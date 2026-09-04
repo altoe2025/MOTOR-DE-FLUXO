@@ -325,3 +325,35 @@ def test_cenario_temporal_bate_com_a_previsao_escrita_no_yaml():
     total_criado = sum(o.valor_brl for o in cenario.ordens)
     total_alocado = sum(a.valor_brl for ciclo in ciclos for a in ciclo.alocacoes)
     assert total_criado == total_alocado == Decimal("730")
+
+
+def test_p0_nao_depende_da_ordem_de_entrada():
+    """Determinismo bit a bit, inclusive a ordem da tupla de alocações.
+
+    Embaralhar as ordens do cenário não pode mudar nada: a prioridade é
+    `(dia_limite, id)`, que é ordem total. A reprodutibilidade é o critério de
+    aceitação da Camada A — se ela depender da ordem em que as ordens chegam na
+    tupla, duas execuções com a mesma seed divergem em silêncio.
+    """
+    from motor import mixes
+    from motor.varredura import montar_pool_do_ponto
+
+    rng = random.Random(99)
+    for seed in range(1, 21):
+        pool = montar_pool_do_ponto(mixes.TODOS["equilibrado"], 6, 120, seed_base=seed)
+        if not pool:
+            continue
+        embaralhadas = list(pool)
+        rng.shuffle(embaralhadas)
+
+        original = Cenario(
+            ordens=pool, janela_dias=5, horizonte_dias=120, custo=_custo_zero()
+        )
+        embaralhado = Cenario(
+            ordens=tuple(embaralhadas),
+            janela_dias=5,
+            horizonte_dias=120,
+            custo=_custo_zero(),
+        )
+
+        assert executar_p0(original) == executar_p0(embaralhado)

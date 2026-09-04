@@ -92,7 +92,11 @@ def executar_p0(cenario: Cenario) -> tuple[Ciclo, ...]:
             assert restante == 0, "casado não coube na fila do próprio lado"
 
         residuo = Decimal(0)
-        for ordem in list(abertas):
+        # Percorrer na mesma prioridade do casamento, e não na ordem em que as
+        # ordens entraram em `abertas`: senão a ordem das alocações REMETIDO na
+        # tupla depende da ordem de entrada do cenário, e duas execuções com a
+        # mesma seed divergem em silêncio.
+        for ordem in sorted(abertas, key=_prioridade):
             # o fim do horizonte drena o que sobrou: sem isso, uma ordem com
             # dia_limite além do horizonte sumiria e a conservação quebraria.
             venceu = ordem.dia_limite <= dia or fim_do_horizonte
