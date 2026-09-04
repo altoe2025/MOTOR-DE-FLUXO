@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 
 from motor.custo import Custos, custo_baseline, custo_netado
-from motor.dominio import Cenario, Ciclo
+from motor.dominio import Cenario, Ciclo, TipoAlocacao
 from motor.netting import executar_p0
 
 
@@ -35,19 +35,27 @@ def simular(cenario: Cenario) -> Resultado:
     baseline = custo_baseline(cenario)
     netado = custo_netado(ciclos, cenario)
 
-    # `casado` é grandeza de UMA perna (min(out, in): o tamanho do casamento, contado
-    # uma vez), mas `bruto_out + bruto_in` conta as DUAS. O volume que deixou de cruzar
-    # a fronteira são as duas pernas — os reais que ficaram no Brasil e a moeda que
-    # ficou lá fora — daí o fator 2. `custo.py` já fazia essa conversão no carry
-    # (`casado * 2 * carry_cnr`); era só aqui que ela faltava.
+    # A partição vive nas ALOCAÇÕES, não nos brutos dos ciclos. Desde que uma ordem
+    # pode ficar aberta em vários ciclos, `bruto_out + bruto_in` conta o mesmo saldo
+    # pendente uma vez por ciclo e infla o denominador — no caso A/B/C isso dava 83%
+    # onde a resposta é 100%. Ver tests/test_netabilidade.py.
     #
-    # A checagem que importa não é o valor e sim a partição:
-    #     bruto_out + bruto_in == 2 * casado + residuo
-    # ou seja, o que não cruzou mais o que cruzou tem que dar 100%. Ver
-    # tests/test_netabilidade.py.
-    soma_nao_cruzou = sum((ciclo.casado * 2 for ciclo in ciclos), Decimal(0))
-    soma_bruto = sum((ciclo.bruto_out + ciclo.bruto_in for ciclo in ciclos), Decimal(0))
-    taxa_netabilidade = soma_nao_cruzou / soma_bruto if soma_bruto else Decimal(0)
+    # Somar as alocações resolve porque elas particionam exatamente o volume criado:
+    #     Σ CASADO + Σ REMETIDO == Σ valor_brl
+    #     \______/   \________/
+    #     não cruzou    cruzou
+    #
+    # `casado` é grandeza de UMA perna, mas as alocações CASADO existem nos DOIS
+    # lados — os reais que ficaram no Brasil e a moeda que ficou lá fora — então o
+    # fator 2 já está embutido e não se aplica de novo aqui.
+    nao_cruzou = Decimal(0)
+    total = Decimal(0)
+    for ciclo in ciclos:
+        for alocacao in ciclo.alocacoes:
+            total += alocacao.valor_brl
+            if alocacao.tipo is TipoAlocacao.CASADO:
+                nao_cruzou += alocacao.valor_brl
+    taxa_netabilidade = nao_cruzou / total if total else Decimal(0)
 
     return Resultado(
         ciclos=ciclos,
