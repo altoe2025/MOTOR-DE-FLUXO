@@ -9,20 +9,24 @@ Cobrar 3,5% nele infla o baseline e, com ele, a economia atribuída ao netting.
 tinha sido lido pelo custo. Havia inclusive um comentário órfão em arquetipos.py
 ("IOF 0% no ingresso — ver custo.py") apontando para um comportamento que não existia.
 
-## O resíduo é pro-rata, e isso é escolha de modelagem
+## Quem paga o IOF do resíduo
 
-No baseline cada ordem paga a sua própria alíquota — não há ambiguidade. No netado,
-o resíduo de um ciclo tem DIREÇÃO mas não tem finalidade única: ele é o excedente de
-um lado que mistura várias finalidades, e o P0 não diz quais ordens especificamente
-atravessaram.
+No baseline cada ordem paga a sua própria alíquota — não há ambiguidade.
 
-Adotamos **pro-rata**: o resíduo paga a alíquota média do seu lado, ponderada por
-volume. É a hipótese neutra — o resíduo é uma fatia proporcional do lado dominante.
+No netado já houve ambiguidade: o resíduo tinha DIREÇÃO mas não tinha dono, porque o
+P0 fechava o lote sem dizer quais ordens especificamente atravessaram. Enquanto isso
+valeu, o resíduo pagava a média **pro-rata** do seu lado, ponderada por volume — a
+hipótese neutra.
 
-A alternativa (casar primeiro as ordens de alíquota alta e deixar as baratas cruzarem)
-aumentaria a economia declarada, mas é planejamento tributário embutido no motor.
-Isso não entra sem parecer jurídico — mesmo espírito da regra do art. 22 gravada em
-netting.py: não "otimize" o resultado fiscal por conta própria.
+Com `Alocacao`, o motor passou a saber: cada `Alocacao(REMETIDO)` aponta para uma
+ordem, e o IOF é o daquela ordem. A ambiguidade que justificava o pro-rata deixou de
+existir.
+
+Isso não é planejamento tributário embutido. Quem escolhe a ordem de cobertura é o
+EDF, por `dia_limite` — critério operacional, e a alíquota nunca entra nele. A
+consequência fiscal é incidental. Se um dia a alíquota virar critério (casar primeiro
+as caras para deixar as baratas cruzarem), aí sim é otimização fiscal, e não entra sem
+parecer jurídico — mesmo espírito da regra do art. 22 gravada em netting.py.
 """
 
 import dataclasses
@@ -138,11 +142,20 @@ def test_finalidade_isenta_nao_gera_iof_nenhum():
 # ------------------------------------------------------------------------ netado
 
 
-def test_residuo_paga_a_aliquota_media_do_seu_lado_ponderada_por_volume():
-    """Lado OUT: 100 a 4% e 300 a 0% -> média ponderada 1%. Resíduo de 200 paga 2."""
+def test_residuo_paga_a_aliquota_da_ordem_que_de_fato_atravessou():
+    """Lado OUT: `a` 100 a 4% e `b` 300 a 1%; contraparte IN de 200.
+
+    Todas são D+0, então o EDF empata em `dia_limite` e desempata por `id`: `a` é
+    coberta inteira e `b` cobre os outros 100. Sobram 200 de `b`, que atravessam a
+    1% e pagam 2.
+
+    A média pro-rata do lado — o modelo antigo, de quando o resíduo não tinha dono —
+    daria (100*4% + 300*1%)/400 = 1,75%, ou seja 3,50. É a diferença que este teste
+    trava.
+    """
     custo = _com_tabela({
                 (BENS, Direcao.OUT): Decimal("0.04"),
-                (DISPONIB, Direcao.OUT): Decimal("0"),
+                (DISPONIB, Direcao.OUT): Decimal("0.01"),
             })
     cenario = _cenario(
         custo,

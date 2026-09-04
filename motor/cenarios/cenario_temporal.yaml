@@ -5,6 +5,16 @@
 # vencendo (dia_limite == dia), nunca pela janela — assim dá pra prever o
 # resultado à mão, ordem por ordem, antes de rodar o motor.
 #
+# ⚠ ESTA PREVISÃO ESTÁ DESATUALIZADA — foi escrita sob a semântica antiga, em que o
+# vencimento de uma ordem fechava o LOTE INTEIRO e remetia todo o resíduo. Sob a
+# semântica corrigida o vencimento força a saída apenas da ordem que venceu, e o
+# excedente com folga fica aberto para casar depois. O teste que trava esta previsão
+# está marcado `xfail` em tests/test_netting.py.
+#
+# Para destravar: refaça a previsão À MÃO, no papel, ordem por ordem, sob a semântica
+# nova — e só então rode o motor. Não copie o output: um resultado esperado escrito
+# depois de ver o output não testa nada.
+#
 # PREVISÃO (escrita antes de rodar o motor — se o motor discordar, um dos dois
 # está errado):
 #
