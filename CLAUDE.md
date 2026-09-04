@@ -21,8 +21,10 @@ errada** — pare e pergunte, não contorne.
 
 ## Pureza
 
-`geracao`, `netting`, `custo` e `rateio` são funções puras: sem estado global, sem I/O,
-sem `random` sem seed explícita. Só a varredura (em `simulacao.py`) escreve arquivo.
+`geracao`, `netting`, `custo`, `simulacao` e `rateio` são funções puras: sem estado
+global, sem I/O, sem `random` sem seed explícita. Dentro do pacote só três funções
+tocam disco: `carregar_cenario` (lê YAML), `varredura.escrever_csv` (escreve o CSV da
+grade) e a CLI em `__main__.py`.
 
 ## Restrição regulatória gravada no código
 
@@ -49,6 +51,8 @@ nesse número quando implementado, **o código está errado**, não o número.
 |---|---|
 | `felipe/netting` | `motor/netting.py`, `tests/test_netting.py`, `motor/cenarios/cenario_temporal.yaml` |
 | `gabriel/custo` | `motor/custo.py`, `tests/test_custo.py`, `docs/ARQUITETURA.md` |
+| `geracao/arquetipos` | `motor/geracao.py`, `motor/arquetipos.py`, `tests/test_geracao*.py` |
+| `varredura/grid-mix-janela` | `motor/mixes.py`, `motor/varredura.py`, `motor/__main__.py`, `tests/test_mixes.py`, `tests/test_varredura.py`, `tests/test_cli.py` |
 | `main` (os dois juntos) | `motor/dominio.py`, `motor/simulacao.py`, `tests/test_integracao.py`, config |
 
 Se uma tarefa exigir editar arquivo fora da coluna da branch atual, **pare e avise** —
