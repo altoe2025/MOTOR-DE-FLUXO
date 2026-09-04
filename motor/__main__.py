@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import sys
-from decimal import Decimal
 
-from motor.dominio import Direcao, carregar_cenario
+from motor.dominio import carregar_cenario
+from motor.simulacao import simular
 
 
 def main(argv: list[str]) -> int:
@@ -14,17 +14,20 @@ def main(argv: list[str]) -> int:
         return 1
 
     cenario = carregar_cenario(argv[1])
-    bruto_out = sum(
-        (o.valor_brl for o in cenario.ordens if o.direcao is Direcao.OUT), Decimal(0)
-    )
-    bruto_in = sum(
-        (o.valor_brl for o in cenario.ordens if o.direcao is Direcao.IN), Decimal(0)
-    )
+    resultado = simular(cenario)
+    ptax = cenario.custo.ptax
 
-    print(f"ordens carregadas: {len(cenario.ordens)}")
-    print(f"bruto OUT (BRL): {bruto_out}")
-    print(f"bruto IN  (BRL): {bruto_in}")
-    print("netting e custo ainda não implementados (ver netting.py / custo.py).")
+    for ciclo in resultado.ciclos:
+        print(
+            f"dia {ciclo.dia}: bruto OUT {ciclo.bruto_out} | bruto IN {ciclo.bruto_in} "
+            f"| casado {ciclo.casado} | resíduo {ciclo.residuo} {ciclo.direcao_residuo.value}"
+        )
+
+    print()
+    print(f"baseline: {resultado.baseline.total} BRL (~ US$ {resultado.baseline.total / ptax:,.0f})")
+    print(f"netado:   {resultado.netado.total} BRL (~ US$ {resultado.netado.total / ptax:,.0f})")
+    print(f"economia: {resultado.economia} BRL (~ US$ {resultado.economia / ptax:,.0f})")
+    print(f"taxa de netabilidade: {resultado.taxa_netabilidade:.2%}")
     return 0
 
 
