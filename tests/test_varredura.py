@@ -12,21 +12,24 @@ import csv
 import dataclasses
 import inspect
 from decimal import Decimal
+from pathlib import Path
 
 import pytest
 
 from motor import arquetipos, mixes
-from motor.dominio import Cenario
+from motor.dominio import Cenario, carregar_cenario
 from motor.simulacao import simular
 from motor.varredura import (
     PARAMETROS_VARREDURA,
     PontoVarredura,
     escrever_csv,
     montar_especificacao_pool,
+    montar_ponto,
     montar_pool_do_ponto,
     rodar_varredura,
 )
 
+CENARIO_AMANDA = Path(__file__).parent.parent / "motor" / "cenarios" / "exemplo_amanda.yaml"
 HORIZONTE_CURTO = 90
 MIXES_DE_TESTE = {"equilibrado": mixes.EQUILIBRADO, "retail_pesado": mixes.RETAIL_PESADO}
 VALORES_N = (3, 7)
@@ -257,6 +260,32 @@ def test_ponto_sem_cliente_nenhum_nao_divide_por_zero():
     assert pontos[0].n_ordens == 0
     assert pontos[0].economia_por_ordem_brl == Decimal(0)
     assert pontos[0].economia_pct == Decimal(0)
+
+
+def test_celula_do_grid_reproduz_o_numero_de_aceitacao_da_amanda():
+    """Alimentada com o cenário da Amanda, uma célula tem que devolver o número de
+    aceitação do CLAUDE.md (baseline ~US$ 439k, netado ~US$ 249k, economia ~US$ 190k).
+
+    É o teste que prova que a varredura não recalcula custo por fora: ela monta o
+    ponto pelo mesmo `simular()` que `test_integracao.py` ancora. Se um dia alguém
+    "otimizar" a varredura somando colunas à mão, este teste cai junto."""
+    cenario = carregar_cenario(str(CENARIO_AMANDA))
+    ponto = montar_ponto(nome_mix="exemplo_amanda", n_clientes=3, cenario=cenario, seed_base=0)
+    ptax = cenario.custo.ptax
+
+    assert ponto.n_ordens == 3
+    assert ponto.n_ciclos == 1
+    assert ponto.janela_dias == cenario.janela_dias
+    assert ponto.horizonte_dias == cenario.horizonte_dias
+    assert float(ponto.baseline_total_brl / ptax) == pytest.approx(439_000, abs=1_000)
+    assert float(ponto.netado_total_brl / ptax) == pytest.approx(249_000, abs=1_000)
+    assert float(ponto.economia_brl / ptax) == pytest.approx(190_000, abs=1_000)
+
+
+def test_montar_ponto_deriva_o_volume_bruto_do_cenario():
+    cenario = carregar_cenario(str(CENARIO_AMANDA))
+    ponto = montar_ponto(nome_mix="exemplo_amanda", n_clientes=3, cenario=cenario, seed_base=0)
+    assert ponto.volume_bruto_brl == sum(ordem.valor_brl for ordem in cenario.ordens)
 
 
 def test_varredura_registra_os_parametros_do_ponto():

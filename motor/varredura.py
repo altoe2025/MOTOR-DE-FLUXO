@@ -181,16 +181,33 @@ def montar_pool_do_ponto(
     return gerar_pool(especificacao, horizonte_dias)
 
 
-def _montar_ponto(
+def montar_ponto(
     nome_mix: str,
     n_clientes: int,
-    janela_dias: int,
-    horizonte_dias: int,
-    seed_base: int,
-    pool: tuple[Ordem, ...],
-    volume_bruto: Decimal,
     cenario: Cenario,
+    seed_base: int,
+    volume_bruto: Decimal | None = None,
 ) -> PontoVarredura:
+    """Simula um `Cenario` e embrulha o `Resultado` numa linha da grade. Pura.
+
+    `janela_dias`, `horizonte_dias` e a pool saem do próprio `cenario` — não há
+    como um ponto discordar do cenário que o produziu. `nome_mix`, `n_clientes` e
+    `seed_base` são só rótulos de proveniência: o cenário não os conhece.
+
+    `volume_bruto` é opcional apenas como cache: `rodar_varredura` soma o volume da
+    pool uma vez por (mix, N) e reaproveita em todos os W. Omitido, é derivado aqui.
+
+    Aceitar um `Cenario` qualquer (e não só um gerado pela grade) é o que permite
+    passar o cenário da Amanda por este mesmo caminho e conferir o número de
+    aceitação — ver `test_celula_do_grid_reproduz_o_numero_de_aceitacao_da_amanda`.
+    """
+    pool = cenario.ordens
+    if volume_bruto is None:
+        volume_bruto = sum((ordem.valor_brl for ordem in pool), Decimal(0))
+
+    janela_dias = cenario.janela_dias
+    horizonte_dias = cenario.horizonte_dias
+
     resultado = simular(cenario)
     baseline = resultado.baseline
     netado = resultado.netado
@@ -259,15 +276,12 @@ def rodar_varredura(
                     custo=custo,
                 )
                 pontos.append(
-                    _montar_ponto(
+                    montar_ponto(
                         nome_mix=nome_mix,
                         n_clientes=n_clientes,
-                        janela_dias=janela_dias,
-                        horizonte_dias=horizonte_dias,
-                        seed_base=seed_base,
-                        pool=pool,
-                        volume_bruto=volume_bruto,
                         cenario=cenario,
+                        seed_base=seed_base,
+                        volume_bruto=volume_bruto,
                     )
                 )
 
