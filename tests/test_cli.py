@@ -37,19 +37,20 @@ def test_varredura_escreve_o_csv_no_caminho_pedido(tmp_path):
             "1,7",
             "--horizonte",
             "60",
-            "--seed-base",
-            "1",
+            "--seeds",
+            "1,2",
         ]
     )
 
     assert codigo == 0
     with destino.open(encoding="utf-8", newline="") as f:
         linhas = list(csv.DictReader(f))
-    assert len(linhas) == 4
+    assert len(linhas) == 8  # 2 N x 2 W x 2 seeds
     assert {linha["nome_mix"] for linha in linhas} == {"equilibrado"}
     assert {int(linha["n_clientes"]) for linha in linhas} == {2, 4}
     assert {int(linha["janela_dias"]) for linha in linhas} == {1, 7}
     assert {int(linha["horizonte_dias"]) for linha in linhas} == {60}
+    assert {int(linha["seed_base"]) for linha in linhas} == {1, 2}
 
 
 def test_varredura_sem_saida_falha():
@@ -91,4 +92,42 @@ def test_varredura_usa_a_grade_padrao_quando_nada_e_passado(monkeypatch, tmp_pat
     assert tuple(capturado["valores_n"]) == (10, 50, 200, 1000)
     assert tuple(capturado["valores_w"]) == (1, 3, 7, 14, 30)
     assert capturado["horizonte_dias"] == 365
-    assert capturado["seed_base"] == 1
+    assert tuple(capturado["valores_seed"]) == (1, 2, 3, 4, 5)
+
+
+def test_varredura_escreve_o_resumo_quando_pedido(tmp_path):
+    """O resumo é o arquivo que se lê para comparar mixes: uma linha por (mix, N, W)
+    com mediana e faixa entre seeds, em vez de um ponto solto por seed."""
+    bruto = tmp_path / "grade.csv"
+    resumo = tmp_path / "resumo.csv"
+    codigo = main(
+        [
+            "motor", "varredura",
+            "--saida", str(bruto),
+            "--saida-resumo", str(resumo),
+            "--mixes", "equilibrado",
+            "--n", "3",
+            "--w", "1,7",
+            "--seeds", "1,2,3",
+            "--horizonte", "60",
+        ]
+    )
+
+    assert codigo == 0
+    with bruto.open(encoding="utf-8", newline="") as f:
+        linhas_brutas = list(csv.DictReader(f))
+    with resumo.open(encoding="utf-8", newline="") as f:
+        linhas_resumo = list(csv.DictReader(f))
+
+    assert len(linhas_brutas) == 6  # 1 N x 2 W x 3 seeds
+    assert len(linhas_resumo) == 2  # o eixo de seeds foi colapsado
+    assert {int(linha["n_seeds"]) for linha in linhas_resumo} == {3}
+
+
+def test_varredura_sem_saida_resumo_nao_cria_o_arquivo(tmp_path):
+    bruto = tmp_path / "grade.csv"
+    resumo = tmp_path / "resumo.csv"
+    main(["motor", "varredura", "--saida", str(bruto), "--mixes", "equilibrado",
+          "--n", "3", "--w", "1", "--seeds", "1", "--horizonte", "60"])
+    assert bruto.exists()
+    assert not resumo.exists()

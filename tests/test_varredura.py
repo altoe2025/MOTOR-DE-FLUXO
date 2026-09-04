@@ -34,6 +34,7 @@ HORIZONTE_CURTO = 90
 MIXES_DE_TESTE = {"equilibrado": mixes.EQUILIBRADO, "retail_pesado": mixes.RETAIL_PESADO}
 VALORES_N = (3, 7)
 VALORES_W = (1, 5, 14)
+VALORES_SEED = (1, 2)
 
 
 def _varredura_pequena():
@@ -41,9 +42,9 @@ def _varredura_pequena():
         mixes=MIXES_DE_TESTE,
         valores_n=VALORES_N,
         valores_w=VALORES_W,
+        valores_seed=VALORES_SEED,
         horizonte_dias=HORIZONTE_CURTO,
         custo=PARAMETROS_VARREDURA,
-        seed_base=1,
     )
 
 
@@ -154,10 +155,40 @@ def test_pool_do_ponto_nao_recebe_janela_como_argumento():
 
 def test_varredura_cobre_todo_o_produto_cartesiano():
     pontos = _varredura_pequena()
-    assert len(pontos) == len(MIXES_DE_TESTE) * len(VALORES_N) * len(VALORES_W)
-    combinacoes = {(p.nome_mix, p.n_clientes, p.janela_dias) for p in pontos}
-    esperado = {(nome, n, w) for nome in MIXES_DE_TESTE for n in VALORES_N for w in VALORES_W}
+    assert len(pontos) == len(MIXES_DE_TESTE) * len(VALORES_N) * len(VALORES_W) * len(VALORES_SEED)
+    combinacoes = {(p.nome_mix, p.n_clientes, p.janela_dias, p.seed_base) for p in pontos}
+    esperado = {
+        (nome, n, w, s)
+        for nome in MIXES_DE_TESTE
+        for n in VALORES_N
+        for w in VALORES_W
+        for s in VALORES_SEED
+    }
     assert combinacoes == esperado
+
+
+def test_seeds_diferentes_dao_pools_diferentes():
+    """Se as seeds não mudassem nada, o eixo seria decorativo e a barra de erro,
+    mentira."""
+    pontos = _varredura_pequena()
+    do_ponto = [p for p in pontos if p.nome_mix == "equilibrado" and p.n_clientes == 7]
+    assert len({p.n_ordens for p in do_ponto}) > 1
+
+
+def test_uma_seed_so_reproduz_a_varredura_de_seed_unica():
+    """Compatibilidade de leitura: com `valores_seed=(1,)` a grade é a de antes."""
+    pontos = rodar_varredura(
+        mixes={"equilibrado": mixes.EQUILIBRADO},
+        valores_n=(5,),
+        valores_w=(7,),
+        valores_seed=(1,),
+        horizonte_dias=HORIZONTE_CURTO,
+        custo=PARAMETROS_VARREDURA,
+    )
+    pool = montar_pool_do_ponto(mixes.EQUILIBRADO, 5, HORIZONTE_CURTO, seed_base=1)
+    assert len(pontos) == 1
+    assert pontos[0].n_ordens == len(pool)
+    assert pontos[0].seed_base == 1
 
 
 def test_varredura_e_determinista():
@@ -170,11 +201,16 @@ def test_baseline_identico_entre_janelas_do_mesmo_ponto():
     pontos = _varredura_pequena()
     for nome_mix in MIXES_DE_TESTE:
         for n in VALORES_N:
-            do_ponto = [p for p in pontos if p.nome_mix == nome_mix and p.n_clientes == n]
-            assert len(do_ponto) == len(VALORES_W)
-            assert len({p.baseline_total_brl for p in do_ponto}) == 1
-            assert len({p.n_ordens for p in do_ponto}) == 1
-            assert len({p.volume_bruto_brl for p in do_ponto}) == 1
+            for seed in VALORES_SEED:
+                do_ponto = [
+                    p
+                    for p in pontos
+                    if p.nome_mix == nome_mix and p.n_clientes == n and p.seed_base == seed
+                ]
+                assert len(do_ponto) == len(VALORES_W)
+                assert len({p.baseline_total_brl for p in do_ponto}) == 1
+                assert len({p.n_ordens for p in do_ponto}) == 1
+                assert len({p.volume_bruto_brl for p in do_ponto}) == 1
 
 
 def test_pool_e_gerada_uma_unica_vez_por_mix_e_n(monkeypatch):
@@ -190,12 +226,15 @@ def test_pool_e_gerada_uma_unica_vez_por_mix_e_n(monkeypatch):
     monkeypatch.setattr(mod, "montar_pool_do_ponto", espiao)
     _varredura_pequena()
 
-    assert len(chamadas) == len(MIXES_DE_TESTE) * len(VALORES_N)
+    # uma pool por (mix, N, seed) — nunca multiplicada por len(VALORES_W)
+    assert len(chamadas) == len(MIXES_DE_TESTE) * len(VALORES_N) * len(VALORES_SEED)
 
 
 def test_janela_altera_o_custo_netado():
     pontos = [
-        p for p in _varredura_pequena() if p.nome_mix == "equilibrado" and p.n_clientes == 7
+        p
+        for p in _varredura_pequena()
+        if p.nome_mix == "equilibrado" and p.n_clientes == 7 and p.seed_base == 1
     ]
     assert len({p.netado_total_brl for p in pontos}) > 1
 
@@ -225,7 +264,11 @@ def test_componentes_somam_o_total_em_cada_ponto():
 
 def test_cada_ponto_bate_com_um_simular_independente():
     pontos = _varredura_pequena()
-    alvo = next(p for p in pontos if p.nome_mix == "equilibrado" and p.n_clientes == 3)
+    alvo = next(
+        p
+        for p in pontos
+        if p.nome_mix == "equilibrado" and p.n_clientes == 3 and p.seed_base == 1
+    )
     pool = montar_pool_do_ponto(mixes.EQUILIBRADO, 3, HORIZONTE_CURTO, seed_base=1)
     cenario = Cenario(
         ordens=pool,
@@ -253,9 +296,9 @@ def test_ponto_sem_cliente_nenhum_nao_divide_por_zero():
         mixes={"equilibrado": mixes.EQUILIBRADO},
         valores_n=(0,),
         valores_w=(1,),
+        valores_seed=(1,),
         horizonte_dias=HORIZONTE_CURTO,
         custo=PARAMETROS_VARREDURA,
-        seed_base=1,
     )
     assert pontos[0].n_ordens == 0
     assert pontos[0].economia_por_ordem_brl == Decimal(0)
