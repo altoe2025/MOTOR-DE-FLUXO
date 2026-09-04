@@ -1,0 +1,50 @@
+# Cenário da Amanda: três clientes, um único dia, janela de 1 dia, PTAX 5,40.
+#
+# astropay OUT  2.000.000 USD -> 10.800.000,00 BRL
+# nomad    IN   5.000.000 USD -> 27.000.000,00 BRL
+# wise     OUT 10.000.000 USD -> 54.000.000,00 BRL
+#
+# Resultado esperado (em USD, política P0):
+#   bruto OUT = 12 mi | bruto IN = 5 mi | casado = 5 mi | resíduo = 7 mi (OUT)
+#   economia ≈ US$ 190 k (baseline ≈ US$ 439 k, netado ≈ US$ 249 k — ver CLAUDE.md)
+#
+# custo_oportunidade_aa fica em "0" nesta etapa para a espera não poluir o
+# número de aceitação.
+
+janela_dias: 1
+horizonte_dias: 1
+
+custo:
+  iof_out: "0.035"
+  iof_in: "0.0038"
+  carry_cnr: "0.0004"
+  spread_rail_bps: "0"
+  custo_fixo_remessa: "0"
+  custo_oportunidade_aa: "0"
+  ptax: "5.40"
+
+ordens:
+  - id: "astropay-1"
+    cliente_id: "astropay"
+    direcao: "OUT"
+    valor_brl: "10800000.00"
+    dia_conhecida: 0
+    dia_limite: 0
+    eh_efx: false
+    finalidade: "TODO-anexo-v"
+  - id: "nomad-1"
+    cliente_id: "nomad"
+    direcao: "IN"
+    valor_brl: "27000000.00"
+    dia_conhecida: 0
+    dia_limite: 0
+    eh_efx: false
+    finalidade: "TODO-anexo-v"
+  - id: "wise-1"
+    cliente_id: "wise"
+    direcao: "OUT"
+    valor_brl: "54000000.00"
+    dia_conhecida: 0
+    dia_limite: 0
+    eh_efx: false
+    finalidade: "TODO-anexo-v"
