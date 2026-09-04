@@ -77,6 +77,7 @@ def _decimal(valor: Any) -> Decimal:
 
 
 def carregar_cenario(path: str) -> Cenario:
+    """Lê um cenário de um arquivo YAML. Não é pura — faz I/O de disco."""
     dados = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
 
     custo_dados = dados["custo"]

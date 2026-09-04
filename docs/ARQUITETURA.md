@@ -39,7 +39,20 @@ etapa o corredor é mono-moeda (USD).
 ## Status de implementação
 
 - `dominio.py` — implementado (entidades + `carregar_cenario`).
-- `netting.py` — stub, responsabilidade de `felipe/netting`.
-- `custo.py` — stub, responsabilidade de `gabriel/custo`.
-- `simulacao.py` — stub, feito em conjunto na `main` depois que as duas camadas acima
-  existirem.
+- `netting.py` — implementado (`executar_p0`, política P0).
+- `custo.py` — implementado (`custo_baseline`, `custo_netado`).
+- `simulacao.py` — implementado (`simular`, junta netting + custo).
+
+## Costuras de extensão
+
+Esta etapa entrega P0 + mono-corredor USD. As linhas abaixo não são trabalho
+futuro implementado — são o desenho de **onde** cada peça futura vai entrar,
+para que ninguém feche uma dessas costuras sem querer nas próximas semanas.
+
+| Peça futura | Onde entra | O que não pode ser quebrado agora |
+| --- | --- | --- |
+| Camada A (geradores por arquétipo de cliente) | Passa a produzir `tuple[Ordem, ...]` diretamente, substituindo `carregar_cenario` como fonte de ordens. | `Cenario` recebe ordens já prontas — ele não sabe (nem deve saber) se vieram de um YAML ou de um gerador. Nada além da fonte de dados muda. |
+| P1 (política oportunista, além da janela fixa) | Outra função com a **mesma assinatura** de `executar_p0`: `Cenario -> tuple[Ciclo, ...]`. | A política não pode virar um `if` dentro de `executar_p0` — cada política é uma função própria, senão `netting.py` vira um emaranhado de casos especiais que ninguém revisa de novo. |
+| Varredura de cenários (grid de misturas de arquétipos) | Uma função nova, fora de `simulacao.py`, que chama `simular()` num loop e escreve o CSV. | `simular` precisa continuar pura (sem I/O) — é o que permite paralelizar a varredura depois. Se `simular` passar a escrever arquivo, a varredura vira sequencial por acidente. |
+| Switches da Camada E (ex.: S13, art. 50 I) | Novos campos em `Cenario` (ou em `ParametrosCusto`), lidos do YAML como qualquer outro parâmetro. | Não usar variável global nem constante de módulo para isso — todo parâmetro do cenário entra pelo `Cenario`, senão duas simulações na mesma sessão Python passam a interferir uma na outra. |
+| Multi-corredor (hoje só existe USD) | Uma camada que particiona as ordens por corredor **antes** de chamar `executar_p0`, e soma os `Resultado` de cada corredor depois. | `executar_p0` deve continuar recebendo ordens de um único corredor por chamada, mesmo hoje só existindo USD — se ele aprender a lidar com mais de uma moeda por dentro, o particionamento por fora vira redundante e ninguém mais confia em qual camada faz o quê. |
