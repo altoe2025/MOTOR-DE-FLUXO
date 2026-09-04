@@ -86,7 +86,16 @@ class Arquetipo:
     visibilidade_dias_min: int  # menor antecedência com que a ordem é conhecida
     visibilidade_dias_max: int  # maior antecedência
     eh_efx: bool
-    finalidade: str  # código único do Anexo V para este arquétipo, nesta etapa
+    # Códigos do Anexo V da Res. BCB 277, UM POR PONTA. Separados porque um cliente
+    # de duas pontas quase nunca tem a mesma natureza nas duas: um exportador RECEBE
+    # receita de exportação e PAGA fornecedor. Com um campo só, o gerador emitia
+    # receita de exportação SAINDO do país — e, desde que custo.py passou a ler
+    # finalidade, isso também cobrava a alíquota errada de IOF.
+    #
+    # Ter a mesma finalidade nas duas pontas é permitido (cripto, tesouraria); o que
+    # não pode é a finalidade contradizer a direção.
+    finalidade_out: str
+    finalidade_in: str
 
     def __post_init__(self) -> None:
         assert 0.0 <= self.p_out <= 1.0
