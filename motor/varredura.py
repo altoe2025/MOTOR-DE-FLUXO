@@ -41,12 +41,39 @@ from dataclasses import dataclass
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Iterable, Mapping, Sequence
 
-from motor.dominio import Cenario, Ordem, ParametrosCusto
+from motor.dominio import Cenario, Direcao, Ordem, ParametrosCusto
 from motor.geracao import gerar_pool
 from motor.mixes import Mix, normalizar, validar_mix
 from motor.simulacao import simular
 
 _MIX_ANONIMO = "(sem nome)"
+
+IOF_POR_FINALIDADE: dict[tuple[str, Direcao], Decimal] = {
+    # Câmbio de exportação é isento. É exatamente o que o comentário em
+    # arquetipos.py ("IOF 0% no ingresso — ver custo.py") sempre disse; o custo
+    # é que nunca tinha lido o campo `finalidade`.
+    ("ANEXO_V_RECEITA_EXPORTACAO", Direcao.IN): Decimal("0"),
+    # Pagamento de importação: BENS é isento, SERVIÇOS paga 0,38%. Os dois caem
+    # na mesma finalidade aqui e não temos o split — é a pergunta em aberto para
+    # a Amanda. Usamos 0,38%, e a incerteza que sobra aponta PARA BAIXO: se o
+    # fluxo for majoritariamente bens, a alíquota é 0 e a economia cai mais.
+    ("ANEXO_V_BENS_SERVICOS", Direcao.OUT): Decimal("0.0038"),
+    # Sem regra explícita aqui, caem no padrão de 3,5% / 0,38%:
+    #   ANEXO_V_DISPONIBILIDADE (transferência a título próprio)  — 3,5% confere
+    #   ANEXO_V_REMESSA_TERCEIRO                                  — 3,5% confere
+    #   ANEXO_V_ATIVOS_VIRTUAIS                                   — INCERTO, verificar
+    #   ANEXO_V_RECEITA_EXPORTACAO na direção OUT                 — combinação que
+    #     não existe no mundo real (receita de exportação não sai do país). Ela
+    #     aparece na pool porque `geracao.py` sorteia a direção ordem a ordem em
+    #     vez de por cliente; some quando esse gerador for corrigido.
+}
+"""Alíquotas de IOF por (finalidade, direção). PROVISÓRIO — pesquisa, não parecer.
+
+Levantado em 2026-09-04 a partir de fontes secundárias. A matéria está instável:
+o Decreto 12.499/2025 unificou boa parte em 3,5%, o Congresso o sustou pelo
+Decreto Legislativo 176/2025, e houve medida cautelar do STF depois. Confirmar o
+que está efetivamente em vigor antes de qualquer número sair daqui.
+"""
 
 PARAMETROS_VARREDURA = ParametrosCusto(
     iof_out=Decimal("0.035"),
@@ -54,20 +81,26 @@ PARAMETROS_VARREDURA = ParametrosCusto(
     carry_cnr=Decimal("0.0004"),
     spread_rail_bps=Decimal("25"),
     custo_fixo_remessa=Decimal("40"),
-    custo_oportunidade_aa=Decimal("0.12"),
+    # ZERO por decisão de produto, não por falta de calibração: o motor é camada
+    # de orquestração, não custodia fundos. Ninguém tem dinheiro parado esperando
+    # o ciclo fechar. A tolerância do cliente ("posso esperar 6 dias") já está no
+    # modelo como RESTRIÇÃO — `buffer_dias_*` do arquétipo vira `dia_limite` da
+    # ordem, e o P0 nunca a ultrapassa. Precificar a espera além disso contaria o
+    # mesmo fenômeno duas vezes.
+    custo_oportunidade_aa=Decimal("0"),
     ptax=Decimal("5.40"),
+    iof_por_finalidade=IOF_POR_FINALIDADE,
 )
-"""Parâmetros de custo da varredura. PLACEHOLDERS — não são calibração de mercado.
+"""Parâmetros de custo da varredura. Ainda placeholders — não são calibração de mercado.
 
-IOF e carry vêm da regra (Res. BCB 277 e o carry de CNR já usado em `custo.py`);
-`spread_rail_bps`, `custo_fixo_remessa` e `custo_oportunidade_aa` são chutes de
-ordem de grandeza, escolhidos apenas para que esses três componentes não fiquem
-zerados e possam competir entre si na decomposição do CSV.
+`spread_rail_bps` e `custo_fixo_remessa` continuam sendo chutes de ordem de
+grandeza, só para que esses componentes não fiquem zerados na decomposição do CSV.
+As alíquotas de IOF agora vêm de pesquisa (ver `IOF_POR_FINALIDADE`), o que é
+melhor que chute mas ainda não é parecer.
 
-Diferença deliberada para `exemplo_amanda.yaml`, que zera os três: lá o objetivo
-é preservar o número de aceitação; aqui é justamente descobrir a qual deles a
-economia é sensível. Trocar esses valores é esperado — é o próximo experimento,
-não um conserto.
+Diferença deliberada para `exemplo_amanda.yaml`, que zera spread e fixo e não
+declara tabela de finalidade: lá o objetivo é preservar o número de aceitação;
+aqui é descobrir a que a economia é sensível.
 """
 
 

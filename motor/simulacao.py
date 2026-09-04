@@ -24,7 +24,9 @@ class Resultado:
     baseline: Custos
     netado: Custos
     economia: Decimal
-    taxa_netabilidade: Decimal  # fração do volume bruto que nunca cruzou a fronteira
+    # fração do volume bruto (as duas pernas) que nunca cruzou a fronteira: 2*casado/bruto.
+    # Vale 1 quando o ciclo fecha sem resíduo. Ver tests/test_netabilidade.py.
+    taxa_netabilidade: Decimal
 
 
 def simular(cenario: Cenario) -> Resultado:
@@ -33,9 +35,19 @@ def simular(cenario: Cenario) -> Resultado:
     baseline = custo_baseline(cenario)
     netado = custo_netado(ciclos, cenario)
 
-    soma_casado = sum((ciclo.casado for ciclo in ciclos), Decimal(0))
+    # `casado` é grandeza de UMA perna (min(out, in): o tamanho do casamento, contado
+    # uma vez), mas `bruto_out + bruto_in` conta as DUAS. O volume que deixou de cruzar
+    # a fronteira são as duas pernas — os reais que ficaram no Brasil e a moeda que
+    # ficou lá fora — daí o fator 2. `custo.py` já fazia essa conversão no carry
+    # (`casado * 2 * carry_cnr`); era só aqui que ela faltava.
+    #
+    # A checagem que importa não é o valor e sim a partição:
+    #     bruto_out + bruto_in == 2 * casado + residuo
+    # ou seja, o que não cruzou mais o que cruzou tem que dar 100%. Ver
+    # tests/test_netabilidade.py.
+    soma_nao_cruzou = sum((ciclo.casado * 2 for ciclo in ciclos), Decimal(0))
     soma_bruto = sum((ciclo.bruto_out + ciclo.bruto_in for ciclo in ciclos), Decimal(0))
-    taxa_netabilidade = soma_casado / soma_bruto if soma_bruto else Decimal(0)
+    taxa_netabilidade = soma_nao_cruzou / soma_bruto if soma_bruto else Decimal(0)
 
     return Resultado(
         ciclos=ciclos,
