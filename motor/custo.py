@@ -43,7 +43,10 @@ def _custo_espera(
 
 
 def custo_baseline(cenario: Cenario) -> Custos:
-    """Cada ordem executa sozinha, no dia em que é conhecida. IOF cheio em tudo."""
+    """Cada ordem executa sozinha, no dia em que é conhecida. IOF cheio em tudo.
+
+    Função pura.
+    """
     custo = cenario.custo
     iof = Decimal(0)
     spread = Decimal(0)
@@ -66,6 +69,8 @@ def custo_netado(ciclos: tuple[Ciclo, ...], cenario: Cenario) -> Custos:
     """IOF só sobre o resíduo de cada ciclo; carry sobre as duas pernas do casado
     (o valor que ficou de cada lado dentro da CNR); espera de cada ordem até o dia
     em que o ciclo em que ela participou fechou.
+
+    Função pura.
     """
     custo = cenario.custo
     iof = Decimal(0)

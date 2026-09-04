@@ -28,6 +28,7 @@ from motor.dominio import Cenario, Ciclo, Direcao, Ordem
 
 
 def executar_p0(cenario: Cenario) -> tuple[Ciclo, ...]:
+    """Casa OUT com IN dentro da janela fixa da política P0. Função pura."""
     por_dia_conhecida: dict[int, list[Ordem]] = {}
     for ordem in cenario.ordens:
         por_dia_conhecida.setdefault(ordem.dia_conhecida, []).append(ordem)

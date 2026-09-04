@@ -9,6 +9,7 @@ from motor.simulacao import simular
 
 
 def main(argv: list[str]) -> int:
+    """Entrada da CLI: lê o cenário, simula e imprime o resumo. Não é pura — faz I/O."""
     if len(argv) != 2:
         print("uso: python -m motor <cenario.yaml>", file=sys.stderr)
         return 1

@@ -28,6 +28,7 @@ class Resultado:
 
 
 def simular(cenario: Cenario) -> Resultado:
+    """Junta netting e custo num Resultado. Função pura (sem I/O)."""
     ciclos = executar_p0(cenario)
     baseline = custo_baseline(cenario)
     netado = custo_netado(ciclos, cenario)
