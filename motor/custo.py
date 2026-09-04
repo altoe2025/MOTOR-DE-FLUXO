@@ -4,6 +4,11 @@ Duas funções puras que, a partir de um Cenario e (para o caso netado) dos Cicl
 fechados pelo netting, calculam IOF, carry de CNR, spread do rail, custo de
 oportunidade da espera e custo fixo de remessa.
 
+O IOF é por (finalidade do Anexo V, direção) — ver `aliquota_iof`. Câmbio de
+importação e de exportação tem tratamento próprio, então duas alíquotas chapadas
+por direção não bastam. Cenários que não declararem tabela caem em
+`iof_out`/`iof_in` e se comportam como antes desse campo existir.
+
 Regra de importação: este módulo importa apenas motor.dominio. Nunca motor.netting
 — recebe Ciclo já pronto como argumento.
 """
@@ -30,6 +35,46 @@ class Custos:
     total: Decimal
 
 
+def aliquota_iof(custo: ParametrosCusto, finalidade: str, direcao: Direcao) -> Decimal:
+    """Alíquota de IOF de uma operação, por (finalidade do Anexo V, direção).
+
+    Cai em `iof_out`/`iof_in` quando a finalidade não tem regra própria, então um
+    `ParametrosCusto` sem tabela se comporta como antes do campo existir.
+
+    Função pura.
+    """
+    padrao = custo.iof_out if direcao is Direcao.OUT else custo.iof_in
+    return custo.iof_por_finalidade.get((finalidade, direcao), padrao)
+
+
+def _aliquota_media_do_lado(
+    custo: ParametrosCusto, ordens: Iterable[Ordem], direcao: Direcao
+) -> Decimal:
+    """Alíquota média do lado `direcao` de um ciclo, ponderada por volume.
+
+    O resíduo de um ciclo tem direção mas não tem finalidade única — ele é o
+    excedente de um lado que mistura várias finalidades, e o P0 não diz quais
+    ordens especificamente atravessaram a fronteira. Adotamos **pro-rata**: o
+    resíduo é uma fatia proporcional do lado dominante, então paga a média desse
+    lado.
+
+    É a hipótese neutra, e isso é deliberado. Casar primeiro as ordens de alíquota
+    alta e deixar as baratas cruzarem aumentaria a economia declarada, mas seria
+    planejamento tributário embutido no motor — não entra sem parecer jurídico,
+    mesmo espírito da regra do art. 22 gravada em netting.py.
+    """
+    do_lado = [ordem for ordem in ordens if ordem.direcao is direcao]
+    volume = sum((ordem.valor_brl for ordem in do_lado), Decimal(0))
+    if volume == 0:
+        return custo.iof_out if direcao is Direcao.OUT else custo.iof_in
+
+    ponderado = sum(
+        (ordem.valor_brl * aliquota_iof(custo, ordem.finalidade, direcao) for ordem in do_lado),
+        Decimal(0),
+    )
+    return ponderado / volume
+
+
 def _custo_espera(
     ordens: Iterable[Ordem], dia_execucao: int, custo_oportunidade_aa: Decimal
 ) -> Decimal:
@@ -54,8 +99,7 @@ def custo_baseline(cenario: Cenario) -> Custos:
     espera = Decimal(0)
 
     for ordem in cenario.ordens:
-        taxa_iof = custo.iof_out if ordem.direcao is Direcao.OUT else custo.iof_in
-        iof += ordem.valor_brl * taxa_iof
+        iof += ordem.valor_brl * aliquota_iof(custo, ordem.finalidade, ordem.direcao)
         spread += ordem.valor_brl * custo.spread_rail_bps / _BPS
         fixo += custo.custo_fixo_remessa
         espera += _custo_espera([ordem], ordem.dia_conhecida, custo.custo_oportunidade_aa)
@@ -81,9 +125,7 @@ def custo_netado(ciclos: tuple[Ciclo, ...], cenario: Cenario) -> Custos:
 
     for ciclo in ciclos:
         if ciclo.residuo > 0:
-            taxa_iof = (
-                custo.iof_out if ciclo.direcao_residuo is Direcao.OUT else custo.iof_in
-            )
+            taxa_iof = _aliquota_media_do_lado(custo, ciclo.ordens, ciclo.direcao_residuo)
             iof += ciclo.residuo * taxa_iof
             spread += ciclo.residuo * custo.spread_rail_bps / _BPS
             fixo += custo.custo_fixo_remessa

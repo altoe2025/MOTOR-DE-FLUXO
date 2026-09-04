@@ -7,11 +7,11 @@ importação em CLAUDE.md.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from decimal import Decimal
 from enum import Enum
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 
 import yaml
 
@@ -44,13 +44,26 @@ class Ordem:
 
 @dataclass(frozen=True)
 class ParametrosCusto:
-    iof_out: Decimal  # 0.035
-    iof_in: Decimal  # 0.0038
+    iof_out: Decimal  # alíquota PADRÃO de saída, quando a finalidade não tem regra própria
+    iof_in: Decimal  # idem, entrada
     carry_cnr: Decimal  # 0.0004
     spread_rail_bps: Decimal
     custo_fixo_remessa: Decimal
     custo_oportunidade_aa: Decimal
     ptax: Decimal  # 5.40
+
+    # Alíquotas de IOF específicas por (finalidade do Anexo V, direção). Câmbio de
+    # importação e de exportação tem tratamento próprio, então duas alíquotas
+    # chapadas por direção não bastam. O que não estiver aqui cai em
+    # iof_out/iof_in — é opt-in, e um cenário que não declare nada se comporta
+    # exatamente como antes deste campo existir.
+    #
+    # A chave é o PAR: a mesma finalidade pode ter alíquotas diferentes conforme
+    # o dinheiro entra ou sai.
+    #
+    # Convenção: trate como imutável depois de construído (dataclass frozen não
+    # congela o dict por dentro). Ver motor/custo.py:aliquota_iof.
+    iof_por_finalidade: Mapping[tuple[str, Direcao], Decimal] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
