@@ -60,10 +60,17 @@ def test_ids_sao_sequenciais_e_deterministicos():
 
 
 def test_eh_efx_e_finalidade_copiados_do_arquetipo():
+    """A finalidade vem da ponta CORRESPONDENTE à direção da ordem — ver
+    tests/test_finalidade_por_direcao.py para o porquê."""
     ordens = gerar_ordens(PSP_INBOUND, "x", seed=1, horizonte_dias=365)
     for o in ordens:
         assert o.eh_efx == PSP_INBOUND.eh_efx
-        assert o.finalidade == PSP_INBOUND.finalidade
+        esperada = (
+            PSP_INBOUND.finalidade_out
+            if o.direcao is Direcao.OUT
+            else PSP_INBOUND.finalidade_in
+        )
+        assert o.finalidade == esperada
 
 
 def test_adicionar_cliente_nao_muda_ordens_dos_outros():

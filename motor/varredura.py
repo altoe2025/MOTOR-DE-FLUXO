@@ -285,45 +285,153 @@ def rodar_varredura(
     mixes: Mapping[str, Mix],
     valores_n: Sequence[int],
     valores_w: Sequence[int],
+    valores_seed: Sequence[int],
     horizonte_dias: int,
     custo: ParametrosCusto,
-    seed_base: int,
 ) -> tuple[PontoVarredura, ...]:
-    """Roda a grade (mix × N × W) e devolve um ponto por célula. Pura — sem I/O.
+    """Roda a grade (mix × N × W × seed) e devolve um ponto por célula. Pura.
 
-    A pool de cada (mix, N) é gerada uma única vez, no laço de N, e reusada em
-    todos os W. Não mova essa chamada para dentro do laço de W.
+    O eixo de seeds existe porque uma célula rodada com uma seed só é UMA amostra.
+    Em N baixo isso é ruído — em `corporativo_pesado` com N=3, vinte seeds vão de
+    +12% a +36% de economia. Sem repetição, comparar dois mixes nessa faixa é
+    comparar sorte. Use `resumir` para colapsar o eixo em mediana + faixa.
+
+    A pool de cada (mix, N, seed) é gerada uma única vez, no laço de seed, e
+    reusada em todos os W. Não mova essa chamada para dentro do laço de W: o W é
+    o único eixo que precisa enxergar exatamente a mesma pool, senão o ruído
+    amostral entra somado ao efeito da janela.
     """
     pontos: list[PontoVarredura] = []
 
     for nome_mix, mix in mixes.items():
         for n_clientes in valores_n:
-            pool = montar_pool_do_ponto(mix, n_clientes, horizonte_dias, seed_base)
-            volume_bruto = sum((ordem.valor_brl for ordem in pool), Decimal(0))
+            for seed_base in valores_seed:
+                pool = montar_pool_do_ponto(mix, n_clientes, horizonte_dias, seed_base)
+                volume_bruto = sum((ordem.valor_brl for ordem in pool), Decimal(0))
 
-            for janela_dias in valores_w:
-                cenario = Cenario(
-                    ordens=pool,
-                    janela_dias=janela_dias,
-                    horizonte_dias=horizonte_dias,
-                    custo=custo,
-                )
-                pontos.append(
-                    montar_ponto(
-                        nome_mix=nome_mix,
-                        n_clientes=n_clientes,
-                        cenario=cenario,
-                        seed_base=seed_base,
-                        volume_bruto=volume_bruto,
+                for janela_dias in valores_w:
+                    cenario = Cenario(
+                        ordens=pool,
+                        janela_dias=janela_dias,
+                        horizonte_dias=horizonte_dias,
+                        custo=custo,
                     )
-                )
+                    pontos.append(
+                        montar_ponto(
+                            nome_mix=nome_mix,
+                            n_clientes=n_clientes,
+                            cenario=cenario,
+                            seed_base=seed_base,
+                            volume_bruto=volume_bruto,
+                        )
+                    )
 
     return tuple(pontos)
 
 
+@dataclass(frozen=True)
+class ResumoCelula:
+    """Uma célula (mix, N, W) com o eixo de seeds colapsado em mediana + faixa.
+
+    `economia_pct_min`/`max` são a pior e a melhor seed, não intervalo de confiança
+    — com poucas seeds a faixa É o resultado, e apertá-la em uma estatística só
+    esconderia justamente o que se quer ver.
+    """
+
+    nome_mix: str
+    n_clientes: int
+    janela_dias: int
+    horizonte_dias: int
+    n_seeds: int
+
+    n_ordens_p50: Decimal
+    taxa_netabilidade_p50: Decimal
+
+    economia_pct_min: Decimal
+    economia_pct_p25: Decimal
+    economia_pct_p50: Decimal
+    economia_pct_p75: Decimal
+    economia_pct_max: Decimal
+
+    economia_brl_min: Decimal
+    economia_brl_p50: Decimal
+
+    frac_seeds_positiva: Decimal
+
+
+def _percentil(ordenados: Sequence[Decimal], q: Decimal) -> Decimal:
+    """Percentil por posto mais próximo — sem interpolar.
+
+    Interpolar inventaria um valor que nenhuma seed produziu. Com poucas seeds
+    isso é pior que arredondar para a amostra vizinha.
+    """
+    indice = int((len(ordenados) - 1) * q)
+    return ordenados[indice]
+
+
+def _mediana(ordenados: Sequence[Decimal]) -> Decimal:
+    meio = len(ordenados) // 2
+    if len(ordenados) % 2:
+        return ordenados[meio]
+    return (ordenados[meio - 1] + ordenados[meio]) / 2
+
+
+def resumir(pontos: Iterable[PontoVarredura]) -> tuple[ResumoCelula, ...]:
+    """Colapsa o eixo de seeds: um `ResumoCelula` por (mix, N, W). Pura.
+
+    Preserva a ordem em que cada célula apareceu pela primeira vez, para o CSV
+    resumido sair na mesma ordem de leitura da grade crua.
+    """
+    grupos: dict[tuple[str, int, int], list[PontoVarredura]] = {}
+    for ponto in pontos:
+        chave = (ponto.nome_mix, ponto.n_clientes, ponto.janela_dias)
+        grupos.setdefault(chave, []).append(ponto)
+
+    resumos: list[ResumoCelula] = []
+    for (nome_mix, n_clientes, janela_dias), do_grupo in grupos.items():
+        pcts = sorted(p.economia_pct for p in do_grupo)
+        brls = sorted(p.economia_brl for p in do_grupo)
+        ordens = sorted(Decimal(p.n_ordens) for p in do_grupo)
+        taxas = sorted(p.taxa_netabilidade for p in do_grupo)
+        positivas = sum(1 for valor in pcts if valor > 0)
+
+        resumos.append(
+            ResumoCelula(
+                nome_mix=nome_mix,
+                n_clientes=n_clientes,
+                janela_dias=janela_dias,
+                horizonte_dias=do_grupo[0].horizonte_dias,
+                n_seeds=len(do_grupo),
+                n_ordens_p50=_mediana(ordens),
+                taxa_netabilidade_p50=_mediana(taxas),
+                economia_pct_min=pcts[0],
+                economia_pct_p25=_percentil(pcts, Decimal("0.25")),
+                economia_pct_p50=_mediana(pcts),
+                economia_pct_p75=_percentil(pcts, Decimal("0.75")),
+                economia_pct_max=pcts[-1],
+                economia_brl_min=brls[0],
+                economia_brl_p50=_mediana(brls),
+                frac_seeds_positiva=Decimal(positivas) / Decimal(len(do_grupo)),
+            )
+        )
+
+    return tuple(resumos)
+
+
 COLUNAS: tuple[str, ...] = tuple(campo.name for campo in dataclasses.fields(PontoVarredura))
 
-_CASAS_DECIMAIS = {"taxa_netabilidade": Decimal("0.000001"), "economia_pct": Decimal("0.000001")}
+# Campos que são fração, não dinheiro: precisam de mais casas para não virar degrau.
+_CASAS_DECIMAIS = {
+    "taxa_netabilidade": Decimal("0.000001"),
+    "taxa_netabilidade_p50": Decimal("0.000001"),
+    "economia_pct": Decimal("0.000001"),
+    "economia_pct_min": Decimal("0.000001"),
+    "economia_pct_p25": Decimal("0.000001"),
+    "economia_pct_p50": Decimal("0.000001"),
+    "economia_pct_p75": Decimal("0.000001"),
+    "economia_pct_max": Decimal("0.000001"),
+    "frac_seeds_positiva": Decimal("0.000001"),
+}
 _CASAS_PADRAO = Decimal("0.01")
 
 
@@ -334,8 +442,12 @@ def _formatar(nome_campo: str, valor: object) -> object:
     return valor.quantize(quantum, rounding=ROUND_HALF_UP)
 
 
-def escrever_csv(pontos: Iterable[PontoVarredura], caminho: str) -> None:
-    """Escreve os pontos num CSV, uma linha por ponto, na ordem recebida.
+def escrever_csv(pontos: Iterable[object], caminho: str, tipo: type = PontoVarredura) -> None:
+    """Escreve linhas num CSV, uma por item, na ordem recebida.
+
+    `tipo` diz de qual dataclass tirar as colunas — `PontoVarredura` (grade crua)
+    ou `ResumoCelula` (grade agregada por seed). É parâmetro e não inferência do
+    primeiro item porque uma sequência vazia ainda precisa escrever o cabeçalho.
 
     Única função com I/O deste módulo. Decimais são arredondados aqui — apenas na
     apresentação: `PontoVarredura` guarda o valor exato que `simular` devolveu, e
@@ -345,9 +457,10 @@ def escrever_csv(pontos: Iterable[PontoVarredura], caminho: str) -> None:
     `*.csv` está no `.gitignore` do projeto: a saída da varredura é resultado de
     execução, não fonte.
     """
+    colunas = tuple(campo.name for campo in dataclasses.fields(tipo))
     with open(caminho, "w", encoding="utf-8", newline="") as arquivo:
-        escritor = csv.DictWriter(arquivo, fieldnames=COLUNAS, lineterminator="\n")
+        escritor = csv.DictWriter(arquivo, fieldnames=colunas, lineterminator="\n")
         escritor.writeheader()
         for ponto in pontos:
             linha = dataclasses.asdict(ponto)
-            escritor.writerow({nome: _formatar(nome, linha[nome]) for nome in COLUNAS})
+            escritor.writerow({nome: _formatar(nome, linha[nome]) for nome in colunas})

@@ -68,7 +68,11 @@ def gerar_ordens(
                 dia_conhecida=dia_conhecida,
                 dia_limite=dia_limite,
                 eh_efx=arquetipo.eh_efx,
-                finalidade=arquetipo.finalidade,
+                finalidade=(
+                    arquetipo.finalidade_out
+                    if direcao is Direcao.OUT
+                    else arquetipo.finalidade_in
+                ),
             )
         )
 

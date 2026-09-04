@@ -67,7 +67,8 @@ def _arquetipo_valido(**overrides) -> Arquetipo:
         visibilidade_dias_min=0,
         visibilidade_dias_max=3,
         eh_efx=True,
-        finalidade="ANEXO_V_TESTE",
+        finalidade_out="ANEXO_V_TESTE_SAIDA",
+        finalidade_in="ANEXO_V_TESTE_ENTRADA",
     )
     campos.update(overrides)
     return Arquetipo(**campos)

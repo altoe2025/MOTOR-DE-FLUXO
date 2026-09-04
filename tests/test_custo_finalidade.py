@@ -192,8 +192,9 @@ def test_tabela_neutra_reproduz_o_numero_antigo_numa_pool_gerada(nome_mix):
     from motor.arquetipos import TODOS as ARQUETIPOS
 
     todas_finalidades = {
-        (arquetipo.finalidade, dire)
+        (finalidade, dire)
         for arquetipo in ARQUETIPOS.values()
+        for finalidade in (arquetipo.finalidade_out, arquetipo.finalidade_in)
         for dire in Direcao
     }
     neutra = _com_tabela({
