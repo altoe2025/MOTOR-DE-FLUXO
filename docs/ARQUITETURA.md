@@ -3,8 +3,8 @@
 ## Camadas
 
 ```
-motor/dominio.py      entidades imutáveis (Direcao, Ordem, ParametrosCusto, Cenario, Ciclo)
-                       + carregar_cenario(path)
+motor/dominio.py      entidades imutáveis (Direcao, Ordem, ParametrosCusto,
+                       Cenario, Ciclo, Arquetipo) + carregar_cenario(path)
                        ↑              ↑
 motor/netting.py ------+              +------ motor/custo.py
   (casamento OUT/IN                     (IOF, carry CNR, custo de
@@ -12,9 +12,14 @@ motor/netting.py ------+              +------ motor/custo.py
    produz Ciclo)                         de cada Ciclo)
                        \\             /
                         motor/simulacao.py
-                    (orquestra netting + custo por
-                     dia/janela; única camada com I/O —
-                     a varredura de cenários escreve CSV)
+                    (orquestra netting + custo; PURA)
+                                ↑
+                        motor/varredura.py
+                    (grade mix × N × W; chama simular()
+                     num loop — escrever_csv é o único I/O)
+                                ↑
+        motor/mixes.py (β: composição de carteira)
+        motor/geracao.py + motor/arquetipos.py (Camada A: ordens sintéticas)
 ```
 
 `dominio.py` não importa nada do projeto. `netting.py` e `custo.py` importam apenas
@@ -53,6 +58,6 @@ para que ninguém feche uma dessas costuras sem querer nas próximas semanas.
 | --- | --- | --- |
 | Camada A (geradores por arquétipo de cliente) | Passa a produzir `tuple[Ordem, ...]` diretamente, substituindo `carregar_cenario` como fonte de ordens. | `Cenario` recebe ordens já prontas — ele não sabe (nem deve saber) se vieram de um YAML ou de um gerador. Nada além da fonte de dados muda. |
 | P1 (política oportunista, além da janela fixa) | Outra função com a **mesma assinatura** de `executar_p0`: `Cenario -> tuple[Ciclo, ...]`. | A política não pode virar um `if` dentro de `executar_p0` — cada política é uma função própria, senão `netting.py` vira um emaranhado de casos especiais que ninguém revisa de novo. |
-| Varredura de cenários (grid de misturas de arquétipos) | Uma função nova, fora de `simulacao.py`, que chama `simular()` num loop e escreve o CSV. | `simular` precisa continuar pura (sem I/O) — é o que permite paralelizar a varredura depois. Se `simular` passar a escrever arquivo, a varredura vira sequencial por acidente. |
+| ~~Varredura de cenários (grid de misturas de arquétipos)~~ — **entregue** em `motor/varredura.py` | `rodar_varredura` (pura) chama `simular()` num loop; `escrever_csv` é a única função com I/O. | `simular` continua pura (sem I/O) — é o que permite paralelizar a varredura depois. E a pool de cada (mix, N) é gerada **uma vez só**, fora do laço de W: regerar por W misturaria ruído de seed com efeito de janela. |
 | Switches da Camada E (ex.: S13, art. 50 I) | Novos campos em `Cenario` (ou em `ParametrosCusto`), lidos do YAML como qualquer outro parâmetro. | Não usar variável global nem constante de módulo para isso — todo parâmetro do cenário entra pelo `Cenario`, senão duas simulações na mesma sessão Python passam a interferir uma na outra. |
 | Multi-corredor (hoje só existe USD) | Uma camada que particiona as ordens por corredor **antes** de chamar `executar_p0`, e soma os `Resultado` de cada corredor depois. | `executar_p0` deve continuar recebendo ordens de um único corredor por chamada, mesmo hoje só existindo USD — se ele aprender a lidar com mais de uma moeda por dentro, o particionamento por fora vira redundante e ninguém mais confia em qual camada faz o quê. |
