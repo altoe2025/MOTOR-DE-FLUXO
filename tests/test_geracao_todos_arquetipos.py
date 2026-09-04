@@ -19,6 +19,7 @@ tem ruído para agregar.
 """
 
 import itertools
+import math
 import statistics
 
 import pytest
@@ -77,3 +78,44 @@ def test_mediana_do_ticket_bate_com_o_declarado(nome_arquetipo):
     # tolerância larga: lognormal tem cauda longa, mediana amostral oscila mais
     # que a média para n moderado
     assert abs(mediana_gerada - mediana_declarada) / mediana_declarada < 0.15
+
+
+@pytest.mark.parametrize("nome_arquetipo", NOMES_ORDENADOS)
+def test_dispersao_do_ticket_bate_com_sigma_declarado(nome_arquetipo):
+    """A mediana não depende de sigma (mediana da lognormal = exp(mu)) — um bug
+    que zera ou ignora ticket_sigma passaria pelo teste de mediana acima sem
+    ser notado. Este teste olha para o desvio padrão de log(valor_brl), que é
+    exatamente sigma por construção da lognormal."""
+    arquetipo = TODOS[nome_arquetipo]
+    ordens = _pool_multi_seed(arquetipo)
+    logs = [math.log(float(o.valor_brl)) for o in ordens]
+    sigma_amostral = statistics.stdev(logs)
+    assert abs(sigma_amostral - arquetipo.ticket_sigma) / arquetipo.ticket_sigma < 0.20
+
+
+@pytest.mark.parametrize("nome_arquetipo", NOMES_ORDENADOS)
+def test_buffer_cobre_todo_o_intervalo_declarado(nome_arquetipo):
+    """O teste de bounds (acima) passaria mesmo se o buffer nunca variasse —
+    por exemplo se rng.integers fosse trocado por um valor fixo. Este teste
+    checa que todo valor inteiro do intervalo declarado aparece pelo menos
+    uma vez na amostra agregada (n suficientemente grande para tornar isso
+    praticamente certo se a amostragem for de fato uniforme)."""
+    arquetipo = TODOS[nome_arquetipo]
+    ordens = _pool_multi_seed(arquetipo)
+    buffers_observados = {o.dia_limite - o.dia_conhecida for o in ordens}
+    intervalo_esperado = set(range(arquetipo.buffer_dias_min, arquetipo.buffer_dias_max + 1))
+    assert buffers_observados == intervalo_esperado
+
+
+@pytest.mark.parametrize("nome_arquetipo", NOMES_ORDENADOS)
+def test_dia_conhecida_espalhado_pelo_horizonte(nome_arquetipo):
+    """O teste de bounds em test_nenhuma_ordem_conhecida_fora_do_horizonte
+    (tests/test_geracao.py) passaria mesmo se dia_conhecida fosse sempre 0 —
+    checa só o intervalo, não a distribuição dentro dele. Uniforme em
+    [0, horizonte) tem média horizonte/2; um bug de concentração no início
+    (ou no fim) do horizonte desloca essa média de forma detectável."""
+    arquetipo = TODOS[nome_arquetipo]
+    ordens = _pool_multi_seed(arquetipo)
+    media = statistics.mean(o.dia_conhecida for o in ordens)
+    media_esperada = HORIZONTE_LONGO / 2
+    assert abs(media - media_esperada) / media_esperada < 0.10
