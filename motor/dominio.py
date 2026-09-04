@@ -62,6 +62,28 @@ class Cenario:
 
 
 @dataclass(frozen=True)
+class Arquetipo:
+    nome: str
+    p_out: float  # probabilidade de uma ordem ser OUT, em [0,1]
+    ticket_mediana_brl: Decimal  # mediana da distribuição lognormal de valor por ordem
+    ticket_sigma: float  # dispersão (sigma do log) da distribuição de ticket
+    cadencia_mensal: float  # nº esperado de ordens por mês (pode ser fracionário)
+    buffer_dias_min: int  # menor prazo possível entre dia_conhecida e dia_limite
+    buffer_dias_max: int  # maior prazo possível
+    visibilidade_dias_min: int  # menor antecedência com que a ordem é conhecida
+    visibilidade_dias_max: int  # maior antecedência
+    eh_efx: bool
+    finalidade: str  # código único do Anexo V para este arquétipo, nesta etapa
+
+    def __post_init__(self) -> None:
+        assert 0.0 <= self.p_out <= 1.0
+        assert self.ticket_mediana_brl > 0
+        assert self.cadencia_mensal > 0
+        assert 0 <= self.buffer_dias_min <= self.buffer_dias_max
+        assert 0 <= self.visibilidade_dias_min <= self.visibilidade_dias_max
+
+
+@dataclass(frozen=True)
 class Ciclo:
     dia: int
     ordens: tuple[Ordem, ...]
