@@ -1,0 +1,66 @@
+# Cenário temporal: 15 ordens espalhadas em 30 dias. O exemplo da Amanda testa a
+# SOMA (tudo no mesmo dia); este testa o TEMPO — ordens chegando e vencendo em
+# dias diferentes. janela_dias é propositalmente maior que o horizonte (100 > 30)
+# para que TODO fechamento de ciclo neste cenário seja causado por uma ordem
+# vencendo (dia_limite == dia), nunca pela janela — assim dá pra prever o
+# resultado à mão, ordem por ordem, antes de rodar o motor.
+#
+# PREVISÃO (escrita antes de rodar o motor — se o motor discordar, um dos dois
+# está errado):
+#
+#   dia  4: {a1 OUT 100, a2 IN 60}            -> casado  60, resíduo  40 OUT
+#     a1 é conhecida no dia 0 e ESPERA 4 dias até a2 chegar (dia 4, D+0) e casar
+#     parcialmente com ela. Caso "espera e casa com contraparte que chega depois".
+#   dia  5: {f1 IN 45}                        -> casado   0, resíduo  45 IN
+#   dia 10: {b1 OUT 80}                       -> casado   0, resíduo  80 OUT
+#     b1 é conhecida no dia 6 e ESPERA até seu próprio vencimento (dia 10) sem
+#     nenhuma contraparte aparecer. Caso "espera e não casa, sai sozinha".
+#   dia 11: {f2 OUT 20}                       -> casado   0, resíduo  20 OUT
+#   dia 12: {f3 IN 25}                        -> casado   0, resíduo  25 IN
+#   dia 15: {c1 OUT 50, c2 IN 90}             -> casado  50, resíduo  40 IN
+#     c1 é conhecida no dia 13 e ainda está esperando quando c2 chega no dia 15
+#     já vencendo no mesmo dia em que é conhecida (D+0 — "nunca pode esperar").
+#     c2 força o fechamento do ciclo e casa com o que c1 tinha deixado em aberto.
+#   dia 17: {f4 OUT 15}                       -> casado   0, resíduo  15 OUT
+#   dia 18: {f5 IN 35}                        -> casado   0, resíduo  35 IN
+#   dia 20: {d1 OUT 70, d2 IN 70}             -> casado  70, resíduo   0
+#     d1 e d2 são conhecidas E vencem no mesmo dia (D+0 as duas) — chegam juntas
+#     e casam integralmente, resíduo zero.
+#   dia 23: {f6 OUT 10}                       -> casado   0, resíduo  10 OUT
+#   dia 25: {f7 IN 55}                        -> casado   0, resíduo  55 IN
+#   dia 28: {f8 OUT  5}                       -> casado   0, resíduo   5 OUT
+#
+# Total: 12 ciclos. Soma criada = soma executada = 730.
+# Os "f*" são ordens de preenchimento D+0 isoladas (chegam e vencem no mesmo
+# dia, sem contraparte), só para engrossar a amostra sem interferir nos quatro
+# casos exigidos acima — cada uma fecha seu próprio ciclo sozinha antes de a
+# próxima ordem relevante ser conhecida.
+
+janela_dias: 100
+horizonte_dias: 30
+
+custo:
+  iof_out: "0.035"
+  iof_in: "0.0038"
+  carry_cnr: "0.0004"
+  spread_rail_bps: "0"
+  custo_fixo_remessa: "0"
+  custo_oportunidade_aa: "0"
+  ptax: "5.40"
+
+ordens:
+  - { id: "a1", cliente_id: "cliente-a1", direcao: "OUT", valor_brl: "100", dia_conhecida: 0,  dia_limite: 10, eh_efx: false, finalidade: "x" }
+  - { id: "a2", cliente_id: "cliente-a2", direcao: "IN",  valor_brl: "60",  dia_conhecida: 4,  dia_limite: 4,  eh_efx: false, finalidade: "x" }
+  - { id: "f1", cliente_id: "cliente-f1", direcao: "IN",  valor_brl: "45",  dia_conhecida: 5,  dia_limite: 5,  eh_efx: false, finalidade: "x" }
+  - { id: "b1", cliente_id: "cliente-b1", direcao: "OUT", valor_brl: "80",  dia_conhecida: 6,  dia_limite: 10, eh_efx: false, finalidade: "x" }
+  - { id: "f2", cliente_id: "cliente-f2", direcao: "OUT", valor_brl: "20",  dia_conhecida: 11, dia_limite: 11, eh_efx: false, finalidade: "x" }
+  - { id: "f3", cliente_id: "cliente-f3", direcao: "IN",  valor_brl: "25",  dia_conhecida: 12, dia_limite: 12, eh_efx: false, finalidade: "x" }
+  - { id: "c1", cliente_id: "cliente-c1", direcao: "OUT", valor_brl: "50",  dia_conhecida: 13, dia_limite: 20, eh_efx: false, finalidade: "x" }
+  - { id: "c2", cliente_id: "cliente-c2", direcao: "IN",  valor_brl: "90",  dia_conhecida: 15, dia_limite: 15, eh_efx: false, finalidade: "x" }
+  - { id: "f4", cliente_id: "cliente-f4", direcao: "OUT", valor_brl: "15",  dia_conhecida: 17, dia_limite: 17, eh_efx: false, finalidade: "x" }
+  - { id: "f5", cliente_id: "cliente-f5", direcao: "IN",  valor_brl: "35",  dia_conhecida: 18, dia_limite: 18, eh_efx: false, finalidade: "x" }
+  - { id: "d1", cliente_id: "cliente-d1", direcao: "OUT", valor_brl: "70",  dia_conhecida: 20, dia_limite: 20, eh_efx: false, finalidade: "x" }
+  - { id: "d2", cliente_id: "cliente-d2", direcao: "IN",  valor_brl: "70",  dia_conhecida: 20, dia_limite: 20, eh_efx: false, finalidade: "x" }
+  - { id: "f6", cliente_id: "cliente-f6", direcao: "OUT", valor_brl: "10",  dia_conhecida: 23, dia_limite: 23, eh_efx: false, finalidade: "x" }
+  - { id: "f7", cliente_id: "cliente-f7", direcao: "IN",  valor_brl: "55",  dia_conhecida: 25, dia_limite: 25, eh_efx: false, finalidade: "x" }
+  - { id: "f8", cliente_id: "cliente-f8", direcao: "OUT", valor_brl: "5",   dia_conhecida: 28, dia_limite: 28, eh_efx: false, finalidade: "x" }
