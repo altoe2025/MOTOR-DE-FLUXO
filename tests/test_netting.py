@@ -14,7 +14,7 @@ from motor.dominio import (
     TipoAlocacao,
     carregar_cenario,
 )
-from motor.netting import executar_p0
+from motor.netting import executar_p0, executar_p1
 
 
 def _por_ordem(ciclos: tuple[Ciclo, ...]) -> dict[str, Decimal]:
@@ -325,3 +325,173 @@ def test_cenario_temporal_bate_com_a_previsao_escrita_no_yaml():
     total_criado = sum(o.valor_brl for o in cenario.ordens)
     total_alocado = sum(a.valor_brl for ciclo in ciclos for a in ciclo.alocacoes)
     assert total_criado == total_alocado == Decimal("730")
+
+
+# ----------------------------------------------------------------- política P1
+
+
+def _netabilidade(ciclos: tuple[Ciclo, ...]) -> Decimal:
+    """Fração do volume que não atravessou a fronteira, somada pelas alocações."""
+    casado = sum(
+        (a.valor_brl for c in ciclos for a in c.alocacoes if a.tipo is TipoAlocacao.CASADO),
+        Decimal(0),
+    )
+    total = sum((a.valor_brl for c in ciclos for a in c.alocacoes), Decimal(0))
+    return casado / total if total else Decimal(0)
+
+
+def _cenarios_da_camada_a(quantidade: int, custo: ParametrosCusto, horizonte: int = 120):
+    """Cenários gerados pela Camada A, um por seed. Pula pools vazias."""
+    from motor import mixes
+    from motor.varredura import montar_pool_do_ponto
+
+    for seed in range(1, quantidade + 1):
+        pool = montar_pool_do_ponto(mixes.TODOS["equilibrado"], 6, horizonte, seed_base=seed)
+        if not pool:
+            continue
+        yield Cenario(
+            ordens=pool, janela_dias=5, horizonte_dias=horizonte, custo=custo
+        )
+
+
+def test_p1_caso_manual_abc_casa_mais_cedo_que_p0():
+    """Previsto no papel ANTES de rodar o motor.
+
+    | Ordem | Direção | Valor | Conhecida | Vence |
+    |-------|---------|-------|-----------|-------|
+    | A     | OUT     | 10    | dia 0     | dia 8 |
+    | B     | IN      |  6    | dia 3     | dia 5 |
+    | C     | IN      |  4    | dia 6     | dia 20|
+
+    P0 (janela 100) só casa quando o lote fecha, e o lote só fecha quando alguém
+    vence: A é coberta 6 no dia 5 (vencimento de B) e 4 no dia 8 (vencimento dela
+    mesma).
+
+    P1 casa no dia em que a contraparte APARECE: 6 no dia 3 (chegada de B) e 4 no
+    dia 6 (chegada de C). Mesmo volume netado — 10, resíduo zero nas duas — mas
+    cinco dias-valor a menos de capital parado.
+    """
+    ordens = (
+        Ordem("a", "cliente-a", Direcao.OUT, Decimal("10"), 0, 8, False, "x"),
+        Ordem("b", "cliente-b", Direcao.IN, Decimal("6"), 3, 5, False, "x"),
+        Ordem("c", "cliente-c", Direcao.IN, Decimal("4"), 6, 20, False, "x"),
+    )
+    cenario = Cenario(ordens=ordens, janela_dias=100, horizonte_dias=20, custo=_custo_zero())
+
+    ciclos_p1 = executar_p1(cenario)
+    ciclos_p0 = executar_p0(cenario)
+
+    assert sum(c.residuo for c in ciclos_p1) == Decimal("0")
+    assert _netabilidade(ciclos_p1) == _netabilidade(ciclos_p0) == Decimal(1)
+
+    casados_de_a = sorted(
+        (a.dia, a.valor_brl)
+        for a in _alocacoes(ciclos_p1, TipoAlocacao.CASADO)
+        if a.ordem_id == "a"
+    )
+    assert casados_de_a == [(3, Decimal("6")), (6, Decimal("4"))]
+
+
+def test_p1_nao_neta_menos_volume_que_p0():
+    """Invariante FRACO de propósito: depois da correção da semântica as duas
+    políticas casam essencialmente o mesmo volume. Empate é o esperado — este teste
+    existe para pegar regressão, não para provar ganho."""
+    for cenario in _cenarios_da_camada_a(100, _custo_zero()):
+        assert _netabilidade(executar_p1(cenario)) >= _netabilidade(executar_p0(cenario))
+
+
+def test_p1_reduz_o_custo_de_espera_em_relacao_ao_p0():
+    """O ganho REAL do P1: casar no dia em que a contraparte aparece fecha as ordens
+    mais cedo e acumula menos capital parado. Mesmo volume, menos espera."""
+    from motor.custo import custo_netado
+
+    custo = ParametrosCusto(
+        iof_out=Decimal("0.035"),
+        iof_in=Decimal("0.0038"),
+        carry_cnr=Decimal("0.0004"),
+        spread_rail_bps=Decimal("0"),
+        custo_fixo_remessa=Decimal("0"),
+        custo_oportunidade_aa=Decimal("0.10"),
+        ptax=Decimal("5.40"),
+    )
+    houve_ganho_estrito = False
+    for cenario in _cenarios_da_camada_a(100, custo):
+        espera_p1 = custo_netado(executar_p1(cenario), cenario).espera
+        espera_p0 = custo_netado(executar_p0(cenario), cenario).espera
+        assert espera_p1 <= espera_p0
+        houve_ganho_estrito = houve_ganho_estrito or espera_p1 < espera_p0
+
+    assert houve_ganho_estrito, "P1 nunca ganhou de P0 — o teste virou tautologia"
+
+
+def test_p1_conserva_alocacoes_exatamente():
+    for cenario in _cenarios_da_camada_a(100, _custo_zero()):
+        por_ordem = _por_ordem(executar_p1(cenario))
+        for ordem in cenario.ordens:
+            assert por_ordem[ordem.id] == ordem.valor_brl
+
+
+def test_p1_casa_o_mesmo_dos_dois_lados_em_cada_dia():
+    for cenario in _cenarios_da_camada_a(30, _custo_zero()):
+        direcao_de = {o.id: o.direcao for o in cenario.ordens}
+        for ciclo in executar_p1(cenario):
+            casado_out = sum(
+                (
+                    a.valor_brl
+                    for a in ciclo.alocacoes
+                    if a.tipo is TipoAlocacao.CASADO
+                    and direcao_de[a.ordem_id] is Direcao.OUT
+                ),
+                Decimal(0),
+            )
+            casado_in = sum(
+                (
+                    a.valor_brl
+                    for a in ciclo.alocacoes
+                    if a.tipo is TipoAlocacao.CASADO
+                    and direcao_de[a.ordem_id] is Direcao.IN
+                ),
+                Decimal(0),
+            )
+            assert casado_out == casado_in == ciclo.casado
+
+
+def test_p1_nao_depende_da_ordem_de_entrada():
+    """Determinismo bit a bit, inclusive a ordem da tupla. Embaralhar as ordens do
+    cenário não pode mudar nada: a prioridade é `(dia_limite, id)`, que é ordem
+    total. Sem o desempate por `id` este teste falha de forma intermitente."""
+    rng = random.Random(99)
+    for cenario in _cenarios_da_camada_a(20, _custo_zero()):
+        embaralhadas = list(cenario.ordens)
+        rng.shuffle(embaralhadas)
+        outro = Cenario(
+            ordens=tuple(embaralhadas),
+            janela_dias=cenario.janela_dias,
+            horizonte_dias=cenario.horizonte_dias,
+            custo=cenario.custo,
+        )
+        assert executar_p1(cenario) == executar_p1(outro)
+
+
+def test_p1_nenhuma_ordem_vence_com_saldo_em_aberto():
+    for cenario in _cenarios_da_camada_a(50, _custo_zero()):
+        ciclos = executar_p1(cenario)
+        for ordem in cenario.ordens:
+            resolvido_ate_o_limite = sum(
+                (
+                    a.valor_brl
+                    for ciclo in ciclos
+                    for a in ciclo.alocacoes
+                    if a.ordem_id == ordem.id and a.dia <= ordem.dia_limite
+                ),
+                Decimal(0),
+            )
+            assert resolvido_ate_o_limite == ordem.valor_brl
+
+
+def test_p1_tem_a_mesma_assinatura_de_p0():
+    """A política é plugável: a varredura precisa poder trocar uma pela outra sem
+    tocar em simulacao.py."""
+    import inspect
+
+    assert inspect.signature(executar_p1) == inspect.signature(executar_p0)

@@ -49,6 +49,86 @@ def _prioridade(ordem: Ordem) -> tuple[int, str]:
     return (ordem.dia_limite, ordem.id)
 
 
+def _resolver_dia(
+    dia: int,
+    abertas: list[Ordem],
+    pendente: dict[str, Decimal],
+    *,
+    drenar_tudo: bool,
+) -> Ciclo:
+    """Casa os saldos pendentes e remete quem venceu. Muta `abertas` e `pendente`.
+
+    É o passo comum às duas políticas: o que as distingue é QUANDO cada uma chama
+    este passo, nunca o que ele faz. Manter a diferença no chamador é o que impede
+    a política de virar um `if` aqui dentro.
+
+    `drenar_tudo` força a saída do que ainda estiver pendente — é o fim do
+    horizonte. Sem isso uma ordem com `dia_limite` além do horizonte sumiria e a
+    conservação quebraria.
+    """
+    out = sorted((o for o in abertas if o.direcao is Direcao.OUT), key=_prioridade)
+    entrada = sorted((o for o in abertas if o.direcao is Direcao.IN), key=_prioridade)
+
+    bruto_out = sum((pendente[o.id] for o in out), Decimal(0))
+    bruto_in = sum((pendente[o.id] for o in entrada), Decimal(0))
+    casado = min(bruto_out, bruto_in)
+
+    alocacoes: list[Alocacao] = []
+    for fila in (out, entrada):
+        restante = casado
+        for ordem in fila:
+            if restante <= 0:
+                break
+            usa = min(pendente[ordem.id], restante)
+            if usa <= 0:
+                continue
+            pendente[ordem.id] -= usa
+            restante -= usa
+            alocacoes.append(Alocacao(ordem.id, dia, usa, TipoAlocacao.CASADO))
+        assert restante == 0, "casado não coube na fila do próprio lado"
+
+    residuo = Decimal(0)
+    # Percorrer na mesma prioridade do casamento, e não na ordem em que as ordens
+    # entraram em `abertas`: senão a ordem das alocações REMETIDO na tupla depende
+    # da ordem de entrada do cenário, e o resultado deixa de ser reprodutível.
+    for ordem in sorted(abertas, key=_prioridade):
+        if pendente[ordem.id] > 0 and (ordem.dia_limite <= dia or drenar_tudo):
+            alocacoes.append(
+                Alocacao(ordem.id, dia, pendente[ordem.id], TipoAlocacao.REMETIDO)
+            )
+            residuo += pendente[ordem.id]
+            pendente[ordem.id] = Decimal(0)
+        if pendente[ordem.id] == 0:
+            abertas.remove(ordem)
+
+    assert casado <= bruto_out and casado <= bruto_in
+
+    return Ciclo(
+        dia=dia,
+        alocacoes=tuple(alocacoes),
+        bruto_out=bruto_out,
+        bruto_in=bruto_in,
+        casado=casado,
+        residuo=residuo,
+        # Depois do casamento um dos lados está zerado por construção — o resíduo é
+        # sempre de um lado só, então a direção continua bem definida.
+        direcao_residuo=Direcao.OUT if bruto_out >= bruto_in else Direcao.IN,
+    )
+
+
+def _conferir_conservacao(ciclos: list[Ciclo], cenario: Cenario) -> None:
+    alocado: dict[str, Decimal] = {}
+    for ciclo in ciclos:
+        for alocacao in ciclo.alocacoes:
+            alocado[alocacao.ordem_id] = (
+                alocado.get(alocacao.ordem_id, Decimal(0)) + alocacao.valor_brl
+            )
+    for ordem in cenario.ordens:
+        assert alocado.get(ordem.id, Decimal(0)) == ordem.valor_brl, (
+            f"conservacao violada em {ordem.id}: alocado != valor_brl"
+        )
+
+
 def executar_p0(cenario: Cenario) -> tuple[Ciclo, ...]:
     """Casa OUT com IN na janela fixa da política P0. Função pura."""
     por_dia_conhecida: dict[int, list[Ordem]] = {}
@@ -70,71 +150,52 @@ def executar_p0(cenario: Cenario) -> tuple[Ciclo, ...]:
         if not abertas or not (vence_hoje or janela_completa or fim_do_horizonte):
             continue
 
-        out = sorted((o for o in abertas if o.direcao is Direcao.OUT), key=_prioridade)
-        entrada = sorted((o for o in abertas if o.direcao is Direcao.IN), key=_prioridade)
-
-        bruto_out = sum((pendente[o.id] for o in out), Decimal(0))
-        bruto_in = sum((pendente[o.id] for o in entrada), Decimal(0))
-        casado = min(bruto_out, bruto_in)
-
-        alocacoes: list[Alocacao] = []
-        for fila in (out, entrada):
-            restante = casado
-            for ordem in fila:
-                if restante <= 0:
-                    break
-                usa = min(pendente[ordem.id], restante)
-                if usa <= 0:
-                    continue
-                pendente[ordem.id] -= usa
-                restante -= usa
-                alocacoes.append(Alocacao(ordem.id, dia, usa, TipoAlocacao.CASADO))
-            assert restante == 0, "casado não coube na fila do próprio lado"
-
-        residuo = Decimal(0)
-        for ordem in list(abertas):
-            # o fim do horizonte drena o que sobrou: sem isso, uma ordem com
-            # dia_limite além do horizonte sumiria e a conservação quebraria.
-            venceu = ordem.dia_limite <= dia or fim_do_horizonte
-            if pendente[ordem.id] > 0 and venceu:
-                alocacoes.append(
-                    Alocacao(ordem.id, dia, pendente[ordem.id], TipoAlocacao.REMETIDO)
-                )
-                residuo += pendente[ordem.id]
-                pendente[ordem.id] = Decimal(0)
-            if pendente[ordem.id] == 0:
-                abertas.remove(ordem)
-
-        # Depois do casamento, um dos lados está zerado por construção — o resíduo
-        # é sempre de um lado só, então a direção continua bem definida.
-        direcao_residuo = Direcao.OUT if bruto_out >= bruto_in else Direcao.IN
-
-        assert casado <= bruto_out and casado <= bruto_in
-
-        ciclos.append(
-            Ciclo(
-                dia=dia,
-                alocacoes=tuple(alocacoes),
-                bruto_out=bruto_out,
-                bruto_in=bruto_in,
-                casado=casado,
-                residuo=residuo,
-                direcao_residuo=direcao_residuo,
-            )
-        )
+        ciclos.append(_resolver_dia(dia, abertas, pendente, drenar_tudo=fim_do_horizonte))
         dia_ultimo_fechamento = dia
 
     assert not abertas, "sobraram ordens abertas ao fim do horizonte"
+    _conferir_conservacao(ciclos, cenario)
 
-    alocado: dict[str, Decimal] = {}
-    for ciclo in ciclos:
-        for alocacao in ciclo.alocacoes:
-            alocado[alocacao.ordem_id] = (
-                alocado.get(alocacao.ordem_id, Decimal(0)) + alocacao.valor_brl
-            )
+    return tuple(ciclos)
+
+
+def executar_p1(cenario: Cenario) -> tuple[Ciclo, ...]:
+    """Casamento oportunista: tenta casar TODO DIA, não só no fechamento da janela.
+
+    Mesma assinatura de executar_p0 — a política é plugável, nunca um `if` dentro
+    do netting. Pura.
+
+    O P1 NÃO neta mais volume que o P0 corrigido: as duas convergem para o mesmo
+    casamento agregado. O ganho é outro — casar no dia em que a contraparte aparece
+    fecha as ordens mais cedo, e portanto acumula menos custo de espera. Mesmo
+    volume netado, menos capital parado. Não venda o P1 como ganho de netabilidade.
+
+    Casamento eager (todo dia), não lazy (só quando alguém vence): volume netado
+    idêntico, mas eager fecha as ordens antes e é mais simples de implementar.
+
+    Ao contrário do P0, aqui só vira `Ciclo` o dia em que alguma coisa aconteceu —
+    num horizonte de 180 dias, "um ciclo por dia" seria quase todo ciclo vazio.
+    """
+    por_dia_conhecida: dict[int, list[Ordem]] = {}
     for ordem in cenario.ordens:
-        assert alocado.get(ordem.id, Decimal(0)) == ordem.valor_brl, (
-            f"conservacao violada em {ordem.id}: alocado != valor_brl"
+        por_dia_conhecida.setdefault(ordem.dia_conhecida, []).append(ordem)
+
+    pendente: dict[str, Decimal] = {o.id: o.valor_brl for o in cenario.ordens}
+    abertas: list[Ordem] = []
+    ciclos: list[Ciclo] = []
+
+    for dia in range(cenario.horizonte_dias + 1):
+        abertas.extend(por_dia_conhecida.get(dia, []))
+        if not abertas:
+            continue
+
+        ciclo = _resolver_dia(
+            dia, abertas, pendente, drenar_tudo=dia == cenario.horizonte_dias
         )
+        if ciclo.alocacoes:
+            ciclos.append(ciclo)
+
+    assert not abertas, "sobraram ordens abertas ao fim do horizonte"
+    _conferir_conservacao(ciclos, cenario)
 
     return tuple(ciclos)
