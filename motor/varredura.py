@@ -129,6 +129,15 @@ class PontoVarredura:
     teto_netabilidade: Decimal
     eficiencia_vs_teto: Decimal
 
+    # Netting que só existe porque clientes DIFERENTES se encontraram. Um cliente
+    # com fluxo nos dois sentidos casa o próprio saldo na tesouraria dele, sem
+    # produto nenhum; contar isso como valor criado infla a proposta. O limite
+    # intra é o teto do que os clientes fariam sozinhos, e o incremental é o que
+    # sobra depois de descontá-lo — um PISO do valor que o motor adiciona.
+    limite_intra_cliente_brl: Decimal
+    volume_casado_incremental_brl: Decimal
+    taxa_netabilidade_incremental: Decimal
+
     baseline_total_brl: Decimal
     baseline_iof_brl: Decimal
     baseline_carry_brl: Decimal
@@ -272,6 +281,25 @@ def montar_ponto(
     teto = 1 - abs(lado_out - lado_in) / total_pernas if total_pernas else Decimal(0)
     eficiencia = resultado.taxa_netabilidade / teto if teto else Decimal(0)
 
+    # `2 × min(manda, recebe)` por cliente: o teto do que a tesouraria dele
+    # resolveria sem contraparte externa. Subtraído do casado, sobra um PISO do
+    # netting que só aconteceu porque dois clientes diferentes se encontraram —
+    # piso, e não valor exato, porque o casamento é agregado e não diz quem casou
+    # com quem. O chão é zero: quando o tempo impede um cliente de casar o próprio
+    # fluxo, o motor casa menos que o limite intra, e um número negativo aqui não
+    # significaria nada.
+    por_cliente: dict[str, list[Decimal]] = {}
+    for ordem in pool:
+        lados = por_cliente.setdefault(ordem.cliente_id, [Decimal(0), Decimal(0)])
+        lados[0 if ordem.direcao is Direcao.OUT else 1] += ordem.valor_brl
+    limite_intra = sum(
+        (2 * min(saida, entrada) for saida, entrada in por_cliente.values()), Decimal(0)
+    )
+    casado_incremental = max(Decimal(0), volume_casado - limite_intra)
+    netabilidade_incremental = (
+        casado_incremental / volume_bruto if volume_bruto else Decimal(0)
+    )
+
     return PontoVarredura(
         nome_mix=nome_mix,
         n_clientes=n_clientes,
@@ -286,6 +314,9 @@ def montar_ponto(
         taxa_netabilidade=resultado.taxa_netabilidade,
         teto_netabilidade=teto,
         eficiencia_vs_teto=eficiencia,
+        limite_intra_cliente_brl=limite_intra,
+        volume_casado_incremental_brl=casado_incremental,
+        taxa_netabilidade_incremental=netabilidade_incremental,
         baseline_total_brl=baseline.total,
         baseline_iof_brl=baseline.iof,
         baseline_carry_brl=baseline.carry,
@@ -371,6 +402,7 @@ class ResumoCelula:
     taxa_netabilidade_p50: Decimal
     teto_netabilidade_p50: Decimal
     eficiencia_vs_teto_p50: Decimal
+    taxa_netabilidade_incremental_p50: Decimal
 
     economia_pct_min: Decimal
     economia_pct_p25: Decimal
@@ -420,6 +452,7 @@ def resumir(pontos: Iterable[PontoVarredura]) -> tuple[ResumoCelula, ...]:
         taxas = sorted(p.taxa_netabilidade for p in do_grupo)
         tetos = sorted(p.teto_netabilidade for p in do_grupo)
         eficiencias = sorted(p.eficiencia_vs_teto for p in do_grupo)
+        incrementais = sorted(p.taxa_netabilidade_incremental for p in do_grupo)
         positivas = sum(1 for valor in pcts if valor > 0)
 
         resumos.append(
@@ -433,6 +466,7 @@ def resumir(pontos: Iterable[PontoVarredura]) -> tuple[ResumoCelula, ...]:
                 taxa_netabilidade_p50=_mediana(taxas),
                 teto_netabilidade_p50=_mediana(tetos),
                 eficiencia_vs_teto_p50=_mediana(eficiencias),
+                taxa_netabilidade_incremental_p50=_mediana(incrementais),
                 economia_pct_min=pcts[0],
                 economia_pct_p25=_percentil(pcts, Decimal("0.25")),
                 economia_pct_p50=_mediana(pcts),

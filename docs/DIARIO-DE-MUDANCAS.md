@@ -45,6 +45,57 @@ Atualize esta tabela em todo push. A data é do último toque.
 
 ---
 
+## 2026-09-05 — Netting incremental: separar o que o cliente faria sozinho
+
+**Sintoma.** Medindo a pendência (a), apareceu um número que muda a proposta do
+produto: **entre 47% e 77% do netting que o motor reivindica seria feito pelo
+próprio cliente**, só com o fluxo dele, sem contraparte externa nenhuma.
+
+**Causa.** `geracao.py` sorteia a direção ordem a ordem, então todo cliente tem
+fluxo nos dois sentidos — um cliente de remessa manda 90% e recebe 10%. Quando o
+motor casa a entrada de um cliente com a saída **do mesmo cliente**, isso entra
+como netting. Mas a tesouraria dele já faria esse encontro sozinha: usa o dólar
+que entrou para bancar o dólar que sai. O valor do produto é casar clientes
+**diferentes**, que não se conhecem — e era exatamente essa parte que o CSV não
+isolava.
+
+**O que foi feito.** `PontoVarredura` ganha `limite_intra_cliente_brl`
+(`Σ 2 × min(manda, recebe)` por cliente — o teto do que fariam sozinhos),
+`volume_casado_incremental_brl` e `taxa_netabilidade_incremental`; `ResumoCelula`
+ganha a mediana da taxa. O incremental é um **piso**, não valor exato: o
+casamento é agregado e não diz quem casou com quem, então subtrair o limite intra
+dá o mínimo que só pode ter vindo de clientes diferentes. Chão em zero — quando o
+tempo impede um cliente de casar o próprio fluxo, o motor casa menos que o limite
+intra, e um negativo ali não significaria nada. A CLI passa a imprimir a linha.
+Quatro testes novos, todos vistos falhar antes. Suíte: 239 passando.
+
+**O que isso invalida.**
+- **A ordenação das carteiras muda, e a inversão se sustenta nos três tamanhos.**
+
+| carteira | net bruta (N=200) | incremental | perde para o intra |
+|---|---|---|---|
+| corporativo_pesado | 97,4% | **51%** | 46,4 pp |
+| psp_dominante | **99,5%** | 45% | 54,5 pp |
+| equilibrado | 87,3% | 40% | 47,3 pp |
+| retail_pesado | 62,5% | 16% | 46,5 pp |
+
+  Pela netabilidade bruta, `psp_dominante` é a melhor carteira. Pelo netting que o
+  produto de fato cria, **`corporativo_pesado` é a melhor**, e o PSP é justamente
+  quem mais perde para o intra-cliente (54 a 60 pontos), porque no modelo ele
+  recebe arrecadação e paga merchant no mesmo volume.
+- **Toda economia citada até hoje está inflada por esse efeito.** Os 80% do mix
+  equilibrado viram 41% de netting incremental. Não usar a bruta em conversa
+  comercial.
+- Pergunta em aberto para a Amanda, agora com número: **na vida real, quanto do
+  próprio fluxo um cliente desses já casa antes de procurar um serviço como o
+  nosso?** Se casar tudo, o mercado endereçável é o incremental. Se não casar nada
+  (porque as pontas caem em dias, moedas ou entidades diferentes), a bruta volta a
+  valer. A verdade está no meio e só ela sabe onde.
+- O gerador **não foi alterado**: a decisão entre direção por ordem e por cliente
+  segue aberta, agora medida dos dois lados.
+
+---
+
 ## 2026-09-05 — Teto da carteira e eficiência da política entram no CSV
 
 **Sintoma.** Lendo a grade, não havia como responder à pergunta mais básica sobre
