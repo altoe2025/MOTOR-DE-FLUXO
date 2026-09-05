@@ -56,6 +56,9 @@ def _ponto_falso(nome_mix: str, economia_pct: str) -> PontoVarredura:
         taxa_netabilidade=zero,
         teto_netabilidade=zero,
         eficiencia_vs_teto=zero,
+        limite_intra_cliente_brl=zero,
+        volume_casado_incremental_brl=zero,
+        taxa_netabilidade_incremental=zero,
         baseline_total_brl=Decimal(100),
         baseline_iof_brl=zero,
         baseline_carry_brl=zero,
@@ -111,6 +114,28 @@ def test_resumo_carrega_o_teto_e_a_eficiencia_medianos():
         )
         assert resumo.teto_netabilidade_p50 == esperado_teto
         assert resumo.eficiencia_vs_teto_p50 == esperado_ef
+
+
+def test_resumo_carrega_a_netabilidade_incremental_mediana():
+    """O número que interessa para a proposta comercial precisa estar no resumo,
+    ao lado da netabilidade bruta — senão só a bruta é citada."""
+    grade = _grade()
+    for resumo in resumir(grade):
+        do_grupo = [
+            p
+            for p in grade
+            if (p.nome_mix, p.n_clientes, p.janela_dias)
+            == (resumo.nome_mix, resumo.n_clientes, resumo.janela_dias)
+        ]
+        valores = sorted(p.taxa_netabilidade_incremental for p in do_grupo)
+        meio = len(valores) // 2
+        esperado = (
+            valores[meio]
+            if len(valores) % 2
+            else (valores[meio - 1] + valores[meio]) / 2
+        )
+        assert resumo.taxa_netabilidade_incremental_p50 == esperado
+        assert resumo.taxa_netabilidade_incremental_p50 <= resumo.taxa_netabilidade_p50
 
 
 def test_nao_mistura_celulas_diferentes():

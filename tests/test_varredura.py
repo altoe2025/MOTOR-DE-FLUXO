@@ -446,6 +446,84 @@ def test_pool_perfeitamente_equilibrada_tem_teto_um():
     assert ponto.eficiencia_vs_teto == Decimal(1)
 
 
+def _ordem(id_, cliente, direcao, valor, conhecida=0, limite=0):
+    return Ordem(
+        id=id_,
+        cliente_id=cliente,
+        direcao=direcao,
+        valor_brl=Decimal(valor),
+        dia_conhecida=conhecida,
+        dia_limite=limite,
+        eh_efx=False,
+        finalidade="x",
+    )
+
+
+def _cenario_de(ordens, horizonte=0):
+    return Cenario(
+        ordens=tuple(ordens),
+        janela_dias=1,
+        horizonte_dias=horizonte,
+        custo=PARAMETROS_VARREDURA,
+    )
+
+
+def test_limite_intra_cliente_e_o_que_cada_cliente_casaria_sozinho():
+    """Para cada cliente, `2 × min(o que ele manda, o que ele recebe)`.
+
+    É o teto do que a tesouraria DELE resolveria sem contraparte externa — e
+    portanto não é valor que o produto cria.
+    """
+    for ponto, pool in _pontos_com_pool():
+        por_cliente = {}
+        for o in pool:
+            lados = por_cliente.setdefault(o.cliente_id, [Decimal(0), Decimal(0)])
+            lados[0 if o.direcao is Direcao.OUT else 1] += o.valor_brl
+        esperado = sum((2 * min(out, ent) for out, ent in por_cliente.values()), Decimal(0))
+        assert ponto.limite_intra_cliente_brl == esperado
+
+
+def test_cliente_de_uma_direcao_so_nao_tem_nada_a_casar_sozinho():
+    """Dois clientes opostos: tudo que casa só casou porque um achou o outro."""
+    cenario = _cenario_de(
+        [
+            _ordem("a", "cliente-a", Direcao.OUT, 100),
+            _ordem("b", "cliente-b", Direcao.IN, 100),
+        ]
+    )
+    ponto = montar_ponto(nome_mix="t", n_clientes=2, cenario=cenario, seed_base=0)
+
+    assert ponto.limite_intra_cliente_brl == Decimal(0)
+    assert ponto.volume_casado_incremental_brl == ponto.volume_casado_brl
+    assert ponto.taxa_netabilidade_incremental == ponto.taxa_netabilidade
+
+
+def test_cliente_que_se_basta_nao_gera_netting_incremental():
+    """Um cliente só, com os dois lados iguais. O motor casa 100% — e o valor que
+    ele adiciona é ZERO: essa pessoa faria isso sozinha na própria tesouraria."""
+    cenario = _cenario_de(
+        [
+            _ordem("a", "cliente-unico", Direcao.OUT, 100),
+            _ordem("b", "cliente-unico", Direcao.IN, 100),
+        ]
+    )
+    ponto = montar_ponto(nome_mix="t", n_clientes=1, cenario=cenario, seed_base=0)
+
+    assert ponto.taxa_netabilidade == Decimal(1)  # o motor neta tudo...
+    assert ponto.volume_casado_incremental_brl == Decimal(0)  # ...e não serve de nada
+    assert ponto.taxa_netabilidade_incremental == Decimal(0)
+
+
+def test_incremental_nunca_e_negativo():
+    """Quando o tempo impede um cliente de casar o próprio fluxo, o motor casa
+    MENOS que o limite intra. A medida é um piso do valor criado, então o chão
+    é zero — nunca um número negativo, que não significaria nada."""
+    for ponto, _pool in _pontos_com_pool():
+        assert ponto.volume_casado_incremental_brl >= Decimal(0)
+        assert ponto.taxa_netabilidade_incremental >= Decimal(0)
+        assert ponto.taxa_netabilidade_incremental <= ponto.taxa_netabilidade
+
+
 def test_varredura_registra_os_parametros_do_ponto():
     p = _varredura_pequena()[0]
     assert p.horizonte_dias == HORIZONTE_CURTO
