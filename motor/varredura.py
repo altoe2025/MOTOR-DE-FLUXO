@@ -245,7 +245,12 @@ def montar_ponto(
     baseline = resultado.baseline
     netado = resultado.netado
 
-    volume_casado = sum((ciclo.casado for ciclo in resultado.ciclos), Decimal(0))
+    # `ciclo.casado` é grandeza de UMA perna (o mínimo entre os dois lados), mas o
+    # volume que deixou de atravessar são as DUAS — os reais que ficaram no Brasil e
+    # a moeda que ficou lá fora. `volume_bruto` conta as duas pernas, então sem o
+    # fator 2 as colunas do CSV não fecham entre si e `volume_casado_brl /
+    # volume_bruto_brl` dá metade da coluna `taxa_netabilidade` da mesma linha.
+    volume_casado = sum((ciclo.casado for ciclo in resultado.ciclos), Decimal(0)) * 2
     volume_residuo = sum((ciclo.residuo for ciclo in resultado.ciclos), Decimal(0))
 
     economia_pct = resultado.economia / baseline.total if baseline.total else Decimal(0)
