@@ -45,6 +45,48 @@ Atualize esta tabela em todo push. A data é do último toque.
 
 ---
 
+## 2026-09-05 — Teto da carteira e eficiência da política entram no CSV
+
+**Sintoma.** Lendo a grade, não havia como responder à pergunta mais básica sobre
+uma célula: uma netabilidade de 90% significa que a política é boa ou que a
+carteira já era equilibrada? São conclusões opostas para o produto e o CSV não
+distinguia as duas.
+
+**Causa.** Faltava a referência. O melhor que qualquer política pode fazer numa
+pool é `1 − |OUT−IN| / (OUT+IN)` — a soma dos resíduos nunca fica abaixo do
+desbalanço total, então nem um ciclo único que enxergasse a pool inteira netaria
+mais que isso. Sem esse teto no CSV, a netabilidade era um número sem denominador.
+
+**O que foi feito.**
+- `PontoVarredura` ganha `teto_netabilidade` e `eficiencia_vs_teto`; `ResumoCelula`
+  ganha as medianas das duas. Calculados em `montar_ponto`, a partir da pool —
+  nenhuma camada abaixo foi tocada.
+- O resumo da CLI passa a imprimir uma segunda linha por mix dizendo quanto do
+  possível a política extraiu.
+- Cinco testes novos, todos escritos antes da implementação: o teto é a fórmula
+  sobre a pool, a netabilidade nunca o ultrapassa, a eficiência é a razão entre os
+  dois, uma pool perfeitamente equilibrada tem teto 1, e o resumo carrega as
+  medianas. Suíte: 234 passando.
+- Bug de portabilidade corrigido no mesmo commit: a seta `→` que eu tinha posto na
+  linha nova da CLI derruba o processo inteiro com `UnicodeEncodeError` no console
+  do Windows (cp1252). **A saída da CLI só pode usar caracteres do cp1252.** O
+  código anterior escapava por usar travessão, que está na tabela.
+
+**O que isso invalida.**
+- A pendência (d) de 2026-09-05 está **fechada**: dá para separar carteira de
+  política lendo o CSV.
+- E a resposta que ela dá é forte, agora medida célula a célula: com 50 clientes
+  ou mais a eficiência é **98% a 100%**, e com 200 é **100,0% em todas as quatro
+  carteiras**. A política P0 não deixa nada na mesa em escala realista. Só com 10
+  clientes sobra folga (92% a 97%), que é onde o timing ainda aperta.
+- Consequência direta: **qualquer trabalho de política (P1, lookahead, teto de
+  folga) tem ganho máximo de zero em N ≥ 50.** O que move o resultado é a carteira.
+  O teto do `retail_pesado` é 62,5% mesmo com 200 clientes — nenhuma política vai
+  consertar fluxo unidirecional.
+- Todo CSV gerado antes deste commit não tem as duas colunas novas.
+
+---
+
 ## 2026-09-05 — Colunas de volume do CSV fechando, e três medições que mudam a leitura da varredura
 
 **Sintoma.** Auditoria antes de subir a `main`. Numa linha qualquer do CSV da

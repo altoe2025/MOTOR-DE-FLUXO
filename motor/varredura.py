@@ -122,6 +122,13 @@ class PontoVarredura:
     volume_residuo_brl: Decimal
     taxa_netabilidade: Decimal
 
+    # O melhor que QUALQUER política conseguiria nesta pool, e quanto disso a
+    # política de fato extraiu. Sem as duas, uma netabilidade alta é ambígua:
+    # pode ser carteira naturalmente equilibrada ou política boa numa carteira
+    # ruim — conclusões opostas para o produto.
+    teto_netabilidade: Decimal
+    eficiencia_vs_teto: Decimal
+
     baseline_total_brl: Decimal
     baseline_iof_brl: Decimal
     baseline_carry_brl: Decimal
@@ -256,6 +263,15 @@ def montar_ponto(
     economia_pct = resultado.economia / baseline.total if baseline.total else Decimal(0)
     economia_por_ordem = resultado.economia / len(pool) if pool else Decimal(0)
 
+    # O teto é propriedade da POOL, não da política: a soma dos resíduos nunca
+    # fica abaixo do desbalanço total entre os dois lados, então nem um ciclo
+    # único que enxergasse a pool inteira netaria mais que isto.
+    lado_out = sum((o.valor_brl for o in pool if o.direcao is Direcao.OUT), Decimal(0))
+    lado_in = sum((o.valor_brl for o in pool if o.direcao is Direcao.IN), Decimal(0))
+    total_pernas = lado_out + lado_in
+    teto = 1 - abs(lado_out - lado_in) / total_pernas if total_pernas else Decimal(0)
+    eficiencia = resultado.taxa_netabilidade / teto if teto else Decimal(0)
+
     return PontoVarredura(
         nome_mix=nome_mix,
         n_clientes=n_clientes,
@@ -268,6 +284,8 @@ def montar_ponto(
         volume_casado_brl=volume_casado,
         volume_residuo_brl=volume_residuo,
         taxa_netabilidade=resultado.taxa_netabilidade,
+        teto_netabilidade=teto,
+        eficiencia_vs_teto=eficiencia,
         baseline_total_brl=baseline.total,
         baseline_iof_brl=baseline.iof,
         baseline_carry_brl=baseline.carry,
@@ -351,6 +369,8 @@ class ResumoCelula:
 
     n_ordens_p50: Decimal
     taxa_netabilidade_p50: Decimal
+    teto_netabilidade_p50: Decimal
+    eficiencia_vs_teto_p50: Decimal
 
     economia_pct_min: Decimal
     economia_pct_p25: Decimal
@@ -398,6 +418,8 @@ def resumir(pontos: Iterable[PontoVarredura]) -> tuple[ResumoCelula, ...]:
         brls = sorted(p.economia_brl for p in do_grupo)
         ordens = sorted(Decimal(p.n_ordens) for p in do_grupo)
         taxas = sorted(p.taxa_netabilidade for p in do_grupo)
+        tetos = sorted(p.teto_netabilidade for p in do_grupo)
+        eficiencias = sorted(p.eficiencia_vs_teto for p in do_grupo)
         positivas = sum(1 for valor in pcts if valor > 0)
 
         resumos.append(
@@ -409,6 +431,8 @@ def resumir(pontos: Iterable[PontoVarredura]) -> tuple[ResumoCelula, ...]:
                 n_seeds=len(do_grupo),
                 n_ordens_p50=_mediana(ordens),
                 taxa_netabilidade_p50=_mediana(taxas),
+                teto_netabilidade_p50=_mediana(tetos),
+                eficiencia_vs_teto_p50=_mediana(eficiencias),
                 economia_pct_min=pcts[0],
                 economia_pct_p25=_percentil(pcts, Decimal("0.25")),
                 economia_pct_p50=_mediana(pcts),
@@ -429,6 +453,10 @@ COLUNAS: tuple[str, ...] = tuple(campo.name for campo in dataclasses.fields(Pont
 _CASAS_DECIMAIS = {
     "taxa_netabilidade": Decimal("0.000001"),
     "taxa_netabilidade_p50": Decimal("0.000001"),
+    "teto_netabilidade": Decimal("0.000001"),
+    "teto_netabilidade_p50": Decimal("0.000001"),
+    "eficiencia_vs_teto": Decimal("0.000001"),
+    "eficiencia_vs_teto_p50": Decimal("0.000001"),
     "economia_pct": Decimal("0.000001"),
     "economia_pct_min": Decimal("0.000001"),
     "economia_pct_p25": Decimal("0.000001"),
