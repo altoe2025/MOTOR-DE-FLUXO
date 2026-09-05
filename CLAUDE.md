@@ -38,6 +38,15 @@ Cenário da Amanda (`motor/cenarios/exemplo_amanda.yaml`): baseline ≈ US$ 439 
 ≈ US$ 249 k, economia ≈ US$ 190 k. Se o código de `netting.py`/`custo.py` não bater
 nesse número quando implementado, **o código está errado**, não o número.
 
+## Diário de mudanças
+
+`docs/DIARIO-DE-MUDANCAS.md` é o estado compartilhado entre o Gabriel e o Felipe.
+**Leia a entrada do topo antes de começar qualquer tarefa** — uma tarefa escrita a
+partir do que está em `origin/main` pode estar descrevendo código que já mudou na
+`main` local. Isso já aconteceu (ver a entrada de 2026-09-05).
+
+Toda mudança que vai para o GitHub ganha uma entrada, no mesmo commit que a faz.
+
 ## Convenção de branch e commit
 
 - Toda mensagem de commit termina com o identificador da issue do Linear que fecha,

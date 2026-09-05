@@ -274,49 +274,42 @@ def test_casamento_equilibrado_nos_dois_lados_em_cada_ciclo():
         assert casado_out == casado_in == ciclo.casado
 
 
-@pytest.mark.xfail(
-    reason=(
-        "A previsão no topo de cenario_temporal.yaml foi escrita à mão sob a semântica "
-        "ANTIGA, em que o vencimento de uma ordem fechava o lote inteiro e remetia todo "
-        "o resíduo. Sob a semântica corrigida (o vencimento força a saída apenas da "
-        "ordem que venceu), a previsão muda: no dia 4, por exemplo, a2 casa 60 com a1 e "
-        "sai zerada, e os 40 restantes de a1 NÃO são remetidos — ficam abertos e casam "
-        "com f1 no dia 5. NÃO ajuste estes números ao output do motor: um teste cujo "
-        "resultado esperado foi escrito depois de ver o output não testa nada. A "
-        "previsão precisa ser refeita à mão, no papel, sob a semântica nova."
-    ),
-    strict=True,
-)
 def test_cenario_temporal_bate_com_a_previsao_escrita_no_yaml():
     """Trava, como regressão, a previsão feita à mão no topo de
     cenario_temporal.yaml — escrita antes de rodar o motor. Cobre: ordem que
-    espera e casa com contraparte tardia, ordem que espera e sai sozinha,
-    ordem D+0 que força saída e ainda assim casa com quem já esperava, e
-    duas ordens que chegam juntas e casam integralmente.
+    espera e casa com DUAS contrapartes tardias em dias diferentes, ordem que
+    espera e sai sozinha, ordem D+0 que força saída e ainda assim casa com quem
+    já esperava, e duas ordens que chegam juntas e casam integralmente.
     """
     cenario = carregar_cenario(str(CENARIO_TEMPORAL))
 
     ciclos = executar_p0(cenario)
 
     previsao = [
-        # (dia, casado, residuo, direcao_residuo)
-        (4, "60", "40", Direcao.OUT),
-        (5, "0", "45", Direcao.IN),
-        (10, "0", "80", Direcao.OUT),
-        (11, "0", "20", Direcao.OUT),
-        (12, "0", "25", Direcao.IN),
-        (15, "50", "40", Direcao.IN),
-        (17, "0", "15", Direcao.OUT),
-        (18, "0", "35", Direcao.IN),
-        (20, "70", "0", Direcao.OUT),
-        (23, "0", "10", Direcao.OUT),
-        (25, "0", "55", Direcao.IN),
-        (28, "0", "5", Direcao.OUT),
+        # (dia, bruto_out, bruto_in, casado, residuo, direcao_residuo)
+        (4, "100", "60", "60", "0", Direcao.OUT),
+        (5, "40", "45", "40", "5", Direcao.IN),
+        (10, "80", "0", "0", "80", Direcao.OUT),
+        (11, "20", "0", "0", "20", Direcao.OUT),
+        (12, "0", "25", "0", "25", Direcao.IN),
+        (15, "50", "90", "50", "40", Direcao.IN),
+        (17, "15", "0", "0", "15", Direcao.OUT),
+        (18, "0", "35", "0", "35", Direcao.IN),
+        (20, "70", "70", "70", "0", Direcao.OUT),
+        (23, "10", "0", "0", "10", Direcao.OUT),
+        (25, "0", "55", "0", "55", Direcao.IN),
+        (28, "5", "0", "0", "5", Direcao.OUT),
     ]
 
     assert len(ciclos) == len(previsao)
-    for ciclo, (dia, casado, residuo, direcao_residuo) in zip(ciclos, previsao):
+    for ciclo, (dia, bruto_out, bruto_in, casado, residuo, direcao_residuo) in zip(
+        ciclos, previsao
+    ):
         assert ciclo.dia == dia
+        # bruto é SALDO PENDENTE, não valor original: no dia 5 o lado OUT vale 40
+        # (o que sobrou de a1), não os 100 com que a1 foi criada.
+        assert ciclo.bruto_out == Decimal(bruto_out)
+        assert ciclo.bruto_in == Decimal(bruto_in)
         assert ciclo.casado == Decimal(casado)
         assert ciclo.residuo == Decimal(residuo)
         if ciclo.residuo > 0:

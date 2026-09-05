@@ -5,46 +5,55 @@
 # vencendo (dia_limite == dia), nunca pela janela — assim dá pra prever o
 # resultado à mão, ordem por ordem, antes de rodar o motor.
 #
-# ⚠ ESTA PREVISÃO ESTÁ DESATUALIZADA — foi escrita sob a semântica antiga, em que o
-# vencimento de uma ordem fechava o LOTE INTEIRO e remetia todo o resíduo. Sob a
-# semântica corrigida o vencimento força a saída apenas da ordem que venceu, e o
-# excedente com folga fica aberto para casar depois. O teste que trava esta previsão
-# está marcado `xfail` em tests/test_netting.py.
+# O vencimento de uma ordem força a saída APENAS daquela ordem, nunca do lote: o
+# saldo de quem ainda tem folga permanece aberto e continua disponível para casar
+# nos dias seguintes. Por isso os brutos abaixo são SALDO PENDENTE no dia do
+# fechamento, e não o valor com que a ordem foi criada.
 #
-# Para destravar: refaça a previsão À MÃO, no papel, ordem por ordem, sob a semântica
-# nova — e só então rode o motor. Não copie o output: um resultado esperado escrito
-# depois de ver o output não testa nada.
+# PREVISÃO (escrita à mão, ciclo a ciclo, antes de rodar o motor — se o motor
+# discordar, um dos dois está errado, e a previsão tem precedência até que se
+# prove o contrário):
 #
-# PREVISÃO (escrita antes de rodar o motor — se o motor discordar, um dos dois
-# está errado):
-#
-#   dia  4: {a1 OUT 100, a2 IN 60}            -> casado  60, resíduo  40 OUT
-#     a1 é conhecida no dia 0 e ESPERA 4 dias até a2 chegar (dia 4, D+0) e casar
-#     parcialmente com ela. Caso "espera e casa com contraparte que chega depois".
-#   dia  5: {f1 IN 45}                        -> casado   0, resíduo  45 IN
-#   dia 10: {b1 OUT 80}                       -> casado   0, resíduo  80 OUT
+#                                     bruto out/in   casado   resíduo
+#   dia  4: {a1 OUT 100, a2 IN  60}      100 / 60       60      0
+#     a1 é conhecida no dia 0 e ESPERA 4 dias até a2 chegar (dia 4, D+0). Casa 60
+#     com ela; a2 sai zerada. Os 40 restantes de a1 NÃO são remetidos — a1 só
+#     vence no dia 10, então continua aberta. Caso "espera e casa com contraparte
+#     que chega depois".
+#   dia  5: {a1 OUT  40, f1 IN  45}       40 / 45       40      5 IN
+#     o saldo de a1 encontra uma SEGUNDA contraparte tardia e casa integralmente,
+#     zerando. f1 é D+0, então os 5 que sobram dela vencem hoje e saem.
+#     É aqui que a semântica antiga errava: ela remetia os 40 de a1 no dia 4 e
+#     depois mandava f1 inteira para fora no dia 5 (0 casado, 45 de resíduo).
+#   dia 10: {b1 OUT  80}                  80 /  0        0     80 OUT
 #     b1 é conhecida no dia 6 e ESPERA até seu próprio vencimento (dia 10) sem
 #     nenhuma contraparte aparecer. Caso "espera e não casa, sai sozinha".
-#   dia 11: {f2 OUT 20}                       -> casado   0, resíduo  20 OUT
-#   dia 12: {f3 IN 25}                        -> casado   0, resíduo  25 IN
-#   dia 15: {c1 OUT 50, c2 IN 90}             -> casado  50, resíduo  40 IN
+#   dia 11: {f2 OUT  20}                  20 /  0        0     20 OUT
+#   dia 12: {f3 IN   25}                   0 / 25        0     25 IN
+#   dia 15: {c1 OUT  50, c2 IN  90}       50 / 90       50     40 IN
 #     c1 é conhecida no dia 13 e ainda está esperando quando c2 chega no dia 15
 #     já vencendo no mesmo dia em que é conhecida (D+0 — "nunca pode esperar").
-#     c2 força o fechamento do ciclo e casa com o que c1 tinha deixado em aberto.
-#   dia 17: {f4 OUT 15}                       -> casado   0, resíduo  15 OUT
-#   dia 18: {f5 IN 35}                        -> casado   0, resíduo  35 IN
-#   dia 20: {d1 OUT 70, d2 IN 70}             -> casado  70, resíduo   0
+#     c2 força o fechamento, casa 50 com c1 e remete os 40 que sobram dela mesma.
+#   dia 17: {f4 OUT  15}                  15 /  0        0     15 OUT
+#   dia 18: {f5 IN   35}                   0 / 35        0     35 IN
+#   dia 20: {d1 OUT  70, d2 IN  70}       70 / 70       70      0
 #     d1 e d2 são conhecidas E vencem no mesmo dia (D+0 as duas) — chegam juntas
 #     e casam integralmente, resíduo zero.
-#   dia 23: {f6 OUT 10}                       -> casado   0, resíduo  10 OUT
-#   dia 25: {f7 IN 55}                        -> casado   0, resíduo  55 IN
-#   dia 28: {f8 OUT  5}                       -> casado   0, resíduo   5 OUT
+#   dia 23: {f6 OUT  10}                  10 /  0        0     10 OUT
+#   dia 25: {f7 IN   55}                   0 / 55        0     55 IN
+#   dia 28: {f8 OUT   5}                   5 /  0        0      5 OUT
 #
 # Total: 12 ciclos. Soma criada = soma executada = 730.
+#   casado   = 2 × (60 + 40 + 50 + 70) = 440 — as alocações CASADO existem nos
+#              DOIS lados (120 + 80 + 100 + 140), então o fator 2 já está embutido
+#   remetido = 5 + 80 + 20 + 25 + 40 + 15 + 35 + 10 + 55 + 5 = 290
+#   440 + 290 = 730, e a netabilidade é 440/730 = 60,27%.
+#
 # Os "f*" são ordens de preenchimento D+0 isoladas (chegam e vencem no mesmo
-# dia, sem contraparte), só para engrossar a amostra sem interferir nos quatro
-# casos exigidos acima — cada uma fecha seu próprio ciclo sozinha antes de a
-# próxima ordem relevante ser conhecida.
+# dia), só para engrossar a amostra sem interferir nos casos exigidos acima —
+# exceto f1, que sob a semântica corrigida deixou de ser inerte e virou a segunda
+# contraparte de a1. Cada uma fecha seu próprio ciclo antes de a próxima ordem
+# relevante ser conhecida.
 
 janela_dias: 100
 horizonte_dias: 30
