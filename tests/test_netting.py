@@ -320,6 +320,53 @@ def test_cenario_temporal_bate_com_a_previsao_escrita_no_yaml():
     assert total_criado == total_alocado == Decimal("730")
 
 
+def test_saida_do_p0_e_bit_a_bit_a_mesma_de_sempre():
+    """Caracterização: trava a saída COMPLETA do P0 em 108 células da grade.
+
+    Existe para proteger otimizações. `executar_p0` tem espaço grande para melhorar
+    desempenho, e toda melhoria é por definição um refactor: o resultado não pode
+    mudar em nenhum bit. Um digest sobre (dia, brutos, casado, resíduo, direção) de
+    cada ciclo mais cada `Alocacao` na ordem exata da tupla pega qualquer desvio,
+    inclusive reordenação — que é justamente o erro fácil de cometer ao trocar as
+    estruturas de dados, e que já mordeu este projeto uma vez.
+
+    Se este teste falhar, ou o refactor mudou o comportamento, ou a política mudou
+    de propósito. No segundo caso, recalcule o digest DE PROPÓSITO e diga no commit
+    o que mudou e por quê — nunca atualize o valor só para ficar verde.
+    """
+    import hashlib
+
+    from motor import mixes
+    from motor.varredura import PARAMETROS_VARREDURA, montar_pool_do_ponto
+
+    partes: list[str] = []
+    for nome in ("equilibrado", "retail_pesado", "corporativo_pesado", "psp_dominante"):
+        for n in (5, 20):
+            for seed in (1, 2, 3):
+                for w in (1, 7, 30):
+                    pool = montar_pool_do_ponto(mixes.TODOS[nome], n, 180, seed_base=seed)
+                    cenario = Cenario(
+                        ordens=pool,
+                        janela_dias=w,
+                        horizonte_dias=180,
+                        custo=PARAMETROS_VARREDURA,
+                    )
+                    for ciclo in executar_p0(cenario):
+                        partes.append(
+                            f"{ciclo.dia}|{ciclo.bruto_out}|{ciclo.bruto_in}"
+                            f"|{ciclo.casado}|{ciclo.residuo}"
+                            f"|{ciclo.direcao_residuo.value}"
+                        )
+                        for a in ciclo.alocacoes:
+                            partes.append(
+                                f"  {a.ordem_id}|{a.dia}|{a.valor_brl}|{a.tipo.value}"
+                            )
+
+    digest = hashlib.sha256("\n".join(partes).encode()).hexdigest()
+    assert len(partes) == 87455
+    assert digest == "179ab6ddfd1c8b21ded5d447bb4aaf4a7ff072e31d6c491ddb20e7b2a6244e25"
+
+
 def test_p0_nao_depende_da_ordem_de_entrada():
     """Determinismo bit a bit, inclusive a ordem da tupla de alocações.
 
