@@ -33,15 +33,21 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
+Atualizada em 2026-09-05, depois de mergear os PRs #11 a #15.
+
 | Branch | Situação | Dono |
 |---|---|---|
-| `main` | atrás de `fix/semantica-remessa-p0` por 2 commits (o PR #11 ainda não foi mergeado) | os dois |
-| `fix/semantica-remessa-p0` | **PR #11 aberto desde 2026-09-04**, aguardando revisão. É o MOT-11 | Felipe |
-| `netting/p1` | spike do P1, **NÃO MERGEAR** — dominado em netabilidade, ver 2026-09-04 | Felipe |
-| `geracao/arquetipos` | mergeada, 16 commits atrás da `main` | Gabriel |
-| `modelo/iof-por-finalidade` | mergeada, 6 atrás | Gabriel |
-| `modelo/seeds-e-finalidade-por-direcao` | mergeada, 3 atrás | Gabriel |
-| `varredura/grid-mix-janela` | mergeada, 10 atrás | Gabriel |
+| `main` | **em dia**: PRs #11 a #15 mergeados, 240 testes passando, zero xfail | os dois |
+| `netting/p1` | spike do P1, **NÃO MERGEAR** — dominado, e agora sabemos que a folga é zero em N ≥ 50 | Felipe |
+| `fix/semantica-remessa-p0` | PR #11, mergeada | Felipe |
+| `fix/previsao-temporal-e-colunas-csv` | PR #12, mergeada | Gabriel |
+| `feat/teto-e-eficiencia-no-csv` | PR #13, mergeada | Gabriel |
+| `feat/netting-incremental-no-csv` | PR #14, mergeada | Gabriel |
+| `perf/netting-sem-custo-quadratico` | PR #15, mergeada | Gabriel |
+| `geracao/arquetipos`, `modelo/*`, `varredura/grid-mix-janela` | mergeadas em 2026-09-04 | Gabriel |
+
+**Nenhuma branch está à frente da `main`.** Toda a auditoria de 2026-09-05 está
+integrada.
 
 ---
 
