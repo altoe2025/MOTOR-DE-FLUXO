@@ -45,6 +45,50 @@ Atualize esta tabela em todo push. A data é do último toque.
 
 ---
 
+## 2026-09-05 — Netting deixa de ser superlinear; a grade padrão volta a ser usável
+
+**Sintoma.** A grade padrão não terminava. Deixei rodando 45 minutos e matei sem
+resultado, apesar de o README prometer "~20 s" e o `__main__.py` "~2 min". O custo
+por ordem crescia com o tamanho da pool: 9 µs em N=10, 30 µs em N=200, 101 µs em
+N=1000.
+
+**Causa.** Três fontes de custo quadrático em `executar_p0`, todas de estrutura de
+dados e nenhuma de política:
+1. `abertas.remove(ordem)` dentro de um laço sobre `abertas` — `list.remove` é
+   O(n), o que dá O(n²) por ciclo fechado;
+2. `sorted(abertas)` três vezes por dia de fechamento, sobre a lista inteira;
+3. `any(o.dia_limite == dia for o in abertas)` todo dia, só para perguntar se
+   alguma ordem vence hoje — O(n) por dia mesmo em dia sem fechamento.
+
+**O que foi feito.**
+- `abertas` passa a ser mantida sempre ordenada por `_prioridade`, com
+  `bisect.insort` na entrada. Filtrar por direção preserva a ordem, então `out` e
+  `entrada` já saem canônicas sem nenhum `sorted`.
+- As ordens que sobram são acumuladas numa lista nova em vez de removidas uma a
+  uma. Como a varredura já é na ordem canônica, a lista nova sai ordenada.
+- Um dicionário `vencem_no_dia` conta quantas ordens abertas vencem em cada dia,
+  substituindo a varredura diária.
+- Antes de tocar no código, entrou
+  `test_saida_do_p0_e_bit_a_bit_a_mesma_de_sempre`: um digest SHA-256 sobre a
+  saída completa de 108 células da grade — dia, brutos, casado, resíduo, direção e
+  cada `Alocacao` na ordem exata da tupla. Verificado verde ANTES da mudança, e
+  segue verde depois. Suíte: 240 passando.
+- README e `__main__.py` corrigidos: os dois anunciavam tempos que nunca foram
+  verdade.
+
+**O que isso invalida.**
+- As duas afirmações de tempo na documentação estavam erradas por uma a duas
+  ordens de grandeza. Agora o número está medido: **a grade padrão completa,
+  400 células com até 1000 clientes em 365 dias, leva 7 min 42 s.**
+- Custo por ordem passa de 9→101 µs para **8→13 µs** — praticamente plano, ou
+  seja, o netting virou linear no tamanho da pool.
+- Nada mais. O resultado é bit a bit idêntico, e é isso que o digest garante.
+  **Se aquele teste falhar um dia, ou o refactor mudou o comportamento ou a
+  política mudou de propósito — no segundo caso, recalcule o digest DE PROPÓSITO e
+  explique no commit. Nunca atualize o valor só para ficar verde.**
+
+---
+
 ## 2026-09-05 — Netting incremental: separar o que o cliente faria sozinho
 
 **Sintoma.** Medindo a pendência (a), apareceu um número que muda a proposta do

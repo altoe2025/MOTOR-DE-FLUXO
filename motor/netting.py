@@ -39,6 +39,7 @@ Regra de importação: este módulo importa apenas `motor.dominio`. Nunca
 
 from __future__ import annotations
 
+from bisect import insort
 from decimal import Decimal
 
 from motor.dominio import Alocacao, Cenario, Ciclo, Direcao, Ordem, TipoAlocacao
@@ -56,22 +57,31 @@ def executar_p0(cenario: Cenario) -> tuple[Ciclo, ...]:
         por_dia_conhecida.setdefault(ordem.dia_conhecida, []).append(ordem)
 
     pendente: dict[str, Decimal] = {o.id: o.valor_brl for o in cenario.ordens}
+    # `abertas` é mantida SEMPRE ordenada por `_prioridade`, com `bisect.insort` na
+    # entrada. É o que permite filtrar por direção sem reordenar: um filtro preserva
+    # a ordem, então `out` e `entrada` já saem canônicas. Antes eram três `sorted`
+    # por dia de fechamento sobre a lista inteira.
     abertas: list[Ordem] = []
+    # Quantas ordens ainda abertas vencem em cada dia. Substitui varrer todas as
+    # abertas todo dia só para perguntar se alguma vence.
+    vencem_no_dia: dict[int, int] = {}
     ciclos: list[Ciclo] = []
     dia_ultimo_fechamento = -1
 
     for dia in range(cenario.horizonte_dias + 1):
-        abertas.extend(por_dia_conhecida.get(dia, []))
+        for ordem in por_dia_conhecida.get(dia, []):
+            insort(abertas, ordem, key=_prioridade)
+            vencem_no_dia[ordem.dia_limite] = vencem_no_dia.get(ordem.dia_limite, 0) + 1
 
-        vence_hoje = any(ordem.dia_limite == dia for ordem in abertas)
+        vence_hoje = vencem_no_dia.get(dia, 0) > 0
         janela_completa = (dia - dia_ultimo_fechamento) >= cenario.janela_dias
         fim_do_horizonte = dia == cenario.horizonte_dias
 
         if not abertas or not (vence_hoje or janela_completa or fim_do_horizonte):
             continue
 
-        out = sorted((o for o in abertas if o.direcao is Direcao.OUT), key=_prioridade)
-        entrada = sorted((o for o in abertas if o.direcao is Direcao.IN), key=_prioridade)
+        out = [o for o in abertas if o.direcao is Direcao.OUT]
+        entrada = [o for o in abertas if o.direcao is Direcao.IN]
 
         bruto_out = sum((pendente[o.id] for o in out), Decimal(0))
         bruto_in = sum((pendente[o.id] for o in entrada), Decimal(0))
@@ -92,11 +102,16 @@ def executar_p0(cenario: Cenario) -> tuple[Ciclo, ...]:
             assert restante == 0, "casado não coube na fila do próprio lado"
 
         residuo = Decimal(0)
-        # Percorrer na mesma prioridade do casamento, e não na ordem em que as
-        # ordens entraram em `abertas`: senão a ordem das alocações REMETIDO na
-        # tupla depende da ordem de entrada do cenário, e duas execuções com a
-        # mesma seed divergem em silêncio.
-        for ordem in sorted(abertas, key=_prioridade):
+        # `abertas` já está na prioridade do casamento — e tem que ser percorrida
+        # nela, não na ordem em que as ordens entraram no cenário: senão a ordem das
+        # alocações REMETIDO na tupla depende da ordem de entrada, e duas execuções
+        # com a mesma seed divergem em silêncio.
+        #
+        # As que sobram são acumuladas numa lista nova em vez de removidas uma a
+        # uma: `list.remove` é O(n) e, dentro deste laço, custava O(n²) por ciclo.
+        # Como a varredura é feita na ordem canônica, a lista nova já sai ordenada.
+        sobrevivem: list[Ordem] = []
+        for ordem in abertas:
             # o fim do horizonte drena o que sobrou: sem isso, uma ordem com
             # dia_limite além do horizonte sumiria e a conservação quebraria.
             venceu = ordem.dia_limite <= dia or fim_do_horizonte
@@ -107,7 +122,10 @@ def executar_p0(cenario: Cenario) -> tuple[Ciclo, ...]:
                 residuo += pendente[ordem.id]
                 pendente[ordem.id] = Decimal(0)
             if pendente[ordem.id] == 0:
-                abertas.remove(ordem)
+                vencem_no_dia[ordem.dia_limite] -= 1
+            else:
+                sobrevivem.append(ordem)
+        abertas = sobrevivem
 
         # Depois do casamento, um dos lados está zerado por construção — o resíduo
         # é sempre de um lado só, então a direção continua bem definida.

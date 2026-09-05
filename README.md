@@ -26,7 +26,8 @@ make varredura  # python -m motor varredura --saida varredura.csv
 A varredura roda a grade (mix de arquétipos × N de clientes × W de janela) e escreve um
 CSV com a decomposição de custo de cada célula — é ela que responde "com que mistura de
 cliente o netting compensa e qual parâmetro domina", não uma simulação solta. A grade
-padrão sai em ~20 s. Para recortá-la:
+padrão (400 células, até 1000 clientes em 365 dias) sai em ~8 min. Para recortá-la — e
+para a maioria das perguntas o recorte basta, já que o eixo W está degenerado:
 
 ```bash
 python -m motor varredura --saida g.csv --mixes psp_dominante --n 50,200 --w 1,7

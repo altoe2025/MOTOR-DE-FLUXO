@@ -39,7 +39,7 @@ MIXES_PADRAO = ("equilibrado", "retail_pesado", "corporativo_pesado", "psp_domin
 VALORES_N_PADRAO = (10, 50, 200, 1000)
 VALORES_W_PADRAO = (1, 3, 7, 14, 30)
 # Cinco seeds por célula: o suficiente para a faixa aparecer sem a grade padrão
-# passar de ~2 min. Uma seed só não é resultado, é uma amostra — em N baixo a
+# passar de ~8 min. Uma seed só não é resultado, é uma amostra — em N baixo a
 # dispersão entre seeds é maior que a diferença entre mixes.
 VALORES_SEED_PADRAO = (1, 2, 3, 4, 5)
 HORIZONTE_PADRAO = 365
