@@ -331,6 +331,24 @@ def test_montar_ponto_deriva_o_volume_bruto_do_cenario():
     assert ponto.volume_bruto_brl == sum(ordem.valor_brl for ordem in cenario.ordens)
 
 
+def test_as_colunas_de_volume_do_ponto_fecham_entre_si():
+    """`volume_casado_brl + volume_residuo_brl == volume_bruto_brl`, em toda célula.
+
+    As três colunas precisam estar na MESMA unidade. `ciclo.casado` é grandeza de
+    uma perna (o mínimo entre os dois lados), mas o que deixou de atravessar são as
+    DUAS pernas — os reais que ficaram no Brasil e a moeda que ficou lá fora. O
+    bruto conta as duas, então o casado também tem que contar.
+
+    Sem isso, quem calcula a taxa de netting a partir do CSV
+    (`volume_casado_brl / volume_bruto_brl`) obtém metade do que a coluna
+    `taxa_netabilidade` da mesma linha informa.
+    """
+    for ponto in _varredura_pequena():
+        assert ponto.volume_casado_brl + ponto.volume_residuo_brl == ponto.volume_bruto_brl
+        if ponto.volume_bruto_brl:
+            assert ponto.volume_casado_brl / ponto.volume_bruto_brl == ponto.taxa_netabilidade
+
+
 def test_varredura_registra_os_parametros_do_ponto():
     p = _varredura_pequena()[0]
     assert p.horizonte_dias == HORIZONTE_CURTO
