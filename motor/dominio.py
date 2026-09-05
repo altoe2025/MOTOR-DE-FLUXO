@@ -21,6 +21,31 @@ class Direcao(Enum):
     IN = "IN"  # tem moeda fora, precisa de reais no Brasil
 
 
+class TipoAlocacao(Enum):
+    CASADO = "CASADO"  # não atravessou a fronteira; ficou dentro da CNR
+    REMETIDO = "REMETIDO"  # atravessou de fato; é o que paga IOF de remessa
+
+
+@dataclass(frozen=True)
+class Alocacao:
+    """Uma parcela de uma ordem, resolvida num dia específico.
+
+    A soma das alocações de uma ordem é sempre igual ao seu valor_brl. Existe
+    porque uma ordem pode ser coberta em tranches: 4 no dia 3, 3 no dia 7, e 3
+    remetidos no vencimento. Sem esta entidade não há "dia_executada" único, e o
+    custo de espera — o componente que impede o simulador de ser otimista por
+    construção — fica indefinido.
+    """
+
+    ordem_id: str
+    dia: int
+    valor_brl: Decimal
+    tipo: TipoAlocacao
+
+    def __post_init__(self) -> None:
+        assert self.valor_brl > 0
+
+
 @dataclass(frozen=True)
 class Ordem:
     id: str
@@ -107,12 +132,26 @@ class Arquetipo:
 
 @dataclass(frozen=True)
 class Ciclo:
+    """Um fechamento de lote: o resumo agregado do dia mais as parcelas resolvidas.
+
+    `bruto_out`/`bruto_in` são o saldo PENDENTE de cada lado no momento do
+    fechamento — não o valor original das ordens, que pode já ter sido coberto em
+    ciclos anteriores. `residuo` é o que de fato atravessou a fronteira neste
+    ciclo (as ordens que venceram hoje com saldo em aberto), e não `abs(bruto_out
+    - bruto_in)`: sob a semântica corrigida o excedente de um lado permanece
+    aberto se ainda tiver folga, em vez de ser remetido.
+
+    Uma ordem pode aparecer em vários ciclos, com uma `Alocacao` em cada. O
+    invariante de conservação vive nas alocações: a soma das alocações de um
+    `ordem_id`, em todos os ciclos, é exatamente o `valor_brl` da ordem.
+    """
+
     dia: int
-    ordens: tuple[Ordem, ...]
+    alocacoes: tuple[Alocacao, ...]
     bruto_out: Decimal
     bruto_in: Decimal
-    casado: Decimal  # min(bruto_out, bruto_in)
-    residuo: Decimal  # abs(bruto_out - bruto_in)
+    casado: Decimal  # min(bruto_out, bruto_in) sobre os saldos pendentes
+    residuo: Decimal  # o que foi remetido neste ciclo
     direcao_residuo: Direcao
 
 

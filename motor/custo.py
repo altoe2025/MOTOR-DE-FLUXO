@@ -9,6 +9,19 @@ importação e de exportação tem tratamento próprio, então duas alíquotas c
 por direção não bastam. Cenários que não declararem tabela caem em
 `iof_out`/`iof_in` e se comportam como antes desse campo existir.
 
+## Quem paga o IOF do resíduo
+
+Antes das `Alocacao` o resíduo tinha direção mas não dono: o P0 fechava o lote e
+não dizia quais ordens especificamente atravessaram, então o resíduo pagava a
+**média pro-rata** do seu lado. Agora o motor sabe — cada `Alocacao(REMETIDO)`
+aponta para uma ordem — e cobra a alíquota daquela ordem.
+
+Isso NÃO é planejamento tributário embutido: quem decide a ordem de cobertura é o
+EDF, por `dia_limite`, um critério operacional. A alíquota nunca entra no
+critério. Se algum dia entrar — casar primeiro as ordens caras para deixar as
+baratas cruzarem — aí sim vira otimização fiscal, e não entra sem parecer
+jurídico, mesmo espírito da regra do art. 22 gravada em netting.py.
+
 Regra de importação: este módulo importa apenas motor.dominio. Nunca motor.netting
 — recebe Ciclo já pronto como argumento.
 """
@@ -19,7 +32,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import Iterable
 
-from motor.dominio import Cenario, Ciclo, Direcao, Ordem, ParametrosCusto
+from motor.dominio import Cenario, Ciclo, Direcao, Ordem, ParametrosCusto, TipoAlocacao
 
 _DIAS_NO_ANO = Decimal(365)
 _BPS = Decimal(10000)
@@ -45,34 +58,6 @@ def aliquota_iof(custo: ParametrosCusto, finalidade: str, direcao: Direcao) -> D
     """
     padrao = custo.iof_out if direcao is Direcao.OUT else custo.iof_in
     return custo.iof_por_finalidade.get((finalidade, direcao), padrao)
-
-
-def _aliquota_media_do_lado(
-    custo: ParametrosCusto, ordens: Iterable[Ordem], direcao: Direcao
-) -> Decimal:
-    """Alíquota média do lado `direcao` de um ciclo, ponderada por volume.
-
-    O resíduo de um ciclo tem direção mas não tem finalidade única — ele é o
-    excedente de um lado que mistura várias finalidades, e o P0 não diz quais
-    ordens especificamente atravessaram a fronteira. Adotamos **pro-rata**: o
-    resíduo é uma fatia proporcional do lado dominante, então paga a média desse
-    lado.
-
-    É a hipótese neutra, e isso é deliberado. Casar primeiro as ordens de alíquota
-    alta e deixar as baratas cruzarem aumentaria a economia declarada, mas seria
-    planejamento tributário embutido no motor — não entra sem parecer jurídico,
-    mesmo espírito da regra do art. 22 gravada em netting.py.
-    """
-    do_lado = [ordem for ordem in ordens if ordem.direcao is direcao]
-    volume = sum((ordem.valor_brl for ordem in do_lado), Decimal(0))
-    if volume == 0:
-        return custo.iof_out if direcao is Direcao.OUT else custo.iof_in
-
-    ponderado = sum(
-        (ordem.valor_brl * aliquota_iof(custo, ordem.finalidade, direcao) for ordem in do_lado),
-        Decimal(0),
-    )
-    return ponderado / volume
 
 
 def _custo_espera(
@@ -110,13 +95,17 @@ def custo_baseline(cenario: Cenario) -> Custos:
 
 
 def custo_netado(ciclos: tuple[Ciclo, ...], cenario: Cenario) -> Custos:
-    """IOF só sobre o resíduo de cada ciclo; carry sobre as duas pernas do casado
-    (o valor que ficou de cada lado dentro da CNR); espera de cada ordem até o dia
-    em que o ciclo em que ela participou fechou.
+    """Preço de cada `Alocacao`: o que atravessou paga IOF, o que ficou na CNR paga
+    carry, e toda parcela paga a espera do dia em que ELA foi resolvida.
+
+    A espera é somada por alocação porque uma ordem coberta em tranches não tem um
+    `dia_executada` único. Somar pelo dia do ciclo em que a ordem "participou"
+    contaria a mesma ordem várias vezes agora que ela pode aparecer em vários.
 
     Função pura.
     """
     custo = cenario.custo
+    ordem_por_id = {ordem.id: ordem for ordem in cenario.ordens}
     iof = Decimal(0)
     carry = Decimal(0)
     spread = Decimal(0)
@@ -124,14 +113,30 @@ def custo_netado(ciclos: tuple[Ciclo, ...], cenario: Cenario) -> Custos:
     espera = Decimal(0)
 
     for ciclo in ciclos:
+        for alocacao in ciclo.alocacoes:
+            ordem = ordem_por_id[alocacao.ordem_id]
+
+            if alocacao.tipo is TipoAlocacao.REMETIDO:
+                iof += alocacao.valor_brl * aliquota_iof(
+                    custo, ordem.finalidade, ordem.direcao
+                )
+            else:
+                carry += alocacao.valor_brl * custo.carry_cnr
+
+            if custo.custo_oportunidade_aa != 0:
+                dias_parado = Decimal(alocacao.dia - ordem.dia_conhecida)
+                espera += (
+                    alocacao.valor_brl
+                    * dias_parado
+                    * custo.custo_oportunidade_aa
+                    / _DIAS_NO_ANO
+                )
+
+        # O resíduo de um ciclo sai numa remessa agregada só — daí um custo fixo
+        # por ciclo, e não um por ordem que atravessou.
         if ciclo.residuo > 0:
-            taxa_iof = _aliquota_media_do_lado(custo, ciclo.ordens, ciclo.direcao_residuo)
-            iof += ciclo.residuo * taxa_iof
             spread += ciclo.residuo * custo.spread_rail_bps / _BPS
             fixo += custo.custo_fixo_remessa
-
-        carry += ciclo.casado * 2 * custo.carry_cnr
-        espera += _custo_espera(ciclo.ordens, ciclo.dia, custo.custo_oportunidade_aa)
 
     total = iof + carry + spread + espera + fixo
     return Custos(iof=iof, carry=carry, spread=spread, espera=espera, fixo=fixo, total=total)

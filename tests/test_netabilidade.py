@@ -1,20 +1,27 @@
 r"""A taxa de netabilidade é uma FRAÇÃO DE VOLUME, e por isso tem que particionar.
 
-O volume bruto de um ciclo (`bruto_out + bruto_in`) se parte em exatamente duas
-fatias, sem sobra:
+A partição vive nas ALOCAÇÕES, que cobrem o volume criado exatamente uma vez:
 
-    bruto_out + bruto_in  ==  2 * casado  +  residuo
-                              \_______/     \_____/
-                              não cruzou     cruzou
+    Σ CASADO  +  Σ REMETIDO  ==  Σ valor_brl
+    \______/     \________/
+    não cruzou     cruzou
 
 `casado` é grandeza de UMA perna (é `min(out, in)` — o tamanho do casamento,
-contado uma vez). O volume que deixou de cruzar a fronteira são as DUAS pernas:
-os reais que ficaram no Brasil e a moeda que ficou lá fora.
+contado uma vez), mas as alocações CASADO existem nos DOIS lados: os reais que
+ficaram no Brasil e a moeda que ficou lá fora.
+
+A identidade por ciclo `bruto_out + bruto_in == 2*casado + residuo` só vale quando
+tudo que estava aberto se resolve naquele mesmo dia — é o caso dos cenários D+0
+abaixo. Fora disso ela NÃO vale: sob a semântica corrigida o excedente de um lado
+permanece aberto em vez de ser remetido, e o mesmo saldo reaparece no ciclo
+seguinte. Somar os brutos dos ciclos infla o denominador; ver
+`test_cobertura_em_tranches_nao_infla_o_denominador`.
 
 Os testes abaixo travam a partição, não o valor. Fixar "58,042%" pegaria uma
 regressão específica; exigir que as duas fatias somem 100% pega a classe inteira
-do erro — que foi exatamente o que aconteceu: numerador de uma perna dividido por
-denominador de duas.
+do erro — que foi exatamente o que aconteceu duas vezes: primeiro numerador de uma
+perna dividido por denominador de duas, depois denominador contando a mesma ordem
+uma vez por ciclo.
 """
 
 from decimal import Decimal
@@ -91,3 +98,24 @@ def test_identidade_de_volume_em_todo_ciclo():
 def test_taxa_continua_entre_zero_e_um():
     r = _simular(_ordem("a", Direcao.OUT, "1000000"), _ordem("b", Direcao.IN, "3"))
     assert Decimal(0) <= r.taxa_netabilidade <= Decimal(1)
+
+
+def test_cobertura_em_tranches_nao_infla_o_denominador():
+    """A/B/C: A (OUT 10) é coberta 6 no dia 5 e 4 no dia 8. Nada atravessa a
+    fronteira, então a netabilidade é 100%.
+
+    Somar `bruto_out + bruto_in` por ciclo daria 83,3%: A ainda tinha 10 pendentes
+    no ciclo do dia 5 e 4 no do dia 8, e seria contada duas vezes no denominador.
+    O denominador honesto é o volume CRIADO, que é o que as alocações somam.
+    """
+    ordens = (
+        Ordem("a", "cliente-a", Direcao.OUT, Decimal("10"), 0, 8, True, "x"),
+        Ordem("b", "cliente-b", Direcao.IN, Decimal("6"), 3, 5, True, "x"),
+        Ordem("c", "cliente-c", Direcao.IN, Decimal("4"), 6, 20, True, "x"),
+    )
+    resultado = simular(
+        Cenario(ordens=ordens, janela_dias=100, horizonte_dias=20, custo=CUSTO)
+    )
+
+    assert sum(c.residuo for c in resultado.ciclos) == Decimal("0")
+    assert resultado.taxa_netabilidade == Decimal(1)

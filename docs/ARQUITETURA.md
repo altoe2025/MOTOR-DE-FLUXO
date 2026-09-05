@@ -4,7 +4,7 @@
 
 ```
 motor/dominio.py      entidades imutáveis (Direcao, Ordem, ParametrosCusto,
-                       Cenario, Ciclo, Arquetipo) + carregar_cenario(path)
+                       Cenario, Alocacao, Ciclo, Arquetipo) + carregar_cenario(path)
                        ↑              ↑
 motor/netting.py ------+              +------ motor/custo.py
   (casamento OUT/IN                     (IOF, carry CNR, custo de
@@ -36,10 +36,34 @@ faz dele um contrato neutro que as duas camadas leem.
 
 ## Política P0 (etapa atual)
 
-Janela fixa de `janela_dias` dias: todas as ordens com `dia_conhecida` dentro da janela
-são casadas de uma vez (`casado = min(bruto_out, bruto_in)`), e o resíduo
-(`abs(bruto_out - bruto_in)`) segue como remessa única na direção que sobrou. Nesta
-etapa o corredor é mono-moeda (USD).
+Janela fixa de `janela_dias` dias: o lote fecha a cada `janela_dias`, ou quando alguma
+ordem aberta vence, ou no fim do horizonte. Ao fechar, casa `min(pendente_out,
+pendente_in)` cobrindo cada lado em ordem **EDF** (`(dia_limite, id)`).
+
+O que sobra **permanece aberto** e só é remetido quando a ordem atinge o próprio
+`dia_limite`. O vencimento de uma ordem força a saída apenas daquela ordem, nunca do
+lote inteiro. Nesta etapa o corredor é mono-moeda (USD).
+
+> Remeter o lote inteiro no vencimento de uma ordem qualquer era um artefato do
+> modelo, não uma escolha de política: arrastava para a remessa ordens que ainda
+> tinham dias de folga. Custava ~33 pontos de netabilidade (42,1% → 75,3% num
+> diagnóstico de 200 cenários com buffers heterogêneos). Não reintroduza.
+
+## `Alocacao`: a granularidade em que a conservação vive
+
+Cobertura parcial existe: uma ordem de 10 pode ser coberta em 6 no dia 5 e 4 no dia 8.
+Isso quebra dois pressupostos do desenho original — não há `dia_executada` único (a
+espera fica indefinida), e a mesma ordem aparece em vários `Ciclo`.
+
+`Alocacao(ordem_id, dia, valor_brl, tipo)` é a parcela de uma ordem resolvida num dia,
+com `tipo ∈ {CASADO, REMETIDO}`. O invariante é:
+
+    Σ alocações de um ordem_id, em todos os ciclos  ==  valor_brl da ordem
+
+Isso **substitui** "nenhuma ordem aparece em dois ciclos", que deixou de ser verdadeiro.
+Toda métrica de volume (netabilidade inclusive) se soma pelas alocações, nunca pelos
+`bruto_out`/`bruto_in` dos ciclos — somar os brutos conta o mesmo saldo pendente uma vez
+por ciclo e infla o denominador.
 
 ## Status de implementação
 

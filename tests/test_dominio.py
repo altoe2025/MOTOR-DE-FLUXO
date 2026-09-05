@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from motor.dominio import Arquetipo, Direcao, Ordem, carregar_cenario
+from motor.dominio import Alocacao, Arquetipo, Direcao, Ordem, TipoAlocacao, carregar_cenario
 
 CENARIO_EXEMPLO = Path(__file__).parent.parent / "motor" / "cenarios" / "exemplo_amanda.yaml"
 
@@ -53,6 +53,22 @@ def test_ordem_rejeita_dia_limite_anterior_a_dia_conhecida():
             eh_efx=False,
             finalidade="TODO",
         )
+
+
+def test_alocacao_guarda_a_parcela_resolvida_num_dia():
+    alocacao = Alocacao(
+        ordem_id="o1", dia=3, valor_brl=Decimal("40"), tipo=TipoAlocacao.CASADO
+    )
+
+    assert alocacao.ordem_id == "o1"
+    assert alocacao.dia == 3
+    assert alocacao.valor_brl == Decimal("40")
+    assert alocacao.tipo is TipoAlocacao.CASADO
+
+
+def test_alocacao_rejeita_valor_nao_positivo():
+    with pytest.raises(AssertionError):
+        Alocacao(ordem_id="o1", dia=0, valor_brl=Decimal("0"), tipo=TipoAlocacao.REMETIDO)
 
 
 def _arquetipo_valido(**overrides) -> Arquetipo:
