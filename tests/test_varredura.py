@@ -17,7 +17,7 @@ from pathlib import Path
 import pytest
 
 from motor import arquetipos, mixes
-from motor.dominio import Cenario, carregar_cenario
+from motor.dominio import Cenario, Direcao, Ordem, carregar_cenario
 from motor.simulacao import simular
 from motor.varredura import (
     PARAMETROS_VARREDURA,
@@ -46,6 +46,33 @@ def _varredura_pequena():
         horizonte_dias=HORIZONTE_CURTO,
         custo=PARAMETROS_VARREDURA,
     )
+
+
+def _pontos_com_pool():
+    """Os mesmos pontos de `_varredura_pequena`, cada um com a pool que o gerou.
+
+    `rodar_varredura` não devolve a pool, e o teto é propriedade da pool — então
+    aqui a grade é remontada com as mesmas chamadas puras que ela usa.
+    """
+    for nome_mix, mix in MIXES_DE_TESTE.items():
+        for n in VALORES_N:
+            for seed in VALORES_SEED:
+                pool = montar_pool_do_ponto(mix, n, HORIZONTE_CURTO, seed_base=seed)
+                if not pool:
+                    continue
+                for w in VALORES_W:
+                    cenario = Cenario(
+                        ordens=pool,
+                        janela_dias=w,
+                        horizonte_dias=HORIZONTE_CURTO,
+                        custo=PARAMETROS_VARREDURA,
+                    )
+                    yield montar_ponto(
+                        nome_mix=nome_mix,
+                        n_clientes=n,
+                        cenario=cenario,
+                        seed_base=seed,
+                    ), pool
 
 
 # ---------------------------------------------------------------- especificação
@@ -347,6 +374,76 @@ def test_as_colunas_de_volume_do_ponto_fecham_entre_si():
         assert ponto.volume_casado_brl + ponto.volume_residuo_brl == ponto.volume_bruto_brl
         if ponto.volume_bruto_brl:
             assert ponto.volume_casado_brl / ponto.volume_bruto_brl == ponto.taxa_netabilidade
+
+
+def test_teto_e_a_netabilidade_maxima_que_a_pool_permite():
+    """`teto_netabilidade == 1 − |OUT−IN| / (OUT+IN)`, sobre os valores das ordens.
+
+    É o melhor que QUALQUER política poderia fazer nesta pool, porque a soma dos
+    resíduos nunca fica abaixo do desbalanço total entre os dois lados. Vários
+    ciclos só podem piorar em relação a um ciclo único que visse a pool inteira.
+    """
+    for ponto, pool in _pontos_com_pool():
+        bruto_out = sum(
+            (o.valor_brl for o in pool if o.direcao is Direcao.OUT), Decimal(0)
+        )
+        bruto_in = sum((o.valor_brl for o in pool if o.direcao is Direcao.IN), Decimal(0))
+        total = bruto_out + bruto_in
+        esperado = 1 - abs(bruto_out - bruto_in) / total if total else Decimal(0)
+        assert ponto.teto_netabilidade == esperado
+
+
+def test_netabilidade_nunca_ultrapassa_o_teto_da_pool():
+    """Se isto quebrar, o motor está contando volume casado que não existe."""
+    for ponto, _pool in _pontos_com_pool():
+        assert ponto.taxa_netabilidade <= ponto.teto_netabilidade
+
+
+def test_eficiencia_e_quanto_da_netabilidade_possivel_a_politica_extraiu():
+    """A coluna que separa "a carteira é boa" de "a política é boa".
+
+    Sem ela, uma célula com netabilidade alta é ambígua: pode ser uma carteira
+    naturalmente equilibrada, ou uma política que aproveitou bem uma carteira
+    ruim. São conclusões opostas para o produto.
+    """
+    for ponto, _pool in _pontos_com_pool():
+        if ponto.teto_netabilidade:
+            assert ponto.eficiencia_vs_teto == (
+                ponto.taxa_netabilidade / ponto.teto_netabilidade
+            )
+        else:
+            assert ponto.eficiencia_vs_teto == Decimal(0)
+
+
+def test_pool_perfeitamente_equilibrada_tem_teto_um():
+    cenario = carregar_cenario(str(CENARIO_AMANDA))
+    equilibrada = tuple(
+        o for o in cenario.ordens if o.direcao is Direcao.OUT
+    ) + tuple(o for o in cenario.ordens if o.direcao is Direcao.IN)
+    bruto_out = sum(
+        (o.valor_brl for o in equilibrada if o.direcao is Direcao.OUT), Decimal(0)
+    )
+    bruto_in = sum(
+        (o.valor_brl for o in equilibrada if o.direcao is Direcao.IN), Decimal(0)
+    )
+    # o exemplo da Amanda é desbalanceado de propósito; construo o espelho
+    espelho = Ordem(
+        id="espelho",
+        cliente_id="espelho",
+        direcao=Direcao.IN,
+        valor_brl=bruto_out - bruto_in,
+        dia_conhecida=0,
+        dia_limite=0,
+        eh_efx=False,
+        finalidade="x",
+    )
+    balanceado = dataclasses.replace(cenario, ordens=equilibrada + (espelho,))
+    ponto = montar_ponto(
+        nome_mix="balanceado", n_clientes=1, cenario=balanceado, seed_base=0
+    )
+    assert ponto.teto_netabilidade == Decimal(1)
+    assert ponto.taxa_netabilidade == Decimal(1)
+    assert ponto.eficiencia_vs_teto == Decimal(1)
 
 
 def test_varredura_registra_os_parametros_do_ponto():

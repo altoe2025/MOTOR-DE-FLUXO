@@ -54,6 +54,8 @@ def _ponto_falso(nome_mix: str, economia_pct: str) -> PontoVarredura:
         volume_casado_brl=zero,
         volume_residuo_brl=zero,
         taxa_netabilidade=zero,
+        teto_netabilidade=zero,
+        eficiencia_vs_teto=zero,
         baseline_total_brl=Decimal(100),
         baseline_iof_brl=zero,
         baseline_carry_brl=zero,
@@ -80,6 +82,35 @@ def test_uma_linha_por_celula_independente_do_numero_de_seeds():
 def test_registra_quantas_seeds_entraram_na_celula():
     for resumo in resumir(_grade()):
         assert resumo.n_seeds == len(VALORES_SEED)
+
+
+def test_resumo_carrega_o_teto_e_a_eficiencia_medianos():
+    """O CSV resumido é o que as pessoas leem; é nele que a distinção precisa estar.
+
+    Sem `eficiencia_vs_teto_p50` ali, comparar duas células por netabilidade não
+    diz se a diferença veio da carteira ou da política.
+    """
+    grade = _grade()
+    for resumo in resumir(grade):
+        do_grupo = [
+            p
+            for p in grade
+            if (p.nome_mix, p.n_clientes, p.janela_dias)
+            == (resumo.nome_mix, resumo.n_clientes, resumo.janela_dias)
+        ]
+        tetos = sorted(p.teto_netabilidade for p in do_grupo)
+        eficiencias = sorted(p.eficiencia_vs_teto for p in do_grupo)
+        meio = len(tetos) // 2
+        esperado_teto = (
+            tetos[meio] if len(tetos) % 2 else (tetos[meio - 1] + tetos[meio]) / 2
+        )
+        esperado_ef = (
+            eficiencias[meio]
+            if len(eficiencias) % 2
+            else (eficiencias[meio - 1] + eficiencias[meio]) / 2
+        )
+        assert resumo.teto_netabilidade_p50 == esperado_teto
+        assert resumo.eficiencia_vs_teto_p50 == esperado_ef
 
 
 def test_nao_mistura_celulas_diferentes():

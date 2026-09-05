@@ -140,6 +140,15 @@ def _varredura(argv: list[str]) -> int:
             f"(faixa {melhor.economia_pct_min:.1%}–{melhor.economia_pct_max:.1%} "
             f"em {melhor.n_seeds} seeds) em N={melhor.n_clientes} W={melhor.janela_dias}"
         )
+        # Sem a eficiência ao lado, netabilidade alta é ambígua: pode ser carteira
+        # equilibrada ou política boa numa carteira ruim. O teto separa as duas.
+        # Só caracteres do cp1252: o console do Windows é a saída padrão deste
+        # projeto, e uma seta unicode derruba a CLI inteira com UnicodeEncodeError.
+        print(
+            f"      netabilidade {melhor.taxa_netabilidade_p50:.1%} "
+            f"de um teto de {melhor.teto_netabilidade_p50:.1%}; "
+            f"a política extraiu {melhor.eficiencia_vs_teto_p50:.1%} do possível"
+        )
 
     return 0
 
