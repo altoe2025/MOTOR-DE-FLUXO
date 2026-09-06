@@ -1,0 +1,27 @@
+# Caso 1 — netting total no mesmo dia.
+#
+# A (OUT 100) financia B (IN 40) e C (IN 60) por completo, sem sobrar nada.
+# B e C têm o mesmo dia_limite, então o desempate é por id — B entra antes de C
+# na fila. É o caso mais simples possível: serve só para confirmar que o motor
+# soma os dois lados e fecha em zero resíduo quando bruto_out == bruto_in.
+#
+# PREVISÃO:
+#   dia 0: bruto_out 100 / bruto_in 100 (40+60) -> casado 100, resíduo 0
+#     alocações: A CASADO 100 | B CASADO 40 | C CASADO 60
+
+janela_dias: 1
+horizonte_dias: 1
+
+custo:
+  iof_out: "0.035"
+  iof_in: "0.0038"
+  carry_cnr: "0.0004"
+  spread_rail_bps: "0"
+  custo_fixo_remessa: "0"
+  custo_oportunidade_aa: "0"
+  ptax: "5.40"
+
+ordens:
+  - { id: "A", cliente_id: "cliente-A", direcao: "OUT", valor_brl: "100", dia_conhecida: 0, dia_limite: 0, eh_efx: false, finalidade: "x" }
+  - { id: "B", cliente_id: "cliente-B", direcao: "IN",  valor_brl: "40",  dia_conhecida: 0, dia_limite: 0, eh_efx: false, finalidade: "x" }
+  - { id: "C", cliente_id: "cliente-C", direcao: "IN",  valor_brl: "60",  dia_conhecida: 0, dia_limite: 0, eh_efx: false, finalidade: "x" }

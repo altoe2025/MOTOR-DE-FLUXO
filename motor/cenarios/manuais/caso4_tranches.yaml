@@ -1,0 +1,37 @@
+# Caso 4 — a mesma ordem coberta em tranches, em três dias diferentes.
+#
+# A (OUT 100) tem folga até o dia 8. B e C chegam já vencendo (D+0) em dias
+# diferentes e vão mordendo o saldo de A aos poucos. No fim, A só teve 70%
+# casado ao longo do caminho; o resto (30) é remetido quando ELA vence — nunca
+# antes, mesmo com B e C já tendo saído de cena.
+#
+# PREVISÃO (saldo pendente de A entre parênteses):
+#   dia 3 (B vence, D+0): abertas = {A(100), B(30)}
+#     bruto_out 100 / bruto_in 30 -> casado 30, resíduo 0
+#     alocações: A CASADO 30 (pendente 70) | B CASADO 30 (zera, sai)
+#   dia 6 (C vence, D+0): abertas = {A(70), C(40)}
+#     bruto_out 70 / bruto_in 40 -> casado 40, resíduo 0
+#     alocações: A CASADO 40 (pendente 30) | C CASADO 40 (zera, sai)
+#   dia 8 (A vence, sozinha): abertas = {A(30)}
+#     bruto_out 30 / bruto_in 0 -> casado 0, resíduo 30 OUT
+#     alocações: A REMETIDO 30
+#
+# Conservação de A: 30 (CASADO dia 3) + 40 (CASADO dia 6) + 30 (REMETIDO dia 8)
+# = 100 = valor_brl de A. Três Alocacao para uma única Ordem.
+
+janela_dias: 100
+horizonte_dias: 8
+
+custo:
+  iof_out: "0.035"
+  iof_in: "0.0038"
+  carry_cnr: "0.0004"
+  spread_rail_bps: "0"
+  custo_fixo_remessa: "0"
+  custo_oportunidade_aa: "0"
+  ptax: "5.40"
+
+ordens:
+  - { id: "A", cliente_id: "cliente-A", direcao: "OUT", valor_brl: "100", dia_conhecida: 0, dia_limite: 8, eh_efx: false, finalidade: "x" }
+  - { id: "B", cliente_id: "cliente-B", direcao: "IN",  valor_brl: "30",  dia_conhecida: 3, dia_limite: 3, eh_efx: false, finalidade: "x" }
+  - { id: "C", cliente_id: "cliente-C", direcao: "IN",  valor_brl: "40",  dia_conhecida: 6, dia_limite: 6, eh_efx: false, finalidade: "x" }

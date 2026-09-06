@@ -1,0 +1,38 @@
+# Caso 5 — fechamento só por janela, incluindo ciclos "vazios".
+#
+# A (OUT 50) e B (IN 20) têm folga enorme (dia_limite 10); só a janela
+# (janela_dias=3) força os fechamentos. Depois que B é consumida no dia 2,
+# sobra só A do lado OUT — e a janela continua fechando ciclo a cada 3 dias
+# mesmo sem ninguém para casar do outro lado. São ciclos "vazios": casado=0 E
+# resíduo=0, só existem porque o relógio da janela venceu. Isso é esperado
+# pela regra (dia - dia_ultimo_fechamento >= janela_dias dispara o fechamento
+# independente de haver o que fazer) — vale conferir se é isso mesmo que você
+# quer, ou se um ciclo sem nenhuma alocação deveria nem aparecer na timeline.
+#
+# PREVISÃO:
+#   dia 2 (2-(-1)=3): abertas = {A(50), B(20)}
+#     bruto_out 50 / bruto_in 20 -> casado 20, resíduo 0
+#     alocações: A CASADO 20 (pendente 30) | B CASADO 20 (zera, sai)
+#   dia 5 (5-2=3): abertas = {A(30)} — só um lado, ninguém vence
+#     bruto_out 30 / bruto_in 0 -> casado 0, resíduo 0 (ciclo vazio)
+#   dia 8 (8-5=3): abertas = {A(30)} — de novo ninguém vence
+#     bruto_out 30 / bruto_in 0 -> casado 0, resíduo 0 (ciclo vazio)
+#   dia 10 (fim do horizonte E dia_limite de A): abertas = {A(30)}
+#     bruto_out 30 / bruto_in 0 -> casado 0, resíduo 30 OUT
+#     alocações: A REMETIDO 30
+
+janela_dias: 3
+horizonte_dias: 10
+
+custo:
+  iof_out: "0.035"
+  iof_in: "0.0038"
+  carry_cnr: "0.0004"
+  spread_rail_bps: "0"
+  custo_fixo_remessa: "0"
+  custo_oportunidade_aa: "0"
+  ptax: "5.40"
+
+ordens:
+  - { id: "A", cliente_id: "cliente-A", direcao: "OUT", valor_brl: "50", dia_conhecida: 0, dia_limite: 10, eh_efx: false, finalidade: "x" }
+  - { id: "B", cliente_id: "cliente-B", direcao: "IN",  valor_brl: "20", dia_conhecida: 1, dia_limite: 10, eh_efx: false, finalidade: "x" }
