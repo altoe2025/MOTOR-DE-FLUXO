@@ -99,7 +99,11 @@ def executar_p0(cenario: Cenario) -> tuple[Ciclo, ...]:
                 pendente[ordem.id] -= usa
                 restante -= usa
                 alocacoes.append(Alocacao(ordem.id, dia, usa, TipoAlocacao.CASADO))
-            assert restante == 0, "casado não coube na fila do próprio lado"
+            if restante != 0:
+                raise ValueError(
+                    f"casado não coube na fila do próprio lado no dia {dia}: "
+                    f"sobraram {restante}"
+                )
 
         residuo = Decimal(0)
         # `abertas` já está na prioridade do casamento — e tem que ser percorrida
@@ -131,7 +135,11 @@ def executar_p0(cenario: Cenario) -> tuple[Ciclo, ...]:
         # é sempre de um lado só, então a direção continua bem definida.
         direcao_residuo = Direcao.OUT if bruto_out >= bruto_in else Direcao.IN
 
-        assert casado <= bruto_out and casado <= bruto_in
+        if casado > bruto_out or casado > bruto_in:
+            raise ValueError(
+                f"casado ({casado}) excede um dos lados no dia {dia}: "
+                f"OUT {bruto_out}, IN {bruto_in}"
+            )
 
         ciclos.append(
             Ciclo(
@@ -146,7 +154,15 @@ def executar_p0(cenario: Cenario) -> tuple[Ciclo, ...]:
         )
         dia_ultimo_fechamento = dia
 
-    assert not abertas, "sobraram ordens abertas ao fim do horizonte"
+    # Estes dois são invariantes de CORREÇÃO, não sanidade de desenvolvimento: se
+    # falharem, o resultado devolvido está errado. Como `assert` some sob `python -O`,
+    # a checagem tem que ser exceção de verdade — senão uma ordem pode desaparecer da
+    # conta em silêncio e a economia sair menor (ou maior) do que a real.
+    if abertas:
+        raise ValueError(
+            f"sobraram {len(abertas)} ordens abertas ao fim do horizonte: "
+            f"{[o.id for o in abertas]}"
+        )
 
     alocado: dict[str, Decimal] = {}
     for ciclo in ciclos:
@@ -155,8 +171,11 @@ def executar_p0(cenario: Cenario) -> tuple[Ciclo, ...]:
                 alocado.get(alocacao.ordem_id, Decimal(0)) + alocacao.valor_brl
             )
     for ordem in cenario.ordens:
-        assert alocado.get(ordem.id, Decimal(0)) == ordem.valor_brl, (
-            f"conservacao violada em {ordem.id}: alocado != valor_brl"
-        )
+        total = alocado.get(ordem.id, Decimal(0))
+        if total != ordem.valor_brl:
+            raise ValueError(
+                f"conservacao violada em {ordem.id}: alocado {total} != "
+                f"valor_brl {ordem.valor_brl}"
+            )
 
     return tuple(ciclos)

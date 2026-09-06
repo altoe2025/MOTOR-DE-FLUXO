@@ -131,3 +131,15 @@ def test_varredura_sem_saida_resumo_nao_cria_o_arquivo(tmp_path):
           "--n", "3", "--w", "1", "--seeds", "1", "--horizonte", "60"])
     assert bruto.exists()
     assert not resumo.exists()
+
+
+def test_help_do_modo_cenario_nao_tenta_abrir_o_flag_como_arquivo():
+    """`--help` caía no caminho do cenário e o loader tentava abrir um arquivo
+    chamado "--help", derrubando a CLI com FileNotFoundError."""
+    assert main(["motor", "--help"]) == 0
+
+
+def test_help_da_varredura_sai_com_codigo_de_sucesso():
+    """Pedir ajuda não é erro: argparse imprime e sai com 0, mas o `except SystemExit`
+    convertia tudo — inclusive o help — em código 1."""
+    assert main(["motor", "varredura", "--help"]) == 0

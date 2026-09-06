@@ -397,3 +397,21 @@ def test_p0_nao_depende_da_ordem_de_entrada():
         )
 
         assert executar_p0(original) == executar_p0(embaralhado)
+
+
+def test_ordem_fora_do_horizonte_nao_some_em_silencio():
+    """A conservação é invariante de correção, não sanidade de desenvolvimento: sob
+    `python -O` o `assert` some e uma ordem nunca alocada passaria batida, com o
+    resultado saindo menor do que o real. Precisa ser exceção de verdade.
+
+    Uma ordem com `dia_conhecida` além do horizonte nunca entra no laço diário, e é
+    exatamente esse o caminho que produz a alocação faltante.
+    """
+    ordens = (
+        Ordem("o1", "cliente-a", Direcao.OUT, Decimal("100"), 0, 0, False, "x"),
+        Ordem("o2", "cliente-b", Direcao.IN, Decimal("100"), 50, 50, False, "x"),
+    )
+    cenario = Cenario(ordens=ordens, janela_dias=1, horizonte_dias=0, custo=_custo_zero())
+
+    with pytest.raises(ValueError, match="conserva"):
+        executar_p0(cenario)
