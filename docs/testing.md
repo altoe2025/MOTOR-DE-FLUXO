@@ -2,8 +2,9 @@
 
 ## Contexto
 
-Confirmado por inspeção em 2026-09-06: a suíte tem 14 arquivos em `tests/` e 240
-testes coletados pelo `pytest`, todos passando (`pytest -q` → `240 passed`).
+Confirmado por inspeção em 2026-09-06: a suíte tem 14 arquivos em `tests/` e 249
+testes coletados pelo `pytest`, todos passando — tanto em `pytest -q` quanto em
+`python -O -m pytest -q`.
 
 ## Decisão
 
@@ -31,7 +32,16 @@ Um arquivo de teste por módulo (ou por aspecto do módulo), espelhando
 make test              # suíte completa (pytest -q)
 pytest tests/test_netting.py -q   # um arquivo
 pytest -k nome_do_teste -q        # um teste isolado
+python -O -m pytest -q            # sem asserts: ver a regra abaixo
 ```
+
+### Invariante de correção não pode ser `assert`
+
+`python -O` remove todo `assert` do bytecode. Um invariante que garante que o
+*resultado* está certo — conservação de valor, validação de entrada de cenário — não
+pode depender disso: sob `-O` ele sumiria e o motor devolveria número errado em
+silêncio. Esses invariantes usam `raise ValueError`, e a suíte roda também com `-O`
+justamente para provar que continuam valendo. `assert` segue válido em teste.
 
 ### Quando um teste quebra
 
@@ -43,17 +53,17 @@ pytest -k nome_do_teste -q        # um teste isolado
 3. Se a mudança de comportamento for intencional, atualizar o teste **e** registrar
    o motivo na entrada do diário do mesmo commit.
 
-### Pendência conhecida — cenários manuais não commitados
+### Pendência conhecida — cenários manuais presos no PR #17
 
 Os **7 cenários de verificação manual** (previsão feita à mão, ciclo a ciclo, antes
 de rodar o motor) e o runner `scripts/rodar_casos_manuais.py` existem apenas na
-branch local/remota `docs/auditoria-2026-09-06` (commit `cbc900d`), **não na
-`main`**. O mesmo vale para `scripts/exportar_timeline.py`. `docs/DIARIO-DE-MUDANCAS.md`
-narra esses 7 cenários como já escritos e rodados — o que é verdade só naquela
-branch, não no estado atual da `main`.
+branch `docs/auditoria-2026-09-06` (commit `cbc900d`), aberta como **PR #17 e
+deliberadamente não mergeada** — **não estão na `main`**. O mesmo vale para
+`scripts/exportar_timeline.py`. `docs/DIARIO-DE-MUDANCAS.md` narra esses 7 cenários
+como já escritos e rodados — o que é verdade naquela branch, não na `main`.
 
-Enquanto essa branch não for mergeada, **não trate os 7 cenários manuais como
-regressão disponível** — não há arquivo para rodar. Isso é uma pendência do Gabriel
-(mergear ou commitar os artefatos), não uma tarefa do Codex.
+Enquanto o PR #17 não for mergeado, **não trate os 7 cenários manuais como regressão
+disponível** — não há arquivo para rodar na `main`. Decidir o destino do PR #17 é do
+Gabriel; até lá, a regressão efetiva do repo são os 249 testes do `pytest`.
 
 Para contexto de negócio e proveniência, consultar o vault Obsidian.

@@ -182,18 +182,48 @@ Se uma tarefa exigir editar arquivo fora da coluna da branch atual, **pare e avi
 
 ## Testes
 
-- A suíte atual possui **240 testes**, todos passando (`pytest -q`, reconferido em
+- A suíte atual possui **249 testes**, todos passando (`pytest -q`, reconferido em
   2026-09-06).
+- A suíte também passa inteira sob **`python -O -m pytest -q`**. Isso não é detalhe:
+  invariante de correção neste repo não pode ser `assert`, porque `-O` os remove. Se
+  você adicionar um invariante que garante correção do resultado (conservação,
+  validação de entrada), use `raise`, não `assert`.
 - **Os 7 cenários manuais de validação, o runner `scripts/rodar_casos_manuais.py` e o
-  script `scripts/exportar_timeline.py` NÃO estão commitados na `main` deste
-  repositório.** Existem apenas na branch local/remota não mergeada
-  `docs/auditoria-2026-09-06` (commit `cbc900d`). O `docs/DIARIO-DE-MUDANCAS.md`
-  descreve esses artefatos como já escritos e rodados, mas isso é verdade só naquela
-  branch — não trate como regressão disponível na `main` até serem mergeados. Ver
-  pendência em `docs/testing.md`.
+  script `scripts/exportar_timeline.py` NÃO estão na `main`.** Estão na branch
+  `docs/auditoria-2026-09-06` (commit `cbc900d`), aberta como **PR #17** e
+  deliberadamente não mergeada. O `docs/DIARIO-DE-MUDANCAS.md` descreve esses
+  artefatos como escritos e rodados — o que é verdade naquela branch, não na `main`.
+  Não trate como regressão disponível até o PR #17 ser mergeado.
 - O dashboard "Fronteira Viva" **não está e nunca esteve neste repositório** — é um
   Artifact publicado fora do repo (ver `docs/DIARIO-DE-MUDANCAS.md`, entrada de
   2026-09-06). Não referenciar como parte do código-fonte.
+
+## Limitações conhecidas (não são bugs a "consertar" sem decisão)
+
+Auditadas e confirmadas no código em 2026-09-06. Cada uma é escolha de modelagem ou
+lacuna deliberada, não descuido — mudar qualquer uma altera os números da varredura e
+exige decisão do Gabriel + atualização dos cenários de regressão.
+
+- **Ordem com `dia_limite` além do horizonte é drenada no último dia.** O gerador
+  produz `dia_limite = dia_conhecida + buffer`, que pode passar do horizonte;
+  `executar_p0` remete o que sobrou no fim para não quebrar a conservação. Isso
+  concentra resíduo artificial no último dia. Registrado como efeito de borda
+  desprezível acima de ~180 dias — não confirmado por teste dedicado.
+- **A direção é sorteada por ordem, não por cliente**, então um cliente pode casar o
+  próprio fluxo ("autonetting"), o que infla a netabilidade bruta. Isto **já é medido
+  e separado**: `limite_intra_cliente_brl` e `taxa_netabilidade_incremental` no CSV, e
+  a linha "descontado o que cada cliente casaria sozinho" na saída da CLI. Use a
+  incremental em conversa comercial, nunca a bruta.
+- **`visibilidade_dias_min/max` do arquétipo não entra na geração.** O campo documenta
+  a intenção de modelar antecedência de forecast separada de `dia_conhecida`; há um
+  TODO explícito em `motor/geracao.py`. Hoje é campo inerte.
+- **Os valores de arquétipos, mixes, `spread_rail_bps` e `custo_fixo_remessa` são
+  placeholders explícitos.** A varredura mede o comportamento do modelo, não
+  viabilidade comercial calibrada. Não citar número de varredura como projeção de
+  negócio sem dizer isso.
+- **A validade regulatória do mecanismo (S13 — consolidação permitida vs. compensação
+  vedada) está fora do código.** O simulador quantifica a economia *caso* o mecanismo
+  seja válido; ele não decide se é. Contexto no vault Obsidian.
 
 ## Antes de implementar
 
