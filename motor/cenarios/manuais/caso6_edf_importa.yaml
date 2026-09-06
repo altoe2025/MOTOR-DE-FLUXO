@@ -1,0 +1,40 @@
+# Caso 6 — por que a prioridade tem que ser EDF (earliest deadline first) e não
+# FIFO por id.
+#
+# A e B são os dois OUT, ambos de 50, chegando juntos no dia 0. B vence cedo
+# (dia 5); A tem folga até o dia 9. C (IN 50) força o fechamento no dia 5.
+# Como a fila OUT é ordenada por (dia_limite, id), B (dia_limite 5) vem ANTES
+# de A (dia_limite 9) mesmo com "A" < "B" alfabeticamente — é a ordem mais
+# urgente que recebe o caixa que aparece, não a mais antiga.
+#
+# PREVISÃO:
+#   dia 5 (B e C vencem): abertas ordenada = [B(50, dia_limite 5), A(50, dia_limite 9)]
+#     bruto_out 100 (50+50) / bruto_in 50 -> casado 50, resíduo 0
+#     cobertura do lado OUT no ordem da fila: B primeiro -> B CASADO 50 (zera);
+#     restante do casado já é 0, então A não recebe nada aqui.
+#     alocações: B CASADO 50 | C CASADO 50
+#     B venceu com pendente 0 -> nenhuma REMETIDO. A sobra aberta com 50 (dia_limite 9).
+#   dia 9 (A vence sozinha): abertas = {A(50)}
+#     bruto_out 50 / bruto_in 0 -> casado 0, resíduo 50 OUT
+#     alocações: A REMETIDO 50
+#
+# Se a fila fosse por id (FIFO "A antes de B"), A absorveria o casado do dia 5
+# e B — que estava vencendo NAQUELE dia — seria remetida inteira na hora, um
+# resultado pior: a ordem urgente paga IOF de remessa para financiar a folgada.
+
+janela_dias: 100
+horizonte_dias: 9
+
+custo:
+  iof_out: "0.035"
+  iof_in: "0.0038"
+  carry_cnr: "0.0004"
+  spread_rail_bps: "0"
+  custo_fixo_remessa: "0"
+  custo_oportunidade_aa: "0"
+  ptax: "5.40"
+
+ordens:
+  - { id: "A", cliente_id: "cliente-A", direcao: "OUT", valor_brl: "50", dia_conhecida: 0, dia_limite: 9, eh_efx: false, finalidade: "x" }
+  - { id: "B", cliente_id: "cliente-B", direcao: "OUT", valor_brl: "50", dia_conhecida: 0, dia_limite: 5, eh_efx: false, finalidade: "x" }
+  - { id: "C", cliente_id: "cliente-C", direcao: "IN",  valor_brl: "50", dia_conhecida: 0, dia_limite: 5, eh_efx: false, finalidade: "x" }

@@ -1,0 +1,35 @@
+# Caso 3 — cascata: dia X neta A+B, dia Y neta o RESTO de B com C.
+#
+# É o caso que o Gabriel pediu para ver acontecer na prática. A e B têm folga
+# (dia_limite 10, bem depois de qualquer fechamento); quem força os dois
+# fechamentos é a JANELA (janela_dias=3), não vencimento — dia_ultimo_fechamento
+# começa em -1, então o primeiro fecha quando dia-(-1) >= 3, ou seja dia 2.
+#
+# PREVISÃO:
+#   dia 2 (fecha por janela: 2-(-1)=3): abertas = {A OUT 60, B IN 100}
+#     bruto_out 60 / bruto_in 100 -> casado 60, resíduo 0
+#     alocações: A CASADO 60 (zera e sai da lista) | B CASADO 60 (sobra 40 aberta)
+#   dia 5 (fecha por janela: 5-2=3; C é conhecida no dia 5): abertas = {B(40), C OUT 40}
+#     bruto_out 40 / bruto_in 40 -> casado 40, resíduo 0
+#     alocações: C CASADO 40 | B CASADO 40 (zera, sai)
+#
+# Nenhuma ordem é remetida neste cenário — tudo o que entrou saiu casado, em
+# dois lotes diferentes. B é a única que aparece em dois ciclos (Alocacao em
+# tranches: 60 no dia 2 + 40 no dia 5 = 100, o valor_brl dela).
+
+janela_dias: 3
+horizonte_dias: 10
+
+custo:
+  iof_out: "0.035"
+  iof_in: "0.0038"
+  carry_cnr: "0.0004"
+  spread_rail_bps: "0"
+  custo_fixo_remessa: "0"
+  custo_oportunidade_aa: "0"
+  ptax: "5.40"
+
+ordens:
+  - { id: "A", cliente_id: "cliente-A", direcao: "OUT", valor_brl: "60",  dia_conhecida: 0, dia_limite: 10, eh_efx: false, finalidade: "x" }
+  - { id: "B", cliente_id: "cliente-B", direcao: "IN",  valor_brl: "100", dia_conhecida: 0, dia_limite: 10, eh_efx: false, finalidade: "x" }
+  - { id: "C", cliente_id: "cliente-C", direcao: "OUT", valor_brl: "40",  dia_conhecida: 5, dia_limite: 10, eh_efx: false, finalidade: "x" }
