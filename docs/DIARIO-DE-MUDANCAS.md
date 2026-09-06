@@ -54,6 +54,69 @@ integrada. Apagada em 2026-09-06 a branch remota `github.com/altoe2025/MOTOR-DE-
 
 ---
 
+## 2026-09-06 — Robustez: validação de carga, invariantes que sobrevivem ao `-O`, e dois bugs de CLI
+
+**Sintoma.** Uma auditoria externa do repositório apontou onze lacunas. Sete se
+confirmaram como defeito de verdade ao serem reproduzidas no código:
+
+1. `carregar_cenario` não valida id duplicado — dois ids iguais colapsam no dict de
+   pendentes do netting e uma das ordens some da conta.
+2. `carregar_cenario` não valida ordem conhecida depois do horizonte — ela nunca entra
+   no laço diário e nunca é alocada.
+3. Os invariantes de conservação do `netting.py` eram `assert`. Sob `python -O` eles
+   somem, e os dois casos acima passariam em silêncio com resultado errado.
+4. `Alocacao` e `Arquetipo` validavam com `assert` pelo mesmo motivo.
+5. `carregar_cenario` nunca lia `iof_por_finalidade` do YAML — o campo existe em
+   `ParametrosCusto` desde o PR #9, mas um cenário que declarasse a tabela era
+   carregado com ela vazia, caindo no `iof_out`/`iof_in` padrão sem avisar.
+6. `_percentil` documentava "posto mais próximo" e implementava piso (`int(...)`).
+7. `resumir()` agrupava por `(mix, N, W)` sem o horizonte: dois horizontes diferentes
+   viravam uma célula só, reportando o horizonte do primeiro ponto.
+
+Mais dois na CLI: `python -m motor --help` tentava abrir um arquivo chamado `--help` e
+morria com `FileNotFoundError`; `python -m motor varredura --help` imprimia a ajuda mas
+saía com código 1, porque o `except SystemExit` convertia o help em erro.
+
+**Causa.** As validações nunca existiram (o loader assumia YAML bem-formado, escrito à
+mão) e os invariantes foram escritos como `assert` na fase em que eram checagem de
+desenvolvimento — antes de virarem a garantia de correção que são hoje. Os dois bugs de
+CLI são caminhos que nenhum teste exercitava.
+
+**O que foi feito.** Branch `fix/robustez-carga-invariantes-cli`, com teste antes da
+correção em todos os casos (9 testes novos; a suíte vai de 240 para 249):
+
+- `motor/dominio.py`: `_validar_ordens` recusa id duplicado, `dia_conhecida` negativo e
+  `dia_conhecida` além do horizonte; `Alocacao`/`Arquetipo` levantam `ValueError` em vez
+  de `assert`; o loader passa a ler `iof_por_finalidade` (lista de
+  `{finalidade, direcao, aliquota}` no YAML, porque a chave é um par e YAML não tem
+  chave composta). A tabela continua opt-in.
+- `motor/netting.py`: os quatro `assert` viram `ValueError` com mensagem que diz qual
+  ordem quebrou a conservação.
+- `motor/varredura.py`: `_percentil` arredonda para o posto mais próximo, como sempre
+  prometeu; `resumir()` inclui `horizonte_dias` na chave de agrupamento.
+- `motor/__main__.py`: `--help`/`-h` tratados nos dois modos, com código de saída 0.
+
+Verificado: `pytest -q` → 249 passed; `python -O -m pytest -q` → 249 passed (é isso que
+prova que os invariantes não dependem mais do `assert`); a varredura roda ponta a ponta.
+
+**O que isso invalida.**
+
+- **`_percentil` muda as colunas `economia_pct_p25` e `economia_pct_p75`** de qualquer
+  CSV de resumo gerado antes desta mudança, quando o número de seeds faz o posto cair no
+  meio (com 4 seeds e q=0,25, antes vinha a pior seed; agora vem a vizinha). Os CSVs
+  soltos na máquina (`grade*.csv`, `varredura*.csv`) foram gerados com o piso — rode de
+  novo antes de comparar com saída nova. Nenhuma coluna de mediana (`p50`) muda.
+- **Nada do número de aceitação muda**: reconferido ao vivo, baseline ≈ US$ 439 k,
+  netado ≈ US$ 249 k, economia ≈ US$ 190 k, netabilidade 58,82%.
+- Cenários YAML escritos à mão que tenham id duplicado ou ordem conhecida além do
+  horizonte **agora falham na carga** em vez de rodar. Isso é intencional: antes eles
+  rodavam e davam número errado. Nenhum cenário versionado no repo tem esse problema.
+- **Não invalida** as conclusões da varredura: o eixo que mudou (p25/p75) não é o que
+  sustenta nenhuma conclusão registrada até aqui — as leituras foram feitas na mediana e
+  na faixa min–max, que não mudaram.
+
+---
+
 ## 2026-09-06 — Auditoria de fechamento: o que está na `main` bate com o que validamos
 
 **Sintoma.** Pedido direto: confirmar que tudo rodando no GitHub hoje é

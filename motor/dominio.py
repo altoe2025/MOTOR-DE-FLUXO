@@ -43,7 +43,12 @@ class Alocacao:
     tipo: TipoAlocacao
 
     def __post_init__(self) -> None:
-        assert self.valor_brl > 0
+        # ValueError, não assert: `python -O` remove asserts, e uma alocação de valor
+        # zero ou negativo entraria em silêncio na soma de conservação.
+        if self.valor_brl <= 0:
+            raise ValueError(
+                f"valor_brl de uma Alocacao deve ser positivo, recebeu {self.valor_brl!r}"
+            )
 
 
 @dataclass(frozen=True)
@@ -123,11 +128,27 @@ class Arquetipo:
     finalidade_in: str
 
     def __post_init__(self) -> None:
-        assert 0.0 <= self.p_out <= 1.0
-        assert self.ticket_mediana_brl > 0
-        assert self.cadencia_mensal > 0
-        assert 0 <= self.buffer_dias_min <= self.buffer_dias_max
-        assert 0 <= self.visibilidade_dias_min <= self.visibilidade_dias_max
+        # ValueError, não assert: um arquétipo mal parametrizado sob `python -O`
+        # geraria uma pool inteira silenciosamente inválida.
+        if not 0.0 <= self.p_out <= 1.0:
+            raise ValueError(f"p_out deve estar em [0,1], recebeu {self.p_out!r}")
+        if self.ticket_mediana_brl <= 0:
+            raise ValueError(
+                f"ticket_mediana_brl deve ser positivo, recebeu {self.ticket_mediana_brl!r}"
+            )
+        if self.cadencia_mensal <= 0:
+            raise ValueError(
+                f"cadencia_mensal deve ser positiva, recebeu {self.cadencia_mensal!r}"
+            )
+        if not 0 <= self.buffer_dias_min <= self.buffer_dias_max:
+            raise ValueError(
+                f"buffer_dias inválido: 0 <= {self.buffer_dias_min} <= {self.buffer_dias_max}"
+            )
+        if not 0 <= self.visibilidade_dias_min <= self.visibilidade_dias_max:
+            raise ValueError(
+                f"visibilidade_dias inválida: 0 <= {self.visibilidade_dias_min} "
+                f"<= {self.visibilidade_dias_max}"
+            )
 
 
 @dataclass(frozen=True)
@@ -164,6 +185,16 @@ def carregar_cenario(path: str) -> Cenario:
     dados = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
 
     custo_dados = dados["custo"]
+
+    # Tabela opcional de alíquota por (finalidade, direção). No YAML é uma LISTA de
+    # registros, porque a chave do dicionário é um par e YAML não tem chave composta.
+    iof_por_finalidade: dict[tuple[str, Direcao], Decimal] = {}
+    for regra in custo_dados.get("iof_por_finalidade") or ():
+        chave = (str(regra["finalidade"]), Direcao(regra["direcao"]))
+        if chave in iof_por_finalidade:
+            raise ValueError(f"regra de iof_por_finalidade duplicada para {chave}")
+        iof_por_finalidade[chave] = _decimal(regra["aliquota"])
+
     custo = ParametrosCusto(
         iof_out=_decimal(custo_dados["iof_out"]),
         iof_in=_decimal(custo_dados["iof_in"]),
@@ -172,7 +203,10 @@ def carregar_cenario(path: str) -> Cenario:
         custo_fixo_remessa=_decimal(custo_dados["custo_fixo_remessa"]),
         custo_oportunidade_aa=_decimal(custo_dados["custo_oportunidade_aa"]),
         ptax=_decimal(custo_dados["ptax"]),
+        iof_por_finalidade=iof_por_finalidade,
     )
+
+    horizonte_dias = int(dados["horizonte_dias"])
 
     ordens = tuple(
         Ordem(
@@ -188,9 +222,35 @@ def carregar_cenario(path: str) -> Cenario:
         for o in dados["ordens"]
     )
 
+    _validar_ordens(ordens, horizonte_dias)
+
     return Cenario(
         ordens=ordens,
         janela_dias=int(dados["janela_dias"]),
-        horizonte_dias=int(dados["horizonte_dias"]),
+        horizonte_dias=horizonte_dias,
         custo=custo,
     )
+
+
+def _validar_ordens(ordens: tuple[Ordem, ...], horizonte_dias: int) -> None:
+    """Barra as duas formas de cenário que o motor não consegue simular corretamente.
+
+    Ambas falham em silêncio se passarem: o netting indexa pendências por `id`, então
+    ids repetidos colapsam duas ordens numa; e o laço diário só vai até
+    `horizonte_dias`, então uma ordem conhecida depois disso nunca é alocada.
+    """
+    vistos: set[str] = set()
+    for ordem in ordens:
+        if ordem.id in vistos:
+            raise ValueError(f"id de ordem duplicado: {ordem.id!r}")
+        vistos.add(ordem.id)
+
+        if ordem.dia_conhecida < 0:
+            raise ValueError(
+                f"ordem {ordem.id!r} tem dia_conhecida negativo: {ordem.dia_conhecida}"
+            )
+        if ordem.dia_conhecida > horizonte_dias:
+            raise ValueError(
+                f"ordem {ordem.id!r} é conhecida no dia {ordem.dia_conhecida}, além do "
+                f"horizonte de {horizonte_dias} dias — nunca entraria na simulação"
+            )

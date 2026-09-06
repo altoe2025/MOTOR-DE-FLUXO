@@ -422,7 +422,10 @@ def _percentil(ordenados: Sequence[Decimal], q: Decimal) -> Decimal:
     Interpolar inventaria um valor que nenhuma seed produziu. Com poucas seeds
     isso é pior que arredondar para a amostra vizinha.
     """
-    indice = int((len(ordenados) - 1) * q)
+    # Arredonda para o posto mais próximo (meio para cima). `int(...)` truncava, o que
+    # é PISO — com 4 seeds e q=0,25 devolvia a pior seed em vez da vizinha.
+    posto = (Decimal(len(ordenados)) - 1) * q
+    indice = int(posto.to_integral_value(rounding=ROUND_HALF_UP))
     return ordenados[indice]
 
 
@@ -439,13 +442,16 @@ def resumir(pontos: Iterable[PontoVarredura]) -> tuple[ResumoCelula, ...]:
     Preserva a ordem em que cada célula apareceu pela primeira vez, para o CSV
     resumido sair na mesma ordem de leitura da grade crua.
     """
-    grupos: dict[tuple[str, int, int], list[PontoVarredura]] = {}
+    # O horizonte entra na chave: sem ele, dois horizontes diferentes com o mesmo
+    # (mix, N, W) viravam um resumo só, que reportava o horizonte do primeiro ponto e
+    # tirava mediana de amostras que não são comparáveis entre si.
+    grupos: dict[tuple[str, int, int, int], list[PontoVarredura]] = {}
     for ponto in pontos:
-        chave = (ponto.nome_mix, ponto.n_clientes, ponto.janela_dias)
+        chave = (ponto.nome_mix, ponto.n_clientes, ponto.janela_dias, ponto.horizonte_dias)
         grupos.setdefault(chave, []).append(ponto)
 
     resumos: list[ResumoCelula] = []
-    for (nome_mix, n_clientes, janela_dias), do_grupo in grupos.items():
+    for (nome_mix, n_clientes, janela_dias, horizonte_dias), do_grupo in grupos.items():
         pcts = sorted(p.economia_pct for p in do_grupo)
         brls = sorted(p.economia_brl for p in do_grupo)
         ordens = sorted(Decimal(p.n_ordens) for p in do_grupo)
@@ -460,7 +466,7 @@ def resumir(pontos: Iterable[PontoVarredura]) -> tuple[ResumoCelula, ...]:
                 nome_mix=nome_mix,
                 n_clientes=n_clientes,
                 janela_dias=janela_dias,
-                horizonte_dias=do_grupo[0].horizonte_dias,
+                horizonte_dias=horizonte_dias,
                 n_seeds=len(do_grupo),
                 n_ordens_p50=_mediana(ordens),
                 taxa_netabilidade_p50=_mediana(taxas),

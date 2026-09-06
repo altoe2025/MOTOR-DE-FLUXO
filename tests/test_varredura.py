@@ -22,10 +22,12 @@ from motor.simulacao import simular
 from motor.varredura import (
     PARAMETROS_VARREDURA,
     PontoVarredura,
+    _percentil,
     escrever_csv,
     montar_especificacao_pool,
     montar_ponto,
     montar_pool_do_ponto,
+    resumir,
     rodar_varredura,
 )
 
@@ -577,3 +579,35 @@ def test_csv_sem_ponto_nenhum_ainda_escreve_o_cabecalho(tmp_path):
     escrever_csv((), str(destino))
     linhas = destino.read_text(encoding="utf-8").strip().splitlines()
     assert len(linhas) == 1
+
+
+def test_percentil_usa_o_posto_mais_proximo_e_nao_o_piso():
+    """O docstring promete "posto mais próximo"; truncar dá o posto de baixo.
+
+    Com 4 amostras e q=0.25 o posto exato é 0,75 — o vizinho é o índice 1, não o 0.
+    """
+    amostras = [Decimal("10"), Decimal("20"), Decimal("30"), Decimal("40")]
+
+    assert _percentil(amostras, Decimal("0.25")) == Decimal("20")
+
+
+def test_resumir_nao_mistura_horizontes_diferentes():
+    """(mix, N, W) não identifica uma célula: dois horizontes diferentes com a mesma
+    chave eram colapsados num resumo só, que reportava o horizonte do primeiro ponto
+    e a mediana dos dois misturados."""
+    base = {
+        campo.name: (Decimal("1") if campo.type == "Decimal" else 1)
+        for campo in dataclasses.fields(PontoVarredura)
+    }
+    base.update(nome_mix="equilibrado", n_clientes=2, janela_dias=1)
+    base.pop("horizonte_dias")
+
+    pontos = (
+        PontoVarredura(horizonte_dias=60, **base),
+        PontoVarredura(horizonte_dias=365, **base),
+    )
+
+    resumos = resumir(pontos)
+
+    assert len(resumos) == 2
+    assert {resumo.horizonte_dias for resumo in resumos} == {60, 365}
