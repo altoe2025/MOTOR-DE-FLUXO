@@ -54,6 +54,55 @@ integrada. Apagada em 2026-09-06 a branch remota `github.com/altoe2025/MOTOR-DE-
 
 ---
 
+## 2026-09-06 — `diagnostico_semantica.py` vira oráculo diferencial (e acha uma sutileza do P0)
+
+**Sintoma.** O `diagnostico_semantica.py` estava solto na raiz, não versionado, e existia
+para responder uma pergunta que já foi respondida: o ganho do "P1" vinha da política ou
+da semântica de remessa? Rodado hoje, ele diz P0 real 75,3% vs. as duas sombras 75,2% —
+*"hipótese não se sustenta neste código"*. A missão diagnóstica dele acabou quando o
+MOT-11 foi corrigido.
+
+**Causa.** O que sobrou no script tem valor maior que a pergunta original: ele contém uma
+**reimplementação independente do P0**. Isso é um oráculo — o tipo de teste que pega
+regressão que os testes de valor-previsto-à-mão não pegam, porque estes só cobrem os
+casos que alguém pensou em escrever.
+
+**O que foi feito.** Branch `test/oraculo-diferencial-p0`. O script virou
+`tests/test_oraculo_p0.py` e foi apagado da raiz. Também apagados `scripts/timeline.json`
+e `scripts/timeline_caso7.json`: são saída gerada pelo `exportar_timeline.py`, que está
+preservado no PR #17 — dado gerado não entra no repo.
+
+Escrever a sombra expôs **uma sutileza de política que não estava escrita em lugar
+nenhum**: uma ordem totalmente coberta sai do lote na hora, e portanto o vencimento dela
+NÃO dispara fechamento. Sem essa regra a sombra fechava lotes a mais e netava até 1,7 pp
+menos que o motor. O motor sempre esteve certo — era a sombra que descrevia outra
+política. Com a regra correta, a concordância é **exata**.
+
+Duas decisões de desenho que valem registro, porque a primeira versão do teste era fraca
+e passou por cima das duas:
+
+1. **Compara a linha do tempo de alocações, não o volume total.** O volume casado de um
+   ciclo é `min(soma_out, soma_in)`, que não depende de quem foi coberto nem de quando —
+   um oráculo de volume é cego a EDF e a timing. Com volume, mutação de EDF e de gatilho
+   de janela passavam batidas.
+2. **Dois regimes de carteira.** Na densa, alguma ordem vence quase todo dia e é o
+   vencimento que dispara; a janela nunca é exercitada (é o mesmo motivo pelo qual o eixo
+   W sai degenerado). Foi preciso um regime **esparso** para a janela virar o gatilho e a
+   troca de `>=` por `>` ser detectada.
+
+Verificado por mutação: o oráculo pega as cinco — gatilho de janela alterado, EDF sem
+desempate por `id`, FIFO no lugar de EDF, ordem quitada mantida no lote, e o bug
+histórico de remessa do lote inteiro. Suíte: 249 → **251 testes**, verdes também sob
+`python -O`. Número de aceitação inalterado.
+
+**O que isso invalida.** Nada de resultado. Invalida a instrução de "rodar o
+`diagnostico_semantica.py`" que aparece na memória exportada do Claude.ai: o script não
+existe mais, e o que ele fazia agora roda no `pytest`. Registra também, pela primeira vez
+por escrito, a regra de que ordem quitada sai do lote — quem for mexer no `executar_p0`
+precisa saber que isso é comportamento, não detalhe de implementação.
+
+---
+
 ## 2026-09-06 — Robustez: validação de carga, invariantes que sobrevivem ao `-O`, e dois bugs de CLI
 
 **Sintoma.** Uma auditoria externa do repositório apontou onze lacunas. Sete se

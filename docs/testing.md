@@ -2,7 +2,7 @@
 
 ## Contexto
 
-Confirmado por inspeção em 2026-09-06: a suíte tem 14 arquivos em `tests/` e 249
+Confirmado por inspeção em 2026-09-06: a suíte tem 15 arquivos em `tests/` e 251
 testes coletados pelo `pytest`, todos passando — tanto em `pytest -q` quanto em
 `python -O -m pytest -q`.
 
@@ -25,6 +25,35 @@ Um arquivo de teste por módulo (ou por aspecto do módulo), espelhando
   (o número de aceitação, ver `AGENTS.md`).
 - `test_cli.py` — a CLI em `motor/__main__.py`.
 - `test_integracao.py` — ponta a ponta, netting + custo juntos.
+- `test_oraculo_p0.py` — oráculo diferencial (ver abaixo).
+
+### O oráculo diferencial do P0
+
+`test_oraculo_p0.py` compara `executar_p0` com uma **reimplementação independente da
+mesma política**, escrita dentro do próprio arquivo, sobre carteiras geradas ao acaso
+com seed fixa. Os dois têm que produzir a **mesma linha do tempo de alocações** —
+quem foi coberto, com quanto, em que dia — e não só o mesmo volume total.
+
+A distinção importa: o volume casado de um ciclo é `min(soma_out, soma_in)`, que não
+depende de quem foi coberto nem de quando. Um oráculo que comparasse só o total seria
+cego exatamente às duas garantias que este motor dá — prioridade EDF e o dia em que o
+resíduo sai.
+
+Dois regimes de carteira, por motivos diferentes:
+
+- **densa** — muitas ordens, prazos curtos. Alguma ordem vence quase todo dia, então é
+  o vencimento que dispara o fechamento.
+- **esparsa** — poucas ordens, buffers longos. Aqui é a **janela** que dispara, e sem
+  este regime uma troca de `>=` por `>` no gatilho passava despercebida (é o mesmo
+  motivo pelo qual o eixo W da varredura sai degenerado).
+
+O segundo teste do arquivo roda a sombra com a semântica **anterior** ao MOT-11 e exige
+que o motor divirja dela de forma gritante. É o que impede o oráculo de virar
+decoração: um teste diferencial que concorda com tudo não testa nada.
+
+Verificado por mutação em 2026-09-06 — o oráculo pega as cinco: gatilho de janela
+alterado, EDF sem desempate por `id`, FIFO no lugar de EDF, ordem quitada mantida no
+lote, e o bug histórico de remessa do lote inteiro.
 
 ### Como rodar
 
@@ -64,6 +93,9 @@ como já escritos e rodados — o que é verdade naquela branch, não na `main`.
 
 Enquanto o PR #17 não for mergeado, **não trate os 7 cenários manuais como regressão
 disponível** — não há arquivo para rodar na `main`. Decidir o destino do PR #17 é do
-Gabriel; até lá, a regressão efetiva do repo são os 249 testes do `pytest`.
+Gabriel; até lá, a regressão efetiva do repo são os 251 testes do `pytest` — com o
+oráculo diferencial cobrindo boa parte do que os 7 cenários manuais cobririam, já que
+ele confere a política contra uma segunda implementação em vez de contra uma previsão
+escrita à mão.
 
 Para contexto de negócio e proveniência, consultar o vault Obsidian.
