@@ -33,92 +33,21 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-09-06, depois da auditoria de fechamento (ver entrada do
-topo) e da limpeza de uma branch órfã.
+Atualizada em 2026-09-05, depois de mergear os PRs #11 a #15.
 
 | Branch | Situação | Dono |
 |---|---|---|
-| `main` | **em dia**: PRs #1 a #16 mergeadas, 240 testes passando, zero xfail | os dois |
-| `netting/p1` | spike do P1, **NÃO MERGEAR** — dominado, e agora sabemos que a folga é zero em N ≥ 50. Só local, nunca foi pro GitHub | Felipe |
+| `main` | **em dia**: PRs #11 a #15 mergeados, 240 testes passando, zero xfail | os dois |
+| `netting/p1` | spike do P1, **NÃO MERGEAR** — dominado, e agora sabemos que a folga é zero em N ≥ 50 | Felipe |
 | `fix/semantica-remessa-p0` | PR #11, mergeada | Felipe |
 | `fix/previsao-temporal-e-colunas-csv` | PR #12, mergeada | Gabriel |
 | `feat/teto-e-eficiencia-no-csv` | PR #13, mergeada | Gabriel |
 | `feat/netting-incremental-no-csv` | PR #14, mergeada | Gabriel |
 | `perf/netting-sem-custo-quadratico` | PR #15, mergeada | Gabriel |
-| `docs/estado-das-branches` | PR #16, mergeada | Gabriel |
 | `geracao/arquetipos`, `modelo/*`, `varredura/grid-mix-janela` | mergeadas em 2026-09-04 | Gabriel |
 
 **Nenhuma branch está à frente da `main`.** Toda a auditoria de 2026-09-05 está
-integrada. Apagada em 2026-09-06 a branch remota `github.com/altoe2025/MOTOR-DE-FLUXO`
-— push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
-
----
-
-## 2026-09-06 — Auditoria de fechamento: o que está na `main` bate com o que validamos
-
-**Sintoma.** Pedido direto: confirmar que tudo rodando no GitHub hoje é
-literalmente o produto que testamos e validamos — sem branch presa, sem PR
-pendente, sem lacuna escondida entre código e documentação — e, se estiver
-tudo certo, deixar registrado aqui como o motor está hoje.
-
-**Causa.** N/A — auditoria de rotina, não um bug relatado.
-
-**O que foi feito.**
-- Conferido no GitHub: 16 PRs, todas `MERGED`; nenhuma PR aberta; nenhuma
-  branch remota à frente da `main`. Apagada a branch órfã `github.com/altoe2025/MOTOR-DE-FLUXO`
-  (ver nota na tabela acima).
-- Suíte completa: **240 testes, tudo verde**. Cenário da Amanda conferido ao
-  vivo: baseline US$ 439 k, netado US$ 249 k, economia US$ 190 k — bate com o
-  número de aceitação do `CLAUDE.md`.
-- Escrevi e rodei **7 cenários de verificação manual** (previsão feita à mão,
-  ciclo a ciclo, antes de rodar o motor — mesmo método do `cenario_temporal.yaml`),
-  em `motor/cenarios/manuais/`, com o runner `scripts/rodar_casos_manuais.py`:
-  netting total no mesmo dia; ordem sem contraparte (sai 100% remetida);
-  cascata em cadeia (A+B num fechamento, resto de B com C num fechamento
-  seguinte); a mesma ordem coberta em tranches ao longo de 3 dias diferentes;
-  fechamento disparado só pela janela, incluindo os ciclos "vazios" que isso
-  produz quando não há nada para casar nem ninguém vencendo; e um cenário de
-  15 ordens com concorrência real — vários OUT ou vários IN abertos ao mesmo
-  tempo, com um empate proposital de `dia_limite` — para conferir a prioridade
-  EDF e o desempate por `id`. Todas as execuções bateram exatamente com a
-  previsão escrita antes de rodar.
-- `scripts/exportar_timeline.py`: exporta a saída de `executar_p0` em JSON
-  (ordens, ciclos, alocações) — é o que alimenta um dashboard visual que fiz à
-  parte (anima a timeline em tempo comprimido, mostra as filas por ordem de
-  chegada vs. prioridade e os casamentos/remessas acontecendo). O dashboard em
-  si é um Artifact publicado fora do repo, não entrou neste commit — avisem se
-  quiserem que eu traga o HTML pra cá.
-- Revisão código↔documentação: os 4 itens que a entrada de 2026-09-05 já
-  listava como "menores, não consertadas" **continuam abertos hoje**,
-  reconferidos linha a linha no código atual:
-  1. `motor/geracao.py`: `if dia_conhecida >= horizonte_dias: continue` é
-     código morto — `rng.integers(0, horizonte_dias)` já exclui o limite
-     superior, a condição nunca é verdadeira.
-  2. `motor/varredura.py:_percentil`: o docstring promete "posto mais
-     próximo", mas a implementação trunca (`int(...)`, sem arredondar) — é
-     piso, não o mais próximo.
-  3. `motor/dominio.py:carregar_cenario` ainda não valida id duplicado nem
-     `dia_limite` além do horizonte — cenário mal escrito quebra dentro do
-     netting, não na carga.
-  4. As invariantes de conservação em `netting.py` (linhas 102, 134, 149, 158)
-     continuam como `assert` puro — somem em silêncio com `python -O`.
-- Também confirmado: a pendência (a) de 2026-09-05 — cliente casando o
-  próprio fluxo por causa de `p_out` sorteado ordem a ordem — segue **medida,
-  não eliminada**. O CSV separa a taxa incremental desde a PR #14, mas o
-  gerador continua sorteando direção por ordem, não por cliente; é decisão de
-  produto em aberto, não bug pendente de conserto.
-- E um gap novo, achado ao ler `geracao.py` com atenção: `visibilidade_dias_min/max`
-  do `Arquetipo` é validado no construtor e testado em `test_dominio.py`, mas
-  **não é usado** em `gerar_ordens` — já tem um TODO explícito no código
-  (`motor/geracao.py:47`) dizendo isso. A antecedência de forecast declarada
-  no arquétipo ainda não afeta o `dia_conhecida` gerado.
-
-**O que isso invalida.** Nada dos números publicados — é o oposto: esta
-entrada confirma que o que está na `main` hoje **é** o produto validado até
-aqui, sem divergência entre código rodando e o que os testes/cenários
-garantem. Todos os itens em aberto listados acima já eram conhecidos (a
-maioria desde 2026-09-05) e continuam sem dono; nenhum é surpresa nova, e
-nenhum bloqueia usar o motor como está.
+integrada.
 
 ---
 
