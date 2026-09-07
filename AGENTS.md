@@ -108,6 +108,13 @@ o código de `netting.py`/`custo.py` não bater nesse número quando implementad
 **o código está errado**, não o número. O mesmo número é cravado em
 `tests/test_varredura.py::test_celula_do_grid_reproduz_o_numero_de_aceitacao_da_amanda`.
 
+## Mapa
+
+`docs/MAPA.md` é o índice do repositório: onde está cada resposta, as entradas de
+código com arquivo:linha, o que já foi medido (para não refazer), o que não foi, e as
+armadilhas que já custaram uma conclusão errada. **Leia antes de procurar qualquer
+coisa.**
+
 ## Relatórios de análise
 
 Duas análises de 2026-09-07 vivem no repo e são autocontidas — leia antes de propor
