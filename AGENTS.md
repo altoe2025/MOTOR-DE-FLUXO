@@ -182,8 +182,8 @@ Se uma tarefa exigir editar arquivo fora da coluna da branch atual, **pare e avi
 
 ## Testes
 
-- A suíte atual possui **251 testes**, todos passando (`pytest -q`, reconferido em
-  2026-09-06).
+- A suíte atual possui **257 testes**, todos passando (`pytest -q`, reconferido em
+  2026-09-07).
 - A suíte também passa inteira sob **`python -O -m pytest -q`**. Isso não é detalhe:
   invariante de correção neste repo não pode ser `assert`, porque `-O` os remove. Se
   você adicionar um invariante que garante correção do resultado (conservação,
@@ -237,7 +237,7 @@ exige decisão do Gabriel + atualização dos cenários de regressão.
 
 ## Atualização
 
-Última revisão: 2026-09-06.
+Última revisão: 2026-09-07.
 
 Sempre que uma decisão técnica desta lista mudar, atualizar esta seção no mesmo
 commit da mudança de código. Um AGENTS.md desatualizado é pior que nenhum, porque o
