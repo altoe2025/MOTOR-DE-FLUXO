@@ -9,25 +9,36 @@ numa varredura silenciosamente enviesada.
 
 import pytest
 
+from decimal import Decimal
+
 from motor import arquetipos
+from motor.dominio import Direcao
+from motor.varredura import montar_pool_do_ponto
 from motor.mixes import (
     CORPORATIVO_PESADO,
     EQUILIBRADO,
     PSP_DOMINANTE,
     RETAIL_PESADO,
+    OUTBOUND_EXTREMO,
     TODOS,
     normalizar,
     validar_mix,
 )
 
-NOMES_ESPERADOS = {"equilibrado", "retail_pesado", "corporativo_pesado", "psp_dominante"}
+NOMES_ESPERADOS = {
+    "equilibrado",
+    "retail_pesado",
+    "corporativo_pesado",
+    "psp_dominante",
+    "outbound_extremo",
+}
 
 
 def _mix_valido() -> dict[str, float]:
     return dict.fromkeys(arquetipos.TODOS, 1.0)
 
 
-def test_todos_contem_os_quatro_mixes_nomeados():
+def test_todos_contem_os_mixes_nomeados():
     assert set(TODOS.keys()) == NOMES_ESPERADOS
 
 
@@ -41,6 +52,7 @@ def test_constantes_nomeadas_sao_as_entradas_de_todos():
     assert TODOS["retail_pesado"] is RETAIL_PESADO
     assert TODOS["corporativo_pesado"] is CORPORATIVO_PESADO
     assert TODOS["psp_dominante"] is PSP_DOMINANTE
+    assert TODOS["outbound_extremo"] is OUTBOUND_EXTREMO
 
 
 def test_pesos_sao_nao_negativos_e_somam_algo_positivo():
@@ -122,3 +134,41 @@ def test_corporativo_pesado_pesa_mais_tesouraria_que_retail():
 
 def test_corporativo_pesado_pesa_mais_exportador_que_retail():
     assert CORPORATIVO_PESADO["exportador"] > CORPORATIVO_PESADO["remessa_outbound_massiva"]
+
+
+def test_outbound_extremo_e_materialmente_mais_out_que_qualquer_outro_mix():
+    """O eixo direcional é o que explica 58,6% da variância da economia, e a grade
+    não cobria a ponta que interessa.
+
+    A varredura de 2026-09-07 (`docs/RELATORIO-VARREDURA.md`) mediu a fração de
+    volume IN que cada mix realiza: retail_pesado 0,280, equilibrado 0,448,
+    corporativo_pesado 0,523, psp_dominante 0,528. O mercado que o produto vai
+    encontrar é estruturalmente mais OUT que 28%, então a curva inteira estava
+    medindo uma região possivelmente sem correspondente comercial.
+
+    Este mix fecha essa ponta. O piso do que os arquétipos permitem é ~4,8% (uma
+    carteira só de `payroll_fornecedor`, cujo `p_out` é 0,95); 15% é folgado o
+    bastante para não trancar o teste no ruído amostral e apertado o bastante para
+    garantir que o mix está de fato NA ponta, e não a meio caminho.
+
+    O teste mede a fração REALIZADA sobre pools geradas, não os pesos declarados:
+    o peso é de clientes, e cada arquétipo carrega volume por cliente muito
+    diferente (payroll move ~3,2 M/mês, remessa ~0,6 M/mês). Peso não é volume.
+    """
+    fracoes = []
+    for n_clientes in (8, 12, 32):
+        for semente in range(1, 11):
+            pool = montar_pool_do_ponto(OUTBOUND_EXTREMO, n_clientes, 365, semente)
+            if not pool:
+                continue
+            total = sum((o.valor_brl for o in pool), Decimal(0))
+            entrada = sum(
+                (o.valor_brl for o in pool if o.direcao is Direcao.IN), Decimal(0)
+            )
+            fracoes.append(entrada / total)
+
+    assert fracoes, "sem pool gerada, o teste não mediu nada"
+    mediana = sorted(fracoes)[len(fracoes) // 2]
+    assert mediana < Decimal("0.15"), f"fração IN realizada foi {mediana}"
+    # E abaixo do mais OUT-pesado que já existia, com margem — senão não fecha lacuna.
+    assert max(fracoes) < Decimal("0.28")
