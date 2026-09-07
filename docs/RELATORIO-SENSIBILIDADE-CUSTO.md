@@ -144,6 +144,78 @@ p10 entre −0,26 e +2,09 bps. A exceção negativa continua no
 
 Isso confirma a decisão de não gastar a primeira sensibilidade refinando W.
 
+## Cenários de estresse e limites
+
+Esta etapa não tenta adivinhar os valores reais que ainda faltam. Ela usa os dados
+supostos atuais como referência e pergunta quanto da economia sobrevive quando as
+premissas favoráveis são retiradas. Foram reprecificadas as mesmas 6.000
+carteiras-ano, sem nova geração e sem alteração no motor.
+
+Os oito testes são:
+
+| cenário | alteração sobre a hipótese atual |
+|---|---|
+| `base_hipotetica` | mantém spread 25 bps, tarifa R$ 40, carry 4 bps e as alíquotas atuais |
+| `sem_spread` | spread cai para zero |
+| `sem_tarifa_fixa` | tarifa fixa cai para zero |
+| `iof_incerto_zero` | BENS/SERVIÇOS OUT e ATIVOS VIRTUAIS OUT caem para zero |
+| `piso_sem_componentes_incertos` | zera spread, tarifa e os dois IOFs incertos; mantém carry em 4 bps |
+| `carry_25bps` | carry sobe de 4 para 25 bps |
+| `combinado_severo` | aplica o piso acima e carry de 25 bps |
+| `sem_carry` | retira o carry para mostrar um limite superior simples |
+
+O custo de oportunidade continua zero porque isso é decisão do desenho do produto,
+não falta de calibração: o orquestrador não custodia o dinheiro durante a janela.
+
+Resultado conservador em W=7. A tabela compara o p10 da hipótese atual, do piso e
+do cenário combinado severo. Cada p10 é a décima pior entre 300 carteiras-ano.
+
+| mix | N | base p10 | piso p10 | severo p10 |
+|---|---:|---:|---:|---:|
+| equilibrado | 8 | 116,8 | 34,1 | 17,4 |
+| equilibrado | 12 | 113,3 | 47,4 | 30,6 |
+| retail_pesado | 8 | 109,1 | 51,5 | 40,9 |
+| retail_pesado | 12 | 109,6 | 47,1 | 37,0 |
+| corporativo_pesado | 8 | 78,4 | 47,7 | 31,2 |
+| corporativo_pesado | 12 | 94,1 | 64,1 | 45,7 |
+| psp_dominante | 8 | 163,1 | 83,7 | 67,3 |
+| psp_dominante | 12 | 181,3 | 81,0 | 62,7 |
+| outbound_extremo | 8 | 22,5 | 7,9 | 3,9 |
+| outbound_extremo | 12 | 20,6 | 7,0 | 3,5 |
+
+Todas as 6.000 carteiras permaneceram positivas até no cenário combinado severo.
+Isso mostra margem dentro destes testes, mas não prova viabilidade comercial: os
+mixes e volumes continuam sintéticos e ainda pode existir custo não modelado.
+
+O `outbound_extremo` é claramente o limite frágil. Em N=12/W=7, seu p10 cai para
+3,5 bps no teste severo. Nos demais mixes, o menor p10 severo é 17,4 bps.
+
+### Ponto de economia zero
+
+O limite de carry foi calculado carteira por carteira, em vez de escolhido numa
+grade arbitrária. No p10 de W=7:
+
+| mix | N | carry que zera na base | carry que zera no piso |
+|---|---:|---:|---:|
+| equilibrado | 8 | 153,8 bps | 46,7 bps |
+| equilibrado | 12 | 146,0 bps | 62,4 bps |
+| retail_pesado | 8 | 228,0 bps | 103,3 bps |
+| retail_pesado | 12 | 229,3 bps | 98,0 bps |
+| corporativo_pesado | 8 | 101,1 bps | 62,8 bps |
+| corporativo_pesado | 12 | 114,8 bps | 77,9 bps |
+| psp_dominante | 8 | 220,7 bps | 109,8 bps |
+| psp_dominante | 12 | 220,9 bps | 97,4 bps |
+| outbound_extremo | 8 | 119,9 bps | 44,1 bps |
+| outbound_extremo | 12 | 122,4 bps | 44,2 bps |
+
+O carry atual suposto é 4 bps. Mesmo depois de retirar spread, tarifa e os dois
+IOFs incertos, o menor limite p10 observado é aproximadamente 44 bps. Além disso,
+o spread mínimo para manter o p90 positivo no piso é zero em todas as 20 células:
+há economia residual proveniente das demais regras de IOF mantidas no modelo.
+
+Esses limites devem ser recalculados quando chegarem os valores reais. Como a
+alocação não depende dos parâmetros de preço, basta reprecificar os mesmos dados.
+
 ## O que falta para virar material da Amanda
 
 Três dados substituem os placeholders:
@@ -168,9 +240,15 @@ aquecimento, 365 dias medidos e liquidação natural.
 - `resultados/sensibilidade/sensibilidade_produto_agregada.csv` — 20 células.
 - `resultados/sensibilidade/sensibilidade_iof_bruta.csv` — exposição por rodada e regra.
 - `resultados/sensibilidade/sensibilidade_iof_agregada.csv` — 100 exposições agregadas.
+- `scripts/estresse_sensibilidade.py` — reprecifica os cenários e calcula o ponto de economia zero.
+- `resultados/sensibilidade/cenarios_estresse_bruta.csv` — 48.000 combinações de carteira e cenário.
+- `resultados/sensibilidade/cenarios_estresse_agregada.csv` — 160 células de cenário.
+- `resultados/sensibilidade/limites_break_even_bruta.csv` — limites nas 6.000 carteiras.
+- `resultados/sensibilidade/limites_break_even_agregada.csv` — 20 células de limites.
 
 Reprodução:
 
 ```bash
 python -m scripts.sensibilidade_custo --saida resultados/sensibilidade --n 8,12 --w 1,7 --sementes 1:300
+python -m scripts.estresse_sensibilidade --saida resultados/sensibilidade
 ```

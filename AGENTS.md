@@ -143,8 +143,9 @@ qualquer medição nova, para não refazer o que já foi medido:
 - `docs/RELATORIO-DECOMPOSICAO-CUSTO.md` — de que a economia é feita (IOF 86%, spread
   16%, fixo 1%, carry −2,5%) e a que ela é sensível.
 - `docs/RELATORIO-SENSIBILIDADE-CUSTO.md` — decompõe as 27.000 rodadas, abre o IOF
-  por finalidade/direção em N=8/12 e fornece as inclinações para reprecificar sem
-  regenerar a carteira.
+  por finalidade/direção em N=8/12, fornece as inclinações para reprecificar sem
+  regenerar a carteira e registra oito cenários de estresse e os limites de
+  economia zero.
 - `docs/dicionario-csv.md` — o significado de cada coluna dos CSVs.
 
 Os dois primeiros relatórios foram escritos antes de o contrato de entrada líquida
@@ -230,7 +231,7 @@ Se uma tarefa exigir editar arquivo fora da coluna da branch atual, **pare e avi
 
 ## Testes
 
-- A suíte atual possui **262 testes**, todos passando (`pytest -q`, reconferido em
+- A suíte atual possui **266 testes**, todos passando (`pytest -q`, reconferido em
   2026-09-07).
 - A suíte também passa inteira sob **`python -O -m pytest -q`**. Isso não é detalhe:
   invariante de correção neste repo não pode ser `assert`, porque `-O` os remove. Se

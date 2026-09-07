@@ -129,3 +129,33 @@ enviesado continua enviesada: isto separa ruído de sinal, não corrige viés.
 
 O resumo **não carrega as colunas de tempo**. Quem precisar de prazo por célula lê a
 grade crua.
+
+## CSVs de cenários de estresse
+
+Os arquivos em `resultados/sensibilidade/` são derivados das 6.000 linhas de
+produto, sem nova execução do motor.
+
+### `cenarios_estresse_bruta.csv`
+
+Uma linha por carteira e cenário. `spread_bps`, `tarifa_fixa_brl`, `carry_bps` e
+as duas colunas `iof_*_bps` registram as hipóteses utilizadas. As colunas
+`efeito_*_bps` mostram quanto cada alteração adicionou ou retirou da
+`economia_base_bps`. `economia_estressada_bps` é o resultado recomposto e
+`economia_positiva` informa se ele ficou acima de zero.
+
+### `cenarios_estresse_agregada.csv`
+
+Uma linha por `(cenário, mix, N, W)`. Traz p10, p50 e p90 da economia estressada e
+`fracao_economia_positiva`, a proporção das 300 carteiras-ano com resultado acima
+de zero.
+
+### `limites_break_even_bruta.csv` e `limites_break_even_agregada.csv`
+
+O bruto calcula por carteira e o agregado apresenta p10, p50 e p90. Os campos
+`carry_break_even_base_bps` e `carry_break_even_piso_bps` são o nível de carry que
+faz a economia chegar exatamente a zero, respectivamente nas hipóteses atuais e
+depois de zerar spread, tarifa e os dois IOFs incertos.
+
+`spread_minimo_no_piso_bps` é o spread necessário para a economia não ficar
+negativa nesse piso, mantendo carry em 4 bps. Zero significa que as demais parcelas
+do modelo já mantêm o resultado positivo; não significa spread real igual a zero.

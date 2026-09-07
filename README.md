@@ -46,6 +46,12 @@ python -m scripts.sensibilidade_custo --saida resultados/sensibilidade --n 8,12 
 
 Ver `docs/RELATORIO-SENSIBILIDADE-CUSTO.md` para método, resultados e ressalvas.
 
+Os cenários de estresse reutilizam esses arquivos e não regeneram carteiras:
+
+```bash
+python -m scripts.estresse_sensibilidade --saida resultados/sensibilidade
+```
+
 Os pesos dos mixes (`motor/mixes.py`) e os parâmetros de custo da varredura
 (`PARAMETROS_VARREDURA`, em `motor/varredura.py`) são **placeholders explícitos** — o
 alvo é medir sensibilidade, não acertar o mercado hoje.

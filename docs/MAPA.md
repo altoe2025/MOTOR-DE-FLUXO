@@ -99,6 +99,7 @@ Todos leem o motor e não o modificam. Precisam de `PYTHONPATH=.`.
 | `scripts/varredura_janela.py` | medição pareada de 30 sementes sobre o eixo W | ~1 min |
 | `scripts/projecao_varredura.py` | cronometra uma rodada e mede a fração IN de cada mix | ~1 min |
 | `scripts/sensibilidade_custo.py` | decompõe a grade e abre as bases de custo/IOF | ~3 min em N=8/12 |
+| `scripts/estresse_sensibilidade.py` | reprecifica oito cenários e calcula limites de economia zero | segundos; não regenera carteiras |
 
 ```bash
 PYTHONPATH=. python scripts/diagnostico_custo.py
@@ -156,6 +157,7 @@ Cada uma já custou uma conclusão errada neste projeto.
 | Decomposição em toda a grade | IOF 72–89% · spread 11–21% · fixo 0,2–11,6% · carry −1,8% a −3,3% em N=12/W=7 | `RELATORIO-SENSIBILIDADE-CUSTO.md` |
 | Sensibilidade de spread/fixo/carry | Inclinações por célula nas 27.000 linhas, sem nova simulação | idem |
 | Exposição das duas alíquotas incertas | Aberta por finalidade/direção em 6.000 rodadas de N=8/12 | idem |
+| Cenários de estresse e break-even | 8 cenários × 6.000 carteiras; todas positivas no combinado severo; menor limite p10 de carry no piso ≈ 44 bps | idem |
 
 ## O que NÃO foi medido — trabalho em aberto
 

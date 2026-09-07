@@ -33,8 +33,7 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-09-06, depois da auditoria de fechamento (ver entrada do
-topo) e da limpeza de uma branch órfã.
+Atualizada em 2026-09-07, depois da análise de cenários de estresse.
 
 | Branch | Situação | Dono |
 |---|---|---|
@@ -47,10 +46,39 @@ topo) e da limpeza de uma branch órfã.
 | `perf/netting-sem-custo-quadratico` | PR #15, mergeada | Gabriel |
 | `docs/estado-das-branches` | PR #16, mergeada | Gabriel |
 | `geracao/arquetipos`, `modelo/*`, `varredura/grid-mix-janela` | mergeadas em 2026-09-04 | Gabriel |
+| `gabriel/metrica-tempo` | PR #21, aberta; base da pilha de varredura | Gabriel |
+| `gabriel/varredura-completa` | PR #22, aberta; empilhada sobre #21 | Gabriel |
+| `gabriel/mix-outbound` | PR #23, aberta; empilhada sobre #22 | Gabriel |
+| `analise/sensibilidade-custo` | sensibilidade, estresse e limites; 266 testes passando | Codex |
 
-**Nenhuma branch está à frente da `main`.** Toda a auditoria de 2026-09-05 está
-integrada. Apagada em 2026-09-06 a branch remota `github.com/altoe2025/MOTOR-DE-FLUXO`
+As quatro últimas branches formam uma pilha e ainda não estão na `main`. Toda a
+auditoria de 2026-09-05 está integrada. Apagada em 2026-09-06 a branch remota
+`github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+---
+
+## 2026-09-07 — Cenários de estresse e limites da sensibilidade
+
+1. **Sintoma.** A sensibilidade fornecia inclinações isoladas, mas ainda não dizia
+   quanto da economia sobreviveria à retirada simultânea das premissas incertas nem
+   em que ponto o carry faria o resultado chegar a zero.
+
+2. **Causa.** Os parâmetros podiam ser reprecificados sem nova simulação, mas as
+   combinações e os limites matemáticos ainda não haviam sido materializados por
+   carteira e por célula.
+
+3. **O que foi feito.** Na branch `analise/sensibilidade-custo`, sem alteração em
+   `motor/`, `scripts/estresse_sensibilidade.py` reaproveita as 6.000 linhas já
+   publicadas. Oito cenários geram 48.000 linhas e 160 células agregadas. Outros
+   dois CSVs calculam o break-even de carry e o spread mínimo em cada carteira.
+   Quatro testes novos cobrem a identidade da base, os efeitos combinados, o ponto
+   zero e a fração de resultados positivos.
+
+4. **O que isso invalida.** Nada nos CSVs ou relatórios anteriores. Acrescenta a
+   ressalva de que a robustez é desigual: todos os resultados permanecem positivos
+   no teste combinado severo, mas `outbound_extremo` chega a apenas 3,5 bps no p10
+   de N=12/W=7. Os testes não substituem a calibração futura.
 
 ---
 
