@@ -249,6 +249,101 @@ cadência de fechamento.* Não é "W não importa em nenhuma configuração".
 4. **Não perguntar sobre com que frequência o ciclo fecha.** É o eixo W, e no agregado
    ele não muda decisão. Gastaria capital de relação por um dado inerte.
 
+## Como ler o eixo N: ele carrega composição junto
+
+O eixo N **não mede escala pura**. A cada valor de N a carteira muda de composição, e
+parte do que a curva acima mostra é isso, não o efeito de ter mais clientes.
+
+A causa é aritmética simples: **cliente é coisa inteira**. O mix pede uma proporção de
+cada perfil, e o motor reparte N clientes entre os seis perfis por maiores médias
+(`_alocar_clientes`). Quando N não divide a proporção pedida, a carteira que sai não é
+a que foi pedida. No `equilibrado`, que pede um sexto de cada perfil:
+
+| N | carteira que sai de fato |
+|---:|---|
+| 2 | cripto 1, exportador 1 — **quatro perfis não existem** |
+| 3 | cripto 1, payroll 1, exportador 1 |
+| 4 | psp 1, cripto 1, payroll 1, exportador 1 |
+| **6** | um de cada — **exato** |
+| 8 | remessa 1, psp 1, cripto **2**, payroll 1, exportador **2**, tesouraria 1 |
+| **12** | dois de cada — **exato** |
+| 16 | remessa 2, psp **3**, cripto 3, payroll 3, exportador 3, tesouraria **2** |
+| **24** | quatro de cada — **exato** |
+
+Em N=2 o `equilibrado` é, na verdade, uma carteira de cripto + exportador. O exportador
+é o perfil mais IN de todos, e é por isso que a fração de entrada em N=2 dá 0,527 em vez
+dos 0,44 que o mix pede. No `psp_dominante` é mais extremo: em N=2 e N=3 a carteira é
+**só PSP**, e os outros cinco perfis não aparecem.
+
+**O efeito é grande e não é ruído.** Com 300 sementes por célula, o erro amostral da
+mediana fica entre 0,2 e 1,0 bps; as quedas da curva de N chegam a 34 bps. Nos 40 passos
+de N da grade, economia e fração IN se movem no mesmo sentido em 31, e as quatro maiores
+quedas coincidem todas com a carteira ficando mais OUT-pesada.
+
+**Nos pontos limpos, a curva se comporta.** No `equilibrado`, olhando só os N que
+dividem exato:
+
+| N | fração IN | economia p50 |
+|---:|---:|---:|
+| 6 | 0,433 | 112,2 bps |
+| 12 | 0,436 | 124,8 bps |
+| 24 | 0,435 | 130,3 bps |
+
+Composição constante, curva **monótona crescente**. O eixo N não está errado — está mal
+amostrado. Nenhum dos outros quatro mixes divide exato em nenhum N desta grade (o
+`psp_dominante` precisaria de múltiplos de 40, porque tem peso 0,25 numa soma de 10).
+
+### A questão de fundo: mix é proporção de clientes ou de volume?
+
+Hoje o peso de um mix é **contagem de clientes**. Mas o que move a economia é **volume**,
+e o volume por cliente varia 7× entre perfis — `remessa_outbound_massiva` move ~0,6
+M/mês, `tesouraria_corporativa` ~4,5 M/mês. No `equilibrado`, com um cliente de cada, a
+tesouraria carrega ~30% do volume e a remessa ~4%. **"Equilibrado" significa clientes
+iguais, não volume igual.**
+
+É escolha de modelagem legítima, mas é dela que vem boa parte da instabilidade: trocar um
+cliente de remessa por um de tesouraria muda o volume da carteira em 7× e a contagem em
+zero.
+
+**Decisão em aberto, deliberadamente adiada.** Fazer o mix significar proporção de volume
+exigiria mudar a montagem da carteira, recalibrar os cinco mixes e refazer todos os
+números. Não foi feito porque a pergunta "quantos clientes bastam" só vira decisão quando
+se souber a composição real da carteira da interlocutora — e essa composição virá descrita
+em volume, não em contagem. Mudar agora significaria refazer duas vezes.
+
+**Até lá, leia assim:** as afirmações "satura em N≈8" e "N≈12 entrega nível e
+previsibilidade" descrevem o comportamento **conjunto** de escala e composição, não o
+efeito isolado de escala. A conclusão principal deste relatório — o colapso do valor
+incremental na ponta OUT — **não depende do eixo N**: ela é medida sobre o eixo de mix,
+com N fixo.
+
+## Conferência independente da grade
+
+Quatro checagens de sanidade sobre o CSV agregado, rodadas depois da varredura.
+
+| # | Checagem | Veredito |
+|---|---|---|
+| 1 | `economia_bps_p50` monótona não-decrescente em N | **falha** — 13 quedas, todas além do erro amostral. Causa na seção acima: o eixo N carrega composição |
+| 2 | dispersão cai conforme N cresce | **ok** — faixa p10–p90 sobre a mediana cai em todos os cinco mixes (ex.: `psp_dominante` 54,9% em N=2 → 5,8% em N=32) |
+| 3 | W=1 pior que W=7 em toda a grade | **falha** — W=1 empata ou ganha em 8 das 45 células, **todas do `corporativo_pesado`**, de N=3 a N=32. Vantagem máxima de W=1: 1,36 bps |
+| 4 | `pct_volume_espera_truncada` sem explodir em nenhum canto | **ok** — 0,18% a 4,00%, mediana 1,23% |
+
+A exceção do item 3 fica **registrada, não investigada**. É sistemática (um mix inteiro,
+não espalhada), o que descarta ruído, mas o efeito vale no máximo 1,36 bps contra um nível
+de 108 — cerca de 1%. Ela invalida a frase "W=1 é sempre pior", e nada além disso. Se o
+`corporativo_pesado` virar carteira-alvo real, vale entender o mecanismo: é o perfil de
+prazos mais longos, justamente onde esperar "deveria" ajudar mais.
+
+### Inclinação do eixo direcional
+
+Entre os dois mixes mais OUT-pesados, N=12, W=7:
+
+    (121,0 − 24,4) bps / (28,4 − 9,5) pontos percentuais = 5,11 bps por ponto percentual
+    de volume IN
+
+É a região mais íngreme da curva. Perto do equilíbrio ela achata e chega a inverter
+(`corporativo_pesado`, com 51,0% de IN, rende menos que `equilibrado`, com 43,6%).
+
 ## O que uma revisão externa corrigiu
 
 Registro do que mudou em 2026-09-07, para quem tiver lido a versão anterior:
@@ -261,6 +356,8 @@ Registro do que mudou em 2026-09-07, para quem tiver lido a versão anterior:
 | "N=12 é o menor ponto previsível" | Depende do mix. `outbound_extremo` ainda tem faixa de 32,3% em N=12 |
 | autonetting citado só em "Limites" | Passou a ser o achado principal: incremental **zero em 300/300** no `outbound_extremo` |
 | `pct_volume_espera_truncada` | Contava a ordem inteira mesmo quando parte casou antes do fim; superestimava em até 3,4×. **Corrigido no motor** |
+| curva de N lida como efeito de escala | O eixo N carrega composição junto — ver "Como ler o eixo N" |
+| "W=1 é pior" | Falso no `corporativo_pesado`, em 8 das 9 células |
 
 Um achado da revisão **não** foi acatado: a alegação de que `carry_cnr` (0,04%,
 cobrado só do lado netado) contraria uma decisão de zerá-lo. Não há tal decisão — o
