@@ -79,6 +79,83 @@ def _cenario_conferido_a_mao() -> Cenario:
     )
 
 
+def _cenario_com_espera_truncada() -> Cenario:
+    """Uma ordem cujo `dia_limite` cai DEPOIS do horizonte.
+
+    `executar_p0` drena o que sobrou no último dia para não quebrar a conservação
+    (ver o laço de resíduo em netting.py: `venceu = ordem.dia_limite <= dia or
+    fim_do_horizonte`). O efeito colateral é que a espera dessa ordem sai MENOR do
+    que teria sido: ela foi resolvida por fim de simulação, não por prazo.
+
+    Previsão escrita ANTES de rodar:
+
+      dia  2: t2 (IN 60) vence e fecha o lote. bruto_out=100 (t1), bruto_in=60,
+              casado=60 -> CASADO(t1, d2, 60) e CASADO(t2, d2, 60). Sobram 40 de
+              t1, que tem folga até o dia 30 e continua aberta.
+      dia 10: fim do horizonte. t1 ainda tem 40 pendentes e é drenada
+              -> REMETIDO(t1, d10, 40). No dia 30, que é o prazo real dela, ela
+              teria esperado 30 dias, não 10.
+    """
+    return Cenario(
+        ordens=(
+            _ordem("t1", Direcao.OUT, "100", 0, 30),
+            _ordem("t2", Direcao.IN, "60", 2, 2),
+        ),
+        janela_dias=100,
+        horizonte_dias=10,
+        custo=CUSTO_NEUTRO,
+    )
+
+
+def test_volume_de_ordens_que_o_horizonte_truncou_e_reportado():
+    """A borda do horizonte encurta a espera, e quem lê o CSV precisa ver quanto.
+
+    Volume bruto = 100 (t1) + 60 (t2) = 160. Só t1 tem `dia_limite` (30) além do
+    horizonte (10), então 100/160 = 0,625 do volume teve a espera encurtada.
+
+    As alocações dessas ordens CONTINUAM nos percentis — excluí-las trocaria um
+    viés por outro, e sobrariam poucos dados. O que a coluna diz é qual fatia dos
+    tempos está encurtada, não que os tempos sejam inválidos.
+
+    media_ponderada = (60*2 + 60*0 + 40*10) / 160 = 520 / 160 = 3.25
+    """
+    cenario = _cenario_com_espera_truncada()
+    ciclos = executar_p0(cenario)
+
+    metricas = metricas_de_tempo(ciclos, cenario.ordens, cenario.horizonte_dias)
+
+    assert metricas.pct_volume_espera_truncada == Decimal("0.625")
+    assert metricas.dias_espera_media_por_real == Decimal("3.25")
+
+
+def test_toda_ordem_recebe_alocacao_dentro_do_horizonte():
+    """Invariante de conservação, no lugar certo: teste, não coluna do CSV.
+
+    Isto já foi uma coluna (`volume_censurado_pct`, commit 8ed8a2b). Saiu porque
+    é estruturalmente zero em toda linha: `executar_p0` drena o que sobrou no fim
+    do horizonte e LEVANTA EXCEÇÃO se alguma ordem ficar aberta, além de conferir
+    ordem a ordem que a soma das alocações é o `valor_brl`. Coluna que é sempre
+    zero vira ruído que ninguém olha; a invariante, essa continua valendo.
+
+    Se este teste cair, `metricas_de_tempo` passou a medir tempo sobre um volume
+    menor que o da pool, e os três números de tempo viraram amostra enviesada de
+    um subconjunto — sem nada no CSV para avisar.
+    """
+    horizonte = 180
+    pool = montar_pool_do_ponto(
+        EQUILIBRADO, n_clientes=6, horizonte_dias=horizonte, seed_base=7
+    )
+    cenario = Cenario(
+        ordens=pool, janela_dias=7, horizonte_dias=horizonte, custo=CUSTO_NEUTRO
+    )
+    ciclos = executar_p0(cenario)
+
+    volume_alocado = sum((a.valor_brl for c in ciclos for a in c.alocacoes), Decimal(0))
+    volume_bruto = sum((o.valor_brl for o in pool), Decimal(0))
+
+    assert volume_alocado == volume_bruto
+
+
 def test_caso_pequeno_bate_com_a_conta_feita_a_mao():
     """Valores calculados no papel a partir do enunciado, antes de rodar o motor.
 
@@ -98,18 +175,18 @@ def test_caso_pequeno_bate_com_a_conta_feita_a_mao():
         espera  0 -> acumulado 40  (< 72)
         espera 10 -> acumulado 80  (>= 72)   <- cruza aqui, p90 = 10
 
-    censurado: as 3 ordens somam 200 e todas são alocadas dentro do horizonte,
+    truncada: nenhuma das 3 tem `dia_limite` (10, 4, 8) além do horizonte (20),
     então 0.
     """
     cenario = _cenario_conferido_a_mao()
     ciclos = executar_p0(cenario)
 
-    metricas = metricas_de_tempo(ciclos, cenario.ordens)
+    metricas = metricas_de_tempo(ciclos, cenario.ordens, cenario.horizonte_dias)
 
-    assert metricas.espera_media_ponderada == Decimal("3.2")
-    assert metricas.espera_p90_casado == Decimal(4)
-    assert metricas.espera_p90_remetido == Decimal(10)
-    assert metricas.volume_censurado_pct == Decimal(0)
+    assert metricas.dias_espera_media_por_real == Decimal("3.2")
+    assert metricas.dias_espera_p90_volume_casado == Decimal(4)
+    assert metricas.dias_espera_p90_volume_remetido == Decimal(10)
+    assert metricas.pct_volume_espera_truncada == Decimal(0)
 
 
 def test_percentil_e_ponderado_por_volume_e_nao_por_contagem_de_alocacao():
@@ -140,7 +217,7 @@ def test_percentil_e_ponderado_por_volume_e_nao_por_contagem_de_alocacao():
 def test_identidade_com_o_termo_de_espera_do_custo():
     """Ancora a métrica nova no termo de custo que o motor já exercita.
 
-        custo_espera == volume_alocado * espera_media_ponderada * oport / 365
+        custo_espera == volume_alocado * dias_espera_media_por_real * oport / 365
 
     Se as duas formas discordarem, a agregação nova e `custo.py` discordam sobre o
     que é uma alocação, e é isso que precisa ser resolvido — não o teste.
@@ -172,12 +249,12 @@ def test_identidade_com_o_termo_de_espera_do_custo():
     cenario = Cenario(ordens=pool, janela_dias=7, horizonte_dias=horizonte, custo=custo)
     ciclos = executar_p0(cenario)
 
-    metricas = metricas_de_tempo(ciclos, pool)
+    metricas = metricas_de_tempo(ciclos, pool, horizonte)
     volume_alocado = sum((a.valor_brl for c in ciclos for a in c.alocacoes), Decimal(0))
 
     pela_media = (
         volume_alocado
-        * metricas.espera_media_ponderada
+        * metricas.dias_espera_media_por_real
         * custo.custo_oportunidade_aa
         / Decimal(365)
     )
@@ -185,33 +262,6 @@ def test_identidade_com_o_termo_de_espera_do_custo():
 
     assert pelo_custo > 0, "cenário sem espera nenhuma não testaria a identidade"
     assert abs(pela_media - pelo_custo) <= abs(pelo_custo) * Decimal("1e-20")
-
-
-def test_ordens_sem_alocacao_nao_contam_como_espera_zero():
-    """Volume censurado é dado ausente, não espera zero.
-
-    Uma ordem que nunca foi alocada dentro do horizonte não tem tempo de espera
-    observado. Contá-la como zero puxaria a média para baixo e faria o produto
-    prometer um prazo que ele não entrega. Ela sai dos percentis e aparece na
-    quarta coluna.
-
-    O cenário conferido à mão tem censura zero; aqui o teste é sobre a MECÂNICA:
-    a fração é medida contra o volume bruto, e a média ponderada ignora o volume
-    sem alocação em vez de somá-lo com peso e espera zero.
-    """
-    cenario = _cenario_conferido_a_mao()
-    ciclos = executar_p0(cenario)
-    # Uma ordem a mais no denominador do bruto, sem nenhuma alocação correspondente:
-    # é exatamente a forma que o dado censurado teria.
-    pool_com_censurada = cenario.ordens + (_ordem("censurada", Direcao.IN, "300", 19, 19),)
-
-    metricas = metricas_de_tempo(ciclos, pool_com_censurada)
-
-    # 300 de 500 (100 + 60 + 40 + 300) ficaram sem alocação.
-    assert metricas.volume_censurado_pct == Decimal("0.6")
-    # E a média não mudou: a censurada não entrou como espera zero com peso 300,
-    # o que teria derrubado 640/200 = 3,2 para 640/500 = 1,28.
-    assert metricas.espera_media_ponderada == Decimal("3.2")
 
 
 def test_as_quatro_colunas_de_tempo_saem_no_csv(tmp_path):
@@ -234,7 +284,7 @@ def test_as_quatro_colunas_de_tempo_saem_no_csv(tmp_path):
         linhas = list(csv.DictReader(arquivo))
 
     (linha,) = linhas
-    assert linha["espera_p90_casado"] == "4.00"
-    assert linha["espera_p90_remetido"] == "10.00"
-    assert linha["espera_media_ponderada"] == "3.20"
-    assert linha["volume_censurado_pct"] == "0.000000"
+    assert linha["dias_espera_p90_volume_casado"] == "4.00"
+    assert linha["dias_espera_p90_volume_remetido"] == "10.00"
+    assert linha["dias_espera_media_por_real"] == "3.20"
+    assert linha["pct_volume_espera_truncada"] == "0.000000"

@@ -54,6 +54,64 @@ integrada. Apagada em 2026-09-06 a branch remota `github.com/altoe2025/MOTOR-DE-
 
 ---
 
+## 2026-09-07 — Tempo até resolução entra no CSV, e o eixo W se revela quase inerte (MOT-?)
+
+> **ID do Linear pendente.** Não foi criada issue para esta mudança; o `MOT-?` acima
+> precisa ser trocado pelo número real antes do push, junto com o do commit.
+
+1. **Sintoma.** O motor media o custo do netting e não media o tempo. Como esperar
+   mais sempre neta mais, a varredura com custo como métrica única aponta "espere o
+   máximo possível" como configuração ótima — um ótimo que nenhum cliente aceita. A
+   restrição que impede esse resultado degenerado é o prazo, e ela não saía no CSV.
+
+2. **Causa.** O dado sempre existiu: `Alocacao.dia - Ordem.dia_conhecida` é o tempo
+   que aquela parcela esperou. Ele só era consumido dentro do termo de custo de
+   espera, que está zerado por decisão de produto (`custo_oportunidade_aa = 0`), e
+   nunca era agregado nem emitido.
+
+3. **O que foi feito.** Branch `gabriel/metrica-tempo`, dois commits, **não** mergeada
+   e **não** pushada.
+   - `motor/varredura.py`: `MetricasTempo`, `metricas_de_tempo()` e
+     `_percentil_ponderado()`; quatro colunas novas em `PontoVarredura` —
+     `dias_espera_p90_volume_casado`, `dias_espera_p90_volume_remetido`,
+     `dias_espera_media_por_real`, `pct_volume_espera_truncada`.
+   - `tests/test_tempo.py`: novo. Caso pequeno com a conta feita à mão antes de rodar,
+     percentil ponderado por volume (e não por contagem), identidade contra o termo de
+     espera de `custo.py` com `custo_oportunidade_aa=0.01` só dentro do teste, e a
+     invariante de conservação.
+   - `docs/dicionario-csv.md`: novo, cobrindo as duas saídas da CLI.
+   - `scripts/varredura_janela.py` e `scripts/diagnostico_custo.py`: descartáveis.
+   - `netting.py`, `custo.py` e a tabela de alíquotas **intocados**.
+
+   A unidade de medida é a **alocação ponderada por volume**, não a ordem: uma ordem
+   coberta em tranches esperou prazos diferentes, e cada real conta o tempo que ele
+   ficou parado. É a mesma base do custo, e é isso que torna a identidade possível.
+
+   Uma decisão foi revertida no caminho. A quarta coluna nasceu como
+   `volume_censurado_pct` (volume sem alocação no fim do horizonte) e virou
+   `pct_volume_espera_truncada`, porque a primeira é **estruturalmente zero em toda
+   linha**: `executar_p0` drena o que sobrou no último dia e levanta exceção se alguma
+   ordem ficar aberta. O viés que ela deveria denunciar entra por outra porta — ordens
+   com `dia_limite` além do horizonte são drenadas artificialmente, e a espera delas
+   sai truncada e é contada como observada. A invariante virou asserção de teste.
+
+4. **O que isso invalida.**
+   - **O eixo W da grade padrão, de seis níveis, é desperdício.** Medição pareada (mix
+     `equilibrado`, N=12, horizonte 365, as MESMAS 30 sementes em todos os W):
+     W=7, W=14 e W=30 dão resultado **decimalmente idêntico nas 30 sementes**;
+     W=3 vs W=7 tem mediana de -0,049 bps com 4/30 sementes invertendo o sinal e 5/30
+     empatando — indistinguível de ruído. Só W=1 se separa (mediana -0,921 bps,
+     0/30 inversões). Conclusão: `VALORES_W_PADRAO` pode cair de `(1, 3, 7, 14, 30)`
+     para três níveis. **Não alterado ainda** — decisão do Gabriel.
+   - Qualquer leitura anterior que tenha atribuído diferença de economia à janela
+     acima de W=7 estava lendo ruído de semente. Isso vale para a `varredura.csv` e a
+     `grade.csv` já geradas.
+   - `AGENTS.md` dizia "251 testes"; agora são 257.
+   - Nada muda nos números de custo, netabilidade ou no número de aceitação da Amanda:
+     nenhuma coluna existente foi renomeada ou recalculada.
+
+---
+
 ## 2026-09-06 — `diagnostico_semantica.py` vira oráculo diferencial (e acha uma sutileza do P0)
 
 **Sintoma.** O `diagnostico_semantica.py` estava solto na raiz, não versionado, e existia

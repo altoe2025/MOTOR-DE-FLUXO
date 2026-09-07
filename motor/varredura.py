@@ -161,10 +161,10 @@ class PontoVarredura:
     # como métrica única o ótimo da varredura é "espere o máximo possível" — um
     # ótimo que nenhum cliente aceita. O prazo é a restrição que impede esse
     # resultado degenerado, e ela só entra na leitura se sair no CSV.
-    espera_p90_casado: Decimal
-    espera_p90_remetido: Decimal
-    espera_media_ponderada: Decimal
-    volume_censurado_pct: Decimal
+    dias_espera_p90_volume_casado: Decimal
+    dias_espera_p90_volume_remetido: Decimal
+    dias_espera_media_por_real: Decimal
+    pct_volume_espera_truncada: Decimal
 
 
 @dataclass(frozen=True)
@@ -182,12 +182,19 @@ class MetricasTempo:
     Quando o conjunto está vazio (nenhuma alocação daquele tipo) o p90 sai 0. Isso
     é indistinguível de "tudo resolveu no mesmo dia" olhando só esta coluna — quem
     lê o CSV desempata pela coluna `volume_casado_brl` da mesma linha.
+
+    `pct_volume_espera_truncada` é a ressalva que acompanha os três primeiros:
+    quanto do volume pertence a ordens cujo `dia_limite` cai depois do horizonte.
+    `executar_p0` drena essas ordens no último dia para não quebrar a conservação,
+    então a espera delas sai MENOR do que teria sido — foram resolvidas por fim de
+    simulação, não por prazo. Elas continuam dentro dos percentis: excluí-las
+    trocaria um viés por outro. A coluna diz qual fatia dos tempos está encurtada.
     """
 
-    espera_p90_casado: Decimal
-    espera_p90_remetido: Decimal
-    espera_media_ponderada: Decimal
-    volume_censurado_pct: Decimal
+    dias_espera_p90_volume_casado: Decimal
+    dias_espera_p90_volume_remetido: Decimal
+    dias_espera_media_por_real: Decimal
+    pct_volume_espera_truncada: Decimal
 
 
 def _percentil_ponderado(
@@ -220,7 +227,7 @@ def _percentil_ponderado(
 
 
 def metricas_de_tempo(
-    ciclos: Iterable[Ciclo], ordens: Iterable[Ordem]
+    ciclos: Iterable[Ciclo], ordens: Iterable[Ordem], horizonte_dias: int
 ) -> MetricasTempo:
     """Tempo até resolução de uma simulação, em dias. Pura.
 
@@ -234,10 +241,12 @@ def metricas_de_tempo(
     O baseline não entra na conta porque nele `dia_exec == dia_conhecida`: toda
     espera medida aqui foi causada pelo netting, sem precisar subtrair nada.
 
-    Volume que não recebeu alocação nenhuma dentro do horizonte é dado CENSURADO,
-    não espera zero. Fica fora dos três primeiros números e aparece em
-    `volume_censurado_pct` — contá-lo como zero puxaria a média para baixo e faria
-    o produto prometer um prazo que ele não entrega.
+    Volume sem alocação nenhuma não existe: `executar_p0` drena o que sobrou no fim
+    do horizonte e levanta exceção se alguma ordem ficar aberta. É por isso que a
+    quarta métrica NÃO é volume sem alocação (seria zero em toda linha do CSV) e
+    sim volume com espera truncada pela borda do horizonte — que é por onde o viés
+    de fato entra. A invariante vive em
+    `tests/test_tempo.py::test_toda_ordem_recebe_alocacao_dentro_do_horizonte`.
     """
     # Materializa: `ordens` é iterável, e ele é percorrido duas vezes (o índice de
     # dia_conhecida e o volume bruto do denominador da censura).
@@ -261,15 +270,19 @@ def metricas_de_tempo(
             volume_alocado += alocacao.valor_brl
 
     volume_bruto = sum((ordem.valor_brl for ordem in pool), Decimal(0))
+    volume_truncado = sum(
+        (ordem.valor_brl for ordem in pool if ordem.dia_limite > horizonte_dias),
+        Decimal(0),
+    )
 
     return MetricasTempo(
-        espera_p90_casado=_percentil_ponderado(casado, Decimal("0.90")),
-        espera_p90_remetido=_percentil_ponderado(remetido, Decimal("0.90")),
-        espera_media_ponderada=(
+        dias_espera_p90_volume_casado=_percentil_ponderado(casado, Decimal("0.90")),
+        dias_espera_p90_volume_remetido=_percentil_ponderado(remetido, Decimal("0.90")),
+        dias_espera_media_por_real=(
             espera_x_volume / volume_alocado if volume_alocado else Decimal(0)
         ),
-        volume_censurado_pct=(
-            (volume_bruto - volume_alocado) / volume_bruto if volume_bruto else Decimal(0)
+        pct_volume_espera_truncada=(
+            volume_truncado / volume_bruto if volume_bruto else Decimal(0)
         ),
     )
 
@@ -417,7 +430,7 @@ def montar_ponto(
         casado_incremental / volume_bruto if volume_bruto else Decimal(0)
     )
 
-    tempo = metricas_de_tempo(resultado.ciclos, pool)
+    tempo = metricas_de_tempo(resultado.ciclos, pool, horizonte_dias)
 
     return PontoVarredura(
         nome_mix=nome_mix,
@@ -451,10 +464,10 @@ def montar_ponto(
         economia_brl=resultado.economia,
         economia_pct=economia_pct,
         economia_por_ordem_brl=economia_por_ordem,
-        espera_p90_casado=tempo.espera_p90_casado,
-        espera_p90_remetido=tempo.espera_p90_remetido,
-        espera_media_ponderada=tempo.espera_media_ponderada,
-        volume_censurado_pct=tempo.volume_censurado_pct,
+        dias_espera_p90_volume_casado=tempo.dias_espera_p90_volume_casado,
+        dias_espera_p90_volume_remetido=tempo.dias_espera_p90_volume_remetido,
+        dias_espera_media_por_real=tempo.dias_espera_media_por_real,
+        pct_volume_espera_truncada=tempo.pct_volume_espera_truncada,
     )
 
 
@@ -627,13 +640,13 @@ _CASAS_DECIMAIS = {
     "economia_pct_p75": Decimal("0.000001"),
     "economia_pct_max": Decimal("0.000001"),
     "frac_seeds_positiva": Decimal("0.000001"),
-    "volume_censurado_pct": Decimal("0.000001"),
+    "pct_volume_espera_truncada": Decimal("0.000001"),
     # Dias, não dinheiro. Duas casas dão ~15 minutos de granularidade, que é mais
     # resolução do que a decisão de produto precisa — mas arredondar para inteiro
     # esconderia a diferença entre janelas vizinhas na grade.
-    "espera_p90_casado": Decimal("0.01"),
-    "espera_p90_remetido": Decimal("0.01"),
-    "espera_media_ponderada": Decimal("0.01"),
+    "dias_espera_p90_volume_casado": Decimal("0.01"),
+    "dias_espera_p90_volume_remetido": Decimal("0.01"),
+    "dias_espera_media_por_real": Decimal("0.01"),
 }
 _CASAS_PADRAO = Decimal("0.01")
 
