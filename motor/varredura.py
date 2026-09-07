@@ -41,7 +41,7 @@ from dataclasses import dataclass
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Iterable, Mapping, Sequence
 
-from motor.dominio import Cenario, Direcao, Ordem, ParametrosCusto
+from motor.dominio import Cenario, Ciclo, Direcao, Ordem, ParametrosCusto, TipoAlocacao
 from motor.geracao import gerar_pool
 from motor.mixes import Mix, normalizar, validar_mix
 from motor.simulacao import simular
@@ -155,6 +155,123 @@ class PontoVarredura:
     economia_brl: Decimal
     economia_pct: Decimal
     economia_por_ordem_brl: Decimal
+
+    # O preço que o cliente pagou pela economia acima. Sem estas colunas a grade
+    # mede metade do trade-off: esperar mais sempre neta mais, então com custo
+    # como métrica única o ótimo da varredura é "espere o máximo possível" — um
+    # ótimo que nenhum cliente aceita. O prazo é a restrição que impede esse
+    # resultado degenerado, e ela só entra na leitura se sair no CSV.
+    espera_p90_casado: Decimal
+    espera_p90_remetido: Decimal
+    espera_media_ponderada: Decimal
+    volume_censurado_pct: Decimal
+
+
+@dataclass(frozen=True)
+class MetricasTempo:
+    """Quanto cada real esperou parado antes de ser resolvido, em dias.
+
+    p90 e não média nas duas primeiras porque a média esconde a cauda: média de 4
+    dias com uma ordem que esperou 30 é um relatório bom sobre um cliente que
+    cancela contrato. A promessa que o produto consegue fazer é sobre a cauda.
+
+    `CASADO` e `REMETIDO` separados porque são coisas diferentes: o volume casado
+    esperou e economizou; o remetido esperou e atravessou a fronteira assim mesmo
+    — espera que não comprou nada. Numa coluna só esse custo desaparece.
+
+    Quando o conjunto está vazio (nenhuma alocação daquele tipo) o p90 sai 0. Isso
+    é indistinguível de "tudo resolveu no mesmo dia" olhando só esta coluna — quem
+    lê o CSV desempata pela coluna `volume_casado_brl` da mesma linha.
+    """
+
+    espera_p90_casado: Decimal
+    espera_p90_remetido: Decimal
+    espera_media_ponderada: Decimal
+    volume_censurado_pct: Decimal
+
+
+def _percentil_ponderado(
+    pares: Sequence[tuple[Decimal, Decimal]], q: Decimal
+) -> Decimal:
+    """Percentil de `valor` ponderado por `peso`, sobre pares `(valor, peso)`.
+
+    Ordena por valor, acumula o peso e devolve o valor onde o acumulado cruza `q`
+    do peso total. NÃO é o percentil sobre a lista de valores ignorando o peso de
+    cada um — esse cálculo daria a uma alocação de R$ 1 mil o mesmo peso que a uma
+    de R$ 5 mi, e o resultado passaria a descrever a contagem de alocações em vez
+    do volume do cliente. Ver
+    `test_percentil_e_ponderado_por_volume_e_nao_por_contagem_de_alocacao`.
+
+    Não interpola, pelo mesmo motivo de `_percentil`: interpolar inventaria um
+    prazo que nenhuma alocação teve. Pura.
+    """
+    total = sum((peso for _, peso in pares), Decimal(0))
+    if total <= 0:
+        return Decimal(0)
+
+    alvo = total * q
+    acumulado = Decimal(0)
+    valor = Decimal(0)
+    for valor, peso in sorted(pares, key=lambda par: par[0]):
+        acumulado += peso
+        if acumulado >= alvo:
+            return valor
+    return valor
+
+
+def metricas_de_tempo(
+    ciclos: Iterable[Ciclo], ordens: Iterable[Ordem]
+) -> MetricasTempo:
+    """Tempo até resolução de uma simulação, em dias. Pura.
+
+    A unidade de medida é a ALOCAÇÃO, ponderada por volume, e não a ordem: uma
+    ordem coberta em tranches (60% casada no dia 5, 40% remetida no dia 12) não
+    tem um tempo de espera único, e cada real conta o tempo que ELE ficou parado.
+    Isso mantém a métrica de tempo na mesma base da métrica de custo, que também é
+    por volume — é essa coincidência de base que sustenta a identidade verificada
+    em `test_identidade_com_o_termo_de_espera_do_custo`.
+
+    O baseline não entra na conta porque nele `dia_exec == dia_conhecida`: toda
+    espera medida aqui foi causada pelo netting, sem precisar subtrair nada.
+
+    Volume que não recebeu alocação nenhuma dentro do horizonte é dado CENSURADO,
+    não espera zero. Fica fora dos três primeiros números e aparece em
+    `volume_censurado_pct` — contá-lo como zero puxaria a média para baixo e faria
+    o produto prometer um prazo que ele não entrega.
+    """
+    # Materializa: `ordens` é iterável, e ele é percorrido duas vezes (o índice de
+    # dia_conhecida e o volume bruto do denominador da censura).
+    pool = tuple(ordens)
+    dia_conhecida = {ordem.id: ordem.dia_conhecida for ordem in pool}
+
+    casado: list[tuple[Decimal, Decimal]] = []
+    remetido: list[tuple[Decimal, Decimal]] = []
+    espera_x_volume = Decimal(0)
+    volume_alocado = Decimal(0)
+
+    for ciclo in ciclos:
+        for alocacao in ciclo.alocacoes:
+            espera = Decimal(alocacao.dia - dia_conhecida[alocacao.ordem_id])
+            par = (espera, alocacao.valor_brl)
+            if alocacao.tipo is TipoAlocacao.CASADO:
+                casado.append(par)
+            else:
+                remetido.append(par)
+            espera_x_volume += alocacao.valor_brl * espera
+            volume_alocado += alocacao.valor_brl
+
+    volume_bruto = sum((ordem.valor_brl for ordem in pool), Decimal(0))
+
+    return MetricasTempo(
+        espera_p90_casado=_percentil_ponderado(casado, Decimal("0.90")),
+        espera_p90_remetido=_percentil_ponderado(remetido, Decimal("0.90")),
+        espera_media_ponderada=(
+            espera_x_volume / volume_alocado if volume_alocado else Decimal(0)
+        ),
+        volume_censurado_pct=(
+            (volume_bruto - volume_alocado) / volume_bruto if volume_bruto else Decimal(0)
+        ),
+    )
 
 
 def _seed_do_cliente(seed_base: int, nome_arquetipo: str, indice: int) -> int:
@@ -300,6 +417,8 @@ def montar_ponto(
         casado_incremental / volume_bruto if volume_bruto else Decimal(0)
     )
 
+    tempo = metricas_de_tempo(resultado.ciclos, pool)
+
     return PontoVarredura(
         nome_mix=nome_mix,
         n_clientes=n_clientes,
@@ -332,6 +451,10 @@ def montar_ponto(
         economia_brl=resultado.economia,
         economia_pct=economia_pct,
         economia_por_ordem_brl=economia_por_ordem,
+        espera_p90_casado=tempo.espera_p90_casado,
+        espera_p90_remetido=tempo.espera_p90_remetido,
+        espera_media_ponderada=tempo.espera_media_ponderada,
+        volume_censurado_pct=tempo.volume_censurado_pct,
     )
 
 
@@ -504,6 +627,13 @@ _CASAS_DECIMAIS = {
     "economia_pct_p75": Decimal("0.000001"),
     "economia_pct_max": Decimal("0.000001"),
     "frac_seeds_positiva": Decimal("0.000001"),
+    "volume_censurado_pct": Decimal("0.000001"),
+    # Dias, não dinheiro. Duas casas dão ~15 minutos de granularidade, que é mais
+    # resolução do que a decisão de produto precisa — mas arredondar para inteiro
+    # esconderia a diferença entre janelas vizinhas na grade.
+    "espera_p90_casado": Decimal("0.01"),
+    "espera_p90_remetido": Decimal("0.01"),
+    "espera_media_ponderada": Decimal("0.01"),
 }
 _CASAS_PADRAO = Decimal("0.01")
 

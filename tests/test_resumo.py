@@ -74,6 +74,12 @@ def _ponto_falso(nome_mix: str, economia_pct: str) -> PontoVarredura:
         economia_brl=Decimal(economia_pct) * Decimal(100),
         economia_pct=Decimal(economia_pct),
         economia_por_ordem_brl=zero,
+        # `resumir` não olha para as colunas de tempo; entram zeradas só para o
+        # ponto sintético ser construível.
+        espera_p90_casado=zero,
+        espera_p90_remetido=zero,
+        espera_media_ponderada=zero,
+        volume_censurado_pct=zero,
     )
 
 
