@@ -216,16 +216,110 @@ há economia residual proveniente das demais regras de IOF mantidas no modelo.
 Esses limites devem ser recalculados quando chegarem os valores reais. Como a
 alocação não depende dos parâmetros de preço, basta reprecificar os mesmos dados.
 
-## O que falta para virar material da Amanda
+## Projeção em BRL com fluxos hipotéticos — fase 4
+
+> **Aviso obrigatório:** todos os fluxos desta seção são suposições sintéticas.
+> Eles não vieram da Amanda e não são volumes reais de Wise, Nomad, AstroPay ou
+> bancos. Os valores em reais são projeções exploratórias e deverão ser
+> substituídos quando chegar a carteira real.
+
+Não existe divulgação pública comparável que informe quanto dessas empresas seria
+enviado ao nosso orquestrador. A pesquisa encontrou referências de escala, mas não
+o dado comercial necessário:
+
+- a [Wise divulgou US$ 243,5 bilhões](https://owners.wise.com/news-releases/news-release-details/wise-fy26-results)
+  de volume transfronteiriço global no FY26; o recorte Business somou
+  aproximadamente US$ 70,6 bilhões nos quatro trimestres;
+- a [Nomad informa 3,8 milhões de clientes, R$ 8 bilhões sob custódia e R$ 50
+  bilhões gastos em cartão](https://www.nomadglobal.com/quem-somos), mas não
+  apresenta fluxo anual de câmbio enviado por uma carteira candidata;
+- a [AstroPay informa milhões de usuários](https://www.astropay.com/business),
+  sem divulgar volume transacionado na página consultada;
+- o [Banco Central publica rankings mensais por instituição](https://www.bcb.gov.br/estatisticas/rankingcambioinstituicoes?ano=2026),
+  mas eles medem operações registradas pelas instituições financeiras, não o
+  fluxo líquido que seria entregue ao produto.
+
+Esses números foram usados somente para conferir se a escala sintética estava
+claramente fora da realidade. Não foram usados como fluxo da projeção.
+
+### Como o fluxo foi suposto
+
+O caso central reaproveita exatamente os tickets, frequências e dispersões que já
+geraram as carteiras da varredura. O valor esperado anual de cada arquétipo é:
+
+```text
+fluxo central = ticket mediano × exp(sigma² / 2) × cadência mensal × 12
+```
+
+| arquétipo | referência descritiva | fluxo central por cliente/ano |
+|---|---|---:|
+| remessa outbound massiva | Wise/serviços de remessa | R$ 8,6 mi |
+| PSP inbound | AstroPay/PSPs | R$ 24,8 mi |
+| cripto sem fiat | plataformas cripto | R$ 59,4 mi |
+| folha/fornecedor | plataformas de pagamentos corporativos | R$ 43,5 mi |
+| exportador | empresas exportadoras | R$ 36,8 mi |
+| tesouraria corporativa | bancos e tesourarias | R$ 58,5 mi |
+
+Foram aplicadas três faixas:
+
+| faixa | volume usado | natureza |
+|---|---:|---|
+| baixa | 0,5 × o volume sintético | suposição de incerteza |
+| central | 1,0 × o volume sintético | hipóteses atuais do gerador |
+| alta | 2,0 × o volume sintético | suposição de incerteza |
+
+Os multiplicadores 0,5 e 2,0 não vieram de informação pública nem da Amanda. Eles
+servem para mostrar quanto o resultado em reais muda se o fluxo suposto estiver
+pela metade ou pelo dobro. Ao redimensionar o volume, a análise corrige a tarifa
+fixa em bps: dobrar tickets não dobra a quantidade de tarifas. Spread, IOF e carry
+continuam proporcionais ao valor.
+
+### Resultado com a faixa central
+
+W=7. `fluxo p50` é a mediana do volume anual sintético entre 300 carteiras. Os
+valores em reais abaixo são anuais e hipotéticos.
+
+| mix | N | fluxo p50 suposto | base p50 | severo p10 | severo p50 |
+|---|---:|---:|---:|---:|---:|
+| equilibrado | 8 | R$ 332,7 mi | R$ 4,25 mi | R$ 0,56 mi | R$ 0,87 mi |
+| equilibrado | 12 | R$ 470,6 mi | R$ 5,85 mi | R$ 1,43 mi | R$ 1,84 mi |
+| retail_pesado | 8 | R$ 188,4 mi | R$ 2,32 mi | R$ 0,76 mi | R$ 0,90 mi |
+| retail_pesado | 12 | R$ 274,7 mi | R$ 3,32 mi | R$ 1,02 mi | R$ 1,18 mi |
+| corporativo_pesado | 8 | R$ 343,0 mi | R$ 3,21 mi | R$ 1,04 mi | R$ 1,54 mi |
+| corporativo_pesado | 12 | R$ 546,3 mi | R$ 5,90 mi | R$ 2,43 mi | R$ 3,16 mi |
+| psp_dominante | 8 | R$ 219,7 mi | R$ 3,92 mi | R$ 1,44 mi | R$ 1,72 mi |
+| psp_dominante | 12 | R$ 337,3 mi | R$ 6,45 mi | R$ 2,10 mi | R$ 2,43 mi |
+| outbound_extremo | 8 | R$ 264,0 mi | R$ 0,73 mi | R$ 0,11 mi | R$ 0,14 mi |
+| outbound_extremo | 12 | R$ 368,3 mi | R$ 0,89 mi | R$ 0,13 mi | R$ 0,17 mi |
+
+O `outbound_extremo` continua sendo o caso frágil também em reais. O PSP dominante
+tem a maior economia, apesar de não ter o maior fluxo, porque sua composição casa
+mais volume e evita mais custos.
+
+Exemplo da incerteza de volume no `equilibrado`, N=12 e W=7:
+
+| faixa | fluxo p50 suposto | base p50 | severo p10 | severo p50 |
+|---|---:|---:|---:|---:|
+| baixa | R$ 235,3 mi | R$ 2,95 mi | R$ 0,71 mi | R$ 0,92 mi |
+| central | R$ 470,6 mi | R$ 5,85 mi | R$ 1,43 mi | R$ 1,84 mi |
+| alta | R$ 941,1 mi | R$ 11,63 mi | R$ 2,86 mi | R$ 3,68 mi |
+
+Essa tabela não prevê receita nem volume capturável. Ela apenas converte a
+economia técnica em BRL para três escalas explicitamente assumidas.
+
+## O que falta para virar material calibrado da Amanda
 
 Três dados substituem os placeholders:
 
 1. spread real do rail/parceiro, em bps;
 2. tarifa fixa real por remessa;
-3. alíquotas confirmadas de BENS/SERVIÇOS OUT e ATIVOS_VIRTUAIS OUT.
+3. alíquotas confirmadas de BENS/SERVIÇOS OUT e ATIVOS_VIRTUAIS OUT;
+4. fluxo anual líquido real da carteira candidata, por tipo de cliente.
 
-Com esses valores, a reprecificação é direta e não exige nova varredura. BRL só
-deve ser calculado depois que houver volume real da carteira candidata.
+Com os três primeiros valores, a reprecificação é direta e não exige nova
+varredura. Com o quarto, substituímos as faixas sintéticas e publicamos a projeção
+em BRL como estimativa calibrada. Até lá, os números em reais desta fase devem ser
+apresentados sempre como hipótese, nunca como dado da Amanda ou das empresas.
 
 Racionalidade individual e regra de rateio não entram nesta entrega, conforme a
 decisão de escopo. p99 também não entra: exige corrigir primeiro o horizonte para
@@ -245,10 +339,16 @@ aquecimento, 365 dias medidos e liquidação natural.
 - `resultados/sensibilidade/cenarios_estresse_agregada.csv` — 160 células de cenário.
 - `resultados/sensibilidade/limites_break_even_bruta.csv` — limites nas 6.000 carteiras.
 - `resultados/sensibilidade/limites_break_even_agregada.csv` — 20 células de limites.
+- `scripts/projecao_fluxo_hipotetico.py` — aplica faixas de fluxo e converte bps para BRL.
+- `resultados/sensibilidade/referencias_fluxo_publicas.csv` — referências públicas e limitações.
+- `resultados/sensibilidade/premissas_fluxo_arquetipos.csv` — fluxo suposto por arquétipo e faixa.
+- `resultados/sensibilidade/projecao_fluxo_hipotetico_bruta.csv` — 144.000 projeções detalhadas.
+- `resultados/sensibilidade/projecao_fluxo_hipotetico_agregada.csv` — 480 células resumidas.
 
 Reprodução:
 
 ```bash
 python -m scripts.sensibilidade_custo --saida resultados/sensibilidade --n 8,12 --w 1,7 --sementes 1:300
 python -m scripts.estresse_sensibilidade --saida resultados/sensibilidade
+python -m scripts.projecao_fluxo_hipotetico --saida resultados/sensibilidade
 ```

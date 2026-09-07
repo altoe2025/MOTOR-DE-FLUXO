@@ -33,7 +33,7 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-09-07, depois da análise de cenários de estresse.
+Atualizada em 2026-09-07, depois da projeção com fluxos hipotéticos.
 
 | Branch | Situação | Dono |
 |---|---|---|
@@ -49,12 +49,38 @@ Atualizada em 2026-09-07, depois da análise de cenários de estresse.
 | `gabriel/metrica-tempo` | PR #21, aberta; base da pilha de varredura | Gabriel |
 | `gabriel/varredura-completa` | PR #22, aberta; empilhada sobre #21 | Gabriel |
 | `gabriel/mix-outbound` | PR #23, aberta; empilhada sobre #22 | Gabriel |
-| `analise/sensibilidade-custo` | sensibilidade, estresse e limites; 266 testes passando | Codex |
+| `analise/sensibilidade-custo` | sensibilidade, estresse, limites e fluxo hipotético; 270 testes passando | Codex |
 
 As quatro últimas branches formam uma pilha e ainda não estão na `main`. Toda a
 auditoria de 2026-09-05 está integrada. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+---
+
+## 2026-09-07 — Projeção em BRL com fluxos hipotéticos
+
+1. **Sintoma.** A sensibilidade terminava em bps porque não existe volume real da
+   carteira candidata. Ainda assim, era necessário estimar a ordem de grandeza em
+   reais sem apresentar números inventados como dados da Amanda ou das empresas.
+
+2. **Causa.** Wise, Nomad, AstroPay e os rankings bancários divulgam métricas de
+   escalas, períodos e geografias diferentes. Nenhuma dessas referências informa
+   quanto fluxo líquido seria enviado ao orquestrador. Multiplicar o bps por um
+   volume qualquer também distorceria a tarifa fixa quando a escala mudasse.
+
+3. **O que foi feito.** Na branch `analise/sensibilidade-custo`, sem alteração em
+   `motor/`, `scripts/projecao_fluxo_hipotetico.py` usa o volume sintético existente
+   como faixa central e aplica 0,5× e 2,0×. A tarifa fixa em bps é corrigida em cada
+   escala. Quatro CSVs registram fontes públicas, premissas por arquétipo, 144.000
+   projeções detalhadas e 480 células agregadas. O relatório e o dicionário marcam
+   cada fluxo como suposição substituível. Quatro testes novos elevam a suíte a 270.
+
+4. **O que isso invalida.** Invalida somente a orientação anterior de não calcular
+   nenhum valor em BRL antes do volume real. BRL agora pode ser apresentado como
+   cenário exploratório, desde que o fluxo usado e sua natureza hipotética apareçam
+   junto do número. Não transforma nenhuma faixa em previsão comercial ou dado da
+   Amanda; a calibração por carteira continua pendente.
 
 ---
 

@@ -100,6 +100,7 @@ Todos leem o motor e não o modificam. Precisam de `PYTHONPATH=.`.
 | `scripts/projecao_varredura.py` | cronometra uma rodada e mede a fração IN de cada mix | ~1 min |
 | `scripts/sensibilidade_custo.py` | decompõe a grade e abre as bases de custo/IOF | ~3 min em N=8/12 |
 | `scripts/estresse_sensibilidade.py` | reprecifica oito cenários e calcula limites de economia zero | segundos; não regenera carteiras |
+| `scripts/projecao_fluxo_hipotetico.py` | converte bps para BRL em fluxos sintéticos de 0,5×, 1× e 2× | segundos; não regenera carteiras |
 
 ```bash
 PYTHONPATH=. python scripts/diagnostico_custo.py
@@ -158,11 +159,14 @@ Cada uma já custou uma conclusão errada neste projeto.
 | Sensibilidade de spread/fixo/carry | Inclinações por célula nas 27.000 linhas, sem nova simulação | idem |
 | Exposição das duas alíquotas incertas | Aberta por finalidade/direção em 6.000 rodadas de N=8/12 | idem |
 | Cenários de estresse e break-even | 8 cenários × 6.000 carteiras; todas positivas no combinado severo; menor limite p10 de carry no piso ≈ 44 bps | idem |
+| Fluxos hipotéticos em BRL | 3 escalas × 48.000 cenários; volumes continuam sintéticos e substituíveis | idem |
 
 ## O que NÃO foi medido — trabalho em aberto
 
 - **Calibração**, não mais estrutura de sensibilidade: faltam o spread e a tarifa
-  fixa reais e a confirmação normativa de BENS/SERVIÇOS OUT e ATIVOS_VIRTUAIS OUT.
+  fixa reais, a confirmação normativa de BENS/SERVIÇOS OUT e ATIVOS_VIRTUAIS OUT
+  e o fluxo anual líquido real da carteira candidata. A projeção em BRL publicada
+  usa apenas 0,5×, 1× e 2× do volume sintético e não deve ser tratada como dado.
 - **Racionalidade individual e rateio por cliente.** A arquitetura prevê rateio do
   custo do resíduo, mas a função e a regra comercial ainda não existem.
 - **O mecanismo por trás da exceção do W=1 no `corporativo_pesado`** — registrado, não

@@ -231,7 +231,7 @@ Se uma tarefa exigir editar arquivo fora da coluna da branch atual, **pare e avi
 
 ## Testes
 
-- A suíte atual possui **266 testes**, todos passando (`pytest -q`, reconferido em
+- A suíte atual possui **270 testes**, todos passando (`pytest -q`, reconferido em
   2026-09-07).
 - A suíte também passa inteira sob **`python -O -m pytest -q`**. Isso não é detalhe:
   invariante de correção neste repo não pode ser `assert`, porque `-O` os remove. Se

@@ -159,3 +159,36 @@ depois de zerar spread, tarifa e os dois IOFs incertos.
 `spread_minimo_no_piso_bps` é o spread necessário para a economia não ficar
 negativa nesse piso, mantendo carry em 4 bps. Zero significa que as demais parcelas
 do modelo já mantêm o resultado positivo; não significa spread real igual a zero.
+
+## CSVs de fluxo hipotético
+
+Todos esses arquivos começam com a ressalva de que os fluxos são suposições
+sintéticas. Nenhuma coluna representa volume real da Amanda, Wise, Nomad,
+AstroPay ou bancos.
+
+### `referencias_fluxo_publicas.csv`
+
+Registra a métrica pública, período, geografia, fonte e limitação de cada
+comparável. `uso_no_modelo` explica que a referência serve para conferir ordem de
+grandeza. Ela não alimenta diretamente o fluxo projetado.
+
+### `premissas_fluxo_arquetipos.csv`
+
+Uma linha por arquétipo e faixa baixa, central ou alta. O fluxo central usa
+`ticket_mediana_brl × exp(ticket_sigma²/2) × cadencia_mensal × 12`.
+`multiplicador_fluxo` vale 0,5, 1 ou 2 e `natureza_do_fluxo` marca a hipótese que
+deverá ser substituída.
+
+### `projecao_fluxo_hipotetico_bruta.csv`
+
+Uma linha por carteira, cenário de custo e cenário de fluxo.
+`volume_anual_central_brl` é o volume gerado originalmente;
+`volume_anual_assumido_brl` aplica o multiplicador. A economia em bps é ajustada
+porque a tarifa fixa não cresce com o ticket. `economia_anual_assumida_brl`
+converte o bps ajustado pelo volume assumido.
+
+### `projecao_fluxo_hipotetico_agregada.csv`
+
+Uma linha por `(cenário de custo, mix, N, W, cenário de fluxo)`. Traz p10, p50 e
+p90 do volume, da economia ajustada em bps e da economia anual hipotética em BRL,
+além da fração de carteiras com economia positiva.
