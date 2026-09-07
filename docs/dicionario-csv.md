@@ -38,9 +38,14 @@ viraria degrau: 0,05% e 0,00% seriam a mesma linha.
 | `taxa_netabilidade` | `volume_casado_brl / volume_bruto_brl` |
 | `teto_netabilidade` | o melhor que QUALQUER política conseguiria nesta pool |
 | `eficiencia_vs_teto` | quanto do teto a política extraiu |
-| `limite_intra_cliente_brl` | o que os clientes casariam sozinhos, na própria tesouraria |
-| `volume_casado_incremental_brl` | casado menos o limite intra: **piso** do valor que o motor adiciona |
-| `taxa_netabilidade_incremental` | a incremental sobre o bruto. **É esta que vai para conversa comercial, nunca a bruta** |
+| `limite_intra_cliente_brl` | diagnóstico da interpretação antiga em que as ordens seriam fluxo bruto do cliente |
+| `volume_casado_incremental_brl` | casado menos o limite intra; preservado por compatibilidade, não é a métrica comercial vigente |
+| `taxa_netabilidade_incremental` | diagnóstico alternativo sobre o bruto; **não descontar** sob o contrato de entrada líquida confirmado em 2026-09-07 |
+
+Contrato vigente: cada `Ordem` já é a posição líquida que o cliente decidiu enviar
+ao orquestrador. Por isso a economia do modelo compara cada posição executando
+sozinha com a pool; aplicar novamente o limite intra faria uma segunda dedução de
+netting dentro do cliente. Ver `docs/RELATORIO-SENSIBILIDADE-CUSTO.md`.
 
 ### Custo
 

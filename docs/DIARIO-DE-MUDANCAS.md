@@ -54,6 +54,48 @@ integrada. Apagada em 2026-09-06 a branch remota `github.com/altoe2025/MOTOR-DE-
 
 ---
 
+## 2026-09-07 — Sensibilidade de custo e contrato de entrada líquida
+
+1. **Sintoma.** A decomposição de custo publicada cobria uma única carteira e a
+   economia da varredura passou a ser descontada como "autonetting". Essa leitura
+   contradizia o funcionamento informado pelo Gabriel: o orquestrador recebe somente
+   a posição líquida que o cliente decidiu colocar na pool.
+
+2. **Causa.** A semântica da entrada não estava escrita no repositório. Na ausência
+   dela, `limite_intra_cliente_brl` foi interpretado como valor que o cliente faria
+   sozinho, embora isso aplique uma segunda dedução de netting sobre uma entrada que
+   já chega líquida. Ao mesmo tempo, spread, custo fixo e IOF estavam agregados de
+   forma que não permitia reprecificar todas as células sem nova análise.
+
+3. **O que foi feito.** Branch `analise/sensibilidade-custo`, sem alteração em
+   `motor/`.
+   - `scripts/sensibilidade_custo.py` reaproveita as 27.000 linhas para decompor
+     IOF/spread/fixo/carry/espera e calcular inclinações de preço em todas as 90
+     células.
+   - Em N=8/12, 3.000 carteiras-base foram geradas uma vez e reutilizadas em W=1/7,
+     produzindo 6.000 linhas e abrindo a exposição de IOF por finalidade/direção.
+   - A reprecificação por bases é conferida exatamente contra `custo_netado`; as
+     6.000 economias reproduzem o CSV original com diferença máxima inferior a
+     0,005 bps (0,00 bps a duas casas), explicada pelo arredondamento monetário.
+   - `tests/test_sensibilidade_custo.py` cobre reprecificação, ausência de valor sem
+     contraparte, duas posições opostas, identidade da decomposição e percentuais.
+   - `docs/RELATORIO-SENSIBILIDADE-CUSTO.md` registra método, resultados e fórmulas.
+
+4. **O que isso invalida.**
+   - Invalida a conclusão comercial de que a economia em bps precisa ser descontada
+     novamente por `taxa_netabilidade_incremental`. Sob a entrada líquida, isso faria
+     netting interno duas vezes. Em particular, o `outbound_extremo` volta a ser lido
+     como cerca de 24 bps no modelo atual — baixo, mas não zero.
+   - Não invalida nenhuma das 27.000 simulações: o CSV estava correto e foi
+     reaproveitado. Invalida a interpretação de autonetting dos relatórios antigos.
+   - A decomposição de um cenário só (85,75% IOF, 15,85% spread, 0,94% fixo,
+     −2,54% carry) não pode ser generalizada. Em N=12/W=7, a grade mede IOF 72–89%,
+     spread 11–21%, fixo 0,2–11,6% e carry −1,8% a −3,3% conforme o mix.
+   - Os níveis ainda não são cotação: faltam spread/tarifa reais e confirmação das
+     duas regras incertas de IOF.
+
+---
+
 ## 2026-09-07 — Varredura completa, o mix que faltava, e uma revisão externa que corrigiu quatro afirmações (MOT-?)
 
 > **ID do Linear pendente** nesta entrada e nos commits das branches citadas.

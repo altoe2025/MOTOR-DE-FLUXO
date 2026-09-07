@@ -108,6 +108,24 @@ o código de `netting.py`/`custo.py` não bater nesse número quando implementad
 **o código está errado**, não o número. O mesmo número é cravado em
 `tests/test_varredura.py::test_celula_do_grid_reproduz_o_numero_de_aceitacao_da_amanda`.
 
+## Contrato de entrada líquida
+
+Decisão confirmada pelo Gabriel em 2026-09-07: cada `Ordem` que chega ao
+orquestrador já é a **posição líquida que o cliente decidiu colocar na pool**. O
+motor não recebe o fluxo bruto da empresa para fazer um segundo netting interno.
+
+Consequências para análise:
+
+- o contrafactual sem produto é cada posição líquida executando sozinha
+  (`custo_baseline`), não uma segunda P0 rodada por cliente;
+- `economia_brl`/`economia_bps` mede a economia do modelo sob esse contrato;
+- `limite_intra_cliente_brl`, `volume_casado_incremental_brl` e
+  `taxa_netabilidade_incremental` pertencem à interpretação alternativa anterior
+  (ordens como fluxo bruto) e não devem ser descontados novamente na conversa de
+  produto;
+- os números continuam não sendo cotação: os volumes, mixes, spread, custo fixo e
+  parte das alíquotas ainda não estão calibrados/confirmados.
+
 ## Mapa
 
 `docs/MAPA.md` é o índice do repositório: onde está cada resposta, as entradas de
@@ -117,21 +135,26 @@ coisa.**
 
 ## Relatórios de análise
 
-Duas análises de 2026-09-07 vivem no repo e são autocontidas — leia antes de propor
+Três análises de 2026-09-07 vivem no repo e são autocontidas — leia antes de propor
 qualquer medição nova, para não refazer o que já foi medido:
 
 - `docs/RELATORIO-VARREDURA.md` — grade de 27.000 rodadas (5 mixes x 9 N x 2 W x 300
   sementes). Onde a economia aparece, decomposição de variância, curvas, espera.
 - `docs/RELATORIO-DECOMPOSICAO-CUSTO.md` — de que a economia é feita (IOF 86%, spread
   16%, fixo 1%, carry −2,5%) e a que ela é sensível.
+- `docs/RELATORIO-SENSIBILIDADE-CUSTO.md` — decompõe as 27.000 rodadas, abre o IOF
+  por finalidade/direção em N=8/12 e fornece as inclinações para reprecificar sem
+  regenerar a carteira.
 - `docs/dicionario-csv.md` — o significado de cada coluna dos CSVs.
 
-**A economia em bps desses relatórios é BRUTA e inclui autonetting.** Em mixes
-OUT-pesados o valor incremental é zero. Nunca cite economia bruta como valor do
-produto — use `taxa_netabilidade_incremental`.
+Os dois primeiros relatórios foram escritos antes de o contrato de entrada líquida
+acima ser confirmado e chamam parte da economia de "autonetting". Os números
+simulados continuam reproduzíveis, mas essa dedução comercial foi superada. A
+leitura vigente está no `RELATORIO-SENSIBILIDADE-CUSTO.md`.
 
-Estão nas branches `gabriel/metrica-tempo`, `gabriel/varredura-completa` e
-`gabriel/mix-outbound` (PRs #21, #22, #23), **não na `main`**.
+Estão nas branches `gabriel/metrica-tempo`, `gabriel/varredura-completa`,
+`gabriel/mix-outbound` (PRs #21, #22, #23) e
+`analise/sensibilidade-custo`, **não na `main`**.
 
 ## Diário de mudanças
 
@@ -207,7 +230,7 @@ Se uma tarefa exigir editar arquivo fora da coluna da branch atual, **pare e avi
 
 ## Testes
 
-- A suíte atual possui **257 testes**, todos passando (`pytest -q`, reconferido em
+- A suíte atual possui **262 testes**, todos passando (`pytest -q`, reconferido em
   2026-09-07).
 - A suíte também passa inteira sob **`python -O -m pytest -q`**. Isso não é detalhe:
   invariante de correção neste repo não pode ser `assert`, porque `-O` os remove. Se
@@ -234,11 +257,12 @@ exige decisão do Gabriel + atualização dos cenários de regressão.
   `executar_p0` remete o que sobrou no fim para não quebrar a conservação. Isso
   concentra resíduo artificial no último dia. Registrado como efeito de borda
   desprezível acima de ~180 dias — não confirmado por teste dedicado.
-- **A direção é sorteada por ordem, não por cliente**, então um cliente pode casar o
-  próprio fluxo ("autonetting"), o que infla a netabilidade bruta. Isto **já é medido
-  e separado**: `limite_intra_cliente_brl` e `taxa_netabilidade_incremental` no CSV, e
-  a linha "descontado o que cada cliente casaria sozinho" na saída da CLI. Use a
-  incremental em conversa comercial, nunca a bruta.
+- **A direção é sorteada por ordem, não por cliente.** Isso produz posições líquidas
+  de direções diferentes para o mesmo cliente ao longo do ano sintético. Pela decisão
+  de entrada líquida, essas ordens já são o que o cliente escolheu colocar na pool e
+  não sofrem uma segunda dedução de autonetting. As colunas `limite_intra_cliente_brl`
+  e `taxa_netabilidade_incremental` continuam no CSV por compatibilidade e como
+  diagnóstico da interpretação antiga; não são a métrica comercial vigente.
 - **`visibilidade_dias_min/max` do arquétipo não entra na geração.** O campo documenta
   a intenção de modelar antecedência de forecast separada de `dia_conhecida`; há um
   TODO explícito em `motor/geracao.py`. Hoje é campo inerte.

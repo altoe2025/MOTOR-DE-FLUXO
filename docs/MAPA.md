@@ -4,23 +4,24 @@
 
 ## Comece por aqui
 
-**Branch: `gabriel/mix-outbound`.** Todo o trabalho de análise está nela, empilhada
-sobre outras duas. **Nada disso está na `main`.**
+**Branch: `analise/sensibilidade-custo`.** A sensibilidade está empilhada sobre o
+trabalho de varredura. **Nada disso está na `main`.**
 
 ```
 main
  └─ gabriel/metrica-tempo        PR #21   colunas de tempo no CSV
      └─ gabriel/varredura-completa  PR #22   a grade e o primeiro relatório
-         └─ gabriel/mix-outbound      PR #23   5º mix, regrada, correções  ← AQUI
+         └─ gabriel/mix-outbound      PR #23   5º mix, regrada, correções
+             └─ analise/sensibilidade-custo    decomposição e exposição  ← AQUI
 ```
 
 Ordem de merge é #21 → #22 → #23. Nenhum foi mergeado. PR #17 é de outro assunto
 (cenários manuais) e está deliberadamente parado.
 
 ```bash
-git checkout gabriel/mix-outbound
+git checkout analise/sensibilidade-custo
 pip install pytest pyyaml numpy
-make test          # 258 testes; passa também sob `python -O -m pytest -q`
+make test          # 262 testes; passa também sob `python -O -m pytest -q`
 ```
 
 ## Onde está cada resposta
@@ -30,6 +31,7 @@ make test          # 258 testes; passa também sob `python -O -m pytest -q`
 | Regras do repo, restrições, o que não mexer | `AGENTS.md` |
 | Onde a economia aparece (carteira, escala, prazo) | `docs/RELATORIO-VARREDURA.md` |
 | De que a economia é feita, e a que é sensível | `docs/RELATORIO-DECOMPOSICAO-CUSTO.md` |
+| Sensibilidade por custo na grade e exposição de IOF em N=8/12 | `docs/RELATORIO-SENSIBILIDADE-CUSTO.md` |
 | O que cada coluna dos CSVs significa | `docs/dicionario-csv.md` |
 | O que mudou e quando, com o que cada mudança invalidou | `docs/DIARIO-DE-MUDANCAS.md` |
 | Por que o custo é medido em bps e não em % de netabilidade | `docs/adr-cost-bps.md` |
@@ -96,6 +98,7 @@ Todos leem o motor e não o modificam. Precisam de `PYTHONPATH=.`.
 | `scripts/diagnostico_custo.py` | decompõe a economia em 4 parcelas + sensibilidade ao carry | segundos |
 | `scripts/varredura_janela.py` | medição pareada de 30 sementes sobre o eixo W | ~1 min |
 | `scripts/projecao_varredura.py` | cronometra uma rodada e mede a fração IN de cada mix | ~1 min |
+| `scripts/sensibilidade_custo.py` | decompõe a grade e abre as bases de custo/IOF | ~3 min em N=8/12 |
 
 ```bash
 PYTHONPATH=. python scripts/diagnostico_custo.py
@@ -108,11 +111,11 @@ qualquer grade é gerar ordens. Cronometre antes de disparar algo grande.
 
 Cada uma já custou uma conclusão errada neste projeto.
 
-1. **A economia em bps é BRUTA e inclui autonetting.** Clientes que casam o próprio
-   fluxo de duas pontas não precisam do produto. No mix `outbound_extremo` o netting
-   incremental é **zero em 300 de 300 sementes** — o produto não rende 24 bps ali, rende
-   zero. Use `taxa_netabilidade_incremental`. **O valor incremental ainda não tem número
-   em bps**; converter exigiria reprecificar só as alocações incrementais.
+1. **Cada Ordem já é a posição líquida escolhida pelo cliente para a pool.** Não rode
+   uma segunda P0 por cliente nem desconte `taxa_netabilidade_incremental`: isso faria
+   netting interno duas vezes. Os relatórios anteriores chamam parte do resultado de
+   autonetting porque foram escritos antes dessa semântica ser confirmada; leia a
+   correção em `RELATORIO-SENSIBILIDADE-CUSTO.md`.
 
 2. **O eixo N não mede escala pura.** Cliente é coisa inteira, e na maioria dos N a
    repartição não realiza a proporção pedida — em N=2 o `equilibrado` vira uma carteira
@@ -150,16 +153,16 @@ Cada uma já custou uma conclusão errada neste projeto.
 | Eixo W | W=7, 14 e 30 idênticos em 30/30 sementes. Exceção: W=1 vence em 8 das 9 células do `corporativo_pesado` | `RELATORIO-VARREDURA.md` |
 | Variância de `economia_bps` | `mix` 81,9% · `N` 10,8% · `W` 0,003% | idem |
 | Base da netabilidade | **não** está inflada; teto é 100%; há teste que amarra | idem |
+| Decomposição em toda a grade | IOF 72–89% · spread 11–21% · fixo 0,2–11,6% · carry −1,8% a −3,3% em N=12/W=7 | `RELATORIO-SENSIBILIDADE-CUSTO.md` |
+| Sensibilidade de spread/fixo/carry | Inclinações por célula nas 27.000 linhas, sem nova simulação | idem |
+| Exposição das duas alíquotas incertas | Aberta por finalidade/direção em 6.000 rodadas de N=8/12 | idem |
 
 ## O que NÃO foi medido — trabalho em aberto
 
-- **Sensibilidade a `spread_rail_bps`, `custo_fixo_remessa` e às duas alíquotas
-  incertas.** É onde a incerteza é maior, e nada disso foi varrido. A única
-  sensibilidade que existe cobre o `carry_cnr`, que é o parâmetro que menos importa.
-- **A decomposição de custo é de um cenário só** (`equilibrado`, N=12, semente 42). As
-  proporções entre as quatro parcelas mudam com a composição da carteira e nunca foram
-  varridas.
-- **O valor incremental em bps.**
+- **Calibração**, não mais estrutura de sensibilidade: faltam o spread e a tarifa
+  fixa reais e a confirmação normativa de BENS/SERVIÇOS OUT e ATIVOS_VIRTUAIS OUT.
+- **Racionalidade individual e rateio por cliente.** A arquitetura prevê rateio do
+  custo do resíduo, mas a função e a regra comercial ainda não existem.
 - **O mecanismo por trás da exceção do W=1 no `corporativo_pesado`** — registrado, não
   investigado, por decisão.
 - **Mix como proporção de volume** em vez de contagem de clientes — decisão nomeada e
