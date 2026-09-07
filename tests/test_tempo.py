@@ -110,8 +110,19 @@ def _cenario_com_espera_truncada() -> Cenario:
 def test_volume_de_ordens_que_o_horizonte_truncou_e_reportado():
     """A borda do horizonte encurta a espera, e quem lê o CSV precisa ver quanto.
 
-    Volume bruto = 100 (t1) + 60 (t2) = 160. Só t1 tem `dia_limite` (30) além do
-    horizonte (10), então 100/160 = 0,625 do volume teve a espera encurtada.
+    Conta o volume DRENADO PELA BORDA, não o volume das ordens que poderiam ter
+    sido drenadas. A distinção não é sutil: t1 vale 100, mas 60 dela casou
+    normalmente no dia 2, com espera de 2 dias que nada tem de truncada. Só os 40
+    que restaram foram resolvidos por fim de simulação.
+
+        volume bruto = 100 (t1) + 60 (t2) = 160
+        drenado na borda = 40 (a alocação de t1 no dia 10, e t1 vence no dia 30)
+        pct = 40 / 160 = 0,25
+
+    Contar a ordem inteira daria 100/160 = 0,625 — 2,5x o valor real. Em pools
+    geradas essa superestimativa chega a 3,4x na mediana de alguns mixes, o que
+    faria a coluna disparar alarme falso justamente na faixa em que ela deveria
+    dizer que está tudo bem.
 
     As alocações dessas ordens CONTINUAM nos percentis — excluí-las trocaria um
     viés por outro, e sobrariam poucos dados. O que a coluna diz é qual fatia dos
@@ -124,7 +135,7 @@ def test_volume_de_ordens_que_o_horizonte_truncou_e_reportado():
 
     metricas = metricas_de_tempo(ciclos, cenario.ordens, cenario.horizonte_dias)
 
-    assert metricas.pct_volume_espera_truncada == Decimal("0.625")
+    assert metricas.pct_volume_espera_truncada == Decimal("0.25")
     assert metricas.dias_espera_media_por_real == Decimal("3.25")
 
 
