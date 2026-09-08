@@ -45,6 +45,8 @@ python -m scripts.sensibilidade_custo --saida resultados/sensibilidade --n 8,12 
 ```
 
 Ver `docs/RELATORIO-SENSIBILIDADE-CUSTO.md` para método, resultados e ressalvas.
+O material curto para conversa com a Amanda está em
+`docs/RESUMO-EXECUTIVO-AMANDA.md`.
 
 Os cenários de estresse reutilizam esses arquivos e não regeneram carteiras:
 

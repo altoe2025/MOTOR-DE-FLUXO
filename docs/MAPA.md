@@ -32,6 +32,7 @@ make test          # 262 testes; passa também sob `python -O -m pytest -q`
 | Onde a economia aparece (carteira, escala, prazo) | `docs/RELATORIO-VARREDURA.md` |
 | De que a economia é feita, e a que é sensível | `docs/RELATORIO-DECOMPOSICAO-CUSTO.md` |
 | Sensibilidade por custo na grade e exposição de IOF em N=8/12 | `docs/RELATORIO-SENSIBILIDADE-CUSTO.md` |
+| Resumo curto para conversa e decisão com a Amanda | `docs/RESUMO-EXECUTIVO-AMANDA.md` |
 | O que cada coluna dos CSVs significa | `docs/dicionario-csv.md` |
 | O que mudou e quando, com o que cada mudança invalidou | `docs/DIARIO-DE-MUDANCAS.md` |
 | Por que o custo é medido em bps e não em % de netabilidade | `docs/adr-cost-bps.md` |

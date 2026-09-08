@@ -146,6 +146,8 @@ qualquer medição nova, para não refazer o que já foi medido:
   por finalidade/direção em N=8/12, fornece as inclinações para reprecificar sem
   regenerar a carteira e registra oito cenários de estresse e os limites de
   economia zero.
+- `docs/RESUMO-EXECUTIVO-AMANDA.md` — versão curta da sensibilidade para conversa
+  de negócio; mantém fluxos em BRL explicitamente marcados como sintéticos.
 - `docs/dicionario-csv.md` — o significado de cada coluna dos CSVs.
 
 Os dois primeiros relatórios foram escritos antes de o contrato de entrada líquida

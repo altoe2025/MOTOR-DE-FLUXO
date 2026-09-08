@@ -1,5 +1,9 @@
 # Sensibilidade econômica do custo — posições líquidas
 
+Uma versão curta para conversa com a Amanda está em
+[`RESUMO-EXECUTIVO-AMANDA.md`](RESUMO-EXECUTIVO-AMANDA.md). Este documento preserva
+o método, os cálculos e as ressalvas técnicas completas.
+
 > **Não é cotação nem projeção em reais.** Os volumes são sintéticos,
 > `spread_rail_bps=25` e `custo_fixo_remessa=40` são placeholders, e duas regras de
 > IOF continuam sem confirmação normativa. Até esses dados chegarem, a unidade de

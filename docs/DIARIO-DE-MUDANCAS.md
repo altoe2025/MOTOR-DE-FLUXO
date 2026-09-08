@@ -33,7 +33,7 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-09-07, depois da projeção com fluxos hipotéticos.
+Atualizada em 2026-09-07, depois do resumo executivo para a Amanda.
 
 | Branch | Situação | Dono |
 |---|---|---|
@@ -55,6 +55,28 @@ As quatro últimas branches formam uma pilha e ainda não estão na `main`. Toda
 auditoria de 2026-09-05 está integrada. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+---
+
+## 2026-09-07 — Resumo executivo da sensibilidade para a Amanda
+
+1. **Sintoma.** O relatório técnico já continha método, 14 CSVs e todos os
+   resultados, mas não havia uma versão curta que separasse conclusão, condição de
+   decisão, hipótese e dado ainda pendente.
+
+2. **Causa.** As etapas anteriores privilegiaram rastreabilidade e reprodução. Uma
+   leitura direta dos CSVs podia levar os valores sintéticos em BRL a serem tratados
+   como previsão ou esconder a fragilidade específica da carteira outbound.
+
+3. **O que foi feito.** Na branch `analise/sensibilidade-custo`, foi criado
+   `docs/RESUMO-EXECUTIVO-AMANDA.md`. O documento apresenta a carteira de referência,
+   três cenários, os dez resultados de mix/N, decisões sugeridas, premissas usadas,
+   dados a substituir e afirmações que ainda não podem ser feitas. README, mapa,
+   relatório técnico e AGENTS apontam para essa versão.
+
+4. **O que isso invalida.** Nada nos cálculos anteriores. O novo resumo substitui
+   apenas a necessidade de montar manualmente uma narrativa a partir dos CSVs. Os
+   valores em reais continuam sendo hipóteses, não previsão comercial.
 
 ---
 
