@@ -168,6 +168,12 @@ def test_arquetipo_rejeita_p_out_fora_de_0_1():
         _arquetipo_valido(p_out=1.5)
 
 
+@pytest.mark.parametrize("p_out", [float("nan"), float("inf"), float("-inf")])
+def test_arquetipo_rejeita_p_out_nao_finito(p_out):
+    with pytest.raises(ValueError, match="p_out deve estar em \\[0,1\\]"):
+        _arquetipo_valido(p_out=p_out)
+
+
 def test_arquetipo_rejeita_ticket_mediana_nao_positivo():
     with pytest.raises(ValueError):
         _arquetipo_valido(ticket_mediana_brl=Decimal("0"))
@@ -266,6 +272,12 @@ def test_parametros_custo_rejeita_ptax_zero():
         _custo_valido(ptax=Decimal("0"))
 
 
+@pytest.mark.parametrize("ptax", [Decimal("NaN"), Decimal("Infinity"), Decimal("-Infinity")])
+def test_parametros_custo_rejeita_ptax_nao_finita(ptax):
+    with pytest.raises(ValueError, match="ptax deve ser finito e positivo"):
+        _custo_valido(ptax=ptax)
+
+
 @pytest.mark.parametrize(
     "campo",
     [
@@ -282,6 +294,23 @@ def test_parametros_custo_rejeita_custo_negativo(campo):
         _custo_valido(**{campo: Decimal("-0.01")})
 
 
+@pytest.mark.parametrize(
+    "campo",
+    [
+        "iof_out",
+        "iof_in",
+        "carry_cnr",
+        "spread_rail_bps",
+        "custo_fixo_remessa",
+        "custo_oportunidade_aa",
+    ],
+)
+@pytest.mark.parametrize("valor", [Decimal("NaN"), Decimal("Infinity"), Decimal("-Infinity")])
+def test_parametros_custo_rejeita_custo_nao_finito(campo, valor):
+    with pytest.raises(ValueError, match=f"{campo} deve ser finito e não negativo"):
+        _custo_valido(**{campo: valor})
+
+
 def test_parametros_custo_copia_a_tabela_de_iof_por_finalidade():
     tabela = {("ANEXO_V_TESTE", Direcao.OUT): Decimal("0.01")}
     custo = _custo_valido(iof_por_finalidade=tabela)
@@ -293,6 +322,28 @@ def test_parametros_custo_copia_a_tabela_de_iof_por_finalidade():
         custo.iof_por_finalidade[("ANEXO_V_TESTE", Direcao.OUT)] = Decimal("0.03")
 
 
+@pytest.mark.parametrize(
+    ("tabela", "mensagem"),
+    [
+        ({"chave inválida": Decimal("0.01")}, "chave inválida"),
+        ({("", Direcao.OUT): Decimal("0.01")}, "finalidade inválida"),
+        ({("ANEXO_V_TESTE", "OUT"): Decimal("0.01")}, "direção inválida"),
+    ],
+)
+def test_parametros_custo_rejeita_chave_de_iof_por_finalidade_invalida(tabela, mensagem):
+    with pytest.raises(ValueError, match=mensagem):
+        _custo_valido(iof_por_finalidade=tabela)
+
+
+@pytest.mark.parametrize(
+    "aliquota", [Decimal("NaN"), Decimal("Infinity"), Decimal("-Infinity"), Decimal("-0.01")]
+)
+def test_parametros_custo_rejeita_aliquota_de_iof_por_finalidade_invalida(aliquota):
+    tabela = {("ANEXO_V_TESTE", Direcao.OUT): aliquota}
+    with pytest.raises(ValueError, match="alíquota de iof_por_finalidade"):
+        _custo_valido(iof_por_finalidade=tabela)
+
+
 def test_carregar_cenario_rejeita_ptax_zero(tmp_path):
     caminho = Path(_escrever_cenario(tmp_path, _ORDEM_OK))
     caminho.write_text(
@@ -301,6 +352,17 @@ def test_carregar_cenario_rejeita_ptax_zero(tmp_path):
     )
 
     with pytest.raises(ValueError, match="ptax deve ser finito e positivo"):
+        carregar_cenario(str(caminho))
+
+
+def test_carregar_cenario_rejeita_custo_nao_finito(tmp_path):
+    caminho = Path(_escrever_cenario(tmp_path, _ORDEM_OK))
+    caminho.write_text(
+        caminho.read_text(encoding="utf-8").replace('iof_out: "0.035"', 'iof_out: "NaN"'),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="iof_out deve ser finito e não negativo"):
         carregar_cenario(str(caminho))
 
 
