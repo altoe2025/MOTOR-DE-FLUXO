@@ -3,9 +3,52 @@ from pathlib import Path
 
 import pytest
 
-from motor.dominio import Alocacao, Arquetipo, Direcao, Ordem, TipoAlocacao, carregar_cenario
+from motor.dominio import (
+    Alocacao,
+    Arquetipo,
+    Cenario,
+    Direcao,
+    Ordem,
+    ParametrosCusto,
+    TipoAlocacao,
+    carregar_cenario,
+)
 
 CENARIO_EXEMPLO = Path(__file__).parent.parent / "motor" / "cenarios" / "exemplo_amanda.yaml"
+
+
+@pytest.fixture
+def custo_zero() -> ParametrosCusto:
+    return _custo_valido()
+
+
+def _custo_valido(**overrides) -> ParametrosCusto:
+    campos = dict(
+        iof_out=Decimal("0"),
+        iof_in=Decimal("0"),
+        carry_cnr=Decimal("0"),
+        spread_rail_bps=Decimal("0"),
+        custo_fixo_remessa=Decimal("0"),
+        custo_oportunidade_aa=Decimal("0"),
+        ptax=Decimal("5.40"),
+    )
+    campos.update(overrides)
+    return ParametrosCusto(**campos)
+
+
+def ordem(**overrides) -> Ordem:
+    campos = dict(
+        id="ordem",
+        cliente_id="cliente",
+        direcao=Direcao.OUT,
+        valor_brl=Decimal("100"),
+        dia_conhecida=0,
+        dia_limite=0,
+        eh_efx=False,
+        finalidade="TODO",
+    )
+    campos.update(overrides)
+    return Ordem(**campos)
 
 
 def test_carregar_cenario_exemplo_amanda():
@@ -41,6 +84,21 @@ def test_ordem_rejeita_valor_nao_positivo():
         )
 
 
+def test_ordem_rejeita_id_vazio():
+    with pytest.raises(ValueError, match="id de ordem não pode ser vazio"):
+        ordem(id="")
+
+
+def test_ordem_rejeita_cliente_vazio():
+    with pytest.raises(ValueError, match="cliente_id não pode ser vazio"):
+        ordem(cliente_id="")
+
+
+def test_ordem_rejeita_valor_nao_finito():
+    with pytest.raises(ValueError, match="valor_brl deve ser positivo"):
+        ordem(valor_brl=Decimal("NaN"))
+
+
 def test_ordem_rejeita_dia_limite_anterior_a_dia_conhecida():
     with pytest.raises(ValueError):
         Ordem(
@@ -71,6 +129,13 @@ def test_alocacao_rejeita_valor_nao_positivo():
     de valor zero passaria a entrar em silêncio na conta de conservação."""
     with pytest.raises(ValueError):
         Alocacao(ordem_id="o1", dia=0, valor_brl=Decimal("0"), tipo=TipoAlocacao.REMETIDO)
+
+
+def test_alocacao_rejeita_valor_nao_finito():
+    with pytest.raises(ValueError, match="valor_brl de uma Alocacao deve ser positivo"):
+        Alocacao(
+            ordem_id="o1", dia=0, valor_brl=Decimal("NaN"), tipo=TipoAlocacao.REMETIDO
+        )
 
 
 def _arquetipo_valido(**overrides) -> Arquetipo:
@@ -111,6 +176,19 @@ def test_arquetipo_rejeita_ticket_mediana_nao_positivo():
 def test_arquetipo_rejeita_cadencia_nao_positiva():
     with pytest.raises(ValueError):
         _arquetipo_valido(cadencia_mensal=0)
+
+
+@pytest.mark.parametrize(
+    ("campo", "valor"),
+    [
+        ("ticket_mediana_brl", Decimal("NaN")),
+        ("ticket_sigma", float("nan")),
+        ("cadencia_mensal", float("inf")),
+    ],
+)
+def test_arquetipo_rejeita_parametro_nao_finito(campo, valor):
+    with pytest.raises(ValueError):
+        _arquetipo_valido(**{campo: valor})
 
 
 def test_arquetipo_rejeita_buffer_max_menor_que_min():
@@ -163,6 +241,67 @@ def test_carregar_cenario_rejeita_ids_duplicados(tmp_path):
 
     with pytest.raises(ValueError, match="a1"):
         carregar_cenario(_escrever_cenario(tmp_path, ordens))
+
+
+def test_cenario_direto_rejeita_ids_duplicados(custo_zero):
+    primeira = ordem(id="dup", cliente_id="a", valor_brl=Decimal("100"))
+    segunda = ordem(id="dup", cliente_id="b", valor_brl=Decimal("100"))
+    with pytest.raises(ValueError, match="id de ordem duplicado: 'dup'"):
+        Cenario((primeira, segunda), janela_dias=1, horizonte_dias=0, custo=custo_zero)
+
+
+@pytest.mark.parametrize("janela", [0, -1])
+def test_cenario_rejeita_janela_nao_positiva(custo_zero, janela):
+    with pytest.raises(ValueError, match="janela_dias deve ser >= 1"):
+        Cenario((), janela_dias=janela, horizonte_dias=0, custo=custo_zero)
+
+
+def test_cenario_rejeita_horizonte_negativo(custo_zero):
+    with pytest.raises(ValueError, match="horizonte_dias deve ser >= 0"):
+        Cenario((), janela_dias=1, horizonte_dias=-1, custo=custo_zero)
+
+
+def test_parametros_custo_rejeita_ptax_zero():
+    with pytest.raises(ValueError, match="ptax deve ser finito e positivo"):
+        _custo_valido(ptax=Decimal("0"))
+
+
+@pytest.mark.parametrize(
+    "campo",
+    [
+        "iof_out",
+        "iof_in",
+        "carry_cnr",
+        "spread_rail_bps",
+        "custo_fixo_remessa",
+        "custo_oportunidade_aa",
+    ],
+)
+def test_parametros_custo_rejeita_custo_negativo(campo):
+    with pytest.raises(ValueError, match=f"{campo} deve ser finito e não negativo"):
+        _custo_valido(**{campo: Decimal("-0.01")})
+
+
+def test_parametros_custo_copia_a_tabela_de_iof_por_finalidade():
+    tabela = {("ANEXO_V_TESTE", Direcao.OUT): Decimal("0.01")}
+    custo = _custo_valido(iof_por_finalidade=tabela)
+
+    tabela[("ANEXO_V_TESTE", Direcao.OUT)] = Decimal("0.02")
+
+    assert custo.iof_por_finalidade[("ANEXO_V_TESTE", Direcao.OUT)] == Decimal("0.01")
+    with pytest.raises(TypeError):
+        custo.iof_por_finalidade[("ANEXO_V_TESTE", Direcao.OUT)] = Decimal("0.03")
+
+
+def test_carregar_cenario_rejeita_ptax_zero(tmp_path):
+    caminho = Path(_escrever_cenario(tmp_path, _ORDEM_OK))
+    caminho.write_text(
+        caminho.read_text(encoding="utf-8").replace('ptax: "5.40"', 'ptax: "0"'),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="ptax deve ser finito e positivo"):
+        carregar_cenario(str(caminho))
 
 
 def test_carregar_cenario_rejeita_ordem_conhecida_depois_do_horizonte(tmp_path):

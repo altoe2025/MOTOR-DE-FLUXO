@@ -411,7 +411,5 @@ def test_ordem_fora_do_horizonte_nao_some_em_silencio():
         Ordem("o1", "cliente-a", Direcao.OUT, Decimal("100"), 0, 0, False, "x"),
         Ordem("o2", "cliente-b", Direcao.IN, Decimal("100"), 50, 50, False, "x"),
     )
-    cenario = Cenario(ordens=ordens, janela_dias=1, horizonte_dias=0, custo=_custo_zero())
-
-    with pytest.raises(ValueError, match="conserva"):
-        executar_p0(cenario)
+    with pytest.raises(ValueError, match="horizonte"):
+        Cenario(ordens=ordens, janela_dias=1, horizonte_dias=0, custo=_custo_zero())

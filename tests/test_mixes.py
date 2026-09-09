@@ -82,6 +82,14 @@ def test_validar_mix_rejeita_peso_negativo():
         validar_mix("teste", mix)
 
 
+@pytest.mark.parametrize("peso", [float("nan"), float("inf")])
+def test_validar_mix_rejeita_peso_nao_finito(peso):
+    mix = _mix_valido()
+    mix["exportador"] = peso
+    with pytest.raises(ValueError, match="peso não finito.*exportador"):
+        validar_mix("teste", mix)
+
+
 def test_validar_mix_rejeita_mix_todo_zerado():
     mix = dict.fromkeys(arquetipos.TODOS, 0.0)
     with pytest.raises(ValueError, match="soma"):
