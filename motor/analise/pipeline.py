@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from dataclasses import replace
 from decimal import Decimal
 
 from motor.analise.clientes import (
@@ -15,6 +14,7 @@ from motor.analise.modelo import (
     ManifestoExecucao, ModoAnalise, ResultadoCanonico,
 )
 from motor.analise.temporal import ConfiguracaoTemporal, preparar_execucao_temporal
+from motor.analise.serializacao import reidentificar_manifesto
 from motor.dominio import Cenario, TipoAlocacao
 from motor.simulacao import simular
 
@@ -104,7 +104,7 @@ def analisar(
             ),
         )
         bruto = bruto_medido
-        manifesto = replace(
+        manifesto = reidentificar_manifesto(
             manifesto, drenagem="NATURAL",
             horizonte_dias=cenario_execucao.horizonte_dias,
             periodo_medicao_dias=configuracao_temporal.periodo_medicao_dias,

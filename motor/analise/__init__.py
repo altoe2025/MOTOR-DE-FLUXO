@@ -15,6 +15,15 @@ from motor.analise.modelo import (
     ResumoDiaCliente,
 )
 from motor.analise.pipeline import analisar
+from motor.analise.serializacao import (
+    PacoteExecucao,
+    TabelaCsvCanonica,
+    criar_manifesto,
+    escrever_csv_canonico,
+    escrever_json,
+    resultado_para_json,
+    validar_compatibilidade,
+)
 from motor.analise.temporal import (
     ConfiguracaoTemporal,
     ExecucaoTemporal,
@@ -40,4 +49,11 @@ __all__ = (
     "ExecucaoTemporal",
     "preparar_execucao_temporal",
     "rotulo_periodo",
+    "PacoteExecucao",
+    "TabelaCsvCanonica",
+    "criar_manifesto",
+    "escrever_csv_canonico",
+    "escrever_json",
+    "resultado_para_json",
+    "validar_compatibilidade",
 )
