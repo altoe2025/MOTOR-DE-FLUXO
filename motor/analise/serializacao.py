@@ -21,6 +21,7 @@ from motor.dominio import ParametrosCusto
 
 SCHEMA_VERSION = "1.0.0"
 _NOME_CSV_SEGURO = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*\.csv", re.ASCII)
+_DISPOSITIVO_DOS = re.compile(r"(?:CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])", re.ASCII)
 _COLUNAS_PROVENIENCIA = ("run_id", "schema_version", "hash_configuracao")
 
 
@@ -46,6 +47,9 @@ class TabelaCsvCanonica:
             self.nome_arquivo
         ):
             raise ValueError("nome_arquivo deve ser um nome CSV simples e seguro")
+        basename = self.nome_arquivo.split(".", 1)[0].upper()
+        if _DISPOSITIVO_DOS.fullmatch(basename):
+            raise ValueError("nome_arquivo usa dispositivo DOS reservado")
         if not isinstance(self.colunas, tuple) or not self.colunas:
             raise ValueError("colunas deve ser uma tupla não vazia")
         if any(not isinstance(coluna, str) or not coluna for coluna in self.colunas):
@@ -171,15 +175,15 @@ def _instante_utc(relogio: Callable[[], datetime]) -> datetime:
     instante = relogio()
     if not isinstance(instante, datetime) or instante.tzinfo is None:
         raise ValueError("relogio deve retornar datetime com fuso horário")
-    return instante.astimezone(timezone.utc).replace(microsecond=0)
+    return instante.astimezone(timezone.utc)
 
 
 def _texto_instante(instante: datetime) -> str:
-    return instante.isoformat().replace("+00:00", "Z")
+    return instante.isoformat(timespec="microseconds").replace("+00:00", "Z")
 
 
 def _prefixo_run_id(instante: datetime) -> str:
-    return instante.strftime("%Y%m%dT%H%M%SZ")
+    return instante.strftime("%Y%m%dT%H%M%S.%fZ")
 
 
 def criar_manifesto(

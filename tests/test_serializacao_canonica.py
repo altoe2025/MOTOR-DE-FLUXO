@@ -152,9 +152,30 @@ def test_serializacao_e_deterministica_e_tem_chaves_ordenadas(resultado):
 def test_manifesto_injeta_relogio_versao_e_identidade_canonica(manifesto):
     assert manifesto.schema_version == SCHEMA_VERSION
     assert manifesto.versao_motor == "0.1.0+e3e4c0e"
-    assert manifesto.criado_em_utc == "2026-09-09T12:34:56Z"
-    assert manifesto.run_id == f"20260909T123456Z-{manifesto.hash_configuracao[:12]}"
+    assert manifesto.criado_em_utc == "2026-09-09T12:34:56.000000Z"
+    assert manifesto.run_id == (
+        f"20260909T123456.000000Z-{manifesto.hash_configuracao[:12]}"
+    )
     assert len(manifesto.hash_configuracao) == hashlib.sha256().digest_size * 2
+
+
+def test_run_id_distingue_execucoes_no_mesmo_segundo_e_e_deterministico(custo):
+    primeiro_instante = datetime(
+        2026, 9, 9, 12, 34, 56, 123456, tzinfo=timezone.utc,
+    )
+    segundo_instante = datetime(
+        2026, 9, 9, 12, 34, 56, 654321, tzinfo=timezone.utc,
+    )
+
+    primeiro = _manifesto(custo, relogio=lambda: primeiro_instante)
+    repetido = _manifesto(custo, relogio=lambda: primeiro_instante)
+    segundo = _manifesto(custo, relogio=lambda: segundo_instante)
+
+    assert primeiro.run_id == repetido.run_id
+    assert primeiro.hash_configuracao == segundo.hash_configuracao
+    assert primeiro.run_id != segundo.run_id
+    assert primeiro.criado_em_utc == "2026-09-09T12:34:56.123456Z"
+    assert segundo.criado_em_utc == "2026-09-09T12:34:56.654321Z"
 
 
 def test_hash_preserva_periodo_de_medicao_separado_do_horizonte(custo):
@@ -269,6 +290,31 @@ def test_pacote_rejeita_tabela_sem_proveniencia(resultado, manifesto):
 def test_tabela_rejeita_nome_que_nao_e_csv_simples_e_seguro(nome):
     with pytest.raises(ValueError, match="nome_arquivo"):
         TabelaCsvCanonica(nome, ("run_id",), (("run-1",),))
+
+
+@pytest.mark.parametrize(
+    "dispositivo",
+    (
+        "CON", "nul", "Aux", "prn",
+        "COM1", "com2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+        "LPT1", "lpt2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
+    ),
+)
+def test_tabela_rejeita_dispositivo_dos_reservado_independente_de_extensao(
+    dispositivo,
+):
+    with pytest.raises(ValueError, match="reservado"):
+        TabelaCsvCanonica(
+            f"{dispositivo}.dados.csv", ("run_id",), (("run-1",),),
+        )
+
+
+def test_tabela_aceita_nome_csv_normal():
+    tabela = TabelaCsvCanonica(
+        "consolidado_2026-09.csv", ("run_id",), (("run-1",),),
+    )
+
+    assert tabela.nome_arquivo == "consolidado_2026-09.csv"
 
 
 def test_escritores_preservam_json_e_csv_canonicos(tmp_path, resultado, manifesto):
