@@ -1,5 +1,6 @@
 """Contratos públicos da camada analítica do motor."""
 
+from motor.analise.clientes import analisar_clientes
 from motor.analise.modelo import (
     AgregadoCanonico,
     ConfiguracaoAnalise,
@@ -14,6 +15,7 @@ from motor.analise.modelo import (
 )
 
 __all__ = (
+    "analisar_clientes",
     "AgregadoCanonico",
     "ConfiguracaoAnalise",
     "ContribuicaoMarginal",
