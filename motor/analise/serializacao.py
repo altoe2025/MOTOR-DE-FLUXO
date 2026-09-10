@@ -163,9 +163,10 @@ def escrever_csv_canonico(tabela: TabelaCsvCanonica, path: str | Path) -> None:
 def _validar_nomes_tabelas_unicos(tabelas: Sequence[TabelaCsvCanonica]) -> None:
     vistos: set[str] = set()
     for tabela in tabelas:
-        if tabela.nome_arquivo in vistos:
+        nome_normalizado = tabela.nome_arquivo.casefold()
+        if nome_normalizado in vistos:
             raise ValueError(f"nome_arquivo duplicado: {tabela.nome_arquivo!r}")
-        vistos.add(tabela.nome_arquivo)
+        vistos.add(nome_normalizado)
 
 
 def _escrever_conjunto(pacote: PacoteExecucao, diretorio: Path) -> None:

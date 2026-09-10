@@ -142,6 +142,37 @@ def test_nomes_de_tabela_duplicados_falham_antes_de_qualquer_escrita(
     assert list(tmp_path.iterdir()) == []
 
 
+def test_nomes_de_tabela_que_variam_so_em_caixa_falham_no_preflight(
+    tmp_path, pacote_execucao, monkeypatch,
+):
+    tabela = pacote_execucao.tabelas[0]
+    tabela_em_maiusculas = TabelaCsvCanonica(
+        "RESUMO.csv", tabela.colunas, tabela.linhas,
+    )
+    pacote_duplicado = PacoteExecucao(
+        pacote_execucao.manifesto,
+        pacote_execucao.resultados,
+        (tabela, tabela_em_maiusculas),
+    )
+    escritas = []
+    monkeypatch.setattr(
+        serializacao,
+        "escrever_json",
+        lambda *args, **kwargs: escritas.append((args, kwargs)),
+    )
+    monkeypatch.setattr(
+        serializacao,
+        "escrever_csv_canonico",
+        lambda *args, **kwargs: escritas.append((args, kwargs)),
+    )
+
+    with pytest.raises(ValueError, match="nome_arquivo duplicado"):
+        serializacao.publicar_execucao(pacote_duplicado, tmp_path)
+
+    assert escritas == []
+    assert list(tmp_path.iterdir()) == []
+
+
 def test_proveniencia_materializada_invalida_impede_promocao(
     tmp_path, pacote_execucao, monkeypatch,
 ):
