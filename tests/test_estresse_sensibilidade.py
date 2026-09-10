@@ -1,8 +1,12 @@
 """Testes da reprecificacao de cenarios e dos limites de break-even."""
 
+from dataclasses import replace
 from decimal import Decimal
 
 import pytest
+
+from motor.analise import ModoAnalise, criar_manifesto, escrever_json
+from motor.varredura import PARAMETROS_VARREDURA
 
 from scripts.estresse_sensibilidade import (
     CARRY_BASE_BPS,
@@ -12,6 +16,7 @@ from scripts.estresse_sensibilidade import (
     agregar_cenarios,
     gerar_limites,
     indexar_exposicoes_iof,
+    main,
     reprecificar_economia,
 )
 
@@ -92,6 +97,28 @@ def test_limite_de_carry_zera_a_economia_na_base():
     assert CARRY_BASE_BPS + Decimal(200) == limite["carry_break_even_base_bps"]
 
 
+def test_limite_de_carry_usa_a_base_do_manifesto():
+    linha = _linha()
+    linha["carry_base_bps"] = "10"
+    chave = tuple(
+        linha[c]
+        for c in (
+            "nome_mix",
+            "n_clientes",
+            "janela_dias",
+            "horizonte_dias",
+            "seed_base",
+        )
+    )
+    parametros_base = replace(PARAMETROS_VARREDURA, carry_cnr=Decimal("0.001"))
+
+    limite = gerar_limites(
+        [linha], {chave: _exposicoes()}, parametros_base=parametros_base
+    )[0]
+
+    assert limite["carry_break_even_base_bps"] == Decimal(210)
+
+
 def test_agregacao_informa_fracao_de_carteiras_positivas():
     linhas = []
     for seed, economia in (("1", Decimal(-1)), ("2", Decimal(2))):
@@ -138,6 +165,50 @@ def test_exposicao_iof_duplicada_e_rejeitada():
         indexar_exposicoes_iof(linhas)
 
 
+def _manifesto():
+    return criar_manifesto(
+        parametros_custo=PARAMETROS_VARREDURA,
+        mixes=("teste",),
+        arquetipos=(),
+        horizonte_dias=365,
+        periodo_medicao_dias=365,
+        janela_dias=7,
+        seeds=(1,),
+        modo_analise=ModoAnalise.AGREGADO,
+        custo_calibrado=False,
+        metodo_percentil="nearest-rank",
+        drenagem="FORCADA_LEGADA",
+    )
+
+
+def test_main_rejeita_produto_vazio_sem_criar_saida(tmp_path):
+    produto = tmp_path / "produto.csv"
+    produto.write_text("nome_mix\n", encoding="utf-8")
+    iof = tmp_path / "iof.csv"
+    iof.write_text("nome_mix\n", encoding="utf-8")
+    manifesto = tmp_path / "manifesto.json"
+    escrever_json(_manifesto(), manifesto)
+    saida = tmp_path / "saida"
+
+    with pytest.raises(ValueError, match="produto vazio"):
+        main(
+            [
+                "--produto",
+                str(produto),
+                "--iof",
+                str(iof),
+                "--manifesto-produto",
+                str(manifesto),
+                "--manifesto-iof",
+                str(manifesto),
+                "--saida",
+                str(saida),
+            ]
+        )
+
+    assert not saida.exists()
+
+
 def test_exposicoes_incompletas_nao_viram_zero_silenciosamente():
     exposicoes_sem_ativos = {CHAVE_BENS_SERVICOS: Decimal("0.2")}
 
@@ -150,10 +221,10 @@ def test_exposicoes_incompletas_nao_viram_zero_silenciosamente():
 
 
 def test_reconciliacao_respeita_a_precisao_publicada_do_produto():
-    linha = {**_linha(), "iof_evitado_bps": "42.600000"}
+    linha = {**_linha(), "iof_evitado_bps": "102.840097"}
     exposicoes = {
-        CHAVE_BENS_SERVICOS: Decimal("0.200000004"),
-        CHAVE_ATIVOS_VIRTUAIS: Decimal("0.099999999"),
+        CHAVE_BENS_SERVICOS: Decimal("0.00000049"),
+        CHAVE_ATIVOS_VIRTUAIS: Decimal("0.29382879"),
     }
 
     resultado = reprecificar_economia(
@@ -163,3 +234,18 @@ def test_reconciliacao_respeita_a_precisao_publicada_do_produto():
     )
 
     assert resultado["economia_estressada_bps"] == Decimal(100)
+
+
+def test_reconciliacao_rejeita_diferenca_maior_que_a_quantizacao_publicada():
+    linha = {**_linha(), "iof_evitado_bps": "102.840100"}
+    exposicoes = {
+        CHAVE_BENS_SERVICOS: Decimal("0.00000049"),
+        CHAVE_ATIVOS_VIRTUAIS: Decimal("0.29382879"),
+    }
+
+    with pytest.raises(ValueError, match="exposicoes IOF nao reconciliam"):
+        reprecificar_economia(
+            linha,
+            exposicoes,
+            CenarioEstresse(nome="base", descricao="base"),
+        )

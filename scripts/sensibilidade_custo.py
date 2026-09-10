@@ -525,9 +525,9 @@ def agregar_iof(linhas: Iterable[Mapping[str, object]]) -> list[dict[str, object
 def escrever_csv(
     caminho: Path, linhas: Sequence[Mapping[str, object]], ressalvas: Sequence[str]
 ) -> None:
-    caminho.parent.mkdir(parents=True, exist_ok=True)
     if not linhas:
         raise ValueError(f"nenhuma linha para escrever em {caminho}")
+    caminho.parent.mkdir(parents=True, exist_ok=True)
     colunas = list(linhas[0].keys())
     with caminho.open("w", encoding="utf-8", newline="") as arquivo:
         for ressalva in ressalvas:
@@ -610,6 +610,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         raise FileNotFoundError(args.manifesto)
     manifesto = ler_manifesto(args.manifesto)
     registros = ler_grade_publicada(args.grade)
+    if not registros:
+        raise ValueError(f"grade vazia: {args.grade}")
     decomposicao = [decompor_linha_grade(registro, manifesto) for registro in registros]
     resumo_grade = agregar_por_celula(decomposicao, METRICAS_GRADE)
 

@@ -7,13 +7,14 @@ from decimal import Decimal
 import pytest
 
 from motor.custo import custo_netado
-from motor.analise import ModoAnalise, criar_manifesto
+from motor.analise import ModoAnalise, criar_manifesto, escrever_json
 from motor.dominio import Cenario, Direcao, Ordem, ParametrosCusto
 from motor.netting import executar_p0
 from scripts.sensibilidade_custo import (
     agregar_por_celula,
     avaliar_produto,
     decompor_linha_grade,
+    escrever_csv,
     extrair_bases,
     main,
     precificar_bases,
@@ -42,6 +43,16 @@ def test_cli_rejeita_sementes_duplicadas_antes_de_ler_a_grade(tmp_path):
         main(["--grade", str(grade_inexistente), "--sementes", "1,1"])
 
 
+def test_escrever_csv_vazio_nao_cria_diretorio_ou_arquivo(tmp_path):
+    saida = tmp_path / "saida" / "vazio.csv"
+
+    with pytest.raises(ValueError, match="nenhuma linha"):
+        escrever_csv(saida, [], ())
+
+    assert not saida.parent.exists()
+    assert not saida.exists()
+
+
 def _custo() -> ParametrosCusto:
     return ParametrosCusto(
         iof_out=Decimal("0.01"),
@@ -68,6 +79,29 @@ def _manifesto(custo: ParametrosCusto):
         metodo_percentil="nearest-rank",
         drenagem="FORCADA_LEGADA",
     )
+
+
+def test_main_rejeita_grade_vazia_sem_criar_saida(tmp_path):
+    grade = tmp_path / "grade.csv"
+    grade.write_text("nome_mix\n", encoding="utf-8")
+    manifesto = tmp_path / "manifesto.json"
+    escrever_json(_manifesto(_custo()), manifesto)
+    saida = tmp_path / "saida"
+
+    with pytest.raises(ValueError, match="grade vazia"):
+        main(
+            [
+                "--grade",
+                str(grade),
+                "--manifesto",
+                str(manifesto),
+                "--saida",
+                str(saida),
+                "--somente-grade",
+            ]
+        )
+
+    assert not saida.exists()
 
 
 def _ordem(id_: str, cliente: str, direcao: Direcao, valor: str) -> Ordem:

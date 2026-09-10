@@ -12,7 +12,7 @@ import argparse
 import csv
 from collections import defaultdict
 from dataclasses import dataclass
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import Decimal
 from pathlib import Path
 from typing import Iterable, Mapping, Sequence
 
@@ -42,6 +42,8 @@ IOF_ATIVOS_VIRTUAIS_BASE_BPS = (
 
 CHAVE_BENS_SERVICOS = ("ANEXO_V_BENS_SERVICOS", "OUT")
 CHAVE_ATIVOS_VIRTUAIS = ("ANEXO_V_ATIVOS_VIRTUAIS", "OUT")
+PRECISAO_IOF_PRODUTO = Decimal("0.000001")
+PRECISAO_EXPOSICAO_IOF = Decimal("0.00000001")
 
 
 @dataclass(frozen=True)
@@ -159,24 +161,30 @@ def reprecificar_economia(
     ]
     if divergentes:
         raise ValueError(f"parametros-base incompativeis: {divergentes}")
-    iof_reconciliado = sum(
+    parcelas_iof = tuple(
         (
-            exposicao * aliquota_iof(
-                parametros_base, finalidade, Direcao(direcao)
-            ) * BPS
-            for (finalidade, direcao), exposicao in exposicoes_iof.items()
-        ),
+            exposicao,
+            aliquota_iof(parametros_base, finalidade, Direcao(direcao)) * BPS,
+        )
+        for (finalidade, direcao), exposicao in exposicoes_iof.items()
+    )
+    iof_reconciliado = sum(
+        (exposicao * aliquota_bps for exposicao, aliquota_bps in parcelas_iof),
         Decimal(0),
     )
     iof_produto = _decimal(linha["iof_evitado_bps"])
-    precisao_publicada = Decimal(1).scaleb(iof_produto.as_tuple().exponent)
-    iof_reconciliado_publicado = iof_reconciliado.quantize(
-        precisao_publicada, rounding=ROUND_HALF_UP
+    erro_maximo_quantizacao = PRECISAO_IOF_PRODUTO / 2 + sum(
+        (
+            PRECISAO_EXPOSICAO_IOF / 2 * abs(aliquota_bps)
+            for _, aliquota_bps in parcelas_iof
+        ),
+        Decimal(0),
     )
-    if iof_reconciliado_publicado != iof_produto:
+    if abs(iof_reconciliado - iof_produto) > erro_maximo_quantizacao:
         raise ValueError(
             "exposicoes IOF nao reconciliam: "
-            f"produto={iof_produto} exposicoes={iof_reconciliado_publicado}"
+            f"produto={iof_produto} exposicoes={iof_reconciliado} "
+            f"erro_maximo_quantizacao={erro_maximo_quantizacao}"
         )
     economia_base = _decimal(linha["economia_produto_bps"])
     efeito_spread = (
@@ -323,6 +331,7 @@ def gerar_limites(
         spread_minimo = _ponto_zero(economia_piso, Decimal(0), inclinacao_spread)
         if spread_minimo is not None:
             spread_minimo = max(Decimal(0), spread_minimo)
+        carry_base_bps = parametros_base.carry_cnr * BPS
         saida.append(
             {
                 **{campo: linha[campo] for campo in CHAVES_IDENTIFICACAO},
@@ -330,10 +339,10 @@ def gerar_limites(
                 "economia_piso_bps": economia_piso,
                 "economia_combinada_severa_bps": economia_severa,
                 "carry_break_even_base_bps": _ponto_zero(
-                    economia_base, CARRY_BASE_BPS, inclinacao_carry
+                    economia_base, carry_base_bps, inclinacao_carry
                 ),
                 "carry_break_even_piso_bps": _ponto_zero(
-                    economia_piso, CARRY_BASE_BPS, inclinacao_carry
+                    economia_piso, carry_base_bps, inclinacao_carry
                 ),
                 "spread_minimo_no_piso_bps": spread_minimo,
             }
@@ -400,6 +409,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     validar_compatibilidade((manifesto_produto, manifesto_iof))
     produto = ler_csv(args.produto)
     iof = ler_csv(args.iof)
+    if not produto:
+        raise ValueError(f"produto vazio: {args.produto}")
+    if not iof:
+        raise ValueError(f"exposicoes IOF vazias: {args.iof}")
     exposicoes = indexar_exposicoes_iof(iof)
     cenarios = gerar_cenarios(
         produto, exposicoes, parametros_base=manifesto_produto.parametros_custo
