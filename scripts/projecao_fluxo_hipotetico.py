@@ -189,7 +189,15 @@ def gerar_premissas_arquetipos(
 
 
 def _chave(linha: Mapping[str, object]) -> tuple[object, ...]:
-    return tuple(linha[campo] for campo in CHAVES_IDENTIFICACAO)
+    return (
+        *tuple(linha[campo] for campo in CHAVES_IDENTIFICACAO),
+        _periodo_medicao_dias(linha),
+    )
+
+
+def _periodo_medicao_dias(linha: Mapping[str, object]) -> int:
+    """No legado, o horizonte informado também era o período medido."""
+    return int(linha.get("periodo_medicao_dias", linha["horizonte_dias"]))
 
 
 def indexar_produto(
@@ -212,6 +220,9 @@ def projetar_linha(
     multiplicador = cenario_fluxo.multiplicador
     if multiplicador <= 0:
         raise ValueError("multiplicador de fluxo deve ser positivo")
+    periodo_medicao_dias = _periodo_medicao_dias(produto)
+    if _periodo_medicao_dias(estresse) != periodo_medicao_dias:
+        raise ValueError("período medido diverge entre estresse e produto")
 
     volume_central = _decimal(produto["volume_bruto_brl"])
     volume_assumido = volume_central * multiplicador
@@ -228,7 +239,7 @@ def projetar_linha(
     )
     economia_brl = economia_ajustada / BPS * volume_assumido
 
-    rotulo = rotulo_periodo(int(produto["horizonte_dias"]))
+    rotulo = rotulo_periodo(periodo_medicao_dias)
     infixo = "anual" if rotulo == "anual" else "do_periodo"
     return {
         **{campo: estresse[campo] for campo in CHAVES_IDENTIFICACAO},
@@ -237,6 +248,7 @@ def projetar_linha(
         "cenario_fluxo": cenario_fluxo.nome,
         "descricao_fluxo": cenario_fluxo.descricao,
         "multiplicador_fluxo": multiplicador,
+        "periodo_medicao_dias": periodo_medicao_dias,
         "natureza_do_fluxo": "SUPOSICAO SINTETICA; NAO E DADO REAL",
         f"volume_{infixo}_central_brl": volume_central,
         f"volume_{infixo}_assumido_brl": volume_assumido,
@@ -275,6 +287,7 @@ def agregar_projecoes(
         "n_clientes",
         "janela_dias",
         "horizonte_dias",
+        "periodo_medicao_dias",
         "cenario_fluxo",
     )
     grupos: dict[tuple[object, ...], list[Mapping[str, object]]] = defaultdict(list)
@@ -292,7 +305,7 @@ def agregar_projecoes(
             "natureza_do_fluxo": "SUPOSICAO SINTETICA; NAO E DADO REAL",
             "n_sementes": len(grupo),
         }
-        rotulo = rotulo_periodo(int(primeiro["horizonte_dias"]))
+        rotulo = rotulo_periodo(int(primeiro["periodo_medicao_dias"]))
         infixo = "anual" if rotulo == "anual" else "do_periodo"
         for metrica in (
             f"volume_{infixo}_central_brl",

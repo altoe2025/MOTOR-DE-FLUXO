@@ -35,6 +35,7 @@ def _produto() -> dict[str, object]:
         "n_clientes": "8",
         "janela_dias": "7",
         "horizonte_dias": "365",
+        "periodo_medicao_dias": "365",
         "seed_base": "1",
         "volume_bruto_brl": "1000",
         "fixo_evitado_bps": "10",
@@ -47,6 +48,7 @@ def _estresse(tarifa: str = "40") -> dict[str, object]:
         "n_clientes": "8",
         "janela_dias": "7",
         "horizonte_dias": "365",
+        "periodo_medicao_dias": "365",
         "seed_base": "1",
         "cenario": "teste",
         "descricao": "teste",
@@ -106,9 +108,11 @@ def test_fluxo_anual_central_usa_a_mesma_base_de_30_dias_do_gerador():
 
 def test_periodo_de_30_dias_nao_publica_campos_anuais():
     produto = _produto()
-    produto["horizonte_dias"] = "30"
+    produto["horizonte_dias"] = "365"
+    produto["periodo_medicao_dias"] = "30"
     estresse = _estresse()
-    estresse["horizonte_dias"] = "30"
+    estresse["horizonte_dias"] = "365"
+    estresse["periodo_medicao_dias"] = "30"
 
     resultado = projetar_linha(estresse, produto, CenarioFluxo("central", Decimal(1), "x"))
 
@@ -119,6 +123,29 @@ def test_periodo_de_30_dias_nao_publica_campos_anuais():
     assert agregado["volume_do_periodo_assumido_brl_p50"] == Decimal(1000)
     assert agregado["economia_do_periodo_assumida_brl_p50"] == Decimal(2)
     assert not any("anual" in chave for chave in agregado)
+
+
+def test_medicao_de_365_dias_permanece_anual_com_liquidacao_posterior():
+    produto = _produto()
+    produto["horizonte_dias"] = "400"
+    estresse = _estresse()
+    estresse["horizonte_dias"] = "400"
+
+    resultado = projetar_linha(estresse, produto, CenarioFluxo("central", Decimal(1), "x"))
+
+    assert resultado["periodo_medicao_dias"] == 365
+    assert resultado["horizonte_dias"] == "400"
+    assert resultado["volume_anual_assumido_brl"] == Decimal(1000)
+    assert "volume_do_periodo_assumido_brl" not in resultado
+
+
+def test_rejeita_periodos_medidos_divergentes_entre_produto_e_estresse():
+    produto = _produto()
+    estresse = _estresse()
+    estresse["periodo_medicao_dias"] = "30"
+
+    with pytest.raises(ValueError, match="período medido diverge"):
+        projetar_linha(estresse, produto, CenarioFluxo("central", Decimal(1), "x"))
 
 
 def test_rejeita_cenario_sem_linha_de_produto_correspondente():

@@ -1,3 +1,4 @@
+from dataclasses import replace
 from decimal import Decimal
 
 import pytest
@@ -45,6 +46,7 @@ def manifesto(cenario_com_aquecimento: Cenario) -> ManifestoExecucao:
         criado_em_utc="2026-09-09T00:00:00Z", hash_configuracao="abc",
         run_ids_origem=(), parametros_custo=cenario_com_aquecimento.custo,
         mixes=("teste",), arquetipos=("teste",), horizonte_dias=50,
+        periodo_medicao_dias=50,
         janela_dias=3, seeds=(7,), modo_analise=ModoAnalise.POR_CLIENTE,
         custo_calibrado=False, metodo_percentil="linear", drenagem="legada",
         avisos=(),
@@ -111,3 +113,21 @@ def test_agregado_oficial_contem_somente_a_coorte_medida(
     )
     assert resultado.agregado.execucao_completa.ciclos[-1].dia == 42
     assert resultado.manifesto.drenagem == "NATURAL"
+    assert resultado.manifesto.periodo_medicao_dias == 30
+    assert resultado.manifesto.horizonte_dias == 42
+
+
+def test_medicao_anual_preserva_rotulo_apesar_de_liquidacao_posterior(
+    cenario_com_aquecimento: Cenario, manifesto: ManifestoExecucao,
+):
+    cenario = Cenario(
+        ordens=(_ordem("anual", "cliente-a", Direcao.OUT, "100", 364, 400),),
+        janela_dias=3, horizonte_dias=400, custo=cenario_com_aquecimento.custo,
+    )
+    resultado = analisar(
+        cenario, ConfiguracaoAnalise(ModoAnalise.POR_CLIENTE),
+        replace(manifesto, horizonte_dias=400, periodo_medicao_dias=400),
+        configuracao_temporal=ConfiguracaoTemporal(0, 365),
+    )
+    assert resultado.manifesto.periodo_medicao_dias == 365
+    assert resultado.manifesto.horizonte_dias == 400

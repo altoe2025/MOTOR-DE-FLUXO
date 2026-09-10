@@ -32,6 +32,7 @@ def _manifesto(cenario, modo):
         criado_em_utc="2026-09-09T00:00:00Z", hash_configuracao="abc",
         run_ids_origem=(), parametros_custo=cenario.custo, mixes=("teste",),
         arquetipos=("teste",), horizonte_dias=cenario.horizonte_dias,
+        periodo_medicao_dias=cenario.horizonte_dias,
         janela_dias=cenario.janela_dias, seeds=(7,), modo_analise=modo,
         custo_calibrado=False, metodo_percentil="linear", drenagem="legada",
         avisos=("sintetico",),

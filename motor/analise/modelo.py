@@ -157,6 +157,7 @@ class ManifestoExecucao:
     mixes: tuple[str, ...]
     arquetipos: tuple[str, ...]
     horizonte_dias: int
+    periodo_medicao_dias: int
     janela_dias: int
     seeds: tuple[int, ...]
     modo_analise: ModoAnalise

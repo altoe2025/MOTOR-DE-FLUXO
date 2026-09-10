@@ -107,6 +107,7 @@ def analisar(
         manifesto = replace(
             manifesto, drenagem="NATURAL",
             horizonte_dias=cenario_execucao.horizonte_dias,
+            periodo_medicao_dias=configuracao_temporal.periodo_medicao_dias,
         )
     ledger, clientes, contribuicoes = (), (), ()
     if modo is not ModoAnalise.AGREGADO:

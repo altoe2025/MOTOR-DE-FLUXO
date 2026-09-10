@@ -46,7 +46,8 @@ def resultado():
         run_id="run-1", schema_version="1", versao_motor="0.1.0",
         criado_em_utc="2026-09-09T00:00:00Z", hash_configuracao="abc",
         run_ids_origem=(), parametros_custo=cenario.custo, mixes=("teste",),
-        arquetipos=("teste",), horizonte_dias=1, janela_dias=1, seeds=(7,),
+        arquetipos=("teste",), horizonte_dias=1, periodo_medicao_dias=1,
+        janela_dias=1, seeds=(7,),
         modo_analise=ModoAnalise.AGREGADO, custo_calibrado=False,
         metodo_percentil="linear", drenagem="legada", avisos=("sintetico",),
     )
@@ -166,6 +167,7 @@ def test_contrato_preserva_resultado_legado_e_parametros_estruturados(resultado)
     assert resultado.manifesto.parametros_custo.iof_por_finalidade == {
         ("TESTE", Direcao.OUT): Decimal("0.02"),
     }
+    assert resultado.manifesto.periodo_medicao_dias == resultado.manifesto.horizonte_dias == 1
     assert resultado.clientes == resultado.ledger_eventos == resultado.contribuicoes_marginais == ()
     assert resultado.diagnosticos_experimentais.limite_intra_cliente_brl is None
 
