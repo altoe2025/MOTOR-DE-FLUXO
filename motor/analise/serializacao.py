@@ -7,6 +7,8 @@ import dataclasses
 import hashlib
 import json
 import re
+import shutil
+import tempfile
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from datetime import datetime, timezone
@@ -156,6 +158,131 @@ def escrever_csv_canonico(tabela: TabelaCsvCanonica, path: str | Path) -> None:
         escritor = csv.writer(arquivo, lineterminator="\n")
         escritor.writerow(tabela.colunas)
         escritor.writerows(tabela.linhas)
+
+
+def _validar_nomes_tabelas_unicos(tabelas: Sequence[TabelaCsvCanonica]) -> None:
+    vistos: set[str] = set()
+    for tabela in tabelas:
+        if tabela.nome_arquivo in vistos:
+            raise ValueError(f"nome_arquivo duplicado: {tabela.nome_arquivo!r}")
+        vistos.add(tabela.nome_arquivo)
+
+
+def _escrever_conjunto(pacote: PacoteExecucao, diretorio: Path) -> None:
+    for indice, resultado in enumerate(pacote.resultados, start=1):
+        escrever_json(resultado, diretorio / f"resultado-{indice}.json")
+    for tabela in pacote.tabelas:
+        escrever_csv_canonico(tabela, diretorio / tabela.nome_arquivo)
+    escrever_json(pacote.manifesto, diretorio / "manifesto.json")
+
+
+def _identidade_documento(documento: Mapping[str, object]) -> tuple[object, object, object]:
+    return (
+        documento.get("run_id"),
+        documento.get("schema_version"),
+        documento.get("hash_configuracao"),
+    )
+
+
+def _validar_conjunto_publicado(pacote: PacoteExecucao, diretorio: Path) -> None:
+    nomes_esperados = {
+        "manifesto.json",
+        *(f"resultado-{indice}.json" for indice in range(1, len(pacote.resultados) + 1)),
+        *(tabela.nome_arquivo for tabela in pacote.tabelas),
+    }
+    nomes_recebidos = {path.name for path in diretorio.iterdir() if path.is_file()}
+    if nomes_recebidos != nomes_esperados:
+        raise ValueError(
+            "conjunto materializado incompleto: "
+            f"esperado {sorted(nomes_esperados)}; recebido {sorted(nomes_recebidos)}"
+        )
+
+    identidade_esperada = _identidade(pacote.manifesto)
+    manifesto_documento = json.loads(
+        (diretorio / "manifesto.json").read_text(encoding="utf-8")
+    )
+    if not isinstance(manifesto_documento, dict) or (
+        _identidade_documento(manifesto_documento) != identidade_esperada
+    ):
+        raise ValueError("identidade materializada do manifesto é incompatível")
+
+    for indice in range(1, len(pacote.resultados) + 1):
+        documento = json.loads(
+            (diretorio / f"resultado-{indice}.json").read_text(encoding="utf-8")
+        )
+        manifesto_resultado = (
+            documento.get("manifesto") if isinstance(documento, dict) else None
+        )
+        if not isinstance(manifesto_resultado, dict) or (
+            _identidade_documento(manifesto_resultado) != identidade_esperada
+        ):
+            raise ValueError(
+                f"identidade materializada do resultado {indice} é incompatível"
+            )
+
+    esperados = dict(zip(_COLUNAS_PROVENIENCIA, identidade_esperada, strict=True))
+    for tabela in pacote.tabelas:
+        with (diretorio / tabela.nome_arquivo).open(
+            encoding="utf-8", newline=""
+        ) as arquivo:
+            leitor = csv.reader(arquivo)
+            try:
+                colunas = next(leitor)
+            except StopIteration as erro:
+                raise ValueError(
+                    f"tabela {tabela.nome_arquivo!r} materializada sem cabeçalho"
+                ) from erro
+            if len(colunas) != len(set(colunas)) or any(
+                nome not in colunas for nome in _COLUNAS_PROVENIENCIA
+            ):
+                raise ValueError(
+                    f"proveniência materializada inválida em {tabela.nome_arquivo!r}"
+                )
+            indices = {nome: colunas.index(nome) for nome in _COLUNAS_PROVENIENCIA}
+            for numero, linha in enumerate(leitor, start=1):
+                if len(linha) != len(colunas) or any(
+                    linha[indices[nome]] != valor for nome, valor in esperados.items()
+                ):
+                    raise ValueError(
+                        "proveniência materializada incompatível em "
+                        f"{tabela.nome_arquivo!r}, linha {numero}"
+                    )
+
+
+def _temporario_esta_dentro_da_raiz(temporario: Path, destino_raiz: Path) -> bool:
+    temporario_resolvido = temporario.resolve()
+    raiz_resolvida = destino_raiz.resolve()
+    return (
+        temporario_resolvido != raiz_resolvida
+        and temporario_resolvido.is_relative_to(raiz_resolvida)
+    )
+
+
+def publicar_execucao(pacote: PacoteExecucao, destino_raiz: Path) -> Path:
+    """Materializa e promove atomicamente um pacote analítico canônico."""
+    _validar_nomes_tabelas_unicos(pacote.tabelas)
+    destino_raiz = Path(destino_raiz)
+    destino_raiz.mkdir(parents=True, exist_ok=True)
+    final = destino_raiz / pacote.manifesto.run_id
+    if final.resolve().parent != destino_raiz.resolve():
+        raise ValueError("run_id deve identificar um diretório filho de destino_raiz")
+    if final.exists():
+        raise FileExistsError(final)
+
+    temporario = Path(tempfile.mkdtemp(prefix=".motor-", dir=destino_raiz))
+    try:
+        _escrever_conjunto(pacote, temporario)
+        _validar_conjunto_publicado(pacote, temporario)
+        if final.exists():
+            raise FileExistsError(final)
+        temporario.replace(final)
+        return final
+    except Exception:
+        if temporario.exists() and _temporario_esta_dentro_da_raiz(
+            temporario, destino_raiz
+        ):
+            shutil.rmtree(temporario)
+        raise
 
 
 def _configuracao_manifesto(manifesto: ManifestoExecucao) -> dict[str, object]:
