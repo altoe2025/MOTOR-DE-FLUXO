@@ -20,13 +20,13 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Iterable, Mapping, Sequence
 
+from motor.analise.estatistica import percentil_empirico
 from motor.arquetipos import TODOS as ARQUETIPOS
 from scripts.estresse_sensibilidade import TARIFA_BASE_BRL, ler_csv
 from scripts.sensibilidade_custo import (
     BPS,
     CHAVES_IDENTIFICACAO,
     _decimal,
-    _percentil,
     escrever_csv,
 )
 
@@ -292,7 +292,9 @@ def agregar_projecoes(
         ):
             valores = [_decimal(linha[metrica]) for linha in grupo]
             for nome_q, q in (("p10", "0.10"), ("p50", "0.50"), ("p90", "0.90")):
-                resumo[f"{metrica}_{nome_q}"] = _percentil(valores, Decimal(q))
+                resumo[f"{metrica}_{nome_q}"] = percentil_empirico(
+                    valores, Decimal(q)
+                )
         resumo["fracao_economia_positiva"] = Decimal(
             sum(1 for linha in grupo if linha["economia_positiva"])
         ) / Decimal(len(grupo))

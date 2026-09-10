@@ -22,7 +22,7 @@ from motor.simulacao import simular
 from motor.varredura import (
     PARAMETROS_VARREDURA,
     PontoVarredura,
-    _percentil,
+    _formatar,
     escrever_csv,
     montar_especificacao_pool,
     montar_ponto,
@@ -30,6 +30,7 @@ from motor.varredura import (
     resumir,
     rodar_varredura,
 )
+from scripts import varredura_completa
 
 CENARIO_AMANDA = Path(__file__).parent.parent / "motor" / "cenarios" / "exemplo_amanda.yaml"
 HORIZONTE_CURTO = 90
@@ -581,14 +582,52 @@ def test_csv_sem_ponto_nenhum_ainda_escreve_o_cabecalho(tmp_path):
     assert len(linhas) == 1
 
 
-def test_percentil_usa_o_posto_mais_proximo_e_nao_o_piso():
-    """O docstring promete "posto mais próximo"; truncar dá o posto de baixo.
+def test_seeds_duplicadas_falham_antes_de_percorrer_a_grade():
+    with pytest.raises(ValueError, match=r"seeds duplicadas: \[1\]"):
+        rodar_varredura(
+            mixes={},
+            valores_n=(),
+            valores_w=(),
+            valores_seed=(1, 1),
+            horizonte_dias=HORIZONTE_CURTO,
+            custo=PARAMETROS_VARREDURA,
+        )
 
-    Com 4 amostras e q=0.25 o posto exato é 0,75 — o vizinho é o índice 1, não o 0.
-    """
-    amostras = [Decimal("10"), Decimal("20"), Decimal("30"), Decimal("40")]
 
-    assert _percentil(amostras, Decimal("0.25")) == Decimal("20")
+@pytest.mark.parametrize(
+    "campo",
+    ["taxa_netabilidade_incremental", "taxa_netabilidade_incremental_p50"],
+)
+def test_csv_preserva_seis_casas_nas_taxas_incrementais(campo):
+    assert _formatar(campo, Decimal("0.0049")) == Decimal("0.004900")
+
+
+def test_varredura_completa_usa_percentil_empirico_nearest_rank():
+    linhas = [
+        {
+            "nome_mix": "teste",
+            "n_clientes": 8,
+            "janela_dias": 7,
+            "economia_bps": Decimal(valor),
+            "dias_espera_p90_volume_casado": Decimal(valor),
+            "dias_espera_p90_volume_remetido": Decimal(valor),
+            "pct_volume_espera_truncada": Decimal(valor),
+            "fracao_in_realizada": Decimal(valor),
+            "taxa_netabilidade_incremental": Decimal(valor),
+            "taxa_netabilidade": Decimal(valor),
+        }
+        for valor in ("10", "20", "30", "40")
+    ]
+
+    assert varredura_completa.agregar(linhas)[0]["economia_bps_p50"] == Decimal("20")
+
+
+def test_varredura_completa_rejeita_sementes_duplicadas_antes_da_grade(monkeypatch):
+    monkeypatch.setattr(varredura_completa, "SEMENTES", (1, 1))
+    monkeypatch.setattr(varredura_completa, "TODOS", {})
+
+    with pytest.raises(ValueError, match=r"seeds duplicadas: \[1\]"):
+        varredura_completa.rodar()
 
 
 def test_resumir_nao_mistura_horizontes_diferentes():

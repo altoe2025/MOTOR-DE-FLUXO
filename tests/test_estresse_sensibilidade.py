@@ -112,3 +112,4 @@ def test_agregacao_informa_fracao_de_carteiras_positivas():
     resumo = agregar_cenarios(linhas)[0]
 
     assert resumo["fracao_economia_positiva"] == Decimal("0.5")
+    assert resumo["economia_estressada_bps_p50"] == Decimal(-1)

@@ -26,6 +26,7 @@ import math
 from decimal import Decimal
 from pathlib import Path
 
+from motor.analise.estatistica import percentil_empirico, validar_seeds_unicas
 from motor.dominio import Cenario, Direcao
 from motor.mixes import TODOS
 from motor.varredura import (
@@ -90,17 +91,6 @@ def _formatar(nome: str, valor):
     return valor.quantize(quantum, rounding="ROUND_HALF_UP")
 
 
-def _percentil(ordenados, q: Decimal) -> Decimal:
-    """Posto mais proximo, sem interpolar — mesma convencao de `motor.varredura`.
-
-    Interpolar inventaria um valor que nenhuma semente produziu.
-    """
-    if not ordenados:
-        return Decimal(0)
-    posto = (Decimal(len(ordenados)) - 1) * q
-    return ordenados[int(posto.to_integral_value(rounding="ROUND_HALF_UP"))]
-
-
 def _fracao_in(pool) -> Decimal:
     total = sum((o.valor_brl for o in pool), Decimal(0))
     entrada = sum((o.valor_brl for o in pool if o.direcao is Direcao.IN), Decimal(0))
@@ -108,10 +98,11 @@ def _fracao_in(pool) -> Decimal:
 
 
 def rodar() -> list[dict]:
+    sementes = validar_seeds_unicas(SEMENTES)
     linhas: list[dict] = []
     for nome_mix, mix in TODOS.items():
         for n in VALORES_N:
-            for semente in SEMENTES:
+            for semente in sementes:
                 # UMA vez por (mix, N, semente); reusada nos dois W logo abaixo.
                 pool = montar_pool_do_ponto(mix, n, HORIZONTE, semente)
                 if not pool:
@@ -168,29 +159,29 @@ def agregar(linhas) -> list[dict]:
                 "janela_dias": w,
                 "horizonte_dias": HORIZONTE,
                 "n_sementes": len(do_grupo),
-                "economia_bps_p10": _percentil(bps, Decimal("0.10")),
-                "economia_bps_p50": _percentil(bps, Decimal("0.50")),
-                "economia_bps_p90": _percentil(bps, Decimal("0.90")),
-                "dias_espera_p90_volume_casado_p50": _percentil(
+                "economia_bps_p10": percentil_empirico(bps, Decimal("0.10")),
+                "economia_bps_p50": percentil_empirico(bps, Decimal("0.50")),
+                "economia_bps_p90": percentil_empirico(bps, Decimal("0.90")),
+                "dias_espera_p90_volume_casado_p50": percentil_empirico(
                     sorted(r["dias_espera_p90_volume_casado"] for r in do_grupo),
                     Decimal("0.50"),
                 ),
-                "dias_espera_p90_volume_remetido_p50": _percentil(
+                "dias_espera_p90_volume_remetido_p50": percentil_empirico(
                     sorted(r["dias_espera_p90_volume_remetido"] for r in do_grupo),
                     Decimal("0.50"),
                 ),
-                "pct_volume_espera_truncada_p50": _percentil(
+                "pct_volume_espera_truncada_p50": percentil_empirico(
                     sorted(r["pct_volume_espera_truncada"] for r in do_grupo),
                     Decimal("0.50"),
                 ),
-                "fracao_in_realizada_p50": _percentil(
+                "fracao_in_realizada_p50": percentil_empirico(
                     sorted(r["fracao_in_realizada"] for r in do_grupo), Decimal("0.50")
                 ),
-                "taxa_netabilidade_incremental_p50": _percentil(
+                "taxa_netabilidade_incremental_p50": percentil_empirico(
                     sorted(r["taxa_netabilidade_incremental"] for r in do_grupo),
                     Decimal("0.50"),
                 ),
-                "taxa_netabilidade_p50": _percentil(
+                "taxa_netabilidade_p50": percentil_empirico(
                     sorted(r["taxa_netabilidade"] for r in do_grupo), Decimal("0.50")
                 ),
             }

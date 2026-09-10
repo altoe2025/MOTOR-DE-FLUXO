@@ -41,6 +41,7 @@ from dataclasses import dataclass
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Iterable, Mapping, Sequence
 
+from motor.analise.estatistica import percentil_empirico, validar_seeds_unicas
 from motor.dominio import Cenario, Ciclo, Direcao, Ordem, ParametrosCusto, TipoAlocacao
 from motor.geracao import gerar_pool
 from motor.mixes import Mix, normalizar, validar_mix
@@ -505,11 +506,12 @@ def rodar_varredura(
     o único eixo que precisa enxergar exatamente a mesma pool, senão o ruído
     amostral entra somado ao efeito da janela.
     """
+    seeds = validar_seeds_unicas(valores_seed)
     pontos: list[PontoVarredura] = []
 
     for nome_mix, mix in mixes.items():
         for n_clientes in valores_n:
-            for seed_base in valores_seed:
+            for seed_base in seeds:
                 pool = montar_pool_do_ponto(mix, n_clientes, horizonte_dias, seed_base)
                 volume_bruto = sum((ordem.valor_brl for ordem in pool), Decimal(0))
 
@@ -566,26 +568,6 @@ class ResumoCelula:
     frac_seeds_positiva: Decimal
 
 
-def _percentil(ordenados: Sequence[Decimal], q: Decimal) -> Decimal:
-    """Percentil por posto mais próximo — sem interpolar.
-
-    Interpolar inventaria um valor que nenhuma seed produziu. Com poucas seeds
-    isso é pior que arredondar para a amostra vizinha.
-    """
-    # Arredonda para o posto mais próximo (meio para cima). `int(...)` truncava, o que
-    # é PISO — com 4 seeds e q=0,25 devolvia a pior seed em vez da vizinha.
-    posto = (Decimal(len(ordenados)) - 1) * q
-    indice = int(posto.to_integral_value(rounding=ROUND_HALF_UP))
-    return ordenados[indice]
-
-
-def _mediana(ordenados: Sequence[Decimal]) -> Decimal:
-    meio = len(ordenados) // 2
-    if len(ordenados) % 2:
-        return ordenados[meio]
-    return (ordenados[meio - 1] + ordenados[meio]) / 2
-
-
 def resumir(pontos: Iterable[PontoVarredura]) -> tuple[ResumoCelula, ...]:
     """Colapsa o eixo de seeds: um `ResumoCelula` por (mix, N, W). Pura.
 
@@ -618,18 +600,22 @@ def resumir(pontos: Iterable[PontoVarredura]) -> tuple[ResumoCelula, ...]:
                 janela_dias=janela_dias,
                 horizonte_dias=horizonte_dias,
                 n_seeds=len(do_grupo),
-                n_ordens_p50=_mediana(ordens),
-                taxa_netabilidade_p50=_mediana(taxas),
-                teto_netabilidade_p50=_mediana(tetos),
-                eficiencia_vs_teto_p50=_mediana(eficiencias),
-                taxa_netabilidade_incremental_p50=_mediana(incrementais),
+                n_ordens_p50=percentil_empirico(ordens, Decimal("0.50")),
+                taxa_netabilidade_p50=percentil_empirico(taxas, Decimal("0.50")),
+                teto_netabilidade_p50=percentil_empirico(tetos, Decimal("0.50")),
+                eficiencia_vs_teto_p50=percentil_empirico(
+                    eficiencias, Decimal("0.50")
+                ),
+                taxa_netabilidade_incremental_p50=percentil_empirico(
+                    incrementais, Decimal("0.50")
+                ),
                 economia_pct_min=pcts[0],
-                economia_pct_p25=_percentil(pcts, Decimal("0.25")),
-                economia_pct_p50=_mediana(pcts),
-                economia_pct_p75=_percentil(pcts, Decimal("0.75")),
+                economia_pct_p25=percentil_empirico(pcts, Decimal("0.25")),
+                economia_pct_p50=percentil_empirico(pcts, Decimal("0.50")),
+                economia_pct_p75=percentil_empirico(pcts, Decimal("0.75")),
                 economia_pct_max=pcts[-1],
                 economia_brl_min=brls[0],
-                economia_brl_p50=_mediana(brls),
+                economia_brl_p50=percentil_empirico(brls, Decimal("0.50")),
                 frac_seeds_positiva=Decimal(positivas) / Decimal(len(do_grupo)),
             )
         )
@@ -643,6 +629,8 @@ COLUNAS: tuple[str, ...] = tuple(campo.name for campo in dataclasses.fields(Pont
 _CASAS_DECIMAIS = {
     "taxa_netabilidade": Decimal("0.000001"),
     "taxa_netabilidade_p50": Decimal("0.000001"),
+    "taxa_netabilidade_incremental": Decimal("0.000001"),
+    "taxa_netabilidade_incremental_p50": Decimal("0.000001"),
     "teto_netabilidade": Decimal("0.000001"),
     "teto_netabilidade_p50": Decimal("0.000001"),
     "eficiencia_vs_teto": Decimal("0.000001"),

@@ -7,10 +7,24 @@ import pytest
 from scripts.projecao_fluxo_hipotetico import (
     CenarioFluxo,
     RESSALVAS,
+    agregar_projecoes,
     gerar_premissas_arquetipos,
     gerar_projecoes,
     projetar_linha,
 )
+
+
+def test_agregacao_usa_percentil_empirico_nearest_rank():
+    cenario = CenarioFluxo("central", Decimal(1), "central")
+    linhas = []
+    for economia in ("10", "20", "30", "40"):
+        estresse = _estresse(tarifa="0")
+        estresse["economia_estressada_bps"] = economia
+        linhas.append(projetar_linha(estresse, _produto(), cenario))
+
+    resumo = agregar_projecoes(linhas)[0]
+
+    assert resumo["economia_bps_escala_assumida_p50"] == Decimal("20")
 
 
 def _produto() -> dict[str, object]:

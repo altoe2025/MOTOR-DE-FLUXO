@@ -4,15 +4,41 @@ from __future__ import annotations
 
 from decimal import Decimal
 
+import pytest
+
 from motor.custo import custo_netado
 from motor.dominio import Cenario, Direcao, Ordem, ParametrosCusto
 from motor.netting import executar_p0
 from scripts.sensibilidade_custo import (
+    agregar_por_celula,
     avaliar_produto,
     decompor_linha_grade,
     extrair_bases,
+    main,
     precificar_bases,
 )
+
+
+def test_agregacao_usa_percentil_empirico_nearest_rank():
+    linhas = [
+        {
+            "nome_mix": "teste",
+            "n_clientes": 8,
+            "janela_dias": 7,
+            "horizonte_dias": 365,
+            "metrica": Decimal(valor),
+        }
+        for valor in ("10", "20", "30", "40")
+    ]
+
+    assert agregar_por_celula(linhas, ("metrica",))[0]["metrica_p50"] == Decimal("20")
+
+
+def test_cli_rejeita_sementes_duplicadas_antes_de_ler_a_grade(tmp_path):
+    grade_inexistente = tmp_path / "grade-inexistente.csv"
+
+    with pytest.raises(ValueError, match=r"seeds duplicadas: \[1\]"):
+        main(["--grade", str(grade_inexistente), "--sementes", "1,1"])
 
 
 def _custo() -> ParametrosCusto:

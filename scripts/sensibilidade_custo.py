@@ -27,6 +27,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 from typing import Iterable, Mapping, Sequence
 
+from motor.analise.estatistica import percentil_empirico, validar_seeds_unicas
 from motor.custo import Custos, aliquota_iof, custo_baseline, custo_netado
 from motor.dominio import Cenario, Ciclo, Direcao, Ordem, ParametrosCusto, TipoAlocacao
 from motor.mixes import TODOS as MIXES
@@ -119,15 +120,6 @@ def _bps(valor_brl: Decimal, volume_bruto_brl: Decimal) -> Decimal:
 
 def _participacao(parcela: Decimal, economia: Decimal) -> Decimal:
     return parcela / economia if economia else Decimal(0)
-
-
-def _percentil(valores: Sequence[Decimal], q: Decimal) -> Decimal:
-    if not valores:
-        return Decimal(0)
-    ordenados = sorted(valores)
-    posto = (Decimal(len(ordenados)) - 1) * q
-    indice = int(posto.to_integral_value(rounding=ROUND_HALF_UP))
-    return ordenados[indice]
 
 
 def extrair_bases(ciclos: Iterable[Ciclo], ordens: Iterable[Ordem]) -> BasesPrecificacao:
@@ -278,9 +270,9 @@ def agregar_por_celula(
         resumo["n_sementes"] = len(grupo)
         for metrica in metricas:
             valores = [_decimal(linha[metrica]) for linha in grupo]
-            resumo[f"{metrica}_p10"] = _percentil(valores, Decimal("0.10"))
-            resumo[f"{metrica}_p50"] = _percentil(valores, Decimal("0.50"))
-            resumo[f"{metrica}_p90"] = _percentil(valores, Decimal("0.90"))
+            resumo[f"{metrica}_p10"] = percentil_empirico(valores, Decimal("0.10"))
+            resumo[f"{metrica}_p50"] = percentil_empirico(valores, Decimal("0.50"))
+            resumo[f"{metrica}_p90"] = percentil_empirico(valores, Decimal("0.90"))
         saida.append(resumo)
     return saida
 
@@ -441,7 +433,9 @@ def agregar_iof(linhas: Iterable[Mapping[str, object]]) -> list[dict[str, object
         for metrica in ("iof_evitado_bps_base", "delta_bps_por_1bp_aliquota"):
             valores = [_decimal(linha[metrica]) for linha in grupo]
             for nome_q, q in (("p10", "0.10"), ("p50", "0.50"), ("p90", "0.90")):
-                resumo[f"{metrica}_{nome_q}"] = _percentil(valores, Decimal(q))
+                resumo[f"{metrica}_{nome_q}"] = percentil_empirico(
+                    valores, Decimal(q)
+                )
         saida.append(resumo)
     return saida
 
@@ -507,6 +501,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         help="nao regenera pools; produz apenas a decomposicao bruta publicada",
     )
     args = parser.parse_args(argv)
+    sementes = validar_seeds_unicas(_lista_int(args.sementes))
 
     registros = ler_grade_publicada(args.grade)
     decomposicao = [decompor_linha_grade(registro) for registro in registros]
@@ -521,7 +516,6 @@ def main(argv: Sequence[str] | None = None) -> int:
     nomes_mix = tuple(nome for nome in args.mixes.split(",") if nome)
     valores_n = _lista_int(args.n)
     valores_w = _lista_int(args.w)
-    sementes = _lista_int(args.sementes)
     desconhecidos = sorted(set(nomes_mix) - set(MIXES))
     if desconhecidos:
         parser.error(f"mixes desconhecidos: {desconhecidos}")

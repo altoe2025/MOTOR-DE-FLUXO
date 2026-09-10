@@ -16,6 +16,7 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Iterable, Mapping, Sequence
 
+from motor.analise.estatistica import percentil_empirico
 from motor.custo import aliquota_iof
 from motor.dominio import Direcao
 from motor.varredura import PARAMETROS_VARREDURA
@@ -23,7 +24,6 @@ from scripts.sensibilidade_custo import (
     BPS,
     CHAVES_IDENTIFICACAO,
     _decimal,
-    _percentil,
     escrever_csv,
 )
 
@@ -219,9 +219,15 @@ def agregar_cenarios(linhas: Iterable[Mapping[str, object]]) -> list[dict[str, o
                     "iof_ativos_virtuais_out_bps"
                 ],
                 "n_sementes": len(grupo),
-                "economia_estressada_bps_p10": _percentil(valores, Decimal("0.10")),
-                "economia_estressada_bps_p50": _percentil(valores, Decimal("0.50")),
-                "economia_estressada_bps_p90": _percentil(valores, Decimal("0.90")),
+                "economia_estressada_bps_p10": percentil_empirico(
+                    valores, Decimal("0.10")
+                ),
+                "economia_estressada_bps_p50": percentil_empirico(
+                    valores, Decimal("0.50")
+                ),
+                "economia_estressada_bps_p90": percentil_empirico(
+                    valores, Decimal("0.90")
+                ),
                 "fracao_economia_positiva": Decimal(
                     sum(1 for valor in valores if valor > 0)
                 )
@@ -300,7 +306,7 @@ def agregar_limites(linhas: Iterable[Mapping[str, object]]) -> list[dict[str, ob
             ]
             for sufixo, q in (("p10", "0.10"), ("p50", "0.50"), ("p90", "0.90")):
                 resumo[f"{metrica}_{sufixo}"] = (
-                    _percentil(valores, Decimal(q)) if valores else None
+                    percentil_empirico(valores, Decimal(q)) if valores else None
                 )
         saida.append(resumo)
     return saida

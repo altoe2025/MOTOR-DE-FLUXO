@@ -18,7 +18,8 @@ from __future__ import annotations
 from decimal import Decimal
 
 from motor.mixes import EQUILIBRADO
-from motor.varredura import PARAMETROS_VARREDURA, _percentil, rodar_varredura
+from motor.analise.estatistica import percentil_empirico
+from motor.varredura import PARAMETROS_VARREDURA, rodar_varredura
 
 MIX, N, HORIZONTE = "equilibrado", 12, 365
 VALORES_W = (1, 3, 7, 14, 30)
@@ -57,7 +58,7 @@ def main() -> None:
         p90 = sorted(p90_de[(w, s)] for s in SEMENTES)
         print(
             f"{w:>3} {_mediana(bps):>13.2f} "
-            f"{_percentil(bps, Decimal('0.10')):>13.2f} {_mediana(p90):>15}"
+            f"{percentil_empirico(bps, Decimal('0.10')):>13.2f} {_mediana(p90):>15}"
         )
 
     for a, b in ((1, 3), (1, 7), (3, 7), (7, 14), (7, 30)):
