@@ -10,8 +10,10 @@ from scripts.projecao_fluxo_hipotetico import (
     agregar_projecoes,
     gerar_premissas_arquetipos,
     gerar_projecoes,
+    fluxo_anual_central,
     projetar_linha,
 )
+from motor.arquetipos import REMESSA_OUTBOUND_MASSIVA
 
 
 def test_agregacao_usa_percentil_empirico_nearest_rank():
@@ -86,11 +88,37 @@ def test_fluxo_central_e_formula_explicita_e_nao_dado_real():
         if linha["arquetipo"] == "remessa_outbound_massiva"
         and linha["cenario_fluxo"] == "central_1_0x"
     )
-    assert Decimal("8619964") < remessa["fluxo_anual_assumido_brl"] < Decimal(
-        "8619966"
+    assert Decimal("8739685") < remessa["fluxo_anual_assumido_brl"] < Decimal(
+        "8739688"
     )
     assert "SUPOSICAO" in remessa["natureza_do_fluxo"]
     assert "SUPOSICOES" in RESSALVAS[0]
+
+
+def test_fluxo_anual_central_usa_a_mesma_base_de_30_dias_do_gerador():
+    arquetipo = REMESSA_OUTBOUND_MASSIVA
+    media_ticket = Decimal(str(float(arquetipo.ticket_mediana_brl) * __import__("math").exp(
+        arquetipo.ticket_sigma**2 / 2
+    )))
+    esperado = media_ticket * Decimal(str(arquetipo.cadencia_mensal)) * Decimal(365) / Decimal(30)
+    assert fluxo_anual_central(arquetipo) == esperado
+
+
+def test_periodo_de_30_dias_nao_publica_campos_anuais():
+    produto = _produto()
+    produto["horizonte_dias"] = "30"
+    estresse = _estresse()
+    estresse["horizonte_dias"] = "30"
+
+    resultado = projetar_linha(estresse, produto, CenarioFluxo("central", Decimal(1), "x"))
+
+    assert resultado["volume_do_periodo_assumido_brl"] == Decimal(1000)
+    assert resultado["economia_do_periodo_assumida_brl"] == Decimal(2)
+    assert not any("anual" in chave for chave in resultado)
+    agregado = agregar_projecoes([resultado])[0]
+    assert agregado["volume_do_periodo_assumido_brl_p50"] == Decimal(1000)
+    assert agregado["economia_do_periodo_assumida_brl_p50"] == Decimal(2)
+    assert not any("anual" in chave for chave in agregado)
 
 
 def test_rejeita_cenario_sem_linha_de_produto_correspondente():

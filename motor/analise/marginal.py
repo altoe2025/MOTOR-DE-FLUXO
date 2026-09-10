@@ -9,7 +9,9 @@ from __future__ import annotations
 from dataclasses import replace
 from decimal import Decimal
 
-from motor.analise.clientes import _somar_exato, analisar_clientes
+from motor.analise.clientes import (
+    _somar_exato, analisar_clientes, filtrar_analise_clientes,
+)
 from motor.analise.modelo import ContribuicaoMarginal, ResultadoCliente
 from motor.dominio import Cenario
 from motor.simulacao import Resultado, simular
@@ -17,22 +19,38 @@ from motor.simulacao import Resultado, simular
 
 def _contribuicao_com_resultado(
     cenario: Cenario, cheio: Resultado, cliente: ResultadoCliente, volume_pool: Decimal,
+    ids_ordens_medidas: tuple[str, ...] | None = None,
+    economia_periodo: Decimal | None = None,
 ) -> ContribuicaoMarginal:
     """Reutiliza a execução cheia e o cliente já calculados pelo pipeline."""
     sem_cliente = replace(cenario, ordens=tuple(
         o for o in cenario.ordens if o.cliente_id != cliente.cliente_id
     ))
-    economia_sem = simular(sem_cliente).economia
-    marginal = _somar_exato((cheio.economia, economia_sem.copy_negate()))
+    resultado_sem = simular(sem_cliente)
+    if ids_ordens_medidas is None:
+        economia_sem = resultado_sem.economia
+        economia_com = cheio.economia
+    else:
+        ledger_sem, _ = analisar_clientes(sem_cliente, resultado_sem)
+        ids_presentes = {ordem.id for ordem in sem_cliente.ordens}
+        ids_sem = tuple(
+            ordem_id for ordem_id in ids_ordens_medidas if ordem_id in ids_presentes
+        )
+        eventos_sem, _ = filtrar_analise_clientes(ledger_sem, ids_sem)
+        economia_sem = _somar_exato(e.ganho_realizado_brl for e in eventos_sem)
+        economia_com = economia_periodo if economia_periodo is not None else cheio.economia
+    marginal = _somar_exato((economia_com, economia_sem.copy_negate()))
     efeito = _somar_exato((marginal, cliente.ganho_proprio_brl.copy_negate()))
+    marginal_bps = marginal / volume_pool * Decimal(10000) if volume_pool else Decimal(0)
+    efeito_bps = efeito / volume_pool * Decimal(10000) if volume_pool else Decimal(0)
     return ContribuicaoMarginal(
         cliente_id=cliente.cliente_id,
         ganho_proprio_brl=cliente.ganho_proprio_brl,
         ganho_proprio_bps=cliente.ganho_proprio_bps,
         contribuicao_marginal_total_brl=marginal,
-        contribuicao_marginal_total_bps=marginal / volume_pool * Decimal(10000),
+        contribuicao_marginal_total_bps=marginal_bps,
         efeito_sobre_demais_brl=efeito,
-        efeito_sobre_demais_bps=efeito / volume_pool * Decimal(10000),
+        efeito_sobre_demais_bps=efeito_bps,
     )
 
 

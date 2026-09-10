@@ -15,6 +15,12 @@ from motor.analise.modelo import (
     ResumoDiaCliente,
 )
 from motor.analise.pipeline import analisar
+from motor.analise.temporal import (
+    ConfiguracaoTemporal,
+    ExecucaoTemporal,
+    preparar_execucao_temporal,
+    rotulo_periodo,
+)
 
 __all__ = (
     "analisar",
@@ -30,4 +36,8 @@ __all__ = (
     "ResultadoCanonico",
     "ResultadoCliente",
     "ResumoDiaCliente",
+    "ConfiguracaoTemporal",
+    "ExecucaoTemporal",
+    "preparar_execucao_temporal",
+    "rotulo_periodo",
 )

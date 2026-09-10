@@ -4,6 +4,7 @@ from decimal import Decimal, getcontext, localcontext
 import pytest
 
 from motor.analise import analisar_clientes
+from motor.analise.clientes import filtrar_analise_clientes
 from motor.custo import custo_baseline
 from motor.dominio import Cenario, Direcao, Ordem, ParametrosCusto
 from motor.simulacao import simular
@@ -67,6 +68,28 @@ def _reconciliar(cenario):
 def test_rateio_dos_clientes_fecha_com_o_agregado():
     _reconciliar(_cenario(_ordem("a", "a", Direcao.OUT, "1000"),
                          _ordem("b", "b", Direcao.IN, "600")))
+
+
+def test_coorte_filtrada_preserva_rateio_e_reconcilia_residuos_decimal():
+    cenario = _cenario(*(
+        _ordem(str(i), str(i % 5), Direcao.OUT if i % 3 else Direcao.IN,
+               str(100 + 13 * i), i % 7, i % 7 + i % 4 + 1)
+        for i in range(30)
+    ), custo=_custo(custo_oportunidade_aa=D("0.15")), janela=3, horizonte=12)
+    ledger, _ = analisar_clientes(cenario, simular(cenario))
+    ids = tuple(str(i) for i in range(1, 30, 2))
+
+    eventos, clientes = filtrar_analise_clientes(ledger, ids)
+
+    assert {evento.ordem_id for evento in eventos} == set(ids)
+    assert _soma(c.ganho_proprio_brl for c in clientes) == _soma(
+        evento.ganho_realizado_brl for evento in eventos
+    )
+    for lado in ("baseline", "netado"):
+        for campo in COMPONENTES:
+            assert _soma(getattr(getattr(c, lado), campo) for c in clientes) == _soma(
+                getattr(getattr(evento, lado), campo) for evento in eventos
+            )
 
 
 def test_entrada_nao_reconhece_custo_ou_ganho_e_preserva_metadados():

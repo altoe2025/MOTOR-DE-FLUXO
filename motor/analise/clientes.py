@@ -276,3 +276,36 @@ def analisar_clientes(
         por_cliente[evento.cliente_id].append(evento)
     clientes = tuple(_resumir(cid, tuple(itens)) for cid, itens in sorted(por_cliente.items()))
     return ledger, clientes
+
+
+def filtrar_analise_clientes(
+    ledger: tuple[EventoCliente, ...], ids_ordens: tuple[str, ...],
+) -> tuple[tuple[EventoCliente, ...], tuple[ResultadoCliente, ...]]:
+    """Publica uma coorte sem refazer o rateio técnico da execução integral."""
+    ids = frozenset(ids_ordens)
+    eventos = [evento for evento in ledger if evento.ordem_id in ids]
+    if not eventos:
+        return (), ()
+    alvo = Resultado(
+        ciclos=(),
+        baseline=_somar_custos(evento.baseline for evento in eventos),
+        netado=_somar_custos(evento.netado for evento in eventos),
+        economia=_somar_exato(evento.ganho_realizado_brl for evento in eventos),
+        taxa_netabilidade=_ZERO,
+    )
+    # Aplica à coorte a mesma política canônica de restos usada no ledger integral.
+    _reconciliar_ledger(eventos, alvo)
+    ledger_coorte = tuple(eventos)
+    por_cliente: dict[str, list[EventoCliente]] = defaultdict(list)
+    for evento in ledger_coorte:
+        por_cliente[evento.cliente_id].append(evento)
+    clientes = tuple(
+        _resumir(cliente_id, tuple(itens))
+        for cliente_id, itens in sorted(por_cliente.items())
+    )
+    return ledger_coorte, clientes
+
+
+def resultado_cliente_vazio(cliente_id: str) -> ResultadoCliente:
+    """Representa ganho próprio nulo para cliente sem ordem na coorte medida."""
+    return _resumir(cliente_id, ())

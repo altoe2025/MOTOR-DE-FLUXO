@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import Iterable, Mapping, Sequence
 
 from motor.analise.estatistica import percentil_empirico
+from motor.analise.temporal import rotulo_periodo
 from motor.arquetipos import TODOS as ARQUETIPOS
 from scripts.estresse_sensibilidade import TARIFA_BASE_BRL, ler_csv
 from scripts.sensibilidade_custo import (
@@ -146,7 +147,12 @@ def fluxo_anual_central(arquetipo: object) -> Decimal:
     media_ticket = float(arquetipo.ticket_mediana_brl) * math.exp(
         arquetipo.ticket_sigma**2 / 2
     )
-    return Decimal(str(media_ticket * arquetipo.cadencia_mensal * 12))
+    return (
+        Decimal(str(media_ticket))
+        * Decimal(str(arquetipo.cadencia_mensal))
+        * Decimal(365)
+        / Decimal(30)
+    )
 
 
 def gerar_premissas_arquetipos(
@@ -175,7 +181,7 @@ def gerar_premissas_arquetipos(
                     "cadencia_mensal": Decimal(str(arquetipo.cadencia_mensal)),
                     "fluxo_anual_central_brl": central,
                     "fluxo_anual_assumido_brl": central * cenario.multiplicador,
-                    "formula_central": "mediana_ticket * exp(sigma^2/2) * cadencia_mensal * 12",
+                    "formula_central": "mediana_ticket * exp(sigma^2/2) * cadencia_mensal * 365 / 30",
                     "natureza_do_fluxo": "SUPOSICAO SINTETICA; substituir quando houver dado real",
                 }
             )
@@ -222,6 +228,8 @@ def projetar_linha(
     )
     economia_brl = economia_ajustada / BPS * volume_assumido
 
+    rotulo = rotulo_periodo(int(produto["horizonte_dias"]))
+    infixo = "anual" if rotulo == "anual" else "do_periodo"
     return {
         **{campo: estresse[campo] for campo in CHAVES_IDENTIFICACAO},
         "cenario_custo": estresse["cenario"],
@@ -230,14 +238,14 @@ def projetar_linha(
         "descricao_fluxo": cenario_fluxo.descricao,
         "multiplicador_fluxo": multiplicador,
         "natureza_do_fluxo": "SUPOSICAO SINTETICA; NAO E DADO REAL",
-        "volume_anual_central_brl": volume_central,
-        "volume_anual_assumido_brl": volume_assumido,
+        f"volume_{infixo}_central_brl": volume_central,
+        f"volume_{infixo}_assumido_brl": volume_assumido,
         "tarifa_fixa_cenario_brl": tarifa_cenario,
         "fixo_evitado_bps_escala_central": fixo_no_cenario_original,
         "fixo_evitado_bps_escala_assumida": fixo_no_cenario_original / multiplicador,
         "economia_bps_escala_central": economia_original,
         "economia_bps_escala_assumida": economia_ajustada,
-        "economia_anual_assumida_brl": economia_brl,
+        f"economia_{infixo}_assumida_brl": economia_brl,
         "economia_positiva": economia_ajustada > 0,
     }
 
@@ -284,11 +292,13 @@ def agregar_projecoes(
             "natureza_do_fluxo": "SUPOSICAO SINTETICA; NAO E DADO REAL",
             "n_sementes": len(grupo),
         }
+        rotulo = rotulo_periodo(int(primeiro["horizonte_dias"]))
+        infixo = "anual" if rotulo == "anual" else "do_periodo"
         for metrica in (
-            "volume_anual_central_brl",
-            "volume_anual_assumido_brl",
+            f"volume_{infixo}_central_brl",
+            f"volume_{infixo}_assumido_brl",
             "economia_bps_escala_assumida",
-            "economia_anual_assumida_brl",
+            f"economia_{infixo}_assumida_brl",
         ):
             valores = [_decimal(linha[metrica]) for linha in grupo]
             for nome_q, q in (("p10", "0.10"), ("p50", "0.50"), ("p90", "0.90")):

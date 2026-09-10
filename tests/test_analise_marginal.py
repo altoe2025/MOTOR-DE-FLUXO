@@ -5,7 +5,7 @@ import pickle
 import pytest
 
 from motor.analise import (
-    ConfiguracaoAnalise, DiagnosticosExperimentais, ManifestoExecucao,
+    ConfiguracaoAnalise, ConfiguracaoTemporal, DiagnosticosExperimentais, ManifestoExecucao,
     ModoAnalise, analisar, analisar_clientes, calcular_contribuicao_marginal,
 )
 from motor.analise import marginal, pipeline
@@ -272,4 +272,32 @@ def test_marginal_preserva_ganho_publicado_com_residuo_decimal(cenario):
     assert contribuicao.contribuicao_marginal_total_brl == esperado
     assert contribuicao.efeito_sobre_demais_brl == _soma_exata(
         esperado, cliente.ganho_proprio_brl.copy_negate(),
+    )
+
+
+def test_marginal_temporal_remove_tambem_ordens_de_aquecimento(cenario):
+    cenario = replace(cenario, ordens=(
+        Ordem("warm-a", "cliente-a", Direcao.OUT, D(100), 0, 9, False, "x"),
+        Ordem("medida-a", "cliente-a", Direcao.IN, D(40), 5, 9, False, "x"),
+        Ordem("medida-b", "cliente-b", Direcao.OUT, D(40), 5, 9, False, "x"),
+    ), horizonte_dias=9)
+    config = ConfiguracaoAnalise(ModoAnalise.MARGINAL_SELECIONADOS, ("cliente-a",))
+    manifesto = _manifesto(cenario, config.modo)
+
+    resultado = analisar(
+        cenario, config, manifesto,
+        configuracao_temporal=ConfiguracaoTemporal(dias_aquecimento=5, periodo_medicao_dias=5),
+    )
+
+    contribuicao, = resultado.contribuicoes_marginais
+    sem_cliente = replace(cenario, ordens=(cenario.ordens[-1],))
+    resultado_sem = analisar(
+        sem_cliente,
+        ConfiguracaoAnalise(ModoAnalise.POR_CLIENTE),
+        replace(manifesto, modo_analise=ModoAnalise.POR_CLIENTE),
+        configuracao_temporal=ConfiguracaoTemporal(5, 5),
+    )
+    assert contribuicao.contribuicao_marginal_total_brl == _soma_exata(
+        resultado.agregado.economia_periodo_brl,
+        resultado_sem.agregado.economia_periodo_brl.copy_negate(),
     )
