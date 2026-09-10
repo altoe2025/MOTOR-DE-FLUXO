@@ -12,19 +12,21 @@ import argparse
 import csv
 from collections import defaultdict
 from dataclasses import dataclass
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 from typing import Iterable, Mapping, Sequence
 
+from motor.analise import validar_compatibilidade
 from motor.analise.estatistica import percentil_empirico
 from motor.custo import aliquota_iof
-from motor.dominio import Direcao
+from motor.dominio import Direcao, ParametrosCusto
 from motor.varredura import PARAMETROS_VARREDURA
 from scripts.sensibilidade_custo import (
     BPS,
     CHAVES_IDENTIFICACAO,
     _decimal,
     escrever_csv,
+    ler_manifesto,
 )
 
 
@@ -127,9 +129,15 @@ def indexar_exposicoes_iof(
 ) -> dict[tuple[object, ...], dict[tuple[str, str], Decimal]]:
     indice: dict[tuple[object, ...], dict[tuple[str, str], Decimal]] = defaultdict(dict)
     for linha in linhas:
-        indice[_chave_identificacao(linha)][
-            (str(linha["finalidade"]), str(linha["direcao"]))
-        ] = _decimal(linha["delta_bps_por_1bp_aliquota"])
+        chave_carteira = _chave_identificacao(linha)
+        chave_exposicao = (str(linha["finalidade"]), str(linha["direcao"]))
+        if chave_exposicao in indice[chave_carteira]:
+            raise ValueError(
+                f"exposicao IOF duplicada: {chave_carteira + chave_exposicao}"
+            )
+        indice[chave_carteira][chave_exposicao] = _decimal(
+            linha["delta_bps_por_1bp_aliquota"]
+        )
     return dict(indice)
 
 
@@ -137,22 +145,64 @@ def reprecificar_economia(
     linha: Mapping[str, object],
     exposicoes_iof: Mapping[tuple[str, str], Decimal],
     cenario: CenarioEstresse,
+    parametros_base: ParametrosCusto = PARAMETROS_VARREDURA,
 ) -> dict[str, object]:
+    parametros_linha = {
+        "spread_base_bps": parametros_base.spread_rail_bps,
+        "tarifa_base_brl": parametros_base.custo_fixo_remessa,
+        "carry_base_bps": parametros_base.carry_cnr * BPS,
+    }
+    divergentes = [
+        nome
+        for nome, esperado in parametros_linha.items()
+        if nome in linha and _decimal(linha[nome]) != esperado
+    ]
+    if divergentes:
+        raise ValueError(f"parametros-base incompativeis: {divergentes}")
+    iof_reconciliado = sum(
+        (
+            exposicao * aliquota_iof(
+                parametros_base, finalidade, Direcao(direcao)
+            ) * BPS
+            for (finalidade, direcao), exposicao in exposicoes_iof.items()
+        ),
+        Decimal(0),
+    )
+    iof_produto = _decimal(linha["iof_evitado_bps"])
+    precisao_publicada = Decimal(1).scaleb(iof_produto.as_tuple().exponent)
+    iof_reconciliado_publicado = iof_reconciliado.quantize(
+        precisao_publicada, rounding=ROUND_HALF_UP
+    )
+    if iof_reconciliado_publicado != iof_produto:
+        raise ValueError(
+            "exposicoes IOF nao reconciliam: "
+            f"produto={iof_produto} exposicoes={iof_reconciliado_publicado}"
+        )
     economia_base = _decimal(linha["economia_produto_bps"])
     efeito_spread = (
-        cenario.spread_bps - SPREAD_BASE_BPS
+        cenario.spread_bps - parametros_base.spread_rail_bps
     ) * _decimal(linha["delta_bps_por_1bp_spread"])
     efeito_tarifa = (
-        cenario.tarifa_fixa_brl - TARIFA_BASE_BRL
+        cenario.tarifa_fixa_brl - parametros_base.custo_fixo_remessa
     ) * _decimal(linha["delta_bps_por_1real_fixo"])
     efeito_carry = (
-        cenario.carry_bps - CARRY_BASE_BPS
+        cenario.carry_bps - parametros_base.carry_cnr * BPS
     ) * _decimal(linha["delta_bps_por_1bp_carry"])
     efeito_iof_bens = (
-        cenario.iof_bens_servicos_out_bps - IOF_BENS_SERVICOS_BASE_BPS
+        cenario.iof_bens_servicos_out_bps
+        - aliquota_iof(
+            parametros_base, CHAVE_BENS_SERVICOS[0], Direcao(CHAVE_BENS_SERVICOS[1])
+        )
+        * BPS
     ) * exposicoes_iof.get(CHAVE_BENS_SERVICOS, Decimal(0))
     efeito_iof_ativos = (
-        cenario.iof_ativos_virtuais_out_bps - IOF_ATIVOS_VIRTUAIS_BASE_BPS
+        cenario.iof_ativos_virtuais_out_bps
+        - aliquota_iof(
+            parametros_base,
+            CHAVE_ATIVOS_VIRTUAIS[0],
+            Direcao(CHAVE_ATIVOS_VIRTUAIS[1]),
+        )
+        * BPS
     ) * exposicoes_iof.get(CHAVE_ATIVOS_VIRTUAIS, Decimal(0))
     economia = (
         economia_base
@@ -186,6 +236,7 @@ def gerar_cenarios(
     produto: Sequence[Mapping[str, object]],
     exposicoes: Mapping[tuple[object, ...], Mapping[tuple[str, str], Decimal]],
     cenarios: Sequence[CenarioEstresse] = CENARIOS,
+    parametros_base: ParametrosCusto = PARAMETROS_VARREDURA,
 ) -> list[dict[str, object]]:
     saida: list[dict[str, object]] = []
     for linha in produto:
@@ -193,7 +244,9 @@ def gerar_cenarios(
         if chave not in exposicoes:
             raise ValueError(f"linha de produto sem exposicao de IOF: {chave}")
         for cenario in cenarios:
-            saida.append(reprecificar_economia(linha, exposicoes[chave], cenario))
+            saida.append(
+                reprecificar_economia(linha, exposicoes[chave], cenario, parametros_base)
+            )
     return saida
 
 
@@ -246,6 +299,7 @@ def _ponto_zero(valor_atual: Decimal, parametro_atual: Decimal, inclinacao: Deci
 def gerar_limites(
     produto: Sequence[Mapping[str, object]],
     exposicoes: Mapping[tuple[object, ...], Mapping[tuple[str, str], Decimal]],
+    parametros_base: ParametrosCusto = PARAMETROS_VARREDURA,
 ) -> list[dict[str, object]]:
     piso = next(c for c in CENARIOS if c.nome == "piso_sem_componentes_incertos")
     severo = next(c for c in CENARIOS if c.nome == "combinado_severo")
@@ -255,10 +309,14 @@ def gerar_limites(
         exposicao = exposicoes[chave]
         economia_base = _decimal(linha["economia_produto_bps"])
         economia_piso = _decimal(
-            reprecificar_economia(linha, exposicao, piso)["economia_estressada_bps"]
+            reprecificar_economia(linha, exposicao, piso, parametros_base)[
+                "economia_estressada_bps"
+            ]
         )
         economia_severa = _decimal(
-            reprecificar_economia(linha, exposicao, severo)["economia_estressada_bps"]
+            reprecificar_economia(linha, exposicao, severo, parametros_base)[
+                "economia_estressada_bps"
+            ]
         )
         inclinacao_carry = _decimal(linha["delta_bps_por_1bp_carry"])
         inclinacao_spread = _decimal(linha["delta_bps_por_1bp_spread"])
@@ -324,17 +382,30 @@ def main(argv: Sequence[str] | None = None) -> int:
         type=Path,
         default=Path("resultados/sensibilidade/sensibilidade_iof_bruta.csv"),
     )
+    parser.add_argument("--manifesto-produto", type=Path)
+    parser.add_argument("--manifesto-iof", type=Path)
     parser.add_argument(
         "--saida", type=Path, default=Path("resultados/sensibilidade")
     )
     args = parser.parse_args(argv)
-
+    manifesto_produto_path = (
+        args.manifesto_produto or args.produto.parent / "manifesto.json"
+    )
+    manifesto_iof_path = args.manifesto_iof or args.iof.parent / "manifesto.json"
+    for caminho in (args.produto, args.iof, manifesto_produto_path, manifesto_iof_path):
+        if not caminho.is_file():
+            raise FileNotFoundError(caminho)
+    manifesto_produto = ler_manifesto(manifesto_produto_path)
+    manifesto_iof = ler_manifesto(manifesto_iof_path)
+    validar_compatibilidade((manifesto_produto, manifesto_iof))
     produto = ler_csv(args.produto)
     iof = ler_csv(args.iof)
     exposicoes = indexar_exposicoes_iof(iof)
-    cenarios = gerar_cenarios(produto, exposicoes)
+    cenarios = gerar_cenarios(
+        produto, exposicoes, parametros_base=manifesto_produto.parametros_custo
+    )
     resumo_cenarios = agregar_cenarios(cenarios)
-    limites = gerar_limites(produto, exposicoes)
+    limites = gerar_limites(produto, exposicoes, manifesto_produto.parametros_custo)
     resumo_limites = agregar_limites(limites)
 
     escrever_csv(args.saida / "cenarios_estresse_bruta.csv", cenarios, RESSALVAS)

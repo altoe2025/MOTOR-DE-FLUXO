@@ -21,12 +21,14 @@ from __future__ import annotations
 
 import argparse
 import csv
+import json
 from collections import defaultdict
 from dataclasses import dataclass
 from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 from typing import Iterable, Mapping, Sequence
 
+from motor.analise import ManifestoExecucao, ModoAnalise, validar_compatibilidade
 from motor.analise.estatistica import percentil_empirico, validar_seeds_unicas
 from motor.custo import Custos, aliquota_iof, custo_baseline, custo_netado
 from motor.dominio import Cenario, Ciclo, Direcao, Ordem, ParametrosCusto, TipoAlocacao
@@ -202,8 +204,41 @@ def _validar_reprecificacao(
         )
 
 
-def decompor_linha_grade(registro: Mapping[str, str]) -> dict[str, object]:
+def _validar_parametros_grade(
+    registro: Mapping[str, str], manifesto: ManifestoExecucao
+) -> None:
+    volume = _decimal(registro["volume_bruto_brl"])
+    spread_registrado = registro.get("spread_base_bps")
+    if spread_registrado is None:
+        spread_esperado_brl = (
+            volume * manifesto.parametros_custo.spread_rail_bps / BPS
+        )
+        spread_registrado_brl = _decimal(registro["baseline_spread_brl"])
+        compativel = (
+            abs(spread_registrado_brl - spread_esperado_brl) <= Decimal("0.005")
+        )
+    else:
+        compativel = (
+            _decimal(spread_registrado)
+            == manifesto.parametros_custo.spread_rail_bps
+        )
+    if not compativel:
+        raise ValueError(
+            "parametros-base incompativeis: spread da grade diverge do manifesto"
+        )
+
+
+def decompor_linha_grade(
+    registro: Mapping[str, str], manifesto: ManifestoExecucao | None = None
+) -> dict[str, object]:
     """Reaproveita uma linha publicada; nenhuma simulacao e executada."""
+
+    if manifesto is None:
+        parametros_base = PARAMETROS_VARREDURA
+    else:
+        validar_compatibilidade((manifesto,))
+        _validar_parametros_grade(registro, manifesto)
+        parametros_base = manifesto.parametros_custo
 
     volume = _decimal(registro["volume_bruto_brl"])
     economia = _decimal(registro["economia_brl"])
@@ -226,9 +261,9 @@ def decompor_linha_grade(registro: Mapping[str, str]) -> dict[str, object]:
             f"economia={economia} recomposta={recomposta}"
         )
 
-    spread_base = PARAMETROS_VARREDURA.spread_rail_bps
-    fixo_base = PARAMETROS_VARREDURA.custo_fixo_remessa
-    carry_base_bps = PARAMETROS_VARREDURA.carry_cnr * BPS
+    spread_base = parametros_base.spread_rail_bps
+    fixo_base = parametros_base.custo_fixo_remessa
+    carry_base_bps = parametros_base.carry_cnr * BPS
 
     return {
         **{chave: registro[chave] for chave in CHAVES_IDENTIFICACAO},
@@ -256,6 +291,47 @@ def ler_grade_publicada(caminho: Path) -> list[dict[str, str]]:
         return list(csv.DictReader(linhas))
 
 
+def ler_manifesto(caminho: Path) -> ManifestoExecucao:
+    documento = json.loads(caminho.read_text(encoding="utf-8"))
+    custo_doc = documento["parametros_custo"]
+    regras = {
+        (regra["finalidade"], Direcao(regra["direcao"])): _decimal(regra["aliquota"])
+        for regra in custo_doc.get("iof_por_finalidade", ())
+    }
+    custo = ParametrosCusto(
+        iof_out=_decimal(custo_doc["iof_out"]),
+        iof_in=_decimal(custo_doc["iof_in"]),
+        carry_cnr=_decimal(custo_doc["carry_cnr"]),
+        spread_rail_bps=_decimal(custo_doc["spread_rail_bps"]),
+        custo_fixo_remessa=_decimal(custo_doc["custo_fixo_remessa"]),
+        custo_oportunidade_aa=_decimal(custo_doc["custo_oportunidade_aa"]),
+        ptax=_decimal(custo_doc["ptax"]),
+        iof_por_finalidade=regras,
+    )
+    manifesto = ManifestoExecucao(
+        run_id=documento["run_id"],
+        schema_version=documento["schema_version"],
+        versao_motor=documento["versao_motor"],
+        criado_em_utc=documento["criado_em_utc"],
+        hash_configuracao=documento["hash_configuracao"],
+        run_ids_origem=tuple(documento["run_ids_origem"]),
+        parametros_custo=custo,
+        mixes=tuple(documento["mixes"]),
+        arquetipos=tuple(documento["arquetipos"]),
+        horizonte_dias=documento["horizonte_dias"],
+        periodo_medicao_dias=documento["periodo_medicao_dias"],
+        janela_dias=documento["janela_dias"],
+        seeds=tuple(documento["seeds"]),
+        modo_analise=ModoAnalise(documento["modo_analise"]),
+        custo_calibrado=documento["custo_calibrado"],
+        metodo_percentil=documento["metodo_percentil"],
+        drenagem=documento["drenagem"],
+        avisos=tuple(documento["avisos"]),
+    )
+    validar_compatibilidade((manifesto,))
+    return manifesto
+
+
 def agregar_por_celula(
     linhas: Iterable[Mapping[str, object]], metricas: Sequence[str]
 ) -> list[dict[str, object]]:
@@ -277,12 +353,14 @@ def agregar_por_celula(
     return saida
 
 
-def _cenario(ordens: tuple[Ordem, ...], w: int, horizonte: int) -> Cenario:
+def _cenario(
+    ordens: tuple[Ordem, ...], w: int, horizonte: int, custo: ParametrosCusto
+) -> Cenario:
     return Cenario(
         ordens=ordens,
         janela_dias=w,
         horizonte_dias=horizonte,
-        custo=PARAMETROS_VARREDURA,
+        custo=custo,
     )
 
 
@@ -292,6 +370,7 @@ def avaliar_produto(
     seed: int,
     valores_w: Sequence[int],
     horizonte: int = HORIZONTE_PADRAO,
+    custo: ParametrosCusto = PARAMETROS_VARREDURA,
 ) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
     """Avalia a pool contra cada posicao liquida executada sozinha."""
 
@@ -303,14 +382,14 @@ def avaliar_produto(
     linhas_iof: list[dict[str, object]] = []
 
     for w in valores_w:
-        cenario_pool = _cenario(pool, w, horizonte)
+        cenario_pool = _cenario(pool, w, horizonte, custo)
         custo_sem_pool = custo_baseline(cenario_pool)
         ciclos_pool = executar_p0(cenario_pool)
         custo_pool = custo_netado(ciclos_pool, cenario_pool)
         bases_pool = extrair_bases(ciclos_pool, pool)
         _validar_reprecificacao(custo_pool, bases_pool, cenario_pool.custo, "pool")
         _validar_reprecificacao(
-            custo_sem_pool, base_baseline, PARAMETROS_VARREDURA, "baseline liquido"
+            custo_sem_pool, base_baseline, custo, "baseline liquido"
         )
 
         componentes = {
@@ -340,6 +419,9 @@ def avaliar_produto(
             "horizonte_dias": horizonte,
             "seed_base": seed,
             "volume_bruto_brl": volume,
+            "spread_base_bps": custo.spread_rail_bps,
+            "tarifa_base_brl": custo.custo_fixo_remessa,
+            "carry_base_bps": custo.carry_cnr * BPS,
             "custo_sem_pool_brl": custo_sem_pool.total,
             "custo_pool_brl": custo_pool.total,
             "economia_produto_brl": economia,
@@ -380,7 +462,7 @@ def avaliar_produto(
             delta_volume = base_baseline.remetido_por_chave.get(
                 (finalidade, direcao), Decimal(0)
             ) - bases_pool.remetido_por_chave.get((finalidade, direcao), Decimal(0))
-            aliquota = aliquota_iof(PARAMETROS_VARREDURA, finalidade, direcao)
+            aliquota = aliquota_iof(custo, finalidade, direcao)
             linhas_iof.append(
                 {
                     **{chave: linha[chave] for chave in CHAVES_IDENTIFICACAO},
@@ -500,35 +582,55 @@ def main(argv: Sequence[str] | None = None) -> int:
         action="store_true",
         help="nao regenera pools; produz apenas a decomposicao bruta publicada",
     )
+    parser.add_argument(
+        "--manifesto",
+        type=Path,
+        default=Path("resultados/manifesto.json"),
+        help="manifesto canonico da grade de origem",
+    )
     args = parser.parse_args(argv)
     sementes = validar_seeds_unicas(_lista_int(args.sementes))
-
-    registros = ler_grade_publicada(args.grade)
-    decomposicao = [decompor_linha_grade(registro) for registro in registros]
-    resumo_grade = agregar_por_celula(decomposicao, METRICAS_GRADE)
-    escrever_csv(args.saida / "decomposicao_grade_bruta.csv", decomposicao, RESSALVAS_GRADE)
-    escrever_csv(args.saida / "decomposicao_grade_agregada.csv", resumo_grade, RESSALVAS_GRADE)
-    print(f"grade publicada: {len(decomposicao)} linhas; {len(resumo_grade)} celulas")
-
-    if args.somente_grade:
-        return 0
-
     nomes_mix = tuple(nome for nome in args.mixes.split(",") if nome)
     valores_n = _lista_int(args.n)
     valores_w = _lista_int(args.w)
     desconhecidos = sorted(set(nomes_mix) - set(MIXES))
     if desconhecidos:
         parser.error(f"mixes desconhecidos: {desconhecidos}")
+    if not nomes_mix:
+        parser.error("ao menos um mix e obrigatorio")
+    if not valores_n or any(valor <= 0 for valor in valores_n):
+        parser.error("n deve conter inteiros positivos")
+    if not valores_w or any(valor <= 0 for valor in valores_w):
+        parser.error("w deve conter inteiros positivos")
+    if not sementes:
+        parser.error("ao menos uma seed e obrigatoria")
+    if not args.grade.is_file():
+        raise FileNotFoundError(args.grade)
+    if not args.manifesto.is_file():
+        raise FileNotFoundError(args.manifesto)
+    manifesto = ler_manifesto(args.manifesto)
+    registros = ler_grade_publicada(args.grade)
+    decomposicao = [decompor_linha_grade(registro, manifesto) for registro in registros]
+    resumo_grade = agregar_por_celula(decomposicao, METRICAS_GRADE)
 
     produto: list[dict[str, object]] = []
     iof: list[dict[str, object]] = []
-    total = len(nomes_mix) * len(valores_n) * len(sementes)
+    total = (
+        0
+        if args.somente_grade
+        else len(nomes_mix) * len(valores_n) * len(sementes)
+    )
     concluido = 0
-    for nome_mix in nomes_mix:
+    for nome_mix in (() if args.somente_grade else nomes_mix):
         for n_clientes in valores_n:
             for seed in sementes:
                 linhas, linhas_iof = avaliar_produto(
-                    nome_mix, n_clientes, seed, valores_w, HORIZONTE_PADRAO
+                    nome_mix,
+                    n_clientes,
+                    seed,
+                    valores_w,
+                    HORIZONTE_PADRAO,
+                    manifesto.parametros_custo,
                 )
                 produto.extend(linhas)
                 iof.extend(linhas_iof)
@@ -536,8 +638,17 @@ def main(argv: Sequence[str] | None = None) -> int:
                 if concluido % 25 == 0 or concluido == total:
                     print(f"produto: {concluido}/{total} pools", flush=True)
 
-    resumo_produto = agregar_por_celula(produto, METRICAS_PRODUTO)
-    resumo_iof = agregar_iof(iof)
+    resumo_produto = agregar_por_celula(produto, METRICAS_PRODUTO) if produto else []
+    resumo_iof = agregar_iof(iof) if iof else []
+    escrever_csv(
+        args.saida / "decomposicao_grade_bruta.csv", decomposicao, RESSALVAS_GRADE
+    )
+    escrever_csv(
+        args.saida / "decomposicao_grade_agregada.csv", resumo_grade, RESSALVAS_GRADE
+    )
+    print(f"grade publicada: {len(decomposicao)} linhas; {len(resumo_grade)} celulas")
+    if args.somente_grade:
+        return 0
     escrever_csv(
         args.saida / "sensibilidade_produto_bruta.csv",
         produto,

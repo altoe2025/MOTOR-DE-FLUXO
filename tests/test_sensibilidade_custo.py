@@ -7,6 +7,7 @@ from decimal import Decimal
 import pytest
 
 from motor.custo import custo_netado
+from motor.analise import ModoAnalise, criar_manifesto
 from motor.dominio import Cenario, Direcao, Ordem, ParametrosCusto
 from motor.netting import executar_p0
 from scripts.sensibilidade_custo import (
@@ -50,6 +51,22 @@ def _custo() -> ParametrosCusto:
         custo_fixo_remessa=Decimal("5"),
         custo_oportunidade_aa=Decimal("0"),
         ptax=Decimal("5.40"),
+    )
+
+
+def _manifesto(custo: ParametrosCusto):
+    return criar_manifesto(
+        parametros_custo=custo,
+        mixes=("teste",),
+        arquetipos=(),
+        horizonte_dias=365,
+        periodo_medicao_dias=365,
+        janela_dias=1,
+        seeds=(1,),
+        modo_analise=ModoAnalise.AGREGADO,
+        custo_calibrado=False,
+        metodo_percentil="nearest-rank",
+        drenagem="FORCADA_LEGADA",
     )
 
 
@@ -148,7 +165,17 @@ def test_decomposicao_da_grade_fecha_com_arredondamento_do_csv():
         "netado_espera_brl": "1.00",
     }
 
-    linha = decompor_linha_grade(registro)
+    custo = _custo()
+    custo = ParametrosCusto(
+        iof_out=custo.iof_out,
+        iof_in=custo.iof_in,
+        carry_cnr=custo.carry_cnr,
+        spread_rail_bps=Decimal("50"),
+        custo_fixo_remessa=Decimal("4"),
+        custo_oportunidade_aa=custo.custo_oportunidade_aa,
+        ptax=custo.ptax,
+    )
+    linha = decompor_linha_grade(registro, _manifesto(custo))
 
     assert linha["economia_produto_bps"] == Decimal("170")
     assert linha["iof_evitado_bps"] == Decimal("100")
@@ -158,3 +185,38 @@ def test_decomposicao_da_grade_fecha_com_arredondamento_do_csv():
     assert linha["espera_criada_bps"] == Decimal("10")
     assert linha["participacao_iof"] == Decimal("10") / Decimal("17")
     assert linha["participacao_carry"] == Decimal("-1") / Decimal("17")
+
+
+def test_csv_de_spread_25_nao_e_reprecificado_com_base_50():
+    registro = {
+        "nome_mix": "teste",
+        "n_clientes": "2",
+        "janela_dias": "1",
+        "horizonte_dias": "365",
+        "seed_base": "1",
+        "volume_bruto_brl": "1000.00",
+        "economia_brl": "0.00",
+        "baseline_iof_brl": "0.00",
+        "netado_iof_brl": "0.00",
+        "baseline_spread_brl": "2.50",
+        "netado_spread_brl": "2.50",
+        "baseline_fixo_brl": "0.00",
+        "netado_fixo_brl": "0.00",
+        "baseline_carry_brl": "0.00",
+        "netado_carry_brl": "0.00",
+        "baseline_espera_brl": "0.00",
+        "netado_espera_brl": "0.00",
+    }
+    custo = _custo()
+    custo_spread_50 = ParametrosCusto(
+        iof_out=custo.iof_out,
+        iof_in=custo.iof_in,
+        carry_cnr=custo.carry_cnr,
+        spread_rail_bps=Decimal("50"),
+        custo_fixo_remessa=custo.custo_fixo_remessa,
+        custo_oportunidade_aa=custo.custo_oportunidade_aa,
+        ptax=custo.ptax,
+    )
+
+    with pytest.raises(ValueError, match="parametros-base incompativeis"):
+        decompor_linha_grade(registro, _manifesto(custo_spread_50))
