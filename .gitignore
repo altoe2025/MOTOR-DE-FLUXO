@@ -5,3 +5,6 @@ __pycache__/
 .worktrees/
 *.csv
 *.egg-info/
+.env
+.env.*
+!.env.example
