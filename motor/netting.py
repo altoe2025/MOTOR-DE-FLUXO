@@ -50,6 +50,27 @@ def _prioridade(ordem: Ordem) -> tuple[int, str]:
     return (ordem.dia_limite, ordem.id)
 
 
+def _validar_conservacao(ordens: tuple[Ordem, ...], ciclos: tuple[Ciclo, ...]) -> None:
+    entrada = sum((ordem.valor_brl for ordem in ordens), Decimal(0))
+    saida = sum(
+        (alocacao.valor_brl for ciclo in ciclos for alocacao in ciclo.alocacoes),
+        Decimal(0),
+    )
+    if entrada != saida:
+        raise ValueError(f"conservacao global violada: entrada {entrada} != alocado {saida}")
+
+    por_id: dict[str, Decimal] = {}
+    for ciclo in ciclos:
+        for alocacao in ciclo.alocacoes:
+            por_id[alocacao.ordem_id] = por_id.get(alocacao.ordem_id, Decimal(0)) + alocacao.valor_brl
+    for ordem in ordens:
+        if por_id.get(ordem.id, Decimal(0)) != ordem.valor_brl:
+            raise ValueError(
+                f"conservacao violada em {ordem.id}: "
+                f"alocado {por_id.get(ordem.id, Decimal(0))} != valor_brl {ordem.valor_brl}"
+            )
+
+
 def executar_p0(cenario: Cenario) -> tuple[Ciclo, ...]:
     """Casa OUT com IN na janela fixa da política P0. Função pura."""
     por_dia_conhecida: dict[int, list[Ordem]] = {}
@@ -164,18 +185,6 @@ def executar_p0(cenario: Cenario) -> tuple[Ciclo, ...]:
             f"{[o.id for o in abertas]}"
         )
 
-    alocado: dict[str, Decimal] = {}
-    for ciclo in ciclos:
-        for alocacao in ciclo.alocacoes:
-            alocado[alocacao.ordem_id] = (
-                alocado.get(alocacao.ordem_id, Decimal(0)) + alocacao.valor_brl
-            )
-    for ordem in cenario.ordens:
-        total = alocado.get(ordem.id, Decimal(0))
-        if total != ordem.valor_brl:
-            raise ValueError(
-                f"conservacao violada em {ordem.id}: alocado {total} != "
-                f"valor_brl {ordem.valor_brl}"
-            )
-
-    return tuple(ciclos)
+    resultado = tuple(ciclos)
+    _validar_conservacao(cenario.ordens, resultado)
+    return resultado

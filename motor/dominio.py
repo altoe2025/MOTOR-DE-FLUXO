@@ -10,7 +10,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from decimal import Decimal
 from enum import Enum
+from math import isfinite
 from pathlib import Path
+from types import MappingProxyType
 from typing import Any, Mapping
 
 import yaml
@@ -24,6 +26,16 @@ class Direcao(Enum):
 class TipoAlocacao(Enum):
     CASADO = "CASADO"  # não atravessou a fronteira; ficou dentro da CNR
     REMETIDO = "REMETIDO"  # atravessou de fato; é o que paga IOF de remessa
+
+
+def _decimal_finito_nao_negativo(nome: str, valor: Decimal) -> None:
+    if not valor.is_finite() or valor < 0:
+        raise ValueError(f"{nome} deve ser finito e não negativo, recebeu {valor!r}")
+
+
+def _decimal_finito_positivo(nome: str, valor: Decimal) -> None:
+    if not valor.is_finite() or valor <= 0:
+        raise ValueError(f"{nome} deve ser positivo, recebeu {valor!r}")
 
 
 @dataclass(frozen=True)
@@ -45,10 +57,7 @@ class Alocacao:
     def __post_init__(self) -> None:
         # ValueError, não assert: `python -O` remove asserts, e uma alocação de valor
         # zero ou negativo entraria em silêncio na soma de conservação.
-        if self.valor_brl <= 0:
-            raise ValueError(
-                f"valor_brl de uma Alocacao deve ser positivo, recebeu {self.valor_brl!r}"
-            )
+        _decimal_finito_positivo("valor_brl de uma Alocacao", self.valor_brl)
 
 
 @dataclass(frozen=True)
@@ -63,8 +72,11 @@ class Ordem:
     finalidade: str  # código do Anexo V da Res. BCB 277
 
     def __post_init__(self) -> None:
-        if self.valor_brl <= 0:
-            raise ValueError(f"valor_brl deve ser positivo, recebeu {self.valor_brl!r}")
+        if not self.id:
+            raise ValueError("id de ordem não pode ser vazio")
+        if not self.cliente_id:
+            raise ValueError("cliente_id não pode ser vazio")
+        _decimal_finito_positivo("valor_brl", self.valor_brl)
         if self.dia_limite < self.dia_conhecida:
             raise ValueError(
                 f"dia_limite ({self.dia_limite}) não pode ser anterior a "
@@ -91,9 +103,37 @@ class ParametrosCusto:
     # A chave é o PAR: a mesma finalidade pode ter alíquotas diferentes conforme
     # o dinheiro entra ou sai.
     #
-    # Convenção: trate como imutável depois de construído (dataclass frozen não
-    # congela o dict por dentro). Ver motor/custo.py:aliquota_iof.
+    # A cópia imutável em __post_init__ impede que um dict fornecido pelo chamador
+    # altere parâmetros já validados. Ver motor/custo.py:aliquota_iof.
     iof_por_finalidade: Mapping[tuple[str, Direcao], Decimal] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        for nome in (
+            "iof_out",
+            "iof_in",
+            "carry_cnr",
+            "spread_rail_bps",
+            "custo_fixo_remessa",
+            "custo_oportunidade_aa",
+        ):
+            _decimal_finito_nao_negativo(nome, getattr(self, nome))
+        if not self.ptax.is_finite() or self.ptax <= 0:
+            raise ValueError(f"ptax deve ser finito e positivo, recebeu {self.ptax!r}")
+
+        tabela: dict[tuple[str, Direcao], Decimal] = {}
+        for chave, aliquota in self.iof_por_finalidade.items():
+            if not isinstance(chave, tuple) or len(chave) != 2:
+                raise ValueError(f"chave inválida de iof_por_finalidade: {chave!r}")
+            finalidade, direcao = chave
+            if not isinstance(finalidade, str) or not finalidade:
+                raise ValueError(f"finalidade inválida em iof_por_finalidade: {finalidade!r}")
+            if not isinstance(direcao, Direcao):
+                raise ValueError(f"direção inválida em iof_por_finalidade: {direcao!r}")
+            _decimal_finito_nao_negativo(
+                f"alíquota de iof_por_finalidade para {chave!r}", aliquota
+            )
+            tabela[chave] = aliquota
+        object.__setattr__(self, "iof_por_finalidade", MappingProxyType(tabela))
 
 
 @dataclass(frozen=True)
@@ -102,6 +142,13 @@ class Cenario:
     janela_dias: int  # W da política P0
     horizonte_dias: int
     custo: ParametrosCusto
+
+    def __post_init__(self) -> None:
+        if self.janela_dias < 1:
+            raise ValueError(f"janela_dias deve ser >= 1, recebeu {self.janela_dias}")
+        if self.horizonte_dias < 0:
+            raise ValueError(f"horizonte_dias deve ser >= 0, recebeu {self.horizonte_dias}")
+        _validar_ordens(self.ordens, self.horizonte_dias)
 
 
 @dataclass(frozen=True)
@@ -130,13 +177,12 @@ class Arquetipo:
     def __post_init__(self) -> None:
         # ValueError, não assert: um arquétipo mal parametrizado sob `python -O`
         # geraria uma pool inteira silenciosamente inválida.
-        if not 0.0 <= self.p_out <= 1.0:
+        if not isfinite(self.p_out) or not 0.0 <= self.p_out <= 1.0:
             raise ValueError(f"p_out deve estar em [0,1], recebeu {self.p_out!r}")
-        if self.ticket_mediana_brl <= 0:
-            raise ValueError(
-                f"ticket_mediana_brl deve ser positivo, recebeu {self.ticket_mediana_brl!r}"
-            )
-        if self.cadencia_mensal <= 0:
+        _decimal_finito_positivo("ticket_mediana_brl", self.ticket_mediana_brl)
+        if not isfinite(self.ticket_sigma):
+            raise ValueError(f"ticket_sigma deve ser finito, recebeu {self.ticket_sigma!r}")
+        if not isfinite(self.cadencia_mensal) or self.cadencia_mensal <= 0:
             raise ValueError(
                 f"cadencia_mensal deve ser positiva, recebeu {self.cadencia_mensal!r}"
             )

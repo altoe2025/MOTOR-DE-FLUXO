@@ -20,13 +20,14 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Iterable, Mapping, Sequence
 
+from motor.analise.estatistica import percentil_empirico
+from motor.analise.temporal import rotulo_periodo
 from motor.arquetipos import TODOS as ARQUETIPOS
 from scripts.estresse_sensibilidade import TARIFA_BASE_BRL, ler_csv
 from scripts.sensibilidade_custo import (
     BPS,
     CHAVES_IDENTIFICACAO,
     _decimal,
-    _percentil,
     escrever_csv,
 )
 
@@ -146,7 +147,12 @@ def fluxo_anual_central(arquetipo: object) -> Decimal:
     media_ticket = float(arquetipo.ticket_mediana_brl) * math.exp(
         arquetipo.ticket_sigma**2 / 2
     )
-    return Decimal(str(media_ticket * arquetipo.cadencia_mensal * 12))
+    return (
+        Decimal(str(media_ticket))
+        * Decimal(str(arquetipo.cadencia_mensal))
+        * Decimal(365)
+        / Decimal(30)
+    )
 
 
 def gerar_premissas_arquetipos(
@@ -175,7 +181,7 @@ def gerar_premissas_arquetipos(
                     "cadencia_mensal": Decimal(str(arquetipo.cadencia_mensal)),
                     "fluxo_anual_central_brl": central,
                     "fluxo_anual_assumido_brl": central * cenario.multiplicador,
-                    "formula_central": "mediana_ticket * exp(sigma^2/2) * cadencia_mensal * 12",
+                    "formula_central": "mediana_ticket * exp(sigma^2/2) * cadencia_mensal * 365 / 30",
                     "natureza_do_fluxo": "SUPOSICAO SINTETICA; substituir quando houver dado real",
                 }
             )
@@ -183,7 +189,15 @@ def gerar_premissas_arquetipos(
 
 
 def _chave(linha: Mapping[str, object]) -> tuple[object, ...]:
-    return tuple(linha[campo] for campo in CHAVES_IDENTIFICACAO)
+    return (
+        *tuple(linha[campo] for campo in CHAVES_IDENTIFICACAO),
+        _periodo_medicao_dias(linha),
+    )
+
+
+def _periodo_medicao_dias(linha: Mapping[str, object]) -> int:
+    """No legado, o horizonte informado também era o período medido."""
+    return int(linha.get("periodo_medicao_dias", linha["horizonte_dias"]))
 
 
 def indexar_produto(
@@ -206,6 +220,9 @@ def projetar_linha(
     multiplicador = cenario_fluxo.multiplicador
     if multiplicador <= 0:
         raise ValueError("multiplicador de fluxo deve ser positivo")
+    periodo_medicao_dias = _periodo_medicao_dias(produto)
+    if _periodo_medicao_dias(estresse) != periodo_medicao_dias:
+        raise ValueError("período medido diverge entre estresse e produto")
 
     volume_central = _decimal(produto["volume_bruto_brl"])
     volume_assumido = volume_central * multiplicador
@@ -222,6 +239,8 @@ def projetar_linha(
     )
     economia_brl = economia_ajustada / BPS * volume_assumido
 
+    rotulo = rotulo_periodo(periodo_medicao_dias)
+    infixo = "anual" if rotulo == "anual" else "do_periodo"
     return {
         **{campo: estresse[campo] for campo in CHAVES_IDENTIFICACAO},
         "cenario_custo": estresse["cenario"],
@@ -229,15 +248,16 @@ def projetar_linha(
         "cenario_fluxo": cenario_fluxo.nome,
         "descricao_fluxo": cenario_fluxo.descricao,
         "multiplicador_fluxo": multiplicador,
+        "periodo_medicao_dias": periodo_medicao_dias,
         "natureza_do_fluxo": "SUPOSICAO SINTETICA; NAO E DADO REAL",
-        "volume_anual_central_brl": volume_central,
-        "volume_anual_assumido_brl": volume_assumido,
+        f"volume_{infixo}_central_brl": volume_central,
+        f"volume_{infixo}_assumido_brl": volume_assumido,
         "tarifa_fixa_cenario_brl": tarifa_cenario,
         "fixo_evitado_bps_escala_central": fixo_no_cenario_original,
         "fixo_evitado_bps_escala_assumida": fixo_no_cenario_original / multiplicador,
         "economia_bps_escala_central": economia_original,
         "economia_bps_escala_assumida": economia_ajustada,
-        "economia_anual_assumida_brl": economia_brl,
+        f"economia_{infixo}_assumida_brl": economia_brl,
         "economia_positiva": economia_ajustada > 0,
     }
 
@@ -267,6 +287,7 @@ def agregar_projecoes(
         "n_clientes",
         "janela_dias",
         "horizonte_dias",
+        "periodo_medicao_dias",
         "cenario_fluxo",
     )
     grupos: dict[tuple[object, ...], list[Mapping[str, object]]] = defaultdict(list)
@@ -284,15 +305,19 @@ def agregar_projecoes(
             "natureza_do_fluxo": "SUPOSICAO SINTETICA; NAO E DADO REAL",
             "n_sementes": len(grupo),
         }
+        rotulo = rotulo_periodo(int(primeiro["periodo_medicao_dias"]))
+        infixo = "anual" if rotulo == "anual" else "do_periodo"
         for metrica in (
-            "volume_anual_central_brl",
-            "volume_anual_assumido_brl",
+            f"volume_{infixo}_central_brl",
+            f"volume_{infixo}_assumido_brl",
             "economia_bps_escala_assumida",
-            "economia_anual_assumida_brl",
+            f"economia_{infixo}_assumida_brl",
         ):
             valores = [_decimal(linha[metrica]) for linha in grupo]
             for nome_q, q in (("p10", "0.10"), ("p50", "0.50"), ("p90", "0.90")):
-                resumo[f"{metrica}_{nome_q}"] = _percentil(valores, Decimal(q))
+                resumo[f"{metrica}_{nome_q}"] = percentil_empirico(
+                    valores, Decimal(q)
+                )
         resumo["fracao_economia_positiva"] = Decimal(
             sum(1 for linha in grupo if linha["economia_positiva"])
         ) / Decimal(len(grupo))
