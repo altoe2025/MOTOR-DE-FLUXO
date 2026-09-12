@@ -54,6 +54,7 @@ fundação de contratos da etapa 1 do front-end.
 | `codex/frontend-base-docs` | PR #25, design, ambiente e planejamento da etapa 1 mergeados | Codex |
 | `codex/fechamento-funcional-integracao` | PR #26, fechamento funcional mergeado após 504 testes e CI verde | Codex |
 | `codex/mot16-contratos` | PR #27 mergeada; contratos HTTP, identidade, apresentação, locks e CI corrigido | Codex |
+| `feat/mot19-shell-acessivel` | shell T4 e componentes acessíveis prontos para PR contra `main` | Codex |
 
 Essa pilha e a MOT-16 foram integradas na `main` pelos PRs #21–#27. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
@@ -61,6 +62,35 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
 ---
+
+## 2026-09-12 — Shell acessível da etapa 1 do front-end (MOT-19)
+
+1. **Sintoma.** A MOT-16 entregava tipos gerados, validação, formatadores e
+   repositório local, mas o diretório `web/` ainda não tinha uma aplicação React
+   inicializável, rotas, navegação, estados vazios ou componentes acessíveis para
+   consumir esses contratos.
+
+2. **Causa.** O plano separou deliberadamente a fundação de contratos (T1) da
+   composição visual e da navegação (T4), para que o browser não reinventasse DTOs,
+   validações ou cálculos antes de existir o adaptador do motor.
+
+3. **O que foi feito.** Na branch `feat/mot19-shell-acessivel`, baseada em
+   `main` no commit `e2eef65`, foi completado o bootstrap Vite/React/TypeScript em
+   `web/`, com `AppShell`, tokens, CSS desktop, rotas públicas e os cinco destinos
+   analíticos vazios. Foram criados Button, TextField, InlineNotice, EmptyState,
+   DefinitionTooltip, ComparisonSummary e CostTable. Os componentes de comparação e
+   custo aceitam somente `PreviewEnvelope` e usam os formatadores da MOT-16, sem
+   cálculo de economia. Testes Vitest cobrem navegação, rota ativa, labels, erro,
+   foco, teclado no tooltip e mensagens de execução. A inspeção visual e de zoom,
+   incluindo contrastes dos tokens, está documentada em
+   `docs/frontend/etapa-1-operacao.md` com quatro capturas locais. Não houve alteração
+   em `motor/`, autenticação real, chamadas HTTP, adaptador, IndexedDB, gráficos ou
+   replay funcional.
+
+4. **O que isso invalida.** Invalida a afirmação de que a etapa 1 não possui shell
+   navegável ou base visual acessível. Não invalida qualquer número, cenário,
+   varredura, contrato canônico ou resultado do motor; autenticação e execução real
+   continuam fora desta entrega.
 
 ## 2026-09-12 — Contratos, identidade e apresentação da etapa 1 (MOT-16)
 

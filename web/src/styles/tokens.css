@@ -1,0 +1,24 @@
+:root {
+  --canvas: #e9e7e2;
+  --surface: #f6f4ef;
+  --surface-alt: #dfddd7;
+  --ink: #252a28;
+  --muted: #56615a;
+  --nav: #252c29;
+  --on-nav: #f4f3ee;
+  --accent: #295e58;
+  --border: #69716a;
+  --error: #8a3631;
+  --focus: #1d625a;
+  --font-body: 'Segoe UI', system-ui, sans-serif;
+  --font-heading: Georgia, 'Times New Roman', serif;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --radius: 8px;
+  --shadow: 0 2px 8px rgb(25 35 30 / 8%);
+  --duration: 120ms;
+}

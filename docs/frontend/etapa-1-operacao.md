@@ -58,7 +58,7 @@ Fonte de execução: [plano técnico aprovado](../superpowers/plans/2026-09-11-f
 | T1 | [MOT-16 — Contratos, identidade e apresentação](https://linear.app/felipe-bisca/issue/MOT-16/etapa-1-t1-contratos-identidade-e-apresentacao) | Integrada pelo PR #27; contratos e gates verificados em Python 3.11/Node 24 |
 | T2 | [MOT-17 — Adaptador único e validação de publicação](https://linear.app/felipe-bisca/issue/MOT-17/etapa-1-t2-adaptador-unico-e-validacao-de-publicacao) | Backlog; liberada pela conclusão de MOT-16 |
 | T3 | [MOT-18 — FastAPI, autenticação e mesma origem](https://linear.app/felipe-bisca/issue/MOT-18/etapa-1-t3-fastapi-autenticacao-e-mesma-origem) | Backlog; bloqueada por MOT-17 |
-| T4 | [MOT-19 — Shell e componentes acessíveis](https://linear.app/felipe-bisca/issue/MOT-19/etapa-1-t4-shell-e-componentes-acessiveis) | Backlog; liberada pela conclusão de MOT-16 |
+| T4 | [MOT-19 — Shell e componentes acessíveis](https://linear.app/felipe-bisca/issue/MOT-19/etapa-1-t4-shell-e-componentes-acessiveis) | Pronta para revisão em PR; depende apenas da MOT-16 |
 | T5 | [MOT-20 — Login, convite e recuperação de rascunho](https://linear.app/felipe-bisca/issue/MOT-20/etapa-1-t5-login-convite-e-recuperacao-de-rascunho) | Backlog; bloqueada por MOT-18 e MOT-19 |
 | T6 | [MOT-21 — Cliente tipado e integração navegador–motor](https://linear.app/felipe-bisca/issue/MOT-21/etapa-1-t6-cliente-tipado-e-integracao-navegador-motor) | Backlog; bloqueada por MOT-20 |
 | T7 | [MOT-22 — Aceitação, CI e passagem para etapa 2](https://linear.app/felipe-bisca/issue/MOT-22/etapa-1-t7-aceitacao-ci-e-passagem-para-etapa-2) | Backlog; bloqueada por MOT-21 |
@@ -79,6 +79,48 @@ Dependências nativas verificadas: T1 depende de T0; T2 de T1; T3 de T2; T4 de T
   checkout; geração repetida com hashes idênticos.
 
 Detalhes, decisões e comandos: [registro da MOT-16](mot-16-implementacao.md).
+
+## T4 — shell, tokens e componentes acessíveis
+
+Implementado na branch `feat/mot19-shell-acessivel`, baseada em `main` no commit
+`e2eef656812de835924c10d35a233d303a53195f`. A entrega mantém o escopo de T4:
+não faz autenticação Supabase, chamadas ao adaptador/motor, IndexedDB, gráficos,
+replay funcional ou mudanças em `motor/`.
+
+- O bootstrap Vite/React/TypeScript estrito está em `web/`, com scripts `dev`,
+  `build`, `typecheck`, `lint` e `test:unit`.
+- `AppShell` entrega navegação vertical de 224 px, skip link, estado ativo com
+  `aria-current`, cabeçalho do estudo e cinco destinos vazios: Carteira,
+  Diagnóstico, Comparar cenários, Replay e Dados e premissas.
+- As rotas públicas são `/login`, `/auth/callback` e `/auth/definir-senha`; a raiz
+  aguarda a resolução do estado de sessão e então redireciona para `/carteira`.
+  Elas são estruturas visuais: nenhum fluxo de autenticação real é apresentado como
+  concluído.
+- `Button`, `TextField`, `InlineNotice`, `EmptyState`, `DefinitionTooltip`,
+  `ComparisonSummary` e `CostTable` usam HTML nativo. Os dois componentes de
+  apresentação recebem `PreviewEnvelope` e somente formatam campos canônicos com os
+  formatadores da MOT-16; não recalculam economia.
+- Os testes cobrem rotas, destino ativo, labels/erros, foco após navegação, teclado
+  no tooltip e estados `aria-busy`/`alert`. Nenhum campo depende exclusivamente de
+  placeholder.
+
+### Evidência visual
+
+Capturas produzidas com o servidor Vite local e Edge, em 2026-09-12:
+
+![Shell em 1280 por 800](evidencias/mot19-shell-1280x800.png)
+
+![Shell em 1440 por 900](evidencias/mot19-shell-1440x900.png)
+
+![Login em 1280 por 800](evidencias/mot19-login-1280x800.png)
+
+![Shell na largura equivalente a zoom de 200%](evidencias/mot19-shell-zoom200-equivalente-640x800.png)
+
+Em 1280×800 e 1440×900, o shell preserva navegação, conteúdo e estados vazios.
+Na largura CSS de 640 px, equivalente a 200% sobre a área de 1280 px, os destinos
+continuam alcançáveis e nenhum controle é cortado. Os contrastes medidos dos tokens
+reais foram: texto principal/canvas 11,80:1; texto secundário/superfície 5,87:1;
+texto da navegação/fundo 12,85:1; foco/canvas 5,77:1; borda/superfície 4,58:1.
 
 ## Arquivos preexistentes preservados
 
