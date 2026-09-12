@@ -1,0 +1,178 @@
+{
+  "api_version": "1.0.0",
+  "cenario": {
+    "custo": {
+      "carry_cnr": "0.0004",
+      "custo_fixo_remessa": "0",
+      "custo_oportunidade_aa": "0",
+      "iof_in": "0.0038",
+      "iof_out": "0.035",
+      "iof_por_finalidade": [],
+      "ptax": "5.40",
+      "spread_rail_bps": "0"
+    },
+    "horizonte_dias": 1,
+    "janela_dias": 1,
+    "ordens": [
+      {
+        "cliente_id": "astropay",
+        "dia_conhecida": 0,
+        "dia_limite": 0,
+        "direcao": "OUT",
+        "eh_efx": false,
+        "finalidade": "TODO-anexo-v",
+        "id": "astropay-1",
+        "valor_brl": "10800000.00"
+      },
+      {
+        "cliente_id": "nomad",
+        "dia_conhecida": 0,
+        "dia_limite": 0,
+        "direcao": "IN",
+        "eh_efx": false,
+        "finalidade": "TODO-anexo-v",
+        "id": "nomad-1",
+        "valor_brl": "27000000.00"
+      },
+      {
+        "cliente_id": "wise",
+        "dia_conhecida": 0,
+        "dia_limite": 0,
+        "direcao": "OUT",
+        "eh_efx": false,
+        "finalidade": "TODO-anexo-v",
+        "id": "wise-1",
+        "valor_brl": "54000000.00"
+      }
+    ]
+  },
+  "periodo": {
+    "modo": "LEGADO"
+  },
+  "proveniencia": {
+    "/custo/carry_cnr": {
+      "fonte": "motor/cenarios/exemplo_amanda.yaml",
+      "registrado_em_utc": "2026-09-11T00:00:00Z",
+      "tipo": "PADRAO_SINTETICO"
+    },
+    "/custo/custo_fixo_remessa": {
+      "fonte": "motor/cenarios/exemplo_amanda.yaml",
+      "registrado_em_utc": "2026-09-11T00:00:00Z",
+      "tipo": "PADRAO_SINTETICO"
+    },
+    "/custo/custo_oportunidade_aa": {
+      "fonte": "motor/cenarios/exemplo_amanda.yaml",
+      "registrado_em_utc": "2026-09-11T00:00:00Z",
+      "tipo": "PADRAO_SINTETICO"
+    },
+    "/custo/iof_in": {
+      "fonte": "motor/cenarios/exemplo_amanda.yaml",
+      "registrado_em_utc": "2026-09-11T00:00:00Z",
+      "tipo": "PADRAO_SINTETICO"
+    },
+    "/custo/iof_out": {
+      "fonte": "motor/cenarios/exemplo_amanda.yaml",
+      "registrado_em_utc": "2026-09-11T00:00:00Z",
+      "tipo": "PADRAO_SINTETICO"
+    },
+    "/custo/ptax": {
+      "fonte": "motor/cenarios/exemplo_amanda.yaml",
+      "registrado_em_utc": "2026-09-11T00:00:00Z",
+      "tipo": "PADRAO_SINTETICO"
+    },
+    "/custo/spread_rail_bps": {
+      "fonte": "motor/cenarios/exemplo_amanda.yaml",
+      "registrado_em_utc": "2026-09-11T00:00:00Z",
+      "tipo": "PADRAO_SINTETICO"
+    },
+    "/horizonte_dias": {
+      "fonte": "motor/cenarios/exemplo_amanda.yaml",
+      "registrado_em_utc": "2026-09-11T00:00:00Z",
+      "tipo": "PADRAO_SINTETICO"
+    },
+    "/janela_dias": {
+      "fonte": "motor/cenarios/exemplo_amanda.yaml",
+      "registrado_em_utc": "2026-09-11T00:00:00Z",
+      "tipo": "PADRAO_SINTETICO"
+    },
+    "/ordens/0/dia_conhecida": {
+      "fonte": "motor/cenarios/exemplo_amanda.yaml",
+      "registrado_em_utc": "2026-09-11T00:00:00Z",
+      "tipo": "PADRAO_SINTETICO"
+    },
+    "/ordens/0/dia_limite": {
+      "fonte": "motor/cenarios/exemplo_amanda.yaml",
+      "registrado_em_utc": "2026-09-11T00:00:00Z",
+      "tipo": "PADRAO_SINTETICO"
+    },
+    "/ordens/0/eh_efx": {
+      "fonte": "motor/cenarios/exemplo_amanda.yaml",
+      "registrado_em_utc": "2026-09-11T00:00:00Z",
+      "tipo": "PADRAO_SINTETICO"
+    },
+    "/ordens/0/finalidade": {
+      "fonte": "motor/cenarios/exemplo_amanda.yaml",
+      "registrado_em_utc": "2026-09-11T00:00:00Z",
+      "tipo": "PADRAO_SINTETICO"
+    },
+    "/ordens/0/valor_brl": {
+      "fonte": "motor/cenarios/exemplo_amanda.yaml",
+      "registrado_em_utc": "2026-09-11T00:00:00Z",
+      "tipo": "PADRAO_SINTETICO"
+    },
+    "/ordens/1/dia_conhecida": {
+      "fonte": "motor/cenarios/exemplo_amanda.yaml",
+      "registrado_em_utc": "2026-09-11T00:00:00Z",
+      "tipo": "PADRAO_SINTETICO"
+    },
+    "/ordens/1/dia_limite": {
+      "fonte": "motor/cenarios/exemplo_amanda.yaml",
+      "registrado_em_utc": "2026-09-11T00:00:00Z",
+      "tipo": "PADRAO_SINTETICO"
+    },
+    "/ordens/1/eh_efx": {
+      "fonte": "motor/cenarios/exemplo_amanda.yaml",
+      "registrado_em_utc": "2026-09-11T00:00:00Z",
+      "tipo": "PADRAO_SINTETICO"
+    },
+    "/ordens/1/finalidade": {
+      "fonte": "motor/cenarios/exemplo_amanda.yaml",
+      "registrado_em_utc": "2026-09-11T00:00:00Z",
+      "tipo": "PADRAO_SINTETICO"
+    },
+    "/ordens/1/valor_brl": {
+      "fonte": "motor/cenarios/exemplo_amanda.yaml",
+      "registrado_em_utc": "2026-09-11T00:00:00Z",
+      "tipo": "PADRAO_SINTETICO"
+    },
+    "/ordens/2/dia_conhecida": {
+      "fonte": "motor/cenarios/exemplo_amanda.yaml",
+      "registrado_em_utc": "2026-09-11T00:00:00Z",
+      "tipo": "PADRAO_SINTETICO"
+    },
+    "/ordens/2/dia_limite": {
+      "fonte": "motor/cenarios/exemplo_amanda.yaml",
+      "registrado_em_utc": "2026-09-11T00:00:00Z",
+      "tipo": "PADRAO_SINTETICO"
+    },
+    "/ordens/2/eh_efx": {
+      "fonte": "motor/cenarios/exemplo_amanda.yaml",
+      "registrado_em_utc": "2026-09-11T00:00:00Z",
+      "tipo": "PADRAO_SINTETICO"
+    },
+    "/ordens/2/finalidade": {
+      "fonte": "motor/cenarios/exemplo_amanda.yaml",
+      "registrado_em_utc": "2026-09-11T00:00:00Z",
+      "tipo": "PADRAO_SINTETICO"
+    },
+    "/ordens/2/valor_brl": {
+      "fonte": "motor/cenarios/exemplo_amanda.yaml",
+      "registrado_em_utc": "2026-09-11T00:00:00Z",
+      "tipo": "PADRAO_SINTETICO"
+    }
+  },
+  "request_id": "00000000-0000-4000-8000-000000000001",
+  "scenario_id": "00000000-0000-4000-8000-000000000003",
+  "scenario_revision": 1,
+  "study_id": "00000000-0000-4000-8000-000000000002"
+}

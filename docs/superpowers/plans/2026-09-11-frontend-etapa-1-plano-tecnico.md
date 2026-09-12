@@ -413,9 +413,9 @@ git ls-tree -r --name-only HEAD motor/analise
 
 **Consome:** contratos públicos da seção 5.1. **Produz:** `PreviaRequest`, `PreviewEnvelope`, `normalizar_execucao(request, build_sha) -> dict`, `execution_fingerprint(request, build_sha) -> str`, `provenance_fingerprint(proveniencia) -> str`, `StudyRepository` e formatadores.
 
-- [ ] Resolver e travar dependências do servidor e ferramentas de contrato; registrar versões e compatibilidade Python 3.11/Node 24. Gerar o lock, instalar por ele; não mudar dependências centrais do motor sem necessidade demonstrada.
-- [ ] Criar fixtures lendo o YAML de referência; origem sintética para seus valores. `reference-request.json` tem UUIDs fixos de teste e revisão 1. Não escrever números esperados manualmente no código de aplicação.
-- [ ] Escrever os testes abaixo e casos parametrizados da seção 9. Rodar primeiro para falha por módulo/comportamento ausente.
+- [x] Resolver e travar dependências do servidor e ferramentas de contrato; registrar versões e compatibilidade Python 3.11/Node 24. Gerar o lock, instalar por ele; não mudar dependências centrais do motor sem necessidade demonstrada.
+- [x] Criar fixtures lendo o YAML de referência; origem sintética para seus valores. `reference-request.json` tem UUIDs fixos de teste e revisão 1. Não escrever números esperados manualmente no código de aplicação.
+- [x] Escrever os testes abaixo e casos parametrizados da seção 9. Rodar primeiro para falha por módulo/comportamento ausente.
 
 ```python
 def test_valor_numerico_json_nao_e_dinheiro(reference_payload):
@@ -437,10 +437,10 @@ def test_hash_normaliza_representacao(reference_request):
     assert execution_fingerprint(a, "a" * 40) == execution_fingerprint(b, "a" * 40)
 ```
 
-- [ ] Implementar DTOs com validação estrita, normalização e contratos locais. A validação de conta em `save/get/remove` verifica `owner_sub`; não basta filtrar lista.
-- [ ] Criar factory de aplicação que permita gerar schema sem carregar settings reais; exportar `contracts/openapi.json` com schemas estáveis.
-- [ ] Gerar TS e schemas runtime; demonstrar o payload real aceito e payload com decimal number recusado. Estabilizar o formato antes de UI/API funcional.
-- [ ] Implementar formatação e seus testes. Exemplo:
+- [x] Implementar DTOs com validação estrita, normalização e contratos locais. A validação de conta em `save/get/remove` verifica `owner_sub`; não basta filtrar lista.
+- [x] Criar factory de aplicação que permita gerar schema sem carregar settings reais; exportar `contracts/openapi.json` com schemas estáveis.
+- [x] Gerar TS e schemas runtime; demonstrar o payload real aceito e payload com decimal number recusado. Estabilizar o formato antes de UI/API funcional.
+- [x] Implementar formatação e seus testes. Exemplo:
 
 ```typescript
 it('preserva precisão e explicita unidade', () => {
@@ -450,8 +450,8 @@ it('preserva precisão e explicita unidade', () => {
 });
 ```
 
-- [ ] Rodar `python -m pytest tests/web_api/test_contracts.py tests/web_api/test_identity.py -q` e os testes JS focalizados. Regerar contrato duas vezes; diff vazio na segunda.
-- [ ] Revisar coerência de tipos, schema e semântica de tempo/hash. Registrar decisões na documentação operacional e atualizar Diário no commit real associado à issue.
+- [x] Rodar `python -m pytest tests/web_api/test_contracts.py tests/web_api/test_identity.py -q` e os testes JS focalizados. Regerar contrato duas vezes; diff vazio na segunda.
+- [x] Revisar coerência de tipos, schema e semântica de tempo/hash. Registrar decisões na documentação operacional e atualizar Diário no commit real associado à issue.
 
 **Gate:** requisição inválida é recusada por HTTP/schema, não apenas por formulário; mudança de ordem afeta identidade; decimais sobrevivem transporte; nenhum contrato depende de atributo privado do motor.
 
@@ -741,4 +741,7 @@ Consultadas em 2026-09-11; sustentam mecanismos de biblioteca, não substituem d
 - [Supabase — usuários e convites](https://supabase.com/docs/guides/auth/users), [senha](https://supabase.com/docs/guides/auth/passwords), [templates de e-mail](https://supabase.com/docs/guides/auth/auth-email-templates) e [verifyOtp](https://supabase.com/docs/reference/javascript/auth-verifyotp): fluxo de acesso e callbacks controlados.
 - [FastAPI — lifespan](https://fastapi.tiangolo.com/advanced/events/) e [estáticos](https://fastapi.tiangolo.com/tutorial/static-files/): lifecycle de recursos e montagem de assets; fallback SPA e separação `/api` são responsabilidade da aplicação.
 
-**Próximo passo de execução:** iniciar MOT-16/T1 na worktree preparada, seguindo teste primeiro e mantendo os contratos públicos confirmados. O cadastro não cria automaticamente projeto Supabase, convites, merge em `main` ou publicação.
+**Próximo passo de execução:** iniciar MOT-17/T2 na mesma worktree, consumindo os
+contratos fechados pela MOT-16. T4 também está liberada, mas não há necessidade de
+execução simultânea. O cadastro não cria automaticamente projeto Supabase, convites,
+merge em `main` ou publicação.

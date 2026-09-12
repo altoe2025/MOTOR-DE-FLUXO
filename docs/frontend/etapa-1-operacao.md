@@ -2,7 +2,14 @@
 
 ## Estado
 
-T0 está **concluída tecnicamente**. As oito tarefas foram cadastradas como MOT-15–MOT-22 no workspace **Felipe Bisca**, time **MOTOR DE FLUXO**, com as dependências nativas do plano. A base integrada reúne a linha de análise e documentação até `da271ad` com o fechamento funcional publicado em `3bc2839`, no merge `e2374ae` da branch `codex/frontend-etapa-1-contratos`. Não houve implementação do front-end, push, merge em `main` ou publicação.
+T0 e T1 estão **concluídas tecnicamente na branch local**. As oito tarefas foram
+cadastradas como MOT-15–MOT-22 no workspace **Felipe Bisca**, time
+**MOTOR DE FLUXO**, com as dependências nativas do plano. A base integrada reúne a
+linha de análise e documentação até `da271ad` com o fechamento funcional publicado
+em `3bc2839`, no merge `e2374ae` da branch
+`codex/frontend-etapa-1-contratos`. A T1 acrescenta contratos, identidade,
+apresentação, geração e locks; não executa o adaptador T2, autenticação/API funcional
+T3 ou interface T4. Não houve push, merge em `main` ou publicação.
 
 Fonte de execução: [plano técnico aprovado](../superpowers/plans/2026-09-11-frontend-etapa-1-plano-tecnico.md). As três referências indicadas no plano continuam obrigatórias.
 
@@ -36,7 +43,9 @@ Fonte de execução: [plano técnico aprovado](../superpowers/plans/2026-09-11-f
 ## Base integrada e pendência externa
 
 - [x] Criar a base integrada, confirmar os contratos públicos e executar o baseline integral em worktree isolada.
-- [ ] Revalidar Python 3.11 no CI quando a branch for publicada; a validação local disponível usou Python 3.14.4.
+- [x] Revalidar Python 3.11 localmente: lock gerado, instalado, suíte normal e sob
+  `-O` executadas com CPython 3.11.16. O CI repetirá essa evidência quando a branch
+  for publicada.
 - [ ] Registrar responsável humano pelo provisionamento Supabase. Sua ausência não impede T1–T4 depois dos demais pré-requisitos, mas impede aceitar o login real na T5/T7.
 
 ## Cadastro no Linear
@@ -44,15 +53,30 @@ Fonte de execução: [plano técnico aprovado](../superpowers/plans/2026-09-11-f
 | Tarefa do plano | Issue | Situação |
 |---|---|---|
 | T0 | [MOT-15 — Confirmar base Git e pré-requisitos](https://linear.app/felipe-bisca/issue/MOT-15/etapa-1-t0-confirmar-base-git-e-pre-requisitos) | Concluída; base integrada e baseline verificados |
-| T1 | [MOT-16 — Contratos, identidade e apresentação](https://linear.app/felipe-bisca/issue/MOT-16/etapa-1-t1-contratos-identidade-e-apresentacao) | Backlog; bloqueada por MOT-15 |
-| T2 | [MOT-17 — Adaptador único e validação de publicação](https://linear.app/felipe-bisca/issue/MOT-17/etapa-1-t2-adaptador-unico-e-validacao-de-publicacao) | Backlog; bloqueada por MOT-16 |
+| T1 | [MOT-16 — Contratos, identidade e apresentação](https://linear.app/felipe-bisca/issue/MOT-16/etapa-1-t1-contratos-identidade-e-apresentacao) | Concluída localmente; contratos e gates verificados em Python 3.11/Node 24 |
+| T2 | [MOT-17 — Adaptador único e validação de publicação](https://linear.app/felipe-bisca/issue/MOT-17/etapa-1-t2-adaptador-unico-e-validacao-de-publicacao) | Backlog; liberada pela conclusão de MOT-16 |
 | T3 | [MOT-18 — FastAPI, autenticação e mesma origem](https://linear.app/felipe-bisca/issue/MOT-18/etapa-1-t3-fastapi-autenticacao-e-mesma-origem) | Backlog; bloqueada por MOT-17 |
-| T4 | [MOT-19 — Shell e componentes acessíveis](https://linear.app/felipe-bisca/issue/MOT-19/etapa-1-t4-shell-e-componentes-acessiveis) | Backlog; bloqueada por MOT-16 |
+| T4 | [MOT-19 — Shell e componentes acessíveis](https://linear.app/felipe-bisca/issue/MOT-19/etapa-1-t4-shell-e-componentes-acessiveis) | Backlog; liberada pela conclusão de MOT-16 |
 | T5 | [MOT-20 — Login, convite e recuperação de rascunho](https://linear.app/felipe-bisca/issue/MOT-20/etapa-1-t5-login-convite-e-recuperacao-de-rascunho) | Backlog; bloqueada por MOT-18 e MOT-19 |
 | T6 | [MOT-21 — Cliente tipado e integração navegador–motor](https://linear.app/felipe-bisca/issue/MOT-21/etapa-1-t6-cliente-tipado-e-integracao-navegador-motor) | Backlog; bloqueada por MOT-20 |
 | T7 | [MOT-22 — Aceitação, CI e passagem para etapa 2](https://linear.app/felipe-bisca/issue/MOT-22/etapa-1-t7-aceitacao-ci-e-passagem-para-etapa-2) | Backlog; bloqueada por MOT-21 |
 
 Dependências nativas verificadas: T1 depende de T0; T2 de T1; T3 de T2; T4 de T1; T5 de T3 e T4; T6 de T5; T7 de T6. Não atribuir a pessoas com base nos nomes dos modelos; a distribuição Astra/Sol/Terra é orientação de execução, não identidade de membro do Linear.
+
+## T1 — evidência operacional
+
+- [x] Contratos Pydantic estritos para entrada, saída canônica e envelope versionado.
+- [x] Fingerprints separados para execução numérica e proveniência.
+- [x] Fixture de referência derivada do YAML empacotado e OpenAPI gerável sem
+  settings, rede ou segredos.
+- [x] Tipos TypeScript e validadores Ajv gerados, sem coerção, remoção de campos ou
+  defaults.
+- [x] Formatadores `decimal.js` com HALF_UP/pt-BR e repositório de estudo isolado por
+  `owner_sub`.
+- [x] Locks instalados em Python 3.11.16 e Node 24.19.0; wheel testada fora do
+  checkout; geração repetida com hashes idênticos.
+
+Detalhes, decisões e comandos: [registro da MOT-16](mot-16-implementacao.md).
 
 ## Arquivos preexistentes preservados
 

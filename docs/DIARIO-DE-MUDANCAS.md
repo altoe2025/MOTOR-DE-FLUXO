@@ -33,7 +33,8 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-09-07, depois do resumo executivo para a Amanda.
+Atualizada em 2026-09-12, depois da implementação local da fundação de contratos da
+etapa 1 do front-end.
 
 | Branch | Situação | Dono |
 |---|---|---|
@@ -50,7 +51,7 @@ Atualizada em 2026-09-07, depois do resumo executivo para a Amanda.
 | `gabriel/varredura-completa` | PR #22, aberta; empilhada sobre #21 | Gabriel |
 | `gabriel/mix-outbound` | PR #23, aberta; empilhada sobre #22 | Gabriel |
 | `analise/sensibilidade-custo` | sensibilidade, estresse, limites e fluxo hipotético; 270 testes passando | Codex |
-| `codex/frontend-etapa-1-contratos` | base integrada da etapa 1; fechamento funcional e documentação reunidos, 504 testes passando | Codex |
+| `codex/frontend-etapa-1-contratos` | MOT-15 e MOT-16 concluídas localmente; base integrada, contratos HTTP/identidade/apresentação e locks, 558 testes Python passando | Codex |
 
 As quatro últimas branches formam uma pilha e ainda não estão na `main`. Toda a
 auditoria de 2026-09-05 está integrada. Apagada em 2026-09-06 a branch remota
@@ -58,6 +59,36 @@ auditoria de 2026-09-05 está integrada. Apagada em 2026-09-06 a branch remota
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
 ---
+
+## 2026-09-12 — Contratos, identidade e apresentação da etapa 1 (MOT-16)
+
+1. **Sintoma.** A base integrada expunha o resultado canônico do motor, mas ainda não
+   havia contrato HTTP estrito, identidade completa da execução, schema consumível
+   pelo navegador, formatação decimal acordada ou isolamento do estudo local. Sem
+   essa fronteira, as tarefas de adaptador, API e interface poderiam divergir sobre
+   precisão, campos e autoria.
+
+2. **Causa.** O repositório era apenas o pacote Python do motor. FastAPI/Pydantic,
+   ferramentas de contrato, projeto TypeScript e seus locks ainda não existiam, e o
+   hash público do manifesto não tinha o significado mais amplo exigido para uma
+   requisição de prévia.
+
+3. **O que foi feito.** Na branch `codex/frontend-etapa-1-contratos`, foram criados
+   DTOs Pydantic estritos de entrada, saída e envelope, fingerprints separados de
+   execução/proveniência, fixture derivada do YAML, factory de schema fechada,
+   OpenAPI e tipos/Ajv gerados, formatadores `decimal.js` HALF_UP/pt-BR e repositório
+   em memória validado por `owner_sub`. `requirements/web-dev.lock` foi gerado e
+   instalado com Python 3.11.16; `web/package-lock.json` foi instalado com Node
+   24.19.0/npm 11.17.0. A wheel inclui `servidor*` e os YAMLs e foi testada fora do
+   checkout. Passaram 558 testes Python normais, 558 sob `-O`, Ruff, mypy, 14 testes
+   Vitest e o typecheck; a segunda geração dos cinco artefatos manteve os mesmos
+   hashes. Nenhum arquivo de implementação em `motor/` foi alterado.
+
+4. **O que isso invalida.** Invalida qualquer DTO ou tipo de front-end anterior que
+   represente dinheiro como JSON number, aceite seed em ordens explícitas, use o hash
+   do manifesto como fingerprint completo ou compartilhe estudos sem `owner_sub`.
+   Não invalida resultados, varreduras ou números de aceitação do motor; adaptador,
+   autenticação e interface continuam fora deste commit.
 
 ## 2026-09-12 — Base integrada para a etapa 1 do front-end (MOT-15)
 

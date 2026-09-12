@@ -1,10 +1,16 @@
 __pycache__/
 *.pyc
 .pytest_cache/
-.venv/
+.venv*/
+.wheel-test*/
+build/
 .worktrees/
 *.csv
 *.egg-info/
 .env
 .env.*
 !.env.example
+web/node_modules/
+web/dist/
+web/coverage/
+*.tsbuildinfo
