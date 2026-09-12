@@ -1,5 +1,12 @@
 # Decomposição do custo e sensibilidade aos parâmetros
 
+> **CORREÇÃO DE SEMÂNTICA POSTERIOR:** cada `Ordem` já é a posição líquida que o
+> cliente decidiu enviar ao orquestrador. A ressalva abaixo sobre economia
+> "bruta" e autonetting foi superada; não se roda uma segunda P0 por cliente. A
+> decomposição numérica deste documento continua correta para o cenário medido.
+> A decomposição em toda a grade está em
+> `docs/RELATORIO-SENSIBILIDADE-CUSTO.md`.
+
 > **Nível absoluto NÃO é cotação.** Duas células da tabela de alíquotas carregam 34,5%
 > do volume e não foram verificadas em norma — ver "Onde a incerteza mora", no fim.
 
@@ -149,13 +156,9 @@ atravessar ou não essa linha é do Gabriel, com apoio jurídico.
 
 ## O que este documento não responde
 
-- **O valor incremental não tem número em bps.** Tudo aqui é economia bruta e inclui
-  autonetting — ver `docs/RELATORIO-VARREDURA.md`. Converter exigiria reprecificar só
-  as alocações incrementais, o que o motor não faz.
-- **A decomposição é de um cenário só.** Mix `equilibrado`, N=12, semente 42. As
-  proporções entre as quatro parcelas mudam com a composição da carteira; em mixes
-  OUT-pesados, com netabilidade baixa, o peso relativo do carry cai junto com o volume
-  casado. Não foi varrido.
-- **A sensibilidade cobre um parâmetro (`carry_cnr`).** `spread_rail_bps`,
-  `custo_fixo_remessa` e as duas alíquotas incertas não foram varridos, e são
-  justamente onde a incerteza é maior.
+- Este documento não contém a confirmação posterior de que a entrada já é líquida;
+  a correção de leitura está no aviso do topo.
+- A decomposição daqui é de um cenário só (`equilibrado`, N=12, semente 42).
+- A decomposição em toda a grade, as inclinações de spread/fixo/carry e a exposição
+  das duas alíquotas incertas foram fechadas depois em
+  `docs/RELATORIO-SENSIBILIDADE-CUSTO.md`.

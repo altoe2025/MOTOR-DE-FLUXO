@@ -1,5 +1,12 @@
 # Relatório da varredura completa — 2026-09-07
 
+> **CORREÇÃO DE SEMÂNTICA POSTERIOR:** foi confirmado que cada `Ordem` já é a
+> posição líquida que o cliente decidiu enviar ao orquestrador. Portanto, a
+> dedução de "autonetting" usada neste relatório não é a leitura comercial
+> vigente. Os números da grade continuam corretos para o modelo executado; o que
+> foi superado é a interpretação de que `economia_bps` precisaria ser descontada
+> novamente. Ver `docs/RELATORIO-SENSIBILIDADE-CUSTO.md`.
+
 > **Nível absoluto NÃO é cotação.** Duas células da tabela de alíquotas carregam 34,5%
 > do volume e não foram verificadas em norma: `ANEXO_V_BENS_SERVICOS` OUT (0,38% no
 > código, com comentário admitindo que bens — isento — e serviços foram colapsados na

@@ -33,8 +33,7 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-09-06, depois da auditoria de fechamento (ver entrada do
-topo) e da limpeza de uma branch órfã.
+Atualizada em 2026-09-07, depois do resumo executivo para a Amanda.
 
 | Branch | Situação | Dono |
 |---|---|---|
@@ -47,10 +46,129 @@ topo) e da limpeza de uma branch órfã.
 | `perf/netting-sem-custo-quadratico` | PR #15, mergeada | Gabriel |
 | `docs/estado-das-branches` | PR #16, mergeada | Gabriel |
 | `geracao/arquetipos`, `modelo/*`, `varredura/grid-mix-janela` | mergeadas em 2026-09-04 | Gabriel |
+| `gabriel/metrica-tempo` | PR #21, aberta; base da pilha de varredura | Gabriel |
+| `gabriel/varredura-completa` | PR #22, aberta; empilhada sobre #21 | Gabriel |
+| `gabriel/mix-outbound` | PR #23, aberta; empilhada sobre #22 | Gabriel |
+| `analise/sensibilidade-custo` | sensibilidade, estresse, limites e fluxo hipotético; 270 testes passando | Codex |
 
-**Nenhuma branch está à frente da `main`.** Toda a auditoria de 2026-09-05 está
-integrada. Apagada em 2026-09-06 a branch remota `github.com/altoe2025/MOTOR-DE-FLUXO`
+As quatro últimas branches formam uma pilha e ainda não estão na `main`. Toda a
+auditoria de 2026-09-05 está integrada. Apagada em 2026-09-06 a branch remota
+`github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+---
+
+## 2026-09-07 — Resumo executivo da sensibilidade para a Amanda
+
+1. **Sintoma.** O relatório técnico já continha método, 14 CSVs e todos os
+   resultados, mas não havia uma versão curta que separasse conclusão, condição de
+   decisão, hipótese e dado ainda pendente.
+
+2. **Causa.** As etapas anteriores privilegiaram rastreabilidade e reprodução. Uma
+   leitura direta dos CSVs podia levar os valores sintéticos em BRL a serem tratados
+   como previsão ou esconder a fragilidade específica da carteira outbound.
+
+3. **O que foi feito.** Na branch `analise/sensibilidade-custo`, foi criado
+   `docs/RESUMO-EXECUTIVO-AMANDA.md`. O documento apresenta a carteira de referência,
+   três cenários, os dez resultados de mix/N, decisões sugeridas, premissas usadas,
+   dados a substituir e afirmações que ainda não podem ser feitas. README, mapa,
+   relatório técnico e AGENTS apontam para essa versão.
+
+4. **O que isso invalida.** Nada nos cálculos anteriores. O novo resumo substitui
+   apenas a necessidade de montar manualmente uma narrativa a partir dos CSVs. Os
+   valores em reais continuam sendo hipóteses, não previsão comercial.
+
+---
+
+## 2026-09-07 — Projeção em BRL com fluxos hipotéticos
+
+1. **Sintoma.** A sensibilidade terminava em bps porque não existe volume real da
+   carteira candidata. Ainda assim, era necessário estimar a ordem de grandeza em
+   reais sem apresentar números inventados como dados da Amanda ou das empresas.
+
+2. **Causa.** Wise, Nomad, AstroPay e os rankings bancários divulgam métricas de
+   escalas, períodos e geografias diferentes. Nenhuma dessas referências informa
+   quanto fluxo líquido seria enviado ao orquestrador. Multiplicar o bps por um
+   volume qualquer também distorceria a tarifa fixa quando a escala mudasse.
+
+3. **O que foi feito.** Na branch `analise/sensibilidade-custo`, sem alteração em
+   `motor/`, `scripts/projecao_fluxo_hipotetico.py` usa o volume sintético existente
+   como faixa central e aplica 0,5× e 2,0×. A tarifa fixa em bps é corrigida em cada
+   escala. Quatro CSVs registram fontes públicas, premissas por arquétipo, 144.000
+   projeções detalhadas e 480 células agregadas. O relatório e o dicionário marcam
+   cada fluxo como suposição substituível. Quatro testes novos elevam a suíte a 270.
+
+4. **O que isso invalida.** Invalida somente a orientação anterior de não calcular
+   nenhum valor em BRL antes do volume real. BRL agora pode ser apresentado como
+   cenário exploratório, desde que o fluxo usado e sua natureza hipotética apareçam
+   junto do número. Não transforma nenhuma faixa em previsão comercial ou dado da
+   Amanda; a calibração por carteira continua pendente.
+
+---
+
+## 2026-09-07 — Cenários de estresse e limites da sensibilidade
+
+1. **Sintoma.** A sensibilidade fornecia inclinações isoladas, mas ainda não dizia
+   quanto da economia sobreviveria à retirada simultânea das premissas incertas nem
+   em que ponto o carry faria o resultado chegar a zero.
+
+2. **Causa.** Os parâmetros podiam ser reprecificados sem nova simulação, mas as
+   combinações e os limites matemáticos ainda não haviam sido materializados por
+   carteira e por célula.
+
+3. **O que foi feito.** Na branch `analise/sensibilidade-custo`, sem alteração em
+   `motor/`, `scripts/estresse_sensibilidade.py` reaproveita as 6.000 linhas já
+   publicadas. Oito cenários geram 48.000 linhas e 160 células agregadas. Outros
+   dois CSVs calculam o break-even de carry e o spread mínimo em cada carteira.
+   Quatro testes novos cobrem a identidade da base, os efeitos combinados, o ponto
+   zero e a fração de resultados positivos.
+
+4. **O que isso invalida.** Nada nos CSVs ou relatórios anteriores. Acrescenta a
+   ressalva de que a robustez é desigual: todos os resultados permanecem positivos
+   no teste combinado severo, mas `outbound_extremo` chega a apenas 3,5 bps no p10
+   de N=12/W=7. Os testes não substituem a calibração futura.
+
+---
+
+## 2026-09-07 — Sensibilidade de custo e contrato de entrada líquida
+
+1. **Sintoma.** A decomposição de custo publicada cobria uma única carteira e a
+   economia da varredura passou a ser descontada como "autonetting". Essa leitura
+   contradizia o funcionamento informado pelo Gabriel: o orquestrador recebe somente
+   a posição líquida que o cliente decidiu colocar na pool.
+
+2. **Causa.** A semântica da entrada não estava escrita no repositório. Na ausência
+   dela, `limite_intra_cliente_brl` foi interpretado como valor que o cliente faria
+   sozinho, embora isso aplique uma segunda dedução de netting sobre uma entrada que
+   já chega líquida. Ao mesmo tempo, spread, custo fixo e IOF estavam agregados de
+   forma que não permitia reprecificar todas as células sem nova análise.
+
+3. **O que foi feito.** Branch `analise/sensibilidade-custo`, sem alteração em
+   `motor/`.
+   - `scripts/sensibilidade_custo.py` reaproveita as 27.000 linhas para decompor
+     IOF/spread/fixo/carry/espera e calcular inclinações de preço em todas as 90
+     células.
+   - Em N=8/12, 3.000 carteiras-base foram geradas uma vez e reutilizadas em W=1/7,
+     produzindo 6.000 linhas e abrindo a exposição de IOF por finalidade/direção.
+   - A reprecificação por bases é conferida exatamente contra `custo_netado`; as
+     6.000 economias reproduzem o CSV original com diferença máxima inferior a
+     0,005 bps (0,00 bps a duas casas), explicada pelo arredondamento monetário.
+   - `tests/test_sensibilidade_custo.py` cobre reprecificação, ausência de valor sem
+     contraparte, duas posições opostas, identidade da decomposição e percentuais.
+   - `docs/RELATORIO-SENSIBILIDADE-CUSTO.md` registra método, resultados e fórmulas.
+
+4. **O que isso invalida.**
+   - Invalida a conclusão comercial de que a economia em bps precisa ser descontada
+     novamente por `taxa_netabilidade_incremental`. Sob a entrada líquida, isso faria
+     netting interno duas vezes. Em particular, o `outbound_extremo` volta a ser lido
+     como cerca de 24 bps no modelo atual — baixo, mas não zero.
+   - Não invalida nenhuma das 27.000 simulações: o CSV estava correto e foi
+     reaproveitado. Invalida a interpretação de autonetting dos relatórios antigos.
+   - A decomposição de um cenário só (85,75% IOF, 15,85% spread, 0,94% fixo,
+     −2,54% carry) não pode ser generalizada. Em N=12/W=7, a grade mede IOF 72–89%,
+     spread 11–21%, fixo 0,2–11,6% e carry −1,8% a −3,3% conforme o mix.
+   - Os níveis ainda não são cotação: faltam spread/tarifa reais e confirmação das
+     duas regras incertas de IOF.
 
 ---
 

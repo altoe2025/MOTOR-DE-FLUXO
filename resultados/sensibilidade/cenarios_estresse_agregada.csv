@@ -1,0 +1,166 @@
+# Testes analiticos, nao cotacao nem previsao comercial.
+# Base hipotetica: spread=25 bps, tarifa fixa=R$40 e carry=4 bps.
+# IOF incerto: BENS_SERVICOS OUT=38 bps e ATIVOS_VIRTUAIS OUT=350 bps na base.
+# Cada Ordem e uma posicao liquida; nao ha deducao adicional de autonetting.
+# Cada semente representa uma carteira-ano sintetica de 365 dias.
+cenario,nome_mix,n_clientes,janela_dias,horizonte_dias,descricao,spread_bps,tarifa_fixa_brl,carry_bps,iof_bens_servicos_out_bps,iof_ativos_virtuais_out_bps,n_sementes,economia_estressada_bps_p10,economia_estressada_bps_p50,economia_estressada_bps_p90,fracao_economia_positiva
+base_hipotetica,equilibrado,8,1,365,Hipoteses atuais do modelo; ainda nao calibradas.,25.000000,40.00,4.000000,38.000000,350.000000,300,114.664591,126.211607,136.512447,1.000000
+sem_spread,equilibrado,8,1,365,Retira integralmente o spread evitado.,0.000000,40.00,4.000000,38.000000,350.000000,300,95.799256,106.248981,115.760344,1.000000
+sem_tarifa_fixa,equilibrado,8,1,365,Retira integralmente a tarifa fixa evitada.,25.000000,0.00,4.000000,38.000000,350.000000,300,113.596761,125.216508,135.498647,1.000000
+iof_incerto_zero,equilibrado,8,1,365,Zera somente as duas aliquotas de IOF ainda nao confirmadas.,25.000000,40.00,4.000000,0.000000,0.000000,300,54.924641,64.400314,73.845923,1.000000
+piso_sem_componentes_incertos,equilibrado,8,1,365,"Zera spread, tarifa fixa e as duas aliquotas incertas; mantem carry em 4 bps.",0.000000,0.00,4.000000,0.000000,0.000000,300,34.113786,43.047239,52.480520,1.000000
+carry_25bps,equilibrado,8,1,365,"Eleva o carry de 4 para 25 bps, sem alterar os demais componentes.",25.000000,40.00,25.000000,38.000000,350.000000,300,98.732808,109.514045,119.107354,1.000000
+combinado_severo,equilibrado,8,1,365,Aplica o piso dos componentes incertos e eleva o carry para 25 bps.,0.000000,0.00,25.000000,0.000000,0.000000,300,17.650649,26.645828,35.924088,1.000000
+sem_carry,equilibrado,8,1,365,Limite superior simples: retira o custo de carry e mantem o restante na base.,25.000000,40.00,0.000000,38.000000,350.000000,300,117.766719,129.294448,139.919219,1.000000
+base_hipotetica,equilibrado,8,7,365,Hipoteses atuais do modelo; ainda nao calibradas.,25.000000,40.00,4.000000,38.000000,350.000000,300,116.754075,127.617196,138.138598,1.000000
+sem_spread,equilibrado,8,7,365,Retira integralmente o spread evitado.,0.000000,40.00,4.000000,38.000000,350.000000,300,97.433979,107.527241,116.928256,1.000000
+sem_tarifa_fixa,equilibrado,8,7,365,Retira integralmente a tarifa fixa evitada.,25.000000,0.00,4.000000,38.000000,350.000000,300,115.732115,126.621195,137.117250,1.000000
+iof_incerto_zero,equilibrado,8,7,365,Zera somente as duas aliquotas de IOF ainda nao confirmadas.,25.000000,40.00,4.000000,0.000000,0.000000,300,54.820401,64.040339,73.752345,1.000000
+piso_sem_componentes_incertos,equilibrado,8,7,365,"Zera spread, tarifa fixa e as duas aliquotas incertas; mantem carry em 4 bps.",0.000000,0.00,4.000000,0.000000,0.000000,300,34.071655,42.487244,52.058266,1.000000
+carry_25bps,equilibrado,8,7,365,"Eleva o carry de 4 para 25 bps, sem alterar os demais componentes.",25.000000,40.00,25.000000,38.000000,350.000000,300,100.702189,110.799913,120.303476,1.000000
+combinado_severo,equilibrado,8,7,365,Aplica o piso dos componentes incertos e eleva o carry para 25 bps.,0.000000,0.00,25.000000,0.000000,0.000000,300,17.371510,25.710804,35.286571,1.000000
+sem_carry,equilibrado,8,7,365,Limite superior simples: retira o custo de carry e mantem o restante na base.,25.000000,40.00,0.000000,38.000000,350.000000,300,119.950335,130.949032,141.587474,1.000000
+base_hipotetica,equilibrado,12,1,365,Hipoteses atuais do modelo; ainda nao calibradas.,25.000000,40.00,4.000000,38.000000,350.000000,300,111.984793,123.143135,133.944207,1.000000
+sem_spread,equilibrado,12,1,365,Retira integralmente o spread evitado.,0.000000,40.00,4.000000,38.000000,350.000000,300,92.085357,102.712535,112.195457,1.000000
+sem_tarifa_fixa,equilibrado,12,1,365,Retira integralmente a tarifa fixa evitada.,25.000000,0.00,4.000000,38.000000,350.000000,300,110.742673,121.908735,132.751127,1.000000
+iof_incerto_zero,equilibrado,12,1,365,Zera somente as duas aliquotas de IOF ainda nao confirmadas.,25.000000,40.00,4.000000,0.000000,0.000000,300,69.417729,79.246898,89.827991,1.000000
+piso_sem_componentes_incertos,equilibrado,12,1,365,"Zera spread, tarifa fixa e as duas aliquotas incertas; mantem carry em 4 bps.",0.000000,0.00,4.000000,0.000000,0.000000,300,48.049112,57.591022,67.480036,1.000000
+carry_25bps,equilibrado,12,1,365,"Eleva o carry de 4 para 25 bps, sem alterar os demais componentes.",25.000000,40.00,25.000000,38.000000,350.000000,300,95.110528,106.017827,115.675257,1.000000
+combinado_severo,equilibrado,12,1,365,Aplica o piso dos componentes incertos e eleva o carry para 25 bps.,0.000000,0.00,25.000000,0.000000,0.000000,300,31.090104,40.598742,49.815929,1.000000
+sem_carry,equilibrado,12,1,365,Limite superior simples: retira o custo de carry e mantem o restante na base.,25.000000,40.00,0.000000,38.000000,350.000000,300,114.908861,126.412031,137.488533,1.000000
+base_hipotetica,equilibrado,12,7,365,Hipoteses atuais do modelo; ainda nao calibradas.,25.000000,40.00,4.000000,38.000000,350.000000,300,113.311514,124.791119,135.462320,1.000000
+sem_spread,equilibrado,12,7,365,Retira integralmente o spread evitado.,0.000000,40.00,4.000000,38.000000,350.000000,300,93.778574,104.010059,113.606023,1.000000
+sem_tarifa_fixa,equilibrado,12,7,365,Retira integralmente a tarifa fixa evitada.,25.000000,0.00,4.000000,38.000000,350.000000,300,112.033234,123.437888,134.122920,1.000000
+iof_incerto_zero,equilibrado,12,7,365,Zera somente as duas aliquotas de IOF ainda nao confirmadas.,25.000000,40.00,4.000000,0.000000,0.000000,300,68.710214,78.562253,88.904228,1.000000
+piso_sem_componentes_incertos,equilibrado,12,7,365,"Zera spread, tarifa fixa e as duas aliquotas incertas; mantem carry em 4 bps.",0.000000,0.00,4.000000,0.000000,0.000000,300,47.427940,56.777966,66.447261,1.000000
+carry_25bps,equilibrado,12,7,365,"Eleva o carry de 4 para 25 bps, sem alterar os demais componentes.",25.000000,40.00,25.000000,38.000000,350.000000,300,96.873340,107.418785,117.103123,1.000000
+combinado_severo,equilibrado,12,7,365,Aplica o piso dos componentes incertos e eleva o carry para 25 bps.,0.000000,0.00,25.000000,0.000000,0.000000,300,30.592329,39.434262,48.951798,1.000000
+sem_carry,equilibrado,12,7,365,Limite superior simples: retira o custo de carry e mantem o restante na base.,25.000000,40.00,0.000000,38.000000,350.000000,300,116.389514,128.001691,138.994320,1.000000
+base_hipotetica,retail_pesado,8,1,365,Hipoteses atuais do modelo; ainda nao calibradas.,25.000000,40.00,4.000000,38.000000,350.000000,300,108.912975,122.649312,135.100100,1.000000
+sem_spread,retail_pesado,8,1,365,Retira integralmente o spread evitado.,0.000000,40.00,4.000000,38.000000,350.000000,300,96.931531,108.984760,120.004475,1.000000
+sem_tarifa_fixa,retail_pesado,8,1,365,Retira integralmente a tarifa fixa evitada.,25.000000,0.00,4.000000,38.000000,350.000000,300,103.227295,117.109470,129.822300,1.000000
+iof_incerto_zero,retail_pesado,8,1,365,Zera somente as duas aliquotas de IOF ainda nao confirmadas.,25.000000,40.00,4.000000,0.000000,0.000000,300,70.518971,80.498911,88.780368,1.000000
+piso_sem_componentes_incertos,retail_pesado,8,1,365,"Zera spread, tarifa fixa e as duas aliquotas incertas; mantem carry em 4 bps.",0.000000,0.00,4.000000,0.000000,0.000000,300,52.796111,61.016970,68.597986,1.000000
+carry_25bps,retail_pesado,8,1,365,"Eleva o carry de 4 para 25 bps, sem alterar os demais componentes.",25.000000,40.00,25.000000,38.000000,350.000000,300,98.859587,111.172940,122.419775,1.000000
+combinado_severo,retail_pesado,8,1,365,Aplica o piso dos componentes incertos e eleva o carry para 25 bps.,0.000000,0.00,25.000000,0.000000,0.000000,300,42.195285,49.652082,56.408909,1.000000
+sem_carry,retail_pesado,8,1,365,Limite superior simples: retira o custo de carry e mantem o restante na base.,25.000000,40.00,0.000000,38.000000,350.000000,300,110.826367,124.822896,137.515400,1.000000
+base_hipotetica,retail_pesado,8,7,365,Hipoteses atuais do modelo; ainda nao calibradas.,25.000000,40.00,4.000000,38.000000,350.000000,300,109.107936,123.337820,136.034807,1.000000
+sem_spread,retail_pesado,8,7,365,Retira integralmente o spread evitado.,0.000000,40.00,4.000000,38.000000,350.000000,300,97.103711,109.649680,120.940636,1.000000
+sem_tarifa_fixa,retail_pesado,8,7,365,Retira integralmente a tarifa fixa evitada.,25.000000,0.00,4.000000,38.000000,350.000000,300,103.389430,117.776020,130.360206,1.000000
+iof_incerto_zero,retail_pesado,8,7,365,Zera somente as duas aliquotas de IOF ainda nao confirmadas.,25.000000,40.00,4.000000,0.000000,0.000000,300,69.285589,79.376741,87.244570,1.000000
+piso_sem_componentes_incertos,retail_pesado,8,7,365,"Zera spread, tarifa fixa e as duas aliquotas incertas; mantem carry em 4 bps.",0.000000,0.00,4.000000,0.000000,0.000000,300,51.530931,59.924971,67.010248,1.000000
+carry_25bps,retail_pesado,8,7,365,"Eleva o carry de 4 para 25 bps, sem alterar os demais componentes.",25.000000,40.00,25.000000,38.000000,350.000000,300,99.024387,111.840864,123.370337,1.000000
+combinado_severo,retail_pesado,8,7,365,Aplica o piso dos componentes incertos e eleva o carry para 25 bps.,0.000000,0.00,25.000000,0.000000,0.000000,300,40.876164,48.187093,54.868083,1.000000
+sem_carry,retail_pesado,8,7,365,Limite superior simples: retira o custo de carry e mantem o restante na base.,25.000000,40.00,0.000000,38.000000,350.000000,300,111.028612,125.523984,138.447087,1.000000
+base_hipotetica,retail_pesado,12,1,365,Hipoteses atuais do modelo; ainda nao calibradas.,25.000000,40.00,4.000000,38.000000,350.000000,300,109.392253,120.515973,131.900058,1.000000
+sem_spread,retail_pesado,12,1,365,Retira integralmente o spread evitado.,0.000000,40.00,4.000000,38.000000,350.000000,300,97.369978,107.282973,117.257833,1.000000
+sem_tarifa_fixa,retail_pesado,12,1,365,Retira integralmente a tarifa fixa evitada.,25.000000,0.00,4.000000,38.000000,350.000000,300,103.075838,114.392936,125.599844,1.000000
+iof_incerto_zero,retail_pesado,12,1,365,Zera somente as duas aliquotas de IOF ainda nao confirmadas.,25.000000,40.00,4.000000,0.000000,0.000000,300,66.402732,75.160859,83.651161,1.000000
+piso_sem_componentes_incertos,retail_pesado,12,1,365,"Zera spread, tarifa fixa e as duas aliquotas incertas; mantem carry em 4 bps.",0.000000,0.00,4.000000,0.000000,0.000000,300,47.952807,55.889612,62.298819,1.000000
+carry_25bps,retail_pesado,12,1,365,"Eleva o carry de 4 para 25 bps, sem alterar os demais componentes.",25.000000,40.00,25.000000,38.000000,350.000000,300,99.293542,109.400253,119.600589,1.000000
+combinado_severo,retail_pesado,12,1,365,Aplica o piso dos componentes incertos e eleva o carry para 25 bps.,0.000000,0.00,25.000000,0.000000,0.000000,300,37.758556,44.626019,50.388375,1.000000
+sem_carry,retail_pesado,12,1,365,Limite superior simples: retira o custo de carry e mantem o restante na base.,25.000000,40.00,0.000000,38.000000,350.000000,300,111.315817,122.633253,134.238208,1.000000
+base_hipotetica,retail_pesado,12,7,365,Hipoteses atuais do modelo; ainda nao calibradas.,25.000000,40.00,4.000000,38.000000,350.000000,300,109.550733,120.985733,132.395837,1.000000
+sem_spread,retail_pesado,12,7,365,Retira integralmente o spread evitado.,0.000000,40.00,4.000000,38.000000,350.000000,300,97.510358,107.628958,117.696137,1.000000
+sem_tarifa_fixa,retail_pesado,12,7,365,Retira integralmente a tarifa fixa evitada.,25.000000,0.00,4.000000,38.000000,350.000000,300,103.367046,114.931971,125.809647,1.000000
+iof_incerto_zero,retail_pesado,12,7,365,Zera somente as duas aliquotas de IOF ainda nao confirmadas.,25.000000,40.00,4.000000,0.000000,0.000000,300,65.287187,74.475849,82.673352,1.000000
+piso_sem_componentes_incertos,retail_pesado,12,7,365,"Zera spread, tarifa fixa e as duas aliquotas incertas; mantem carry em 4 bps.",0.000000,0.00,4.000000,0.000000,0.000000,300,47.122298,54.971085,61.469771,1.000000
+carry_25bps,retail_pesado,12,7,365,"Eleva o carry de 4 para 25 bps, sem alterar os demais componentes.",25.000000,40.00,25.000000,38.000000,350.000000,300,99.436818,109.766042,120.048089,1.000000
+combinado_severo,retail_pesado,12,7,365,Aplica o piso dos componentes incertos e eleva o carry para 25 bps.,0.000000,0.00,25.000000,0.000000,0.000000,300,36.995160,43.734679,49.151676,1.000000
+sem_carry,retail_pesado,12,7,365,Limite superior simples: retira o custo de carry e mantem o restante na base.,25.000000,40.00,0.000000,38.000000,350.000000,300,111.477193,123.122817,134.747789,1.000000
+base_hipotetica,corporativo_pesado,8,1,365,Hipoteses atuais do modelo; ainda nao calibradas.,25.000000,40.00,4.000000,38.000000,350.000000,300,78.661137,93.458954,108.342611,1.000000
+sem_spread,corporativo_pesado,8,1,365,Retira integralmente o spread evitado.,0.000000,40.00,4.000000,38.000000,350.000000,300,58.426017,72.332512,86.352479,1.000000
+sem_tarifa_fixa,corporativo_pesado,8,1,365,Retira integralmente a tarifa fixa evitada.,25.000000,0.00,4.000000,38.000000,350.000000,300,78.379897,93.186194,108.073731,1.000000
+iof_incerto_zero,corporativo_pesado,8,1,365,Zera somente as duas aliquotas de IOF ainda nao confirmadas.,25.000000,40.00,4.000000,0.000000,0.000000,300,68.101805,83.717751,99.552436,1.000000
+piso_sem_componentes_incertos,corporativo_pesado,8,1,365,"Zera spread, tarifa fixa e as duas aliquotas incertas; mantem carry em 4 bps.",0.000000,0.00,4.000000,0.000000,0.000000,300,48.139282,62.454886,77.597396,1.000000
+carry_25bps,corporativo_pesado,8,1,365,"Eleva o carry de 4 para 25 bps, sem alterar os demais componentes.",25.000000,40.00,25.000000,38.000000,350.000000,300,61.705319,75.705029,89.857107,1.000000
+combinado_severo,corporativo_pesado,8,1,365,Aplica o piso dos componentes incertos e eleva o carry para 25 bps.,0.000000,0.00,25.000000,0.000000,0.000000,300,31.149405,44.813689,60.028957,1.000000
+sem_carry,corporativo_pesado,8,1,365,Limite superior simples: retira o custo de carry e mantem o restante na base.,25.000000,40.00,0.000000,38.000000,350.000000,300,82.039749,96.674428,111.958119,1.000000
+base_hipotetica,corporativo_pesado,8,7,365,Hipoteses atuais do modelo; ainda nao calibradas.,25.000000,40.00,4.000000,38.000000,350.000000,300,78.396790,93.278632,108.388548,1.000000
+sem_spread,corporativo_pesado,8,7,365,Retira integralmente o spread evitado.,0.000000,40.00,4.000000,38.000000,350.000000,300,58.171075,72.167143,86.241248,1.000000
+sem_tarifa_fixa,corporativo_pesado,8,7,365,Retira integralmente a tarifa fixa evitada.,25.000000,0.00,4.000000,38.000000,350.000000,300,78.141270,93.068192,108.165228,1.000000
+iof_incerto_zero,corporativo_pesado,8,7,365,Zera somente as duas aliquotas de IOF ainda nao confirmadas.,25.000000,40.00,4.000000,0.000000,0.000000,300,67.947081,83.539780,99.505317,1.000000
+piso_sem_componentes_incertos,corporativo_pesado,8,7,365,"Zera spread, tarifa fixa e as duas aliquotas incertas; mantem carry em 4 bps.",0.000000,0.00,4.000000,0.000000,0.000000,300,47.725408,62.472165,77.252766,1.000000
+carry_25bps,corporativo_pesado,8,7,365,"Eleva o carry de 4 para 25 bps, sem alterar os demais componentes.",25.000000,40.00,25.000000,38.000000,350.000000,300,61.372936,75.490925,89.784816,1.000000
+combinado_severo,corporativo_pesado,8,7,365,Aplica o piso dos componentes incertos e eleva o carry para 25 bps.,0.000000,0.00,25.000000,0.000000,0.000000,300,31.182427,44.448598,59.124934,1.000000
+sem_carry,corporativo_pesado,8,7,365,Limite superior simples: retira o custo de carry e mantem o restante na base.,25.000000,40.00,0.000000,38.000000,350.000000,300,81.844986,96.633579,111.932116,1.000000
+base_hipotetica,corporativo_pesado,12,1,365,Hipoteses atuais do modelo; ainda nao calibradas.,25.000000,40.00,4.000000,38.000000,350.000000,300,94.342834,108.312700,120.763064,1.000000
+sem_spread,corporativo_pesado,12,1,365,Retira integralmente o spread evitado.,0.000000,40.00,4.000000,38.000000,350.000000,300,73.624898,85.831787,97.750494,1.000000
+sem_tarifa_fixa,corporativo_pesado,12,1,365,Retira integralmente a tarifa fixa evitada.,25.000000,0.00,4.000000,38.000000,350.000000,300,94.110794,108.084980,120.534624,1.000000
+iof_incerto_zero,corporativo_pesado,12,1,365,Zera somente as duas aliquotas de IOF ainda nao confirmadas.,25.000000,40.00,4.000000,0.000000,0.000000,300,85.067066,99.045697,112.397037,1.000000
+piso_sem_componentes_incertos,corporativo_pesado,12,1,365,"Zera spread, tarifa fixa e as duas aliquotas incertas; mantem carry em 4 bps.",0.000000,0.00,4.000000,0.000000,0.000000,300,64.406214,76.468908,88.485560,1.000000
+carry_25bps,corporativo_pesado,12,1,365,"Eleva o carry de 4 para 25 bps, sem alterar os demais componentes.",25.000000,40.00,25.000000,38.000000,350.000000,300,77.055313,89.465867,101.595564,1.000000
+combinado_severo,corporativo_pesado,12,1,365,Aplica o piso dos componentes incertos e eleva o carry para 25 bps.,0.000000,0.00,25.000000,0.000000,0.000000,300,46.365450,57.621681,69.438741,1.000000
+sem_carry,corporativo_pesado,12,1,365,Limite superior simples: retira o custo de carry e mantem o restante na base.,25.000000,40.00,0.000000,38.000000,350.000000,300,97.598994,111.809403,124.308264,1.000000
+base_hipotetica,corporativo_pesado,12,7,365,Hipoteses atuais do modelo; ainda nao calibradas.,25.000000,40.00,4.000000,38.000000,350.000000,300,94.119653,108.034930,120.576250,1.000000
+sem_spread,corporativo_pesado,12,7,365,Retira integralmente o spread evitado.,0.000000,40.00,4.000000,38.000000,350.000000,300,73.435503,85.316935,97.221921,1.000000
+sem_tarifa_fixa,corporativo_pesado,12,7,365,Retira integralmente a tarifa fixa evitada.,25.000000,0.00,4.000000,38.000000,350.000000,300,93.890093,107.793370,120.346970,1.000000
+iof_incerto_zero,corporativo_pesado,12,7,365,Zera somente as duas aliquotas de IOF ainda nao confirmadas.,25.000000,40.00,4.000000,0.000000,0.000000,300,84.600376,98.426956,111.830483,1.000000
+piso_sem_componentes_incertos,corporativo_pesado,12,7,365,"Zera spread, tarifa fixa e as duas aliquotas incertas; mantem carry em 4 bps.",0.000000,0.00,4.000000,0.000000,0.000000,300,64.110780,75.764998,88.253440,1.000000
+carry_25bps,corporativo_pesado,12,7,365,"Eleva o carry de 4 para 25 bps, sem alterar os demais componentes.",25.000000,40.00,25.000000,38.000000,350.000000,300,76.744967,88.938451,101.083621,1.000000
+combinado_severo,corporativo_pesado,12,7,365,Aplica o piso dos componentes incertos e eleva o carry para 25 bps.,0.000000,0.00,25.000000,0.000000,0.000000,300,45.728682,57.116514,68.641127,1.000000
+sem_carry,corporativo_pesado,12,7,365,Limite superior simples: retira o custo de carry e mantem o restante na base.,25.000000,40.00,0.000000,38.000000,350.000000,300,97.429117,111.572926,124.104642,1.000000
+base_hipotetica,psp_dominante,8,1,365,Hipoteses atuais do modelo; ainda nao calibradas.,25.000000,40.00,4.000000,38.000000,350.000000,300,162.659162,178.605027,190.724630,1.000000
+sem_spread,psp_dominante,8,1,365,Retira integralmente o spread evitado.,0.000000,40.00,4.000000,38.000000,350.000000,300,143.929637,158.020702,168.705680,1.000000
+sem_tarifa_fixa,psp_dominante,8,1,365,Retira integralmente a tarifa fixa evitada.,25.000000,0.00,4.000000,38.000000,350.000000,300,161.254652,177.025267,189.362950,1.000000
+iof_incerto_zero,psp_dominante,8,1,365,Zera somente as duas aliquotas de IOF ainda nao confirmadas.,25.000000,40.00,4.000000,0.000000,0.000000,300,104.570320,118.460076,133.174107,1.000000
+piso_sem_componentes_incertos,psp_dominante,8,1,365,"Zera spread, tarifa fixa e as duas aliquotas incertas; mantem carry em 4 bps.",0.000000,0.00,4.000000,0.000000,0.000000,300,83.618082,96.440472,110.591219,1.000000
+carry_25bps,psp_dominante,8,1,365,"Eleva o carry de 4 para 25 bps, sem alterar os demais componentes.",25.000000,40.00,25.000000,38.000000,350.000000,300,146.926361,161.314194,172.228712,1.000000
+combinado_severo,psp_dominante,8,1,365,Aplica o piso dos componentes incertos e eleva o carry para 25 bps.,0.000000,0.00,25.000000,0.000000,0.000000,300,67.397218,79.126233,92.567265,1.000000
+sem_carry,psp_dominante,8,1,365,Limite superior simples: retira o custo de carry e mantem o restante na base.,25.000000,40.00,0.000000,38.000000,350.000000,300,165.655886,181.898519,194.247662,1.000000
+base_hipotetica,psp_dominante,8,7,365,Hipoteses atuais do modelo; ainda nao calibradas.,25.000000,40.00,4.000000,38.000000,350.000000,300,163.144883,180.360086,192.475822,1.000000
+sem_spread,psp_dominante,8,7,365,Retira integralmente o spread evitado.,0.000000,40.00,4.000000,38.000000,350.000000,300,144.335758,159.576336,170.276072,1.000000
+sem_tarifa_fixa,psp_dominante,8,7,365,Retira integralmente a tarifa fixa evitada.,25.000000,0.00,4.000000,38.000000,350.000000,300,161.758563,178.789827,191.100749,1.000000
+iof_incerto_zero,psp_dominante,8,7,365,Zera somente as duas aliquotas de IOF ainda nao confirmadas.,25.000000,40.00,4.000000,0.000000,0.000000,300,104.602068,118.567309,133.589140,1.000000
+piso_sem_componentes_incertos,psp_dominante,8,7,365,"Zera spread, tarifa fixa e as duas aliquotas incertas; mantem carry em 4 bps.",0.000000,0.00,4.000000,0.000000,0.000000,300,83.651611,96.360656,110.550380,1.000000
+carry_25bps,psp_dominante,8,7,365,"Eleva o carry de 4 para 25 bps, sem alterar os demais componentes.",25.000000,40.00,25.000000,38.000000,350.000000,300,147.345218,162.901736,173.828032,1.000000
+combinado_severo,psp_dominante,8,7,365,Aplica o piso dos componentes incertos e eleva o carry para 25 bps.,0.000000,0.00,25.000000,0.000000,0.000000,300,67.347424,78.964476,92.548687,1.000000
+sem_carry,psp_dominante,8,7,365,Limite superior simples: retira o custo de carry e mantem o restante na base.,25.000000,40.00,0.000000,38.000000,350.000000,300,166.154343,183.685486,196.029873,1.000000
+base_hipotetica,psp_dominante,12,1,365,Hipoteses atuais do modelo; ainda nao calibradas.,25.000000,40.00,4.000000,38.000000,350.000000,300,180.768745,189.761620,197.890373,1.000000
+sem_spread,psp_dominante,12,1,365,Retira integralmente o spread evitado.,0.000000,40.00,4.000000,38.000000,350.000000,300,159.967070,167.918161,175.099948,1.000000
+sem_tarifa_fixa,psp_dominante,12,1,365,Retira integralmente a tarifa fixa evitada.,25.000000,0.00,4.000000,38.000000,350.000000,300,178.894345,187.833051,196.010685,1.000000
+iof_incerto_zero,psp_dominante,12,1,365,Zera somente as duas aliquotas de IOF ainda nao confirmadas.,25.000000,40.00,4.000000,0.000000,0.000000,300,104.392437,115.454963,125.856741,1.000000
+piso_sem_componentes_incertos,psp_dominante,12,1,365,"Zera spread, tarifa fixa e as duas aliquotas incertas; mantem carry em 4 bps.",0.000000,0.00,4.000000,0.000000,0.000000,300,81.070372,91.923004,101.490578,1.000000
+carry_25bps,psp_dominante,12,1,365,"Eleva o carry de 4 para 25 bps, sem alterar os demais componentes.",25.000000,40.00,25.000000,38.000000,350.000000,300,163.295338,171.412729,178.746416,1.000000
+combinado_severo,psp_dominante,12,1,365,Aplica o piso dos componentes incertos e eleva o carry para 25 bps.,0.000000,0.00,25.000000,0.000000,0.000000,300,62.967007,73.578412,83.133948,1.000000
+sem_carry,psp_dominante,12,1,365,Limite superior simples: retira o custo de carry e mantem o restante na base.,25.000000,40.00,0.000000,38.000000,350.000000,300,184.097013,193.257560,201.536841,1.000000
+base_hipotetica,psp_dominante,12,7,365,Hipoteses atuais do modelo; ainda nao calibradas.,25.000000,40.00,4.000000,38.000000,350.000000,300,181.262394,191.278802,199.510007,1.000000
+sem_spread,psp_dominante,12,7,365,Retira integralmente o spread evitado.,0.000000,40.00,4.000000,38.000000,350.000000,300,160.380919,169.259502,176.535882,1.000000
+sem_tarifa_fixa,psp_dominante,12,7,365,Retira integralmente a tarifa fixa evitada.,25.000000,0.00,4.000000,38.000000,350.000000,300,179.580674,189.463905,197.711934,1.000000
+iof_incerto_zero,psp_dominante,12,7,365,Zera somente as duas aliquotas de IOF ainda nao confirmadas.,25.000000,40.00,4.000000,0.000000,0.000000,300,104.441156,115.366002,125.869977,1.000000
+piso_sem_componentes_incertos,psp_dominante,12,7,365,"Zera spread, tarifa fixa e as duas aliquotas incertas; mantem carry em 4 bps.",0.000000,0.00,4.000000,0.000000,0.000000,300,80.996488,91.268407,101.434902,1.000000
+carry_25bps,psp_dominante,12,7,365,"Eleva o carry de 4 para 25 bps, sem alterar os demais componentes.",25.000000,40.00,25.000000,38.000000,350.000000,300,163.721955,172.782590,180.211742,1.000000
+combinado_severo,psp_dominante,12,7,365,Aplica o piso dos componentes incertos e eleva o carry para 25 bps.,0.000000,0.00,25.000000,0.000000,0.000000,300,62.710290,73.038513,82.525431,1.000000
+sem_carry,psp_dominante,12,7,365,Limite superior simples: retira o custo de carry e mantem o restante na base.,25.000000,40.00,0.000000,38.000000,350.000000,300,184.603430,194.801890,203.185867,1.000000
+base_hipotetica,outbound_extremo,8,1,365,Hipoteses atuais do modelo; ainda nao calibradas.,25.000000,40.00,4.000000,38.000000,350.000000,300,22.338154,27.574880,32.534841,1.000000
+sem_spread,outbound_extremo,8,1,365,Retira integralmente o spread evitado.,0.000000,40.00,4.000000,38.000000,350.000000,300,17.835641,22.019131,25.901566,1.000000
+sem_tarifa_fixa,outbound_extremo,8,1,365,Retira integralmente a tarifa fixa evitada.,25.000000,0.00,4.000000,38.000000,350.000000,300,20.081681,25.201673,30.272599,1.000000
+iof_incerto_zero,outbound_extremo,8,1,365,Zera somente as duas aliquotas de IOF ainda nao confirmadas.,25.000000,40.00,4.000000,0.000000,0.000000,300,14.691828,17.931679,21.118375,1.000000
+piso_sem_componentes_incertos,outbound_extremo,8,1,365,"Zera spread, tarifa fixa e as duas aliquotas incertas; mantem carry em 4 bps.",0.000000,0.00,4.000000,0.000000,0.000000,300,7.914025,10.009863,12.275124,1.000000
+carry_25bps,outbound_extremo,8,1,365,"Eleva o carry de 4 para 25 bps, sem alterar os demais componentes.",25.000000,40.00,25.000000,38.000000,350.000000,300,18.590722,22.845924,26.962890,1.000000
+combinado_severo,outbound_extremo,8,1,365,Aplica o piso dos componentes incertos e eleva o carry para 25 bps.,0.000000,0.00,25.000000,0.000000,0.000000,300,4.035045,5.354384,6.839511,1.000000
+sem_carry,outbound_extremo,8,1,365,Limite superior simples: retira o custo de carry e mantem o restante na base.,25.000000,40.00,0.000000,38.000000,350.000000,300,23.050011,28.387128,33.596165,1.000000
+base_hipotetica,outbound_extremo,8,7,365,Hipoteses atuais do modelo; ainda nao calibradas.,25.000000,40.00,4.000000,38.000000,350.000000,300,22.490617,27.768631,32.812175,1.000000
+sem_spread,outbound_extremo,8,7,365,Retira integralmente o spread evitado.,0.000000,40.00,4.000000,38.000000,350.000000,300,17.987795,22.185056,26.242146,1.000000
+sem_tarifa_fixa,outbound_extremo,8,7,365,Retira integralmente a tarifa fixa evitada.,25.000000,0.00,4.000000,38.000000,350.000000,300,20.176777,25.452459,30.439648,1.000000
+iof_incerto_zero,outbound_extremo,8,7,365,Zera somente as duas aliquotas de IOF ainda nao confirmadas.,25.000000,40.00,4.000000,0.000000,0.000000,300,14.654525,17.823487,21.167383,1.000000
+piso_sem_componentes_incertos,outbound_extremo,8,7,365,"Zera spread, tarifa fixa e as duas aliquotas incertas; mantem carry em 4 bps.",0.000000,0.00,4.000000,0.000000,0.000000,300,7.880680,9.908959,12.256103,1.000000
+carry_25bps,outbound_extremo,8,7,365,"Eleva o carry de 4 para 25 bps, sem alterar os demais componentes.",25.000000,40.00,25.000000,38.000000,350.000000,300,18.731295,23.084898,27.315390,1.000000
+combinado_severo,outbound_extremo,8,7,365,Aplica o piso dos componentes incertos e eleva o carry para 25 bps.,0.000000,0.00,25.000000,0.000000,0.000000,300,3.892667,5.284064,6.808809,1.000000
+sem_carry,outbound_extremo,8,7,365,Limite superior simples: retira o custo de carry e mantem o restante na base.,25.000000,40.00,0.000000,38.000000,350.000000,300,23.200720,28.662003,33.873499,1.000000
+base_hipotetica,outbound_extremo,12,1,365,Hipoteses atuais do modelo; ainda nao calibradas.,25.000000,40.00,4.000000,38.000000,350.000000,300,20.476526,24.341667,28.318260,1.000000
+sem_spread,outbound_extremo,12,1,365,Retira integralmente o spread evitado.,0.000000,40.00,4.000000,38.000000,350.000000,300,16.477302,19.596265,22.691125,1.000000
+sem_tarifa_fixa,outbound_extremo,12,1,365,Retira integralmente a tarifa fixa evitada.,25.000000,0.00,4.000000,38.000000,350.000000,300,17.681441,21.503608,25.441385,1.000000
+iof_incerto_zero,outbound_extremo,12,1,365,Zera somente as duas aliquotas de IOF ainda nao confirmadas.,25.000000,40.00,4.000000,0.000000,0.000000,300,13.904004,16.321083,19.201385,1.000000
+piso_sem_componentes_incertos,outbound_extremo,12,1,365,"Zera spread, tarifa fixa e as duas aliquotas incertas; mantem carry em 4 bps.",0.000000,0.00,4.000000,0.000000,0.000000,300,7.042998,8.737182,10.661295,1.000000
+carry_25bps,outbound_extremo,12,1,365,"Eleva o carry de 4 para 25 bps, sem alterar os demais componentes.",25.000000,40.00,25.000000,38.000000,350.000000,300,17.125542,20.328677,23.557006,1.000000
+combinado_severo,outbound_extremo,12,1,365,Aplica o piso dos componentes incertos e eleva o carry para 25 bps.,0.000000,0.00,25.000000,0.000000,0.000000,300,3.570153,4.662368,6.007798,1.000000
+sem_carry,outbound_extremo,12,1,365,Limite superior simples: retira o custo de carry e mantem o restante na base.,25.000000,40.00,0.000000,38.000000,350.000000,300,21.090814,25.101838,29.170372,1.000000
+base_hipotetica,outbound_extremo,12,7,365,Hipoteses atuais do modelo; ainda nao calibradas.,25.000000,40.00,4.000000,38.000000,350.000000,300,20.640961,24.416594,28.531044,1.000000
+sem_spread,outbound_extremo,12,7,365,Retira integralmente o spread evitado.,0.000000,40.00,4.000000,38.000000,350.000000,300,16.608392,19.714943,22.820251,1.000000
+sem_tarifa_fixa,outbound_extremo,12,7,365,Retira integralmente a tarifa fixa evitada.,25.000000,0.00,4.000000,38.000000,350.000000,300,17.713773,21.559619,25.737781,1.000000
+iof_incerto_zero,outbound_extremo,12,7,365,Zera somente as duas aliquotas de IOF ainda nao confirmadas.,25.000000,40.00,4.000000,0.000000,0.000000,300,13.821867,16.310850,19.167588,1.000000
+piso_sem_componentes_incertos,outbound_extremo,12,7,365,"Zera spread, tarifa fixa e as duas aliquotas incertas; mantem carry em 4 bps.",0.000000,0.00,4.000000,0.000000,0.000000,300,7.012774,8.679464,10.653745,1.000000
+carry_25bps,outbound_extremo,12,7,365,"Eleva o carry de 4 para 25 bps, sem alterar os demais componentes.",25.000000,40.00,25.000000,38.000000,350.000000,300,17.274646,20.498412,23.796589,1.000000
+combinado_severo,outbound_extremo,12,7,365,Aplica o piso dos componentes incertos e eleva o carry para 25 bps.,0.000000,0.00,25.000000,0.000000,0.000000,300,3.525216,4.645267,5.987051,1.000000
+sem_carry,outbound_extremo,12,7,365,Limite superior simples: retira o custo de carry e mantem o restante na base.,25.000000,40.00,0.000000,38.000000,350.000000,300,21.277813,25.197376,29.384209,1.000000

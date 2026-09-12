@@ -38,9 +38,14 @@ viraria degrau: 0,05% e 0,00% seriam a mesma linha.
 | `taxa_netabilidade` | `volume_casado_brl / volume_bruto_brl` |
 | `teto_netabilidade` | o melhor que QUALQUER política conseguiria nesta pool |
 | `eficiencia_vs_teto` | quanto do teto a política extraiu |
-| `limite_intra_cliente_brl` | o que os clientes casariam sozinhos, na própria tesouraria |
-| `volume_casado_incremental_brl` | casado menos o limite intra: **piso** do valor que o motor adiciona |
-| `taxa_netabilidade_incremental` | a incremental sobre o bruto. **É esta que vai para conversa comercial, nunca a bruta** |
+| `limite_intra_cliente_brl` | diagnóstico da interpretação antiga em que as ordens seriam fluxo bruto do cliente |
+| `volume_casado_incremental_brl` | casado menos o limite intra; preservado por compatibilidade, não é a métrica comercial vigente |
+| `taxa_netabilidade_incremental` | diagnóstico alternativo sobre o bruto; **não descontar** sob o contrato de entrada líquida confirmado em 2026-09-07 |
+
+Contrato vigente: cada `Ordem` já é a posição líquida que o cliente decidiu enviar
+ao orquestrador. Por isso a economia do modelo compara cada posição executando
+sozinha com a pool; aplicar novamente o limite intra faria uma segunda dedução de
+netting dentro do cliente. Ver `docs/RELATORIO-SENSIBILIDADE-CUSTO.md`.
 
 ### Custo
 
@@ -124,3 +129,66 @@ enviesado continua enviesada: isto separa ruído de sinal, não corrige viés.
 
 O resumo **não carrega as colunas de tempo**. Quem precisar de prazo por célula lê a
 grade crua.
+
+## CSVs de cenários de estresse
+
+Os arquivos em `resultados/sensibilidade/` são derivados das 6.000 linhas de
+produto, sem nova execução do motor.
+
+### `cenarios_estresse_bruta.csv`
+
+Uma linha por carteira e cenário. `spread_bps`, `tarifa_fixa_brl`, `carry_bps` e
+as duas colunas `iof_*_bps` registram as hipóteses utilizadas. As colunas
+`efeito_*_bps` mostram quanto cada alteração adicionou ou retirou da
+`economia_base_bps`. `economia_estressada_bps` é o resultado recomposto e
+`economia_positiva` informa se ele ficou acima de zero.
+
+### `cenarios_estresse_agregada.csv`
+
+Uma linha por `(cenário, mix, N, W)`. Traz p10, p50 e p90 da economia estressada e
+`fracao_economia_positiva`, a proporção das 300 carteiras-ano com resultado acima
+de zero.
+
+### `limites_break_even_bruta.csv` e `limites_break_even_agregada.csv`
+
+O bruto calcula por carteira e o agregado apresenta p10, p50 e p90. Os campos
+`carry_break_even_base_bps` e `carry_break_even_piso_bps` são o nível de carry que
+faz a economia chegar exatamente a zero, respectivamente nas hipóteses atuais e
+depois de zerar spread, tarifa e os dois IOFs incertos.
+
+`spread_minimo_no_piso_bps` é o spread necessário para a economia não ficar
+negativa nesse piso, mantendo carry em 4 bps. Zero significa que as demais parcelas
+do modelo já mantêm o resultado positivo; não significa spread real igual a zero.
+
+## CSVs de fluxo hipotético
+
+Todos esses arquivos começam com a ressalva de que os fluxos são suposições
+sintéticas. Nenhuma coluna representa volume real da Amanda, Wise, Nomad,
+AstroPay ou bancos.
+
+### `referencias_fluxo_publicas.csv`
+
+Registra a métrica pública, período, geografia, fonte e limitação de cada
+comparável. `uso_no_modelo` explica que a referência serve para conferir ordem de
+grandeza. Ela não alimenta diretamente o fluxo projetado.
+
+### `premissas_fluxo_arquetipos.csv`
+
+Uma linha por arquétipo e faixa baixa, central ou alta. O fluxo central usa
+`ticket_mediana_brl × exp(ticket_sigma²/2) × cadencia_mensal × 12`.
+`multiplicador_fluxo` vale 0,5, 1 ou 2 e `natureza_do_fluxo` marca a hipótese que
+deverá ser substituída.
+
+### `projecao_fluxo_hipotetico_bruta.csv`
+
+Uma linha por carteira, cenário de custo e cenário de fluxo.
+`volume_anual_central_brl` é o volume gerado originalmente;
+`volume_anual_assumido_brl` aplica o multiplicador. A economia em bps é ajustada
+porque a tarifa fixa não cresce com o ticket. `economia_anual_assumida_brl`
+converte o bps ajustado pelo volume assumido.
+
+### `projecao_fluxo_hipotetico_agregada.csv`
+
+Uma linha por `(cenário de custo, mix, N, W, cenário de fluxo)`. Traz p10, p50 e
+p90 do volume, da economia ajustada em bps e da economia anual hipotética em BRL,
+além da fração de carteiras com economia positiva.
