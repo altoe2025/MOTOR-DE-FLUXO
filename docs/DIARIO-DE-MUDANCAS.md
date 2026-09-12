@@ -54,6 +54,62 @@ integrada. Apagada em 2026-09-06 a branch remota `github.com/altoe2025/MOTOR-DE-
 
 ---
 
+## 2026-09-07 — Varredura completa, o mix que faltava, e uma revisão externa que corrigiu quatro afirmações (MOT-?)
+
+> **ID do Linear pendente** nesta entrada e nos commits das branches citadas.
+
+1. **Sintoma.** O motor media custo e tempo, mas nunca tinha sido rodado em grade sobre
+   uma faixa de composições de carteira. Não havia resposta para "que mistura de
+   clientes faz o netting valer a pena", que é a pergunta do projeto.
+
+2. **Causa.** A varredura existia como código (`motor/varredura.py`) mas só tinha sido
+   exercitada em grades pequenas de teste. E faltava um mix na ponta OUT-pesada: o mais
+   extremo disponível, `retail_pesado`, realiza 28% de volume IN, enquanto o mercado
+   brasileiro é estruturalmente mais OUT que isso.
+
+3. **O que foi feito.** Três branches empilhadas, **nenhuma mergeada**:
+   `gabriel/metrica-tempo` (PR #21) -> `gabriel/varredura-completa` (PR #22) ->
+   `gabriel/mix-outbound` (PR #23).
+   - Mix `outbound_extremo` em `motor/mixes.py`, realizando ~9,5% de volume IN.
+   - Grade de 27.000 rodadas (5 mixes x 9 N x 2 W x 300 sementes pareadas, horizonte
+     365), em `resultados/varredura_bruta.csv` e `varredura_agregada.csv`. Os CSVs
+     entram com `git add -f` contra a regra `*.csv` do `.gitignore`, deliberadamente:
+     são o dado que sustenta o relatório.
+   - `docs/RELATORIO-VARREDURA.md` e `docs/RELATORIO-DECOMPOSICAO-CUSTO.md`, ambos
+     autocontidos.
+   - Correção em `pct_volume_espera_truncada`: contava a ordem inteira mesmo quando
+     parte dela casou antes do horizonte; superestimava de 1,06x a 3,45x.
+   - `netting.py`, `custo.py`, `arquetipos.py` e a tabela de alíquotas **intocados**.
+
+4. **O que isso invalida.**
+   - **A economia bruta não é o valor do produto.** Ela inclui autonetting. No
+     `outbound_extremo` o netting incremental é **zero em 300 de 300 sementes** — o
+     produto não rende 24 bps ali, rende zero. Em `retail_pesado`, 0,037 contra 0,535 de
+     netabilidade bruta. Qualquer citação anterior de economia em bps como valor
+     comercial está errada.
+   - **Quatro afirmações do relatório foram corrigidas** depois de revisão externa
+     (Codex): "9 em cada 10 meses" (cada semente é uma carteira-ANO); "o split
+     direcional explica 82%" (81,9% é do fator `mix` inteiro; o split sozinho dá R2 de
+     50,7%); "a janela é irrelevante" (vale no agregado — W=1 vence em 8 das 9 células
+     do `corporativo_pesado`); "N=12 é o menor ponto previsível" (não vale para
+     `outbound_extremo`, que ainda tem faixa de 32,3% ali).
+   - **A curva de N não mede escala pura.** O eixo carrega composição junto, porque
+     cliente é coisa inteira e a repartição por maiores médias não realiza a proporção
+     pedida na maioria dos N. Em N=2 o `equilibrado` é uma carteira de cripto +
+     exportador. Nos N que dividem exato (6, 12, 24) a curva É monótona. Qualquer
+     leitura de "quantos clientes bastam" a partir desta grade lê os dois efeitos juntos.
+   - **Um achado da revisão NÃO foi acatado**: a alegação de que `carry_cnr` contraria
+     uma decisão de zerá-lo. O "ZERO por decisão de produto" em `motor/varredura.py` é
+     sobre `custo_oportunidade_aa`, outro parâmetro.
+   - **Uma decisão de modelagem foi nomeada e adiada**: o peso de um mix é contagem de
+     CLIENTES, mas o que move a economia é VOLUME, e o volume por cliente varia 7x entre
+     perfis. Mudar isso exigiria recalibrar os cinco mixes e refazer todos os números;
+     adiado até a composição real da carteira chegar.
+   - A varredura anterior de 4 mixes (21.600 rodadas) está superada. A decomposição de
+     variância dela dava `mix` 58,6%; com a ponta OUT na amostra, dá 81,9%.
+
+---
+
 ## 2026-09-07 — Tempo até resolução entra no CSV, e o eixo W se revela quase inerte (MOT-?)
 
 > **ID do Linear pendente.** Não foi criada issue para esta mudança; o `MOT-?` acima

@@ -108,6 +108,31 @@ o código de `netting.py`/`custo.py` não bater nesse número quando implementad
 **o código está errado**, não o número. O mesmo número é cravado em
 `tests/test_varredura.py::test_celula_do_grid_reproduz_o_numero_de_aceitacao_da_amanda`.
 
+## Mapa
+
+`docs/MAPA.md` é o índice do repositório: onde está cada resposta, as entradas de
+código com arquivo:linha, o que já foi medido (para não refazer), o que não foi, e as
+armadilhas que já custaram uma conclusão errada. **Leia antes de procurar qualquer
+coisa.**
+
+## Relatórios de análise
+
+Duas análises de 2026-09-07 vivem no repo e são autocontidas — leia antes de propor
+qualquer medição nova, para não refazer o que já foi medido:
+
+- `docs/RELATORIO-VARREDURA.md` — grade de 27.000 rodadas (5 mixes x 9 N x 2 W x 300
+  sementes). Onde a economia aparece, decomposição de variância, curvas, espera.
+- `docs/RELATORIO-DECOMPOSICAO-CUSTO.md` — de que a economia é feita (IOF 86%, spread
+  16%, fixo 1%, carry −2,5%) e a que ela é sensível.
+- `docs/dicionario-csv.md` — o significado de cada coluna dos CSVs.
+
+**A economia em bps desses relatórios é BRUTA e inclui autonetting.** Em mixes
+OUT-pesados o valor incremental é zero. Nunca cite economia bruta como valor do
+produto — use `taxa_netabilidade_incremental`.
+
+Estão nas branches `gabriel/metrica-tempo`, `gabriel/varredura-completa` e
+`gabriel/mix-outbound` (PRs #21, #22, #23), **não na `main`**.
+
 ## Diário de mudanças
 
 `docs/DIARIO-DE-MUDANCAS.md` é o estado compartilhado entre colaboradores deste
@@ -231,7 +256,8 @@ exige decisão do Gabriel + atualização dos cenários de regressão.
 2. Ler a entrada do topo de `docs/DIARIO-DE-MUDANCAS.md`.
 3. Verificar a issue correspondente no Linear (workspace "Felipe Bisca", time
    "MOTOR DE FLUXO").
-4. Verificar se há ADR técnico relevante em `docs/`.
+4. Verificar se há ADR técnico relevante em `docs/`, e se a medição já foi feita
+   (ver "Relatórios de análise" acima).
 5. Rodar os testes relacionados antes e depois da mudança.
 6. Abrir PR pequeno e focado.
 

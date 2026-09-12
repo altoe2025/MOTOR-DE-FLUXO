@@ -65,6 +65,12 @@ COLUNAS_AGREGADA = (
     "dias_espera_p90_volume_remetido_p50",
     "pct_volume_espera_truncada_p50",
     "fracao_in_realizada_p50",
+    # O piso do valor que o motor de fato adiciona, descontado o que cada cliente
+    # casaria sozinho na propria tesouraria. Sobe para o agregado porque a economia
+    # bruta INCLUI autonetting, e em mixes OUT-pesados o incremental e zero: sem
+    # esta coluna ao lado, a economia bruta seria lida como valor do produto.
+    "taxa_netabilidade_incremental_p50",
+    "taxa_netabilidade_p50",
 )
 
 
@@ -77,7 +83,7 @@ def _formatar(nome: str, valor):
     """
     if not isinstance(valor, Decimal):
         return valor
-    if nome.startswith(("pct_", "fracao_")) or nome in _CASAS_DECIMAIS:
+    if nome.startswith(("pct_", "fracao_", "taxa_")) or nome in _CASAS_DECIMAIS:
         quantum = _CASAS_DECIMAIS.get(nome, Decimal("0.000001"))
     else:
         quantum = Decimal("0.01")
@@ -179,6 +185,13 @@ def agregar(linhas) -> list[dict]:
                 ),
                 "fracao_in_realizada_p50": _percentil(
                     sorted(r["fracao_in_realizada"] for r in do_grupo), Decimal("0.50")
+                ),
+                "taxa_netabilidade_incremental_p50": _percentil(
+                    sorted(r["taxa_netabilidade_incremental"] for r in do_grupo),
+                    Decimal("0.50"),
+                ),
+                "taxa_netabilidade_p50": _percentil(
+                    sorted(r["taxa_netabilidade"] for r in do_grupo), Decimal("0.50")
                 ),
             }
         )

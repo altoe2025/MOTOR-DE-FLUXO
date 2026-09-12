@@ -1,4 +1,4 @@
-"""Quatro mixes de composição de carteira (β): que fração dos clientes é de cada
+"""Cinco mixes de composição de carteira (β): que fração dos clientes é de cada
 arquétipo.
 
 Um mix é `dict[str, float]` mapeando nome do arquétipo (chave de
@@ -114,9 +114,46 @@ PSP_DOMINANTE = validar_mix(
 """Uma carteira ancorada num punhado de PSPs de ticket alto e buffer de 20-30 dias,
 com o retail OUT como contraparte natural."""
 
+OUTBOUND_EXTREMO = validar_mix(
+    "outbound_extremo",
+    {
+        "remessa_outbound_massiva": 4.0,
+        "psp_inbound": 0.25,
+        "cripto_native_sem_fiat": 1.0,
+        "payroll_fornecedor": 5.0,
+        "exportador": 0.0,
+        "tesouraria_corporativa": 0.25,
+    },
+)
+"""A ponta OUT do eixo direcional: ~10% do volume entra, ~90% sai.
+
+Existe porque a varredura de 2026-09-07 (`docs/RELATORIO-VARREDURA.md`) mostrou que
+o eixo direcional explica 58,6% da variância da economia — e que o mix mais
+OUT-pesado da grade, `retail_pesado`, ainda realizava 28% de volume IN. O mercado
+que o produto vai encontrar é estruturalmente mais OUT que isso, então a grade
+inteira media uma região possivelmente sem correspondente comercial.
+
+`exportador: 0.0` é deliberado, não esquecimento: é o caso de estresse em que não
+há nenhuma contraparte natural de ingresso na carteira. O módulo exige que os seis
+arquétipos sejam citados justamente para que "sem exportadores" seja uma escolha
+escrita, e não um mix digitado errado.
+
+O piso do que os arquétipos permitem é ~4,8% de IN (uma carteira só de
+`payroll_fornecedor`, `p_out` 0,95). Este mix não vai até lá: mantém retail e
+cripto para que a carteira continue tendo cadência e ticket heterogêneos, e não
+vire um arquétipo único disfarçado de mix.
+
+Cuidado ao ler: o peso é de CLIENTES, não de volume. `payroll_fornecedor` move
+~3,2 M/mês por cliente e `remessa_outbound_massiva` ~0,6 M/mês, então peso 5 no
+primeiro pesa muito mais no volume que peso 4 no segundo. A fração IN que importa é
+a REALIZADA sobre as pools, medida em
+`tests/test_mixes.py::test_outbound_extremo_e_materialmente_mais_out_que_qualquer_outro_mix`.
+"""
+
 TODOS: dict[str, Mix] = {
     "equilibrado": EQUILIBRADO,
     "retail_pesado": RETAIL_PESADO,
     "corporativo_pesado": CORPORATIVO_PESADO,
     "psp_dominante": PSP_DOMINANTE,
+    "outbound_extremo": OUTBOUND_EXTREMO,
 }

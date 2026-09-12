@@ -184,7 +184,8 @@ class MetricasTempo:
     lê o CSV desempata pela coluna `volume_casado_brl` da mesma linha.
 
     `pct_volume_espera_truncada` é a ressalva que acompanha os três primeiros:
-    quanto do volume pertence a ordens cujo `dia_limite` cai depois do horizonte.
+    quanto do volume foi DRENADO pela borda — resolvido no último dia da simulação
+    por ordens cujo `dia_limite` ainda estava à frente.
     `executar_p0` drena essas ordens no último dia para não quebrar a conservação,
     então a espera delas sai MENOR do que teria sido — foram resolvidas por fim de
     simulação, não por prazo. Elas continuam dentro dos percentis: excluí-las
@@ -251,14 +252,16 @@ def metricas_de_tempo(
     # Materializa: `ordens` é iterável, e ele é percorrido duas vezes (o índice de
     # dia_conhecida e o volume bruto do denominador da censura).
     pool = tuple(ordens)
+    ciclos_materializados = tuple(ciclos)
     dia_conhecida = {ordem.id: ordem.dia_conhecida for ordem in pool}
+    dia_limite = {ordem.id: ordem.dia_limite for ordem in pool}
 
     casado: list[tuple[Decimal, Decimal]] = []
     remetido: list[tuple[Decimal, Decimal]] = []
     espera_x_volume = Decimal(0)
     volume_alocado = Decimal(0)
 
-    for ciclo in ciclos:
+    for ciclo in ciclos_materializados:
         for alocacao in ciclo.alocacoes:
             espera = Decimal(alocacao.dia - dia_conhecida[alocacao.ordem_id])
             par = (espera, alocacao.valor_brl)
@@ -270,8 +273,19 @@ def metricas_de_tempo(
             volume_alocado += alocacao.valor_brl
 
     volume_bruto = sum((ordem.valor_brl for ordem in pool), Decimal(0))
+    # DRENADO pela borda, nao "de ordens que poderiam ter sido drenadas". Uma ordem
+    # com dia_limite alem do horizonte pode ter casado quase toda antes do fim, e
+    # so a parcela resolvida NO ultimo dia teve a espera encurtada. Contar a ordem
+    # inteira superestimava isto em ate ~3,4x na mediana de alguns mixes — alarme
+    # falso justamente na faixa em que a coluna deveria dizer que esta tudo bem.
     volume_truncado = sum(
-        (ordem.valor_brl for ordem in pool if ordem.dia_limite > horizonte_dias),
+        (
+            alocacao.valor_brl
+            for ciclo in ciclos_materializados
+            for alocacao in ciclo.alocacoes
+            if alocacao.dia == horizonte_dias
+            and dia_limite[alocacao.ordem_id] > horizonte_dias
+        ),
         Decimal(0),
     )
 
