@@ -82,9 +82,11 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
    em memória validado por `owner_sub`. `requirements/web-dev.lock` foi gerado e
    instalado com Python 3.11.16; `web/package-lock.json` foi instalado com Node
    24.19.0/npm 11.17.0. A wheel inclui `servidor*` e os YAMLs e foi testada fora do
-   checkout. Passaram 558 testes Python normais, 558 sob `-O`, Ruff, mypy, 14 testes
-   Vitest e o typecheck; a segunda geração dos cinco artefatos manteve os mesmos
-   hashes. Nenhum arquivo de implementação em `motor/` foi alterado.
+   checkout. O workflow Python passou a instalar esse lock, substituindo a lista
+   antiga que não continha Pydantic nem HTTPX. Passaram 558 testes Python normais,
+   558 sob `-O`, Ruff, mypy, 14 testes Vitest e o typecheck; a segunda geração dos
+   cinco artefatos manteve os mesmos hashes. Nenhum arquivo de implementação em
+   `motor/` foi alterado.
 
 4. **O que isso invalida.** Invalida qualquer DTO ou tipo de front-end anterior que
    represente dinheiro como JSON number, aceite seed em ordens explícitas, use o hash

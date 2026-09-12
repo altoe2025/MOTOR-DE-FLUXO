@@ -58,6 +58,8 @@ Verificações executadas em Python 3.11.16 e Node 24.19.0:
   asserts de testes sob `-O`;
 - `python -m ruff check servidor tests/web_api`: passou;
 - `python -m mypy servidor`: passou após o narrowing explícito do JSON Pointer;
+- CI Python: instala `requirements/web-dev.lock`, em vez da lista histórica que não
+  continha Pydantic/HTTPX;
 - `npm run test:unit`: 14 testes passaram;
 - `npm run typecheck`: passou;
 - `npm ci`: instalação limpa, audit de 249 pacotes com 0 vulnerabilidades.
