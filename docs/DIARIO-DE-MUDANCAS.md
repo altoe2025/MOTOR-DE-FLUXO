@@ -58,6 +58,31 @@ auditoria de 2026-09-05 está integrada. Apagada em 2026-09-06 a branch remota
 
 ---
 
+## 2026-09-12 — Planejamento técnico da etapa 1 e rastreabilidade no Linear (MOT-15)
+
+1. **Sintoma.** A etapa 1 do front-end tinha design, plano geral e workflow
+   aprovados, mas ainda não possuía um plano técnico executável, registro operacional
+   nem tarefas rastreáveis com dependências no Linear.
+
+2. **Causa.** O início dependia de decompor a fundação em entregas verificáveis e de
+   escolher conscientemente uma base que reunisse a pilha analítica com os contratos
+   públicos do fechamento funcional.
+
+3. **O que foi feito.** Foram criados
+   `docs/superpowers/plans/2026-09-11-frontend-etapa-1-plano-tecnico.md` e
+   `docs/frontend/etapa-1-operacao.md`. O plano divide a etapa em T0–T7, fixa
+   contratos, testes, falhas, gates e fronteiras. No Linear, as tarefas foram
+   cadastradas como MOT-15–MOT-22 no time MOTOR DE FLUXO e ligadas pelo grafo
+   aprovado. Gabriel escolheu aguardar a base integrada; MOT-15 ficou Em andamento
+   enquanto essa base é preparada.
+
+4. **O que isso invalida.** Invalida o registro anterior de que não havia issues da
+   etapa 1 e a possibilidade de iniciar o front-end diretamente em
+   `analise/sensibilidade-custo` ou no commit isolado `3bc2839`. Nada no motor, nos
+   resultados ou nas premissas de negócio foi alterado.
+
+---
+
 ## 2026-09-11 — Preparação do ambiente e workflow do front-end (MOT-20)
 
 1. **Sintoma.** A especificação do front-end estava versionada, mas o plano geral
