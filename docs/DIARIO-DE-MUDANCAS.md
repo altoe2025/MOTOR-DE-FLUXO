@@ -58,6 +58,68 @@ auditoria de 2026-09-05 está integrada. Apagada em 2026-09-06 a branch remota
 
 ---
 
+## 2026-09-12 — Planejamento técnico da etapa 1 e rastreabilidade no Linear (MOT-15)
+
+1. **Sintoma.** A etapa 1 do front-end tinha design, plano geral e workflow
+   aprovados, mas ainda não possuía um plano técnico executável, registro operacional
+   nem tarefas rastreáveis com dependências no Linear.
+
+2. **Causa.** O início dependia de decompor a fundação em entregas verificáveis e de
+   escolher conscientemente uma base que reunisse a pilha analítica com os contratos
+   públicos do fechamento funcional.
+
+3. **O que foi feito.** Foram criados
+   `docs/superpowers/plans/2026-09-11-frontend-etapa-1-plano-tecnico.md` e
+   `docs/frontend/etapa-1-operacao.md`. O plano divide a etapa em T0–T7, fixa
+   contratos, testes, falhas, gates e fronteiras. No Linear, as tarefas foram
+   cadastradas como MOT-15–MOT-22 no time MOTOR DE FLUXO e ligadas pelo grafo
+   aprovado. Gabriel escolheu aguardar a base integrada; MOT-15 ficou Em andamento
+   enquanto essa base é preparada.
+
+4. **O que isso invalida.** Invalida o registro anterior de que não havia issues da
+   etapa 1 e a possibilidade de iniciar o front-end diretamente em
+   `analise/sensibilidade-custo` ou no commit isolado `3bc2839`. Nada no motor, nos
+   resultados ou nas premissas de negócio foi alterado.
+
+---
+
+## 2026-09-11 — Preparação do ambiente e workflow do front-end (MOT-20)
+
+1. **Sintoma.** A especificação do front-end estava versionada, mas o plano geral
+   permanecia com nome provisório e referência a uma cópia em `Downloads`. Também não
+   havia um documento operacional que fixasse base Git, worktrees, ferramentas,
+   modelos, segredos e critérios de passagem entre as seis etapas.
+
+2. **Causa.** O desenho do produto e a distribuição de modelos foram aprovados antes
+   da preparação organizacional do repositório. O checkout contém branches empilhadas
+   e um fechamento funcional ainda sem PR, portanto iniciar a interface sem uma regra
+   explícita de integração criaria risco de desenvolver contra contratos transitórios.
+
+3. **O que foi feito.** Na branch `analise/sensibilidade-custo`, o plano geral foi
+   renomeado para
+   `docs/superpowers/plans/2026-09-11-frontend-plano-geral-execucao-modelos.md` e sua
+   referência passou a apontar para a especificação versionada. Foi criado
+   `docs/superpowers/plans/2026-09-11-frontend-ambiente-e-workflow.md`, com auditoria
+   do ambiente, recomendação de base integrada, estratégia de worktrees, distribuição
+   de modelos, configuração do Codex, política de segredos e checklists. O ambiente
+   local `motor-de-fluxo` foi criado na interface do Codex e sua configuração gerada
+   foi incluída em `.codex/environments/environment.toml`: ele prepara a `.venv` e
+   expõe as ações **Testar motor** e **Executar exemplo amanda** em worktrees Windows.
+   O `.gitignore` passou a proteger `.env` e variantes, preservando `.env.example`.
+   Ficou decidido que npm será usado na Etapa 1 e que dependências novas só serão
+   instaladas depois da aprovação do plano técnico dessa etapa. A ambientação não
+   aguarda nem interfere no worktree de fechamento; cada sessão técnica futura deve
+   confirmar sua própria branch e SHA antes de criar o worktree. Nenhum código de
+   front-end, servidor ou motor foi alterado.
+
+4. **O que isso invalida.** Nada no motor, nos resultados, nos testes ou na
+   especificação aprovada. Invalida apenas o caminho provisório e a possibilidade de
+   começar uma etapa silenciosamente sobre uma base não identificada: cada sessão
+   técnica registra sua branch e seu SHA, sem transformar as integrações pendentes em
+   bloqueio da ambientação.
+
+---
+
 ## 2026-09-07 — Resumo executivo da sensibilidade para a Amanda
 
 1. **Sintoma.** O relatório técnico já continha método, 14 CSVs e todos os
