@@ -50,11 +50,42 @@ Atualizada em 2026-09-07, depois do resumo executivo para a Amanda.
 | `gabriel/varredura-completa` | PR #22, aberta; empilhada sobre #21 | Gabriel |
 | `gabriel/mix-outbound` | PR #23, aberta; empilhada sobre #22 | Gabriel |
 | `analise/sensibilidade-custo` | sensibilidade, estresse, limites e fluxo hipotético; 270 testes passando | Codex |
+| `codex/frontend-etapa-1-contratos` | base integrada da etapa 1; fechamento funcional e documentação reunidos, 504 testes passando | Codex |
 
 As quatro últimas branches formam uma pilha e ainda não estão na `main`. Toda a
 auditoria de 2026-09-05 está integrada. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+---
+
+## 2026-09-12 — Base integrada para a etapa 1 do front-end (MOT-15)
+
+1. **Sintoma.** A documentação do front-end estava em
+   `analise/sensibilidade-custo`, enquanto os contratos canônicos necessários estavam
+   nos 15 commits de `implementacao/fechamento-funcional-motor`; nenhuma das duas
+   linhas isoladas era uma base suficiente para iniciar a etapa 1.
+
+2. **Causa.** As branches divergiram no commit comum `2fc62a2`: a primeira recebeu
+   especificação, ambiente e planejamento, e a segunda recebeu o fechamento
+   funcional do motor.
+
+3. **O que foi feito.** Foi criada a worktree isolada
+   `.worktrees/frontend-etapa-1-contratos`, branch
+   `codex/frontend-etapa-1-contratos`, a partir de `da271ad`, e integrado o commit
+   publicado `3bc2839`. O merge foi automático e não incorporou as alterações não
+   commitadas da worktree de fechamento. Foram confirmados os exports públicos
+   `analisar`, `criar_manifesto`, `ConfiguracaoAnalise`, `ConfiguracaoTemporal` e
+   `resultado_para_json`. Em venv própria com Python 3.14.4, passaram 504 testes na
+   execução normal, 504 sob `-O` e o cenário Amanda, com baseline aproximado de
+   US$ 439 mil, custo netado aproximado de US$ 249 mil, economia aproximada de
+   US$ 190 mil e netabilidade de 58,82%. Python 3.11 continua sendo a versão oficial
+   do CI e será revalidada quando a branch for publicada.
+
+4. **O que isso invalida.** Invalida o bloqueio por ausência de uma base Git que
+   reúna planejamento e contratos públicos, permitindo iniciar T1. Não invalida
+   resultados, premissas ou regras do motor. O projeto Supabase ainda não existe e
+   continua sendo gate externo de T5/T7.
 
 ---
 

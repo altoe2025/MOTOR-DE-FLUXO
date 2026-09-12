@@ -109,15 +109,8 @@ def test_resumo_carrega_o_teto_e_a_eficiencia_medianos():
         ]
         tetos = sorted(p.teto_netabilidade for p in do_grupo)
         eficiencias = sorted(p.eficiencia_vs_teto for p in do_grupo)
-        meio = len(tetos) // 2
-        esperado_teto = (
-            tetos[meio] if len(tetos) % 2 else (tetos[meio - 1] + tetos[meio]) / 2
-        )
-        esperado_ef = (
-            eficiencias[meio]
-            if len(eficiencias) % 2
-            else (eficiencias[meio - 1] + eficiencias[meio]) / 2
-        )
+        esperado_teto = tetos[1]
+        esperado_ef = eficiencias[1]
         assert resumo.teto_netabilidade_p50 == esperado_teto
         assert resumo.eficiencia_vs_teto_p50 == esperado_ef
 
@@ -134,12 +127,7 @@ def test_resumo_carrega_a_netabilidade_incremental_mediana():
             == (resumo.nome_mix, resumo.n_clientes, resumo.janela_dias)
         ]
         valores = sorted(p.taxa_netabilidade_incremental for p in do_grupo)
-        meio = len(valores) // 2
-        esperado = (
-            valores[meio]
-            if len(valores) % 2
-            else (valores[meio - 1] + valores[meio]) / 2
-        )
+        esperado = valores[1]
         assert resumo.taxa_netabilidade_incremental_p50 == esperado
         assert resumo.taxa_netabilidade_incremental_p50 <= resumo.taxa_netabilidade_p50
 
@@ -188,9 +176,9 @@ def test_fracao_positiva_conta_as_seeds_que_deram_prejuizo():
     assert resumo.economia_pct_min == Decimal("-0.10")
 
 
-def test_mediana_de_numero_par_de_seeds():
+def test_p50_de_numero_par_de_seeds_usa_nearest_rank():
     pontos = [_ponto_falso("m", v) for v in ["0.10", "0.20", "0.30", "0.40"]]
-    assert resumir(pontos)[0].economia_pct_p50 == Decimal("0.25")
+    assert resumir(pontos)[0].economia_pct_p50 == Decimal("0.20")
 
 
 def test_resumir_grade_vazia_devolve_nada():

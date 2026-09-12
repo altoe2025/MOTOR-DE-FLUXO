@@ -22,6 +22,8 @@ Regra de importação: este módulo importa apenas `motor.arquetipos`.
 
 from __future__ import annotations
 
+from math import isfinite
+
 from motor.arquetipos import TODOS as ARQUETIPOS
 
 Mix = dict[str, float]
@@ -42,6 +44,10 @@ def validar_mix(nome: str, mix: Mix) -> Mix:
             f"mix {nome!r} não cobre os arquétipos de motor.arquetipos.TODOS: "
             f"faltando={faltando} desconhecidos={sobrando}"
         )
+
+    nao_finitos = sorted(chave for chave, peso in mix.items() if not isfinite(peso))
+    if nao_finitos:
+        raise ValueError(f"mix {nome!r} tem peso não finito em {nao_finitos}")
 
     negativos = sorted(chave for chave, peso in mix.items() if peso < 0)
     if negativos:

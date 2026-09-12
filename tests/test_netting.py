@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from motor.dominio import (
+    Alocacao,
     Cenario,
     Ciclo,
     Direcao,
@@ -14,7 +15,11 @@ from motor.dominio import (
     TipoAlocacao,
     carregar_cenario,
 )
-from motor.netting import executar_p0
+from motor.netting import _validar_conservacao, executar_p0
+
+
+def _ordem(id_: str, direcao: Direcao, valor: str, conhecida: int, limite: int) -> Ordem:
+    return Ordem(id_, f"cliente-{id_}", direcao, Decimal(valor), conhecida, limite, False, "x")
 
 
 def _por_ordem(ciclos: tuple[Ciclo, ...]) -> dict[str, Decimal]:
@@ -28,6 +33,20 @@ def _por_ordem(ciclos: tuple[Ciclo, ...]) -> dict[str, Decimal]:
 
 def _alocacoes(ciclos: tuple[Ciclo, ...], tipo: TipoAlocacao) -> list:
     return [a for ciclo in ciclos for a in ciclo.alocacoes if a.tipo is tipo]
+
+
+def test_conservacao_global_rejeita_volume_ausente():
+    ordem = _ordem("a", Direcao.OUT, "100", 0, 0)
+    ciclo = Ciclo(0, (), Decimal("100"), Decimal(0), Decimal(0), Decimal(0), Direcao.OUT)
+    with pytest.raises(ValueError, match="conservacao global violada"):
+        _validar_conservacao((ordem,), (ciclo,))
+
+
+def test_conservacao_global_aceita_particao_exata():
+    ordem = _ordem("a", Direcao.OUT, "100", 0, 0)
+    alocacao = Alocacao("a", 0, Decimal("100"), TipoAlocacao.REMETIDO)
+    ciclo = Ciclo(0, (alocacao,), Decimal("100"), Decimal(0), Decimal(0), Decimal("100"), Direcao.OUT)
+    _validar_conservacao((ordem,), (ciclo,))
 
 CENARIO_EXEMPLO = Path(__file__).parent.parent / "motor" / "cenarios" / "exemplo_amanda.yaml"
 CENARIO_TEMPORAL = Path(__file__).parent.parent / "motor" / "cenarios" / "cenario_temporal.yaml"
@@ -411,7 +430,5 @@ def test_ordem_fora_do_horizonte_nao_some_em_silencio():
         Ordem("o1", "cliente-a", Direcao.OUT, Decimal("100"), 0, 0, False, "x"),
         Ordem("o2", "cliente-b", Direcao.IN, Decimal("100"), 50, 50, False, "x"),
     )
-    cenario = Cenario(ordens=ordens, janela_dias=1, horizonte_dias=0, custo=_custo_zero())
-
-    with pytest.raises(ValueError, match="conserva"):
-        executar_p0(cenario)
+    with pytest.raises(ValueError, match="horizonte"):
+        Cenario(ordens=ordens, janela_dias=1, horizonte_dias=0, custo=_custo_zero())

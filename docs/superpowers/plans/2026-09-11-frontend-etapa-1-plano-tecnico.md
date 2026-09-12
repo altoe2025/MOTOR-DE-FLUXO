@@ -10,7 +10,7 @@
 
 **Spec:** [design aprovado](../specs/2026-09-11-frontend-motor-de-fluxo-design.md), [plano geral e distribuição de modelos](2026-09-11-frontend-plano-geral-execucao-modelos.md), [ambiente e workflow](2026-09-11-frontend-ambiente-e-workflow.md).
 
-**Status:** aprovado por Gabriel nesta conversa. T0–T7 foram cadastradas no Linear (workspace Felipe Bisca, time MOTOR DE FLUXO) como MOT-15–MOT-22, com as dependências nativas configuradas; MOT-15 está Em andamento. Gabriel decidiu aguardar a base integrada após o fechamento funcional. Implementação de código não iniciada. Projeto Supabase ainda não provisionado. A autorização de cadastro das tarefas é específica; não autoriza criar conta, projeto Supabase, convites ou infraestrutura automaticamente.
+**Status:** aprovado por Gabriel nesta conversa. T0–T7 foram cadastradas no Linear (workspace Felipe Bisca, time MOTOR DE FLUXO) como MOT-15–MOT-22, com as dependências nativas configuradas. A MOT-15 reuniu `da271ad` e o fechamento `3bc2839` em `codex/frontend-etapa-1-contratos`, confirmou os contratos públicos e passou o baseline. Implementação do front-end não iniciada. Projeto Supabase ainda não provisionado. A autorização de cadastro das tarefas é específica; não autoriza criar conta, projeto Supabase, convites ou infraestrutura automaticamente.
 
 ## 1. Restrições globais
 
@@ -695,11 +695,11 @@ Escalar para Sol em falhas de sessão, serialização, integração temporal ou 
 
 | Risco/pendência | Estado | Tratamento e ponto de decisão |
 |---|---|---|
-| Base ainda não integrada | Confirmado | T0 fixa SHA; não começar adaptador sobre contrato imaginário; não tocar trabalho concorrente |
+| Base integrada | Resolvido na MOT-15 | branch `codex/frontend-etapa-1-contratos` reúne documentação e fechamento publicado; trabalho não commitado da outra worktree ficou de fora |
 | Hash do manifesto não cobre ordens | Confirmado por inspeção | fingerprint da API cobre snapshot completo e mantém hash original separado; T1 testa colisões semânticas |
 | Mapping Python diferente da lista JSON de IOF | Confirmado por inspeção | DTOs de transporte explícitos e teste de igualdade com JSON público na T1/T2 |
 | Falha de coleta local não rastreada | Reproduzida | preservar arquivo; baseline limpo no worktree; não declarar suíte completa verde |
-| Base integrada sem SHA confirmado | Aguardando fechamento funcional | MOT-15 permanece Em andamento; registrar o SHA e conferir os exports antes de criar worktree ou instalar dependências |
+| Python 3.11 ainda não executado localmente na base | Pendente de CI | baseline local passou em Python 3.14.4; executar a matriz oficial em 3.11 quando a branch for publicada |
 | Supabase inexistente | Confirmado por Gabriel | provisionamento administrativo separado; testes reais bloqueiam aceitação final, não a conclusão deste planejamento |
 | Convite/redirect/senha não provisionados | Consequência do anterior | roteiro T5 inclui configuração e primeiro acesso; somente ter formulário de login não conclui acesso por convite |
 | Estudo local por conta | Decisão proposta | owner_sub obrigatório; rascunho mínimo agora, IndexedDB e migração na etapa 2 |
@@ -741,4 +741,4 @@ Consultadas em 2026-09-11; sustentam mecanismos de biblioteca, não substituem d
 - [Supabase — usuários e convites](https://supabase.com/docs/guides/auth/users), [senha](https://supabase.com/docs/guides/auth/passwords), [templates de e-mail](https://supabase.com/docs/guides/auth/auth-email-templates) e [verifyOtp](https://supabase.com/docs/reference/javascript/auth-verifyotp): fluxo de acesso e callbacks controlados.
 - [FastAPI — lifespan](https://fastapi.tiangolo.com/advanced/events/) e [estáticos](https://fastapi.tiangolo.com/tutorial/static-files/): lifecycle de recursos e montagem de assets; fallback SPA e separação `/api` são responsabilidade da aplicação.
 
-**Próximo passo de execução:** quando o fechamento funcional estiver integrado, concluir MOT-15 registrando o SHA, conferir os exports da seção 5.1, criar a worktree da T1 e executar o baseline. O cadastro não cria automaticamente projeto Supabase, convites, merges ou publicação.
+**Próximo passo de execução:** iniciar MOT-16/T1 na worktree preparada, seguindo teste primeiro e mantendo os contratos públicos confirmados. O cadastro não cria automaticamente projeto Supabase, convites, merge em `main` ou publicação.

@@ -2,7 +2,7 @@
 
 ## Estado
 
-T0 está **Em andamento** após aprovação explícita do plano e autorização para cadastrar suas tarefas no Linear, no workspace **Felipe Bisca**, time **MOTOR DE FLUXO**. As oito tarefas foram cadastradas como MOT-15–MOT-22, com as dependências nativas do plano. Gabriel escolheu aguardar a base integrada após o fechamento funcional; por isso a execução está parada no gate do SHA integrado. Não houve implementação de código, instalação de dependências, criação de worktree, commit, push ou merge.
+T0 está **concluída tecnicamente**. As oito tarefas foram cadastradas como MOT-15–MOT-22 no workspace **Felipe Bisca**, time **MOTOR DE FLUXO**, com as dependências nativas do plano. A base integrada reúne a linha de análise e documentação até `da271ad` com o fechamento funcional publicado em `3bc2839`, na branch `codex/frontend-etapa-1-contratos`. Não houve implementação do front-end, push, merge em `main` ou publicação.
 
 Fonte de execução: [plano técnico aprovado](../superpowers/plans/2026-09-11-frontend-etapa-1-plano-tecnico.md). As três referências indicadas no plano continuam obrigatórias.
 
@@ -20,6 +20,11 @@ Fonte de execução: [plano técnico aprovado](../superpowers/plans/2026-09-11-f
 - [x] Busca inicial não encontrou tarefas da etapa 1; T0–T7 foram cadastradas como MOT-15–MOT-22.
 - [x] Dependências nativas configuradas conforme o grafo do plano.
 - [x] Gabriel escolheu aguardar a base integrada após o fechamento funcional. A decisão foi registrada em MOT-15 em 2026-09-12.
+- [x] Worktree `.worktrees/frontend-etapa-1-contratos` criada na branch `codex/frontend-etapa-1-contratos`.
+- [x] Linhas divergentes desde `2fc62a2` integradas por merge limpo: documentação em `da271ad` e fechamento em `3bc2839`.
+- [x] Exports públicos confirmados: `analisar`, `criar_manifesto`, `ConfiguracaoAnalise`, `ConfiguracaoTemporal` e `resultado_para_json`.
+- [x] Baseline em venv própria, Python 3.14.4: 504 testes normais e 504 sob `-O`; o único aviso sob `-O` é o aviso esperado do pytest sobre asserts.
+- [x] Cenário Amanda reproduzido: baseline R$ 2.370.600, netado R$ 1.344.600, economia R$ 1.026.000 e netabilidade 58,82%.
 
 | PR | Branch | Base |
 |---|---|---|
@@ -28,19 +33,17 @@ Fonte de execução: [plano técnico aprovado](../superpowers/plans/2026-09-11-f
 | [#23](https://github.com/altoe2025/MOTOR-DE-FLUXO/pull/23) | `gabriel/mix-outbound` | `gabriel/varredura-completa` |
 | [#17](https://github.com/altoe2025/MOTOR-DE-FLUXO/pull/17) | `docs/auditoria-2026-09-06` | `main`; assunto separado |
 
-## T0 — ações pendentes
+## Base integrada e pendência externa
 
-- [ ] Confirmar que o fechamento funcional foi integrado e registrar o SHA exato da nova base. Esta tarefa não autoriza realizar os merges do fechamento.
-- [ ] Confirmar nessa base os exports exigidos pela seção 5.1 do plano.
-- [ ] Criar worktree próprio da primeira entrega, a partir do SHA integrado, pelo fluxo `using-git-worktrees`; compartilhar documentação por commit/branch, sem copiar alterações do worktree concorrente.
-- [ ] Executar o baseline integral nesse worktree. A execução anterior de 270 testes pertence ao checkout de planejamento e excluiu um teste não rastreado; não substitui esta validação.
+- [x] Criar a base integrada, confirmar os contratos públicos e executar o baseline integral em worktree isolada.
+- [ ] Revalidar Python 3.11 no CI quando a branch for publicada; a validação local disponível usou Python 3.14.4.
 - [ ] Registrar responsável humano pelo provisionamento Supabase. Sua ausência não impede T1–T4 depois dos demais pré-requisitos, mas impede aceitar o login real na T5/T7.
 
 ## Cadastro no Linear
 
 | Tarefa do plano | Issue | Situação |
 |---|---|---|
-| T0 | [MOT-15 — Confirmar base Git e pré-requisitos](https://linear.app/felipe-bisca/issue/MOT-15/etapa-1-t0-confirmar-base-git-e-pre-requisitos) | Em andamento; aguardando base integrada |
+| T0 | [MOT-15 — Confirmar base Git e pré-requisitos](https://linear.app/felipe-bisca/issue/MOT-15/etapa-1-t0-confirmar-base-git-e-pre-requisitos) | Concluída; base integrada e baseline verificados |
 | T1 | [MOT-16 — Contratos, identidade e apresentação](https://linear.app/felipe-bisca/issue/MOT-16/etapa-1-t1-contratos-identidade-e-apresentacao) | Backlog; bloqueada por MOT-15 |
 | T2 | [MOT-17 — Adaptador único e validação de publicação](https://linear.app/felipe-bisca/issue/MOT-17/etapa-1-t2-adaptador-unico-e-validacao-de-publicacao) | Backlog; bloqueada por MOT-16 |
 | T3 | [MOT-18 — FastAPI, autenticação e mesma origem](https://linear.app/felipe-bisca/issue/MOT-18/etapa-1-t3-fastapi-autenticacao-e-mesma-origem) | Backlog; bloqueada por MOT-17 |
@@ -53,4 +56,4 @@ Dependências nativas verificadas: T1 depende de T0; T2 de T1; T3 de T2; T4 de T
 
 ## Arquivos preexistentes preservados
 
-Permanecem intactos os não rastreados `docs/superpowers/plans/2026-09-11-frontend-motor-de-fluxo-design.md`, `motor/cenarios/fluxo_gabriel.yaml` e `tests/test_exportar_player.py`. O trabalho do outro worktree não foi alterado. O plano, este registro e a entrada correspondente do Diário serão compartilhados por commit antes da criação da base integrada.
+Permanecem intactos, no checkout original, os não rastreados `docs/superpowers/plans/2026-09-11-frontend-motor-de-fluxo-design.md`, `motor/cenarios/fluxo_gabriel.yaml` e `tests/test_exportar_player.py`. O trabalho não commitado da outra worktree não foi alterado nem incorporado.
