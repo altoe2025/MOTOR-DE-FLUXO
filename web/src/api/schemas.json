@@ -1,0 +1,1074 @@
+{
+  "$id": "https://motor-de-fluxo.local/contracts/schemas.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "AgregadoDTO": {
+      "additionalProperties": false,
+      "properties": {
+        "baseline_periodo": {
+          "$ref": "#/$defs/CustosDTO"
+        },
+        "economia_periodo_brl": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Economia Periodo Brl",
+          "type": "string"
+        },
+        "execucao_completa": {
+          "$ref": "#/$defs/ResultadoLegadoDTO"
+        },
+        "ids_ordens_medidas": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Ids Ordens Medidas",
+          "type": "array"
+        },
+        "netado_periodo": {
+          "$ref": "#/$defs/CustosDTO"
+        },
+        "taxa_netabilidade_periodo": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Taxa Netabilidade Periodo",
+          "type": "string"
+        },
+        "volume_bruto_periodo_brl": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Volume Bruto Periodo Brl",
+          "type": "string"
+        },
+        "volume_casado_periodo_brl": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Volume Casado Periodo Brl",
+          "type": "string"
+        },
+        "volume_remetido_periodo_brl": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Volume Remetido Periodo Brl",
+          "type": "string"
+        }
+      },
+      "required": [
+        "execucao_completa",
+        "ids_ordens_medidas",
+        "volume_bruto_periodo_brl",
+        "volume_casado_periodo_brl",
+        "volume_remetido_periodo_brl",
+        "baseline_periodo",
+        "netado_periodo",
+        "economia_periodo_brl",
+        "taxa_netabilidade_periodo"
+      ],
+      "title": "AgregadoDTO",
+      "type": "object"
+    },
+    "AlocacaoDTO": {
+      "additionalProperties": false,
+      "properties": {
+        "dia": {
+          "title": "Dia",
+          "type": "integer"
+        },
+        "ordem_id": {
+          "title": "Ordem Id",
+          "type": "string"
+        },
+        "tipo": {
+          "enum": [
+            "CASADO",
+            "REMETIDO"
+          ],
+          "title": "Tipo",
+          "type": "string"
+        },
+        "valor_brl": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Valor Brl",
+          "type": "string"
+        }
+      },
+      "required": [
+        "ordem_id",
+        "dia",
+        "valor_brl",
+        "tipo"
+      ],
+      "title": "AlocacaoDTO",
+      "type": "object"
+    },
+    "CenarioEntrada": {
+      "additionalProperties": false,
+      "properties": {
+        "custo": {
+          "$ref": "#/$defs/CustoEntrada"
+        },
+        "horizonte_dias": {
+          "maximum": 730,
+          "minimum": 0,
+          "title": "Horizonte Dias",
+          "type": "integer"
+        },
+        "janela_dias": {
+          "maximum": 730,
+          "minimum": 1,
+          "title": "Janela Dias",
+          "type": "integer"
+        },
+        "ordens": {
+          "items": {
+            "$ref": "#/$defs/OrdemEntrada"
+          },
+          "maxItems": 1000,
+          "title": "Ordens",
+          "type": "array"
+        }
+      },
+      "required": [
+        "ordens",
+        "janela_dias",
+        "horizonte_dias",
+        "custo"
+      ],
+      "title": "CenarioEntrada",
+      "type": "object"
+    },
+    "CicloDTO": {
+      "additionalProperties": false,
+      "properties": {
+        "alocacoes": {
+          "items": {
+            "$ref": "#/$defs/AlocacaoDTO"
+          },
+          "title": "Alocacoes",
+          "type": "array"
+        },
+        "bruto_in": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Bruto In",
+          "type": "string"
+        },
+        "bruto_out": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Bruto Out",
+          "type": "string"
+        },
+        "casado": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Casado",
+          "type": "string"
+        },
+        "dia": {
+          "title": "Dia",
+          "type": "integer"
+        },
+        "direcao_residuo": {
+          "enum": [
+            "OUT",
+            "IN"
+          ],
+          "title": "Direcao Residuo",
+          "type": "string"
+        },
+        "residuo": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Residuo",
+          "type": "string"
+        }
+      },
+      "required": [
+        "dia",
+        "alocacoes",
+        "bruto_out",
+        "bruto_in",
+        "casado",
+        "residuo",
+        "direcao_residuo"
+      ],
+      "title": "CicloDTO",
+      "type": "object"
+    },
+    "CustoEntrada": {
+      "additionalProperties": false,
+      "properties": {
+        "carry_cnr": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Carry Cnr",
+          "type": "string"
+        },
+        "custo_fixo_remessa": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Custo Fixo Remessa",
+          "type": "string"
+        },
+        "custo_oportunidade_aa": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Custo Oportunidade Aa",
+          "type": "string"
+        },
+        "iof_in": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Iof In",
+          "type": "string"
+        },
+        "iof_out": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Iof Out",
+          "type": "string"
+        },
+        "iof_por_finalidade": {
+          "items": {
+            "$ref": "#/$defs/RegraIOF"
+          },
+          "maxItems": 100,
+          "title": "Iof Por Finalidade",
+          "type": "array"
+        },
+        "ptax": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Ptax",
+          "type": "string"
+        },
+        "spread_rail_bps": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Spread Rail Bps",
+          "type": "string"
+        }
+      },
+      "required": [
+        "iof_out",
+        "iof_in",
+        "carry_cnr",
+        "spread_rail_bps",
+        "custo_fixo_remessa",
+        "custo_oportunidade_aa",
+        "ptax",
+        "iof_por_finalidade"
+      ],
+      "title": "CustoEntrada",
+      "type": "object"
+    },
+    "CustosDTO": {
+      "additionalProperties": false,
+      "properties": {
+        "carry": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Carry",
+          "type": "string"
+        },
+        "espera": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Espera",
+          "type": "string"
+        },
+        "fixo": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Fixo",
+          "type": "string"
+        },
+        "iof": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Iof",
+          "type": "string"
+        },
+        "spread": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Spread",
+          "type": "string"
+        },
+        "total": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Total",
+          "type": "string"
+        }
+      },
+      "required": [
+        "iof",
+        "carry",
+        "spread",
+        "espera",
+        "fixo",
+        "total"
+      ],
+      "title": "CustosDTO",
+      "type": "object"
+    },
+    "DiagnosticosExperimentaisDTO": {
+      "additionalProperties": false,
+      "properties": {
+        "limite_intra_cliente_brl": {
+          "title": "Limite Intra Cliente Brl",
+          "type": "null"
+        },
+        "taxa_netabilidade_incremental": {
+          "title": "Taxa Netabilidade Incremental",
+          "type": "null"
+        },
+        "volume_casado_incremental_brl": {
+          "title": "Volume Casado Incremental Brl",
+          "type": "null"
+        }
+      },
+      "required": [
+        "limite_intra_cliente_brl",
+        "volume_casado_incremental_brl",
+        "taxa_netabilidade_incremental"
+      ],
+      "title": "DiagnosticosExperimentaisDTO",
+      "type": "object"
+    },
+    "EstatisticaPrevia": {
+      "additionalProperties": false,
+      "properties": {
+        "count": {
+          "const": 1,
+          "title": "Count",
+          "type": "integer"
+        },
+        "kind": {
+          "const": "SINGLE_EXECUTION",
+          "title": "Kind",
+          "type": "string"
+        },
+        "percentile_method": {
+          "title": "Percentile Method",
+          "type": "null"
+        },
+        "repetition_id": {
+          "format": "uuid",
+          "title": "Repetition Id",
+          "type": "string"
+        },
+        "seed": {
+          "title": "Seed",
+          "type": "null"
+        }
+      },
+      "required": [
+        "kind",
+        "count",
+        "seed",
+        "repetition_id",
+        "percentile_method"
+      ],
+      "title": "EstatisticaPrevia",
+      "type": "object"
+    },
+    "HTTPValidationError": {
+      "properties": {
+        "detail": {
+          "items": {
+            "$ref": "#/$defs/ValidationError"
+          },
+          "title": "Detail",
+          "type": "array"
+        }
+      },
+      "title": "HTTPValidationError",
+      "type": "object"
+    },
+    "InputSnapshot": {
+      "additionalProperties": false,
+      "properties": {
+        "cenario": {
+          "$ref": "#/$defs/CenarioEntrada"
+        },
+        "periodo": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/PeriodoLegado"
+            },
+            {
+              "$ref": "#/$defs/PeriodoNatural"
+            }
+          ],
+          "title": "Periodo"
+        },
+        "proveniencia": {
+          "additionalProperties": {
+            "$ref": "#/$defs/OrigemValor"
+          },
+          "title": "Proveniencia",
+          "type": "object"
+        }
+      },
+      "required": [
+        "cenario",
+        "periodo",
+        "proveniencia"
+      ],
+      "title": "InputSnapshot",
+      "type": "object"
+    },
+    "ManifestoDTO": {
+      "additionalProperties": false,
+      "properties": {
+        "arquetipos": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Arquetipos",
+          "type": "array"
+        },
+        "avisos": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Avisos",
+          "type": "array"
+        },
+        "criado_em_utc": {
+          "title": "Criado Em Utc",
+          "type": "string"
+        },
+        "custo_calibrado": {
+          "title": "Custo Calibrado",
+          "type": "boolean"
+        },
+        "drenagem": {
+          "title": "Drenagem",
+          "type": "string"
+        },
+        "hash_configuracao": {
+          "title": "Hash Configuracao",
+          "type": "string"
+        },
+        "horizonte_dias": {
+          "title": "Horizonte Dias",
+          "type": "integer"
+        },
+        "janela_dias": {
+          "title": "Janela Dias",
+          "type": "integer"
+        },
+        "metodo_percentil": {
+          "title": "Metodo Percentil",
+          "type": "string"
+        },
+        "mixes": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Mixes",
+          "type": "array"
+        },
+        "modo_analise": {
+          "const": "AGREGADO",
+          "title": "Modo Analise",
+          "type": "string"
+        },
+        "parametros_custo": {
+          "$ref": "#/$defs/CustoEntrada"
+        },
+        "periodo_medicao_dias": {
+          "title": "Periodo Medicao Dias",
+          "type": "integer"
+        },
+        "run_id": {
+          "title": "Run Id",
+          "type": "string"
+        },
+        "run_ids_origem": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Run Ids Origem",
+          "type": "array"
+        },
+        "schema_version": {
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "seeds": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Seeds",
+          "type": "array"
+        },
+        "versao_motor": {
+          "title": "Versao Motor",
+          "type": "string"
+        }
+      },
+      "required": [
+        "run_id",
+        "schema_version",
+        "versao_motor",
+        "criado_em_utc",
+        "hash_configuracao",
+        "run_ids_origem",
+        "parametros_custo",
+        "mixes",
+        "arquetipos",
+        "horizonte_dias",
+        "periodo_medicao_dias",
+        "janela_dias",
+        "seeds",
+        "modo_analise",
+        "custo_calibrado",
+        "metodo_percentil",
+        "drenagem",
+        "avisos"
+      ],
+      "title": "ManifestoDTO",
+      "type": "object"
+    },
+    "OrdemEntrada": {
+      "additionalProperties": false,
+      "properties": {
+        "cliente_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Cliente Id",
+          "type": "string"
+        },
+        "dia_conhecida": {
+          "maximum": 1095,
+          "minimum": 0,
+          "title": "Dia Conhecida",
+          "type": "integer"
+        },
+        "dia_limite": {
+          "maximum": 1095,
+          "minimum": 0,
+          "title": "Dia Limite",
+          "type": "integer"
+        },
+        "direcao": {
+          "enum": [
+            "OUT",
+            "IN"
+          ],
+          "title": "Direcao",
+          "type": "string"
+        },
+        "eh_efx": {
+          "title": "Eh Efx",
+          "type": "boolean"
+        },
+        "finalidade": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Finalidade",
+          "type": "string"
+        },
+        "id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "valor_brl": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Valor Brl",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "cliente_id",
+        "direcao",
+        "valor_brl",
+        "dia_conhecida",
+        "dia_limite",
+        "eh_efx",
+        "finalidade"
+      ],
+      "title": "OrdemEntrada",
+      "type": "object"
+    },
+    "OrigemValor": {
+      "additionalProperties": false,
+      "properties": {
+        "fonte": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Fonte",
+          "type": "string"
+        },
+        "registrado_em_utc": {
+          "format": "date-time",
+          "title": "Registrado Em Utc",
+          "type": "string"
+        },
+        "tipo": {
+          "enum": [
+            "PADRAO_SINTETICO",
+            "ESTIMATIVA_USUARIO",
+            "DADO_OBSERVADO"
+          ],
+          "title": "Tipo",
+          "type": "string"
+        }
+      },
+      "required": [
+        "tipo",
+        "fonte",
+        "registrado_em_utc"
+      ],
+      "title": "OrigemValor",
+      "type": "object"
+    },
+    "PeriodoLegado": {
+      "additionalProperties": false,
+      "properties": {
+        "modo": {
+          "const": "LEGADO",
+          "title": "Modo",
+          "type": "string"
+        }
+      },
+      "required": [
+        "modo"
+      ],
+      "title": "PeriodoLegado",
+      "type": "object"
+    },
+    "PeriodoNatural": {
+      "additionalProperties": false,
+      "properties": {
+        "dias_aquecimento": {
+          "minimum": 0,
+          "title": "Dias Aquecimento",
+          "type": "integer"
+        },
+        "modo": {
+          "const": "NATURAL",
+          "title": "Modo",
+          "type": "string"
+        },
+        "periodo_medicao_dias": {
+          "exclusiveMinimum": 0,
+          "title": "Periodo Medicao Dias",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "modo",
+        "dias_aquecimento",
+        "periodo_medicao_dias"
+      ],
+      "title": "PeriodoNatural",
+      "type": "object"
+    },
+    "PresentationContract": {
+      "additionalProperties": false,
+      "properties": {
+        "currency": {
+          "const": "BRL",
+          "title": "Currency",
+          "type": "string"
+        },
+        "fraction_percent_digits": {
+          "const": 2,
+          "title": "Fraction Percent Digits",
+          "type": "integer"
+        },
+        "locale": {
+          "const": "pt-BR",
+          "title": "Locale",
+          "type": "string"
+        },
+        "money_digits": {
+          "const": 2,
+          "title": "Money Digits",
+          "type": "integer"
+        },
+        "rounding": {
+          "const": "HALF_UP",
+          "title": "Rounding",
+          "type": "string"
+        }
+      },
+      "required": [
+        "currency",
+        "locale",
+        "rounding",
+        "money_digits",
+        "fraction_percent_digits"
+      ],
+      "title": "PresentationContract",
+      "type": "object"
+    },
+    "PreviaRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "api_version": {
+          "const": "1.0.0",
+          "title": "Api Version",
+          "type": "string"
+        },
+        "cenario": {
+          "$ref": "#/$defs/CenarioEntrada"
+        },
+        "periodo": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/PeriodoLegado"
+            },
+            {
+              "$ref": "#/$defs/PeriodoNatural"
+            }
+          ],
+          "title": "Periodo"
+        },
+        "proveniencia": {
+          "additionalProperties": {
+            "$ref": "#/$defs/OrigemValor"
+          },
+          "title": "Proveniencia",
+          "type": "object"
+        },
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "scenario_id": {
+          "format": "uuid",
+          "title": "Scenario Id",
+          "type": "string"
+        },
+        "scenario_revision": {
+          "minimum": 1,
+          "title": "Scenario Revision",
+          "type": "integer"
+        },
+        "study_id": {
+          "format": "uuid",
+          "title": "Study Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "api_version",
+        "request_id",
+        "study_id",
+        "scenario_id",
+        "scenario_revision",
+        "cenario",
+        "periodo",
+        "proveniencia"
+      ],
+      "title": "PreviaRequest",
+      "type": "object"
+    },
+    "PreviewEnvelope": {
+      "additionalProperties": false,
+      "properties": {
+        "api_version": {
+          "const": "1.0.0",
+          "title": "Api Version",
+          "type": "string"
+        },
+        "execution_fingerprint": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Execution Fingerprint",
+          "type": "string"
+        },
+        "execution_id": {
+          "format": "uuid",
+          "title": "Execution Id",
+          "type": "string"
+        },
+        "input_snapshot": {
+          "$ref": "#/$defs/InputSnapshot"
+        },
+        "kind": {
+          "const": "PREVIA",
+          "title": "Kind",
+          "type": "string"
+        },
+        "motor_build_sha": {
+          "pattern": "^[0-9a-f]{40}$",
+          "title": "Motor Build Sha",
+          "type": "string"
+        },
+        "presentation": {
+          "$ref": "#/$defs/PresentationContract"
+        },
+        "presentation_version": {
+          "const": "1.0.0",
+          "title": "Presentation Version",
+          "type": "string"
+        },
+        "provenance_fingerprint": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Provenance Fingerprint",
+          "type": "string"
+        },
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "result": {
+          "$ref": "#/$defs/ResultadoCanonicoDTO"
+        },
+        "scenario_id": {
+          "format": "uuid",
+          "title": "Scenario Id",
+          "type": "string"
+        },
+        "scenario_revision": {
+          "minimum": 1,
+          "title": "Scenario Revision",
+          "type": "integer"
+        },
+        "statistics": {
+          "$ref": "#/$defs/EstatisticaPrevia"
+        },
+        "study_id": {
+          "format": "uuid",
+          "title": "Study Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "api_version",
+        "presentation_version",
+        "execution_id",
+        "request_id",
+        "study_id",
+        "scenario_id",
+        "scenario_revision",
+        "execution_fingerprint",
+        "provenance_fingerprint",
+        "motor_build_sha",
+        "kind",
+        "statistics",
+        "input_snapshot",
+        "result",
+        "presentation"
+      ],
+      "title": "PreviewEnvelope",
+      "type": "object"
+    },
+    "ReferenceExample": {
+      "additionalProperties": false,
+      "properties": {
+        "cenario": {
+          "$ref": "#/$defs/CenarioEntrada"
+        },
+        "periodo": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/PeriodoLegado"
+            },
+            {
+              "$ref": "#/$defs/PeriodoNatural"
+            }
+          ],
+          "title": "Periodo"
+        },
+        "proveniencia": {
+          "additionalProperties": {
+            "$ref": "#/$defs/OrigemValor"
+          },
+          "title": "Proveniencia",
+          "type": "object"
+        }
+      },
+      "required": [
+        "cenario",
+        "periodo",
+        "proveniencia"
+      ],
+      "title": "ReferenceExample",
+      "type": "object"
+    },
+    "RegraIOF": {
+      "additionalProperties": false,
+      "properties": {
+        "aliquota": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Aliquota",
+          "type": "string"
+        },
+        "direcao": {
+          "enum": [
+            "OUT",
+            "IN"
+          ],
+          "title": "Direcao",
+          "type": "string"
+        },
+        "finalidade": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Finalidade",
+          "type": "string"
+        }
+      },
+      "required": [
+        "finalidade",
+        "direcao",
+        "aliquota"
+      ],
+      "title": "RegraIOF",
+      "type": "object"
+    },
+    "ResultadoCanonicoDTO": {
+      "additionalProperties": false,
+      "properties": {
+        "agregado": {
+          "$ref": "#/$defs/AgregadoDTO"
+        },
+        "avisos": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Avisos",
+          "type": "array"
+        },
+        "clientes": {
+          "items": {},
+          "maxItems": 0,
+          "title": "Clientes",
+          "type": "array"
+        },
+        "contribuicoes_marginais": {
+          "items": {},
+          "maxItems": 0,
+          "title": "Contribuicoes Marginais",
+          "type": "array"
+        },
+        "diagnosticos_experimentais": {
+          "$ref": "#/$defs/DiagnosticosExperimentaisDTO"
+        },
+        "ledger_eventos": {
+          "items": {},
+          "maxItems": 0,
+          "title": "Ledger Eventos",
+          "type": "array"
+        },
+        "manifesto": {
+          "$ref": "#/$defs/ManifestoDTO"
+        }
+      },
+      "required": [
+        "manifesto",
+        "agregado",
+        "clientes",
+        "ledger_eventos",
+        "contribuicoes_marginais",
+        "diagnosticos_experimentais",
+        "avisos"
+      ],
+      "title": "ResultadoCanonicoDTO",
+      "type": "object"
+    },
+    "ResultadoLegadoDTO": {
+      "additionalProperties": false,
+      "properties": {
+        "baseline": {
+          "$ref": "#/$defs/CustosDTO"
+        },
+        "ciclos": {
+          "items": {
+            "$ref": "#/$defs/CicloDTO"
+          },
+          "title": "Ciclos",
+          "type": "array"
+        },
+        "economia": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Economia",
+          "type": "string"
+        },
+        "netado": {
+          "$ref": "#/$defs/CustosDTO"
+        },
+        "taxa_netabilidade": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Taxa Netabilidade",
+          "type": "string"
+        }
+      },
+      "required": [
+        "ciclos",
+        "baseline",
+        "netado",
+        "economia",
+        "taxa_netabilidade"
+      ],
+      "title": "ResultadoLegadoDTO",
+      "type": "object"
+    },
+    "ValidationError": {
+      "properties": {
+        "ctx": {
+          "title": "Context",
+          "type": "object"
+        },
+        "input": {
+          "title": "Input"
+        },
+        "loc": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              }
+            ]
+          },
+          "title": "Location",
+          "type": "array"
+        },
+        "msg": {
+          "title": "Message",
+          "type": "string"
+        },
+        "type": {
+          "title": "Error Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "loc",
+        "msg",
+        "type"
+      ],
+      "title": "ValidationError",
+      "type": "object"
+    }
+  }
+}

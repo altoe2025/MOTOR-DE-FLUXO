@@ -33,11 +33,12 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-09-07, depois do resumo executivo para a Amanda.
+Atualizada em 2026-09-12, depois da integração da base e da preparação do PR da
+fundação de contratos da etapa 1 do front-end.
 
 | Branch | Situação | Dono |
 |---|---|---|
-| `main` | **em dia**: PRs #1 a #16 mergeadas, 240 testes passando, zero xfail | os dois |
+| `main` | base da etapa 1 integrada até o PR #26 (`1aecc57`), 504 testes passando | os dois |
 | `netting/p1` | spike do P1, **NÃO MERGEAR** — dominado, e agora sabemos que a folga é zero em N ≥ 50. Só local, nunca foi pro GitHub | Felipe |
 | `fix/semantica-remessa-p0` | PR #11, mergeada | Felipe |
 | `fix/previsao-temporal-e-colunas-csv` | PR #12, mergeada | Gabriel |
@@ -46,15 +47,77 @@ Atualizada em 2026-09-07, depois do resumo executivo para a Amanda.
 | `perf/netting-sem-custo-quadratico` | PR #15, mergeada | Gabriel |
 | `docs/estado-das-branches` | PR #16, mergeada | Gabriel |
 | `geracao/arquetipos`, `modelo/*`, `varredura/grid-mix-janela` | mergeadas em 2026-09-04 | Gabriel |
-| `gabriel/metrica-tempo` | PR #21, aberta; base da pilha de varredura | Gabriel |
-| `gabriel/varredura-completa` | PR #22, aberta; empilhada sobre #21 | Gabriel |
-| `gabriel/mix-outbound` | PR #23, aberta; empilhada sobre #22 | Gabriel |
-| `analise/sensibilidade-custo` | sensibilidade, estresse, limites e fluxo hipotético; 270 testes passando | Codex |
+| `gabriel/metrica-tempo` | PR #21, mergeada na `main` | Gabriel |
+| `gabriel/varredura-completa` | PR #22, atualizada sobre `main`, CI verde e mergeada | Gabriel |
+| `gabriel/mix-outbound` | PR #23, atualizada sobre `main`, CI verde e mergeada | Gabriel |
+| `analise/sensibilidade-custo` | PR #24, sensibilidade, estresse, limites e fluxo hipotético mergeados | Codex |
+| `codex/frontend-base-docs` | PR #25, design, ambiente e planejamento da etapa 1 mergeados | Codex |
+| `codex/fechamento-funcional-integracao` | PR #26, fechamento funcional mergeado após 504 testes e CI verde | Codex |
+| `codex/mot16-contratos` | MOT-16 preparada sobre `1aecc57`; contratos HTTP, identidade, apresentação e locks, 558 testes passando | Codex |
 
-As quatro últimas branches formam uma pilha e ainda não estão na `main`. Toda a
-auditoria de 2026-09-05 está integrada. Apagada em 2026-09-06 a branch remota
+Essa pilha foi integrada na `main` pelos PRs #21–#26. O PR #17 continua aberto e
+separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+---
+
+## 2026-09-12 — Contratos, identidade e apresentação da etapa 1 (MOT-16)
+
+1. **Sintoma.** A base integrada expunha o resultado canônico do motor, mas ainda não
+   havia contrato HTTP estrito, identidade completa da execução, schema consumível
+   pelo navegador, formatação decimal acordada ou isolamento do estudo local. Sem
+   essa fronteira, as tarefas de adaptador, API e interface poderiam divergir sobre
+   precisão, campos e autoria.
+
+2. **Causa.** O repositório era apenas o pacote Python do motor. FastAPI/Pydantic,
+   ferramentas de contrato, projeto TypeScript e seus locks ainda não existiam, e o
+   hash público do manifesto não tinha o significado mais amplo exigido para uma
+   requisição de prévia.
+
+3. **O que foi feito.** Na branch `codex/mot16-contratos`, foram criados
+   DTOs Pydantic estritos de entrada, saída e envelope, fingerprints separados de
+   execução/proveniência, fixture derivada do YAML, factory de schema fechada,
+   OpenAPI e tipos/Ajv gerados, formatadores `decimal.js` HALF_UP/pt-BR e repositório
+   em memória validado por `owner_sub`. `requirements/web-dev.lock` foi gerado e
+   instalado com Python 3.11.16; `web/package-lock.json` foi instalado com Node
+   24.19.0/npm 11.17.0. A wheel inclui `servidor*` e os YAMLs e foi testada fora do
+   checkout. Passaram 558 testes Python normais, 558 sob `-O`, Ruff, mypy, 14 testes
+   Vitest e o typecheck; a segunda geração dos cinco artefatos manteve os mesmos
+   hashes. Nenhum arquivo de implementação em `motor/` foi alterado.
+
+4. **O que isso invalida.** Invalida qualquer DTO ou tipo de front-end anterior que
+   represente dinheiro como JSON number, aceite seed em ordens explícitas, use o hash
+   do manifesto como fingerprint completo ou compartilhe estudos sem `owner_sub`.
+   Não invalida resultados, varreduras ou números de aceitação do motor; adaptador,
+   autenticação e interface continuam fora deste commit.
+
+## 2026-09-12 — Base integrada para a etapa 1 do front-end (MOT-15)
+
+1. **Sintoma.** A documentação do front-end estava em
+   `analise/sensibilidade-custo`, enquanto os contratos canônicos necessários estavam
+   nos 15 commits de `implementacao/fechamento-funcional-motor`; nenhuma das duas
+   linhas isoladas era uma base suficiente para iniciar a etapa 1.
+
+2. **Causa.** As branches divergiram no commit comum `2fc62a2`: a primeira recebeu
+   especificação, ambiente e planejamento, e a segunda recebeu o fechamento
+   funcional do motor.
+
+3. **O que foi feito.** A pilha de varredura foi integrada pelos PRs #21–#23, a
+   sensibilidade pelo PR #24, a documentação e o planejamento pelo PR #25 e o
+   fechamento funcional pelo PR #26. A base publicada resultante é `1aecc57` em
+   `main`. O trabalho não commitado da worktree original de fechamento não foi
+   incorporado. Foram confirmados os exports públicos
+   `analisar`, `criar_manifesto`, `ConfiguracaoAnalise`, `ConfiguracaoTemporal` e
+   `resultado_para_json`. A base passou 504 testes em Python 3.11 e no CI; na
+   validação inicial também passaram 504 testes sob `-O` e o cenário Amanda, com baseline aproximado de
+   US$ 439 mil, custo netado aproximado de US$ 249 mil, economia aproximada de
+   US$ 190 mil e netabilidade de 58,82%.
+
+4. **O que isso invalida.** Invalida o bloqueio por ausência de uma base Git que
+   reúna planejamento e contratos públicos, permitindo iniciar T1. Não invalida
+   resultados, premissas ou regras do motor. O projeto Supabase ainda não existe e
+   continua sendo gate externo de T5/T7.
 
 ---
 

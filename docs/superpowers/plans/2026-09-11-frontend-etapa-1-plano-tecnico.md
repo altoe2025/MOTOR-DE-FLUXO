@@ -10,7 +10,7 @@
 
 **Spec:** [design aprovado](../specs/2026-09-11-frontend-motor-de-fluxo-design.md), [plano geral e distribuição de modelos](2026-09-11-frontend-plano-geral-execucao-modelos.md), [ambiente e workflow](2026-09-11-frontend-ambiente-e-workflow.md).
 
-**Status:** aprovado por Gabriel nesta conversa. T0–T7 foram cadastradas no Linear (workspace Felipe Bisca, time MOTOR DE FLUXO) como MOT-15–MOT-22, com as dependências nativas configuradas; MOT-15 está Em andamento. Gabriel decidiu aguardar a base integrada após o fechamento funcional. Implementação de código não iniciada. Projeto Supabase ainda não provisionado. A autorização de cadastro das tarefas é específica; não autoriza criar conta, projeto Supabase, convites ou infraestrutura automaticamente.
+**Status:** aprovado por Gabriel nesta conversa. T0–T7 foram cadastradas no Linear (workspace Felipe Bisca, time MOTOR DE FLUXO) como MOT-15–MOT-22, com as dependências nativas configuradas. A MOT-15 foi integrada na `main` pelos PRs #21–#26, commit `1aecc57`, confirmou os contratos públicos e passou o baseline. A MOT-16 implementou a fundação de contratos na branch `codex/mot16-contratos`. Projeto Supabase ainda não provisionado. A autorização de cadastro das tarefas é específica; não autoriza criar conta, projeto Supabase, convites ou infraestrutura automaticamente.
 
 ## 1. Restrições globais
 
@@ -391,9 +391,9 @@ Dependências: `T0 → T1 → T2 → T3`; `T1 → T4`; `T3 + T4 → T5 → T6 �
 - [x] Ler regras, três referências e este plano; registrar a aprovação e cadastrar T0–T7 como MOT-15–MOT-22 no Linear autorizado por Gabriel.
 - [x] Executar os comandos de inventário e registrar branch/SHA de inspeção, worktrees existentes e dependências de PR.
 - [x] Escolher com Gabriel a base integrada ou a alternativa empilhada da seção 2.2: aguardar a base integrada após o fechamento funcional.
-- [ ] Depois da integração, registrar o SHA exato e confirmar os exports da seção 5.1 por inspeção da base escolhida.
-- [ ] Criar worktree/branch `codex/frontend-etapa-1-contratos` pelo fluxo `using-git-worktrees` e ferramentas nativas disponíveis. Não criar os seis worktrees futuros antecipadamente.
-- [ ] Rodar baseline na base escolhida. O teste não rastreado deste checkout não deve ser copiado para o novo worktree.
+- [x] Depois da integração, registrar o SHA exato e confirmar os exports da seção 5.1 por inspeção da base escolhida.
+- [x] Criar worktree/branch isolada pelo fluxo `using-git-worktrees` e ferramentas nativas disponíveis. Não criar os seis worktrees futuros antecipadamente.
+- [x] Rodar baseline na base escolhida. O teste não rastreado deste checkout não foi copiado para o novo worktree.
 - [ ] Registrar responsável humano pelo projeto Supabase, cadastro fechado, UUIDs permitidos, redirect URLs e conta de teste. Provisionamento pode ocorrer enquanto T1–T4 avançam; impede concluir T5/T7 real.
 
 ```powershell
@@ -413,9 +413,9 @@ git ls-tree -r --name-only HEAD motor/analise
 
 **Consome:** contratos públicos da seção 5.1. **Produz:** `PreviaRequest`, `PreviewEnvelope`, `normalizar_execucao(request, build_sha) -> dict`, `execution_fingerprint(request, build_sha) -> str`, `provenance_fingerprint(proveniencia) -> str`, `StudyRepository` e formatadores.
 
-- [ ] Resolver e travar dependências do servidor e ferramentas de contrato; registrar versões e compatibilidade Python 3.11/Node 24. Gerar o lock, instalar por ele; não mudar dependências centrais do motor sem necessidade demonstrada.
-- [ ] Criar fixtures lendo o YAML de referência; origem sintética para seus valores. `reference-request.json` tem UUIDs fixos de teste e revisão 1. Não escrever números esperados manualmente no código de aplicação.
-- [ ] Escrever os testes abaixo e casos parametrizados da seção 9. Rodar primeiro para falha por módulo/comportamento ausente.
+- [x] Resolver e travar dependências do servidor e ferramentas de contrato; registrar versões e compatibilidade Python 3.11/Node 24. Gerar o lock, instalar por ele; não mudar dependências centrais do motor sem necessidade demonstrada.
+- [x] Criar fixtures lendo o YAML de referência; origem sintética para seus valores. `reference-request.json` tem UUIDs fixos de teste e revisão 1. Não escrever números esperados manualmente no código de aplicação.
+- [x] Escrever os testes abaixo e casos parametrizados da seção 9. Rodar primeiro para falha por módulo/comportamento ausente.
 
 ```python
 def test_valor_numerico_json_nao_e_dinheiro(reference_payload):
@@ -437,10 +437,10 @@ def test_hash_normaliza_representacao(reference_request):
     assert execution_fingerprint(a, "a" * 40) == execution_fingerprint(b, "a" * 40)
 ```
 
-- [ ] Implementar DTOs com validação estrita, normalização e contratos locais. A validação de conta em `save/get/remove` verifica `owner_sub`; não basta filtrar lista.
-- [ ] Criar factory de aplicação que permita gerar schema sem carregar settings reais; exportar `contracts/openapi.json` com schemas estáveis.
-- [ ] Gerar TS e schemas runtime; demonstrar o payload real aceito e payload com decimal number recusado. Estabilizar o formato antes de UI/API funcional.
-- [ ] Implementar formatação e seus testes. Exemplo:
+- [x] Implementar DTOs com validação estrita, normalização e contratos locais. A validação de conta em `save/get/remove` verifica `owner_sub`; não basta filtrar lista.
+- [x] Criar factory de aplicação que permita gerar schema sem carregar settings reais; exportar `contracts/openapi.json` com schemas estáveis.
+- [x] Gerar TS e schemas runtime; demonstrar o payload real aceito e payload com decimal number recusado. Estabilizar o formato antes de UI/API funcional.
+- [x] Implementar formatação e seus testes. Exemplo:
 
 ```typescript
 it('preserva precisão e explicita unidade', () => {
@@ -450,8 +450,8 @@ it('preserva precisão e explicita unidade', () => {
 });
 ```
 
-- [ ] Rodar `python -m pytest tests/web_api/test_contracts.py tests/web_api/test_identity.py -q` e os testes JS focalizados. Regerar contrato duas vezes; diff vazio na segunda.
-- [ ] Revisar coerência de tipos, schema e semântica de tempo/hash. Registrar decisões na documentação operacional e atualizar Diário no commit real associado à issue.
+- [x] Rodar `python -m pytest tests/web_api/test_contracts.py tests/web_api/test_identity.py -q` e os testes JS focalizados. Regerar contrato duas vezes; diff vazio na segunda.
+- [x] Revisar coerência de tipos, schema e semântica de tempo/hash. Registrar decisões na documentação operacional e atualizar Diário no commit real associado à issue.
 
 **Gate:** requisição inválida é recusada por HTTP/schema, não apenas por formulário; mudança de ordem afeta identidade; decimais sobrevivem transporte; nenhum contrato depende de atributo privado do motor.
 
@@ -695,18 +695,18 @@ Escalar para Sol em falhas de sessão, serialização, integração temporal ou 
 
 | Risco/pendência | Estado | Tratamento e ponto de decisão |
 |---|---|---|
-| Base ainda não integrada | Confirmado | T0 fixa SHA; não começar adaptador sobre contrato imaginário; não tocar trabalho concorrente |
+| Base integrada | Resolvido na MOT-15 | `main` em `1aecc57` reúne a pilha de análises, documentação e fechamento pelos PRs #21–#26; trabalho não commitado da outra worktree ficou de fora |
 | Hash do manifesto não cobre ordens | Confirmado por inspeção | fingerprint da API cobre snapshot completo e mantém hash original separado; T1 testa colisões semânticas |
 | Mapping Python diferente da lista JSON de IOF | Confirmado por inspeção | DTOs de transporte explícitos e teste de igualdade com JSON público na T1/T2 |
-| Falha de coleta local não rastreada | Reproduzida | preservar arquivo; baseline limpo no worktree; não declarar suíte completa verde |
-| Base integrada sem SHA confirmado | Aguardando fechamento funcional | MOT-15 permanece Em andamento; registrar o SHA e conferir os exports antes de criar worktree ou instalar dependências |
+| Falha de coleta local não rastreada | Isolada | arquivo preservado no checkout original; baseline e suíte completa passaram nos worktrees limpos |
+| Python 3.11 | Resolvido na MOT-16 | 558 testes passaram em execução normal e sob `-O`; CI da base também passou |
 | Supabase inexistente | Confirmado por Gabriel | provisionamento administrativo separado; testes reais bloqueiam aceitação final, não a conclusão deste planejamento |
 | Convite/redirect/senha não provisionados | Consequência do anterior | roteiro T5 inclui configuração e primeiro acesso; somente ter formulário de login não conclui acesso por convite |
 | Estudo local por conta | Decisão proposta | owner_sub obrigatório; rascunho mínimo agora, IndexedDB e migração na etapa 2 |
 | Mapeamento participante → geração | Fora da etapa | contrato executável usa ordens; planejar autoria/geração na etapa 2, sem inferir premissas de negócio |
 | Cálculo síncrono limitado | Decisão proposta | cap de entrada/concorrência, medição T7; trabalhos robustos e cancelamento real na etapa 3 |
 | Semântica temporal transitória | Inspeção em branch de fechamento | revalidar a assinatura/base na T0 e testar medição versus execução; não misturar LEGADO/NATURAL |
-| Dependências futuras | Não instaladas | versões travadas na T1; Docker/publicação/ECharts/LLM não antecipados |
+| Dependências da T1 | Instaladas e travadas | locks Python/Node validados; Docker/publicação/ECharts/LLM não antecipados |
 
 O planejamento reduz fontes conhecidas de retrabalho, mas não elimina risco de integração, indisponibilidade externa ou mudança de requisito. Nenhuma dessas lacunas deve ser escondida com mocks, percentuais aproximados, bypass de auth ou mudanças nas regras do motor.
 
@@ -741,4 +741,7 @@ Consultadas em 2026-09-11; sustentam mecanismos de biblioteca, não substituem d
 - [Supabase — usuários e convites](https://supabase.com/docs/guides/auth/users), [senha](https://supabase.com/docs/guides/auth/passwords), [templates de e-mail](https://supabase.com/docs/guides/auth/auth-email-templates) e [verifyOtp](https://supabase.com/docs/reference/javascript/auth-verifyotp): fluxo de acesso e callbacks controlados.
 - [FastAPI — lifespan](https://fastapi.tiangolo.com/advanced/events/) e [estáticos](https://fastapi.tiangolo.com/tutorial/static-files/): lifecycle de recursos e montagem de assets; fallback SPA e separação `/api` são responsabilidade da aplicação.
 
-**Próximo passo de execução:** quando o fechamento funcional estiver integrado, concluir MOT-15 registrando o SHA, conferir os exports da seção 5.1, criar a worktree da T1 e executar o baseline. O cadastro não cria automaticamente projeto Supabase, convites, merges ou publicação.
+**Próximo passo de execução:** após integrar a MOT-16, iniciar MOT-17/T2 em worktree
+própria baseada na `main`, consumindo os contratos fechados. T4 também está liberada,
+mas não há necessidade de execução simultânea. O cadastro não cria automaticamente
+projeto Supabase, convites ou infraestrutura.
