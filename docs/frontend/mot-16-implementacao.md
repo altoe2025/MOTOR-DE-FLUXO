@@ -1,7 +1,7 @@
 # MOT-16 — contratos, identidade e apresentação
 
-Estado em 2026-09-12: **T1 implementada na branch
-`codex/mot16-contratos`**, baseada na `main` integrada em `1aecc57`. O escopo termina antes do
+Estado em 2026-09-12: **T1 integrada na `main` pelo PR #27, commit `d2a261b`**. A
+implementação foi preparada na branch `codex/mot16-contratos`, baseada em `1aecc57`. O escopo termina antes do
 adaptador T2, da autenticação/API funcional T3 e da interface T4.
 
 ## Contratos entregues

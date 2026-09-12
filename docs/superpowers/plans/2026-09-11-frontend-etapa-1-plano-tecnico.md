@@ -10,7 +10,7 @@
 
 **Spec:** [design aprovado](../specs/2026-09-11-frontend-motor-de-fluxo-design.md), [plano geral e distribuição de modelos](2026-09-11-frontend-plano-geral-execucao-modelos.md), [ambiente e workflow](2026-09-11-frontend-ambiente-e-workflow.md).
 
-**Status:** aprovado por Gabriel nesta conversa. T0–T7 foram cadastradas no Linear (workspace Felipe Bisca, time MOTOR DE FLUXO) como MOT-15–MOT-22, com as dependências nativas configuradas. A MOT-15 foi integrada na `main` pelos PRs #21–#26, commit `1aecc57`, confirmou os contratos públicos e passou o baseline. A MOT-16 implementou a fundação de contratos na branch `codex/mot16-contratos`. Projeto Supabase ainda não provisionado. A autorização de cadastro das tarefas é específica; não autoriza criar conta, projeto Supabase, convites ou infraestrutura automaticamente.
+**Status:** aprovado por Gabriel nesta conversa. T0–T7 foram cadastradas no Linear (workspace Felipe Bisca, time MOTOR DE FLUXO) como MOT-15–MOT-22, com as dependências nativas configuradas. A MOT-15 foi integrada na `main` pelos PRs #21–#26, commit `1aecc57`, confirmou os contratos públicos e passou o baseline. A MOT-16 foi integrada pelo PR #27, commit `d2a261b`, com a fundação de contratos e CI verde. Projeto Supabase ainda não provisionado. A autorização de cadastro das tarefas é específica; não autoriza criar conta, projeto Supabase, convites ou infraestrutura automaticamente.
 
 ## 1. Restrições globais
 
@@ -741,7 +741,7 @@ Consultadas em 2026-09-11; sustentam mecanismos de biblioteca, não substituem d
 - [Supabase — usuários e convites](https://supabase.com/docs/guides/auth/users), [senha](https://supabase.com/docs/guides/auth/passwords), [templates de e-mail](https://supabase.com/docs/guides/auth/auth-email-templates) e [verifyOtp](https://supabase.com/docs/reference/javascript/auth-verifyotp): fluxo de acesso e callbacks controlados.
 - [FastAPI — lifespan](https://fastapi.tiangolo.com/advanced/events/) e [estáticos](https://fastapi.tiangolo.com/tutorial/static-files/): lifecycle de recursos e montagem de assets; fallback SPA e separação `/api` são responsabilidade da aplicação.
 
-**Próximo passo de execução:** após integrar a MOT-16, iniciar MOT-17/T2 em worktree
-própria baseada na `main`, consumindo os contratos fechados. T4 também está liberada,
+**Próximo passo de execução:** iniciar MOT-17/T2 em worktree própria baseada na
+`main`, consumindo os contratos fechados. T4 também está liberada,
 mas não há necessidade de execução simultânea. O cadastro não cria automaticamente
 projeto Supabase, convites ou infraestrutura.

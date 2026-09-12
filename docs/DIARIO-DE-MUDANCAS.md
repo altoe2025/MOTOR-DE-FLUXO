@@ -38,7 +38,7 @@ fundação de contratos da etapa 1 do front-end.
 
 | Branch | Situação | Dono |
 |---|---|---|
-| `main` | base da etapa 1 integrada até o PR #26 (`1aecc57`), 504 testes passando | os dois |
+| `main` | MOT-15 e MOT-16 integradas até o PR #27 (`d2a261b`), 558 testes passando | os dois |
 | `netting/p1` | spike do P1, **NÃO MERGEAR** — dominado, e agora sabemos que a folga é zero em N ≥ 50. Só local, nunca foi pro GitHub | Felipe |
 | `fix/semantica-remessa-p0` | PR #11, mergeada | Felipe |
 | `fix/previsao-temporal-e-colunas-csv` | PR #12, mergeada | Gabriel |
@@ -53,9 +53,9 @@ fundação de contratos da etapa 1 do front-end.
 | `analise/sensibilidade-custo` | PR #24, sensibilidade, estresse, limites e fluxo hipotético mergeados | Codex |
 | `codex/frontend-base-docs` | PR #25, design, ambiente e planejamento da etapa 1 mergeados | Codex |
 | `codex/fechamento-funcional-integracao` | PR #26, fechamento funcional mergeado após 504 testes e CI verde | Codex |
-| `codex/mot16-contratos` | MOT-16 preparada sobre `1aecc57`; contratos HTTP, identidade, apresentação e locks, 558 testes passando | Codex |
+| `codex/mot16-contratos` | PR #27 mergeada; contratos HTTP, identidade, apresentação, locks e CI corrigido | Codex |
 
-Essa pilha foi integrada na `main` pelos PRs #21–#26. O PR #17 continua aberto e
+Essa pilha e a MOT-16 foram integradas na `main` pelos PRs #21–#27. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
@@ -75,7 +75,8 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
    hash público do manifesto não tinha o significado mais amplo exigido para uma
    requisição de prévia.
 
-3. **O que foi feito.** Na branch `codex/mot16-contratos`, foram criados
+3. **O que foi feito.** Na branch `codex/mot16-contratos`, integrada na `main` pelo
+   PR #27 (`d2a261b`), foram criados
    DTOs Pydantic estritos de entrada, saída e envelope, fingerprints separados de
    execução/proveniência, fixture derivada do YAML, factory de schema fechada,
    OpenAPI e tipos/Ajv gerados, formatadores `decimal.js` HALF_UP/pt-BR e repositório
