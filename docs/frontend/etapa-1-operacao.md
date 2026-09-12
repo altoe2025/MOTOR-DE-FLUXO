@@ -2,7 +2,7 @@
 
 ## Estado
 
-T0 está **concluída tecnicamente**. As oito tarefas foram cadastradas como MOT-15–MOT-22 no workspace **Felipe Bisca**, time **MOTOR DE FLUXO**, com as dependências nativas do plano. A base integrada reúne a linha de análise e documentação até `da271ad` com o fechamento funcional publicado em `3bc2839`, na branch `codex/frontend-etapa-1-contratos`. Não houve implementação do front-end, push, merge em `main` ou publicação.
+T0 está **concluída tecnicamente**. As oito tarefas foram cadastradas como MOT-15–MOT-22 no workspace **Felipe Bisca**, time **MOTOR DE FLUXO**, com as dependências nativas do plano. A base integrada reúne a linha de análise e documentação até `da271ad` com o fechamento funcional publicado em `3bc2839`, no merge `e2374ae` da branch `codex/frontend-etapa-1-contratos`. Não houve implementação do front-end, push, merge em `main` ou publicação.
 
 Fonte de execução: [plano técnico aprovado](../superpowers/plans/2026-09-11-frontend-etapa-1-plano-tecnico.md). As três referências indicadas no plano continuam obrigatórias.
 

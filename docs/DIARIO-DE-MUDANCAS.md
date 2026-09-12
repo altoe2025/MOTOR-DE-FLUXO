@@ -73,7 +73,7 @@ auditoria de 2026-09-05 está integrada. Apagada em 2026-09-06 a branch remota
 3. **O que foi feito.** Foi criada a worktree isolada
    `.worktrees/frontend-etapa-1-contratos`, branch
    `codex/frontend-etapa-1-contratos`, a partir de `da271ad`, e integrado o commit
-   publicado `3bc2839`. O merge foi automático e não incorporou as alterações não
+   publicado `3bc2839` no merge `e2374ae`. O merge foi automático e não incorporou as alterações não
    commitadas da worktree de fechamento. Foram confirmados os exports públicos
    `analisar`, `criar_manifesto`, `ConfiguracaoAnalise`, `ConfiguracaoTemporal` e
    `resultado_para_json`. Em venv própria com Python 3.14.4, passaram 504 testes na

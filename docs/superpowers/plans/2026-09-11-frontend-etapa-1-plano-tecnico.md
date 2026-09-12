@@ -10,7 +10,7 @@
 
 **Spec:** [design aprovado](../specs/2026-09-11-frontend-motor-de-fluxo-design.md), [plano geral e distribuição de modelos](2026-09-11-frontend-plano-geral-execucao-modelos.md), [ambiente e workflow](2026-09-11-frontend-ambiente-e-workflow.md).
 
-**Status:** aprovado por Gabriel nesta conversa. T0–T7 foram cadastradas no Linear (workspace Felipe Bisca, time MOTOR DE FLUXO) como MOT-15–MOT-22, com as dependências nativas configuradas. A MOT-15 reuniu `da271ad` e o fechamento `3bc2839` em `codex/frontend-etapa-1-contratos`, confirmou os contratos públicos e passou o baseline. Implementação do front-end não iniciada. Projeto Supabase ainda não provisionado. A autorização de cadastro das tarefas é específica; não autoriza criar conta, projeto Supabase, convites ou infraestrutura automaticamente.
+**Status:** aprovado por Gabriel nesta conversa. T0–T7 foram cadastradas no Linear (workspace Felipe Bisca, time MOTOR DE FLUXO) como MOT-15–MOT-22, com as dependências nativas configuradas. A MOT-15 reuniu `da271ad` e o fechamento `3bc2839` no merge `e2374ae` de `codex/frontend-etapa-1-contratos`, confirmou os contratos públicos e passou o baseline. Implementação do front-end não iniciada. Projeto Supabase ainda não provisionado. A autorização de cadastro das tarefas é específica; não autoriza criar conta, projeto Supabase, convites ou infraestrutura automaticamente.
 
 ## 1. Restrições globais
 
