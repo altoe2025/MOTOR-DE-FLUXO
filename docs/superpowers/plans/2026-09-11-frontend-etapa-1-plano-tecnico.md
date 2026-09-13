@@ -10,7 +10,7 @@
 
 **Spec:** [design aprovado](../specs/2026-09-11-frontend-motor-de-fluxo-design.md), [plano geral e distribuição de modelos](2026-09-11-frontend-plano-geral-execucao-modelos.md), [ambiente e workflow](2026-09-11-frontend-ambiente-e-workflow.md).
 
-**Status:** aprovado por Gabriel nesta conversa. T0–T4 foram integradas na `main` até `64bf303`; T5/MOT-20 está em execução na branch `codex/mot20-auth`. Gabriel provisionou o projeto Supabase com ES256, cadastro fechado e redirects locais. Convite e primeiro acesso reais permanecem ações humanas do gate T5; T6/T7 aguardam sua conclusão.
+**Status:** aprovado por Gabriel nesta conversa. T0–T4 foram integradas na `main` até `64bf303`; T5/MOT-20 foi concluída no PR #32 com convite, primeiro acesso, rascunho e POST autenticado reais. T6/T7 aguardam integração e execução.
 
 ## 1. Restrições globais
 
@@ -394,7 +394,7 @@ Dependências: `T0 → T1 → T2 → T3`; `T1 → T4`; `T3 + T4 → T5 → T6 �
 - [x] Depois da integração, registrar o SHA exato e confirmar os exports da seção 5.1 por inspeção da base escolhida.
 - [x] Criar worktree/branch isolada pelo fluxo `using-git-worktrees` e ferramentas nativas disponíveis. Não criar os seis worktrees futuros antecipadamente.
 - [x] Rodar baseline na base escolhida. O teste não rastreado deste checkout não foi copiado para o novo worktree.
-- [ ] Registrar responsável humano pelo projeto Supabase, cadastro fechado, UUIDs permitidos, redirect URLs e conta de teste. Provisionamento pode ocorrer enquanto T1–T4 avançam; impede concluir T5/T7 real.
+- [x] Registrar responsável humano pelo projeto Supabase, cadastro fechado, UUIDs permitidos, redirect URLs e conta de teste. Provisionamento pode ocorrer enquanto T1–T4 avançam; impede concluir T5/T7 real.
 
 ```powershell
 git status --short --branch
@@ -544,15 +544,15 @@ it('identifica o destino atual sem esconder os demais', () => {
 
 **Interfaces:** `useAuth()` expõe `{status, userId, signIn(email,password), signOut(), getAccessToken()}`. Status: `loading|authenticated|unauthenticated|expired|unavailable`. `DraftRecovery` expõe `load(ownerSub)`, `save(ownerSub, draft)`, `clear(ownerSub)`; draft é `{version:1, owner_sub, study_id, name, updated_at}`. Sem senha/token nesse objeto.
 
-- [ ] Provisionamento humano: criar projeto, desabilitar signup público/anônimo, confirmar ES256, configurar URLs exatas `http://localhost:5173/auth/callback` e a origem local do build, fornecer UUIDs e configuração pública. Não usar wildcard para qualquer domínio.
-- [ ] Configurar template de convite/recovery para callback com `token_hash` e `type=invite|recovery`; callback lê os parâmetros em memória, limpa a URL com replace e chama `verifyOtp` do SDK com tipo permitido. Configurar `detectSessionInUrl: false` para esse fluxo explícito, evitando processamento duplicado/aceitação de fragmentos não contratados. Nunca guardar token em log; `Referrer-Policy: no-referrer` na rota. Links expirados mostram erro e retorno ao login, sem loop. Próximo destino é fixo em `/auth/definir-senha`; não aceitar redirect externo enviado pelo link.
-- [ ] Definir senha via `updateUser({password})` somente depois de sessão de convite/recovery validada. Criar conta e enviar convite permanecem ações humanas explicitamente autorizadas. Política de senha refletida no UI e validada pelo Supabase, mínimo 12 caracteres, sem truncar espaços silenciosamente.
-- [ ] Escrever testes: login válido/inválido, sessão em carregamento, callback inválido, expiração durante rascunho, falha de refresh, troca de usuário e logout em outra aba.
-- [ ] Implementar Supabase client singleton, sessão via SDK e inscrição/desinscrição em eventos. Não bloquear callback do evento esperando outra chamada Auth; disparar trabalho assíncrono fora dele.
-- [ ] Implementar rascunho mínimo em localStorage por `motor-fluxo:draft:v1:<sub>`, salvamento ao editar nome, leitura/validação antes de restaurar. JSON corrompido não é apagado automaticamente; mostrar falha de recuperação. Erro de quota/storage bloqueado preserva estado em memória e informa que a recuperação após recarga não está disponível.
-- [ ] Em `401`, preservar rascunho e resultado recebido em memória, bloquear novos cálculos e pedir login. Após reconectar a mesma conta, restaurar a tela sem repetir POST. Em conta diferente, limpar cache em memória e não mostrar rascunho do usuário anterior. Não guardar senha de login no rascunho.
-- [ ] Logout salva draft da conta, limpa Query cache e sessão SDK; falha de rede no signOut não mantém tela autenticada localmente. Sincronizar abas via eventos do SDK/storage, sem transportar tokens em canal próprio.
-- [ ] Verificar convite, definição de senha, login e POST autenticado contra Supabase real. Sem projeto/conta, registrar testes locais como locais; não marcar esta tarefa concluída.
+- [x] Provisionamento humano: criar projeto, desabilitar signup público/anônimo, confirmar ES256, configurar URLs exatas `http://localhost:5173/auth/callback` e a origem local do build, fornecer UUIDs e configuração pública. Não usar wildcard para qualquer domínio.
+- [x] Configurar template de convite/recovery para callback com `token_hash` e `type=invite|recovery`; callback lê os parâmetros em memória, limpa a URL com replace e chama `verifyOtp` do SDK com tipo permitido. Configurar `detectSessionInUrl: false` para esse fluxo explícito, evitando processamento duplicado/aceitação de fragmentos não contratados. Nunca guardar token em log; `Referrer-Policy: no-referrer` na rota. Links expirados mostram erro e retorno ao login, sem loop. Próximo destino é fixo em `/auth/definir-senha`; não aceitar redirect externo enviado pelo link.
+- [x] Definir senha via `updateUser({password})` somente depois de sessão de convite/recovery validada. Criar conta e enviar convite permanecem ações humanas explicitamente autorizadas. Política de senha refletida no UI e validada pelo Supabase, mínimo 12 caracteres, sem truncar espaços silenciosamente.
+- [x] Escrever testes: login válido/inválido, sessão em carregamento, callback inválido, expiração durante rascunho, falha de refresh, troca de usuário e logout em outra aba.
+- [x] Implementar Supabase client singleton, sessão via SDK e inscrição/desinscrição em eventos. Não bloquear callback do evento esperando outra chamada Auth; disparar trabalho assíncrono fora dele.
+- [x] Implementar rascunho mínimo em localStorage por `motor-fluxo:draft:v1:<sub>`, salvamento ao editar nome, leitura/validação antes de restaurar. JSON corrompido não é apagado automaticamente; mostrar falha de recuperação. Erro de quota/storage bloqueado preserva estado em memória e informa que a recuperação após recarga não está disponível.
+- [x] Em `401`, preservar rascunho e resultado recebido em memória, bloquear novos cálculos e pedir login. Após reconectar a mesma conta, restaurar a tela sem repetir POST. Em conta diferente, limpar cache em memória e não mostrar rascunho do usuário anterior. Não guardar senha de login no rascunho.
+- [x] Logout salva draft da conta, limpa Query cache e sessão SDK; falha de rede no signOut não mantém tela autenticada localmente. Sincronizar abas via eventos do SDK/storage, sem transportar tokens em canal próprio.
+- [x] Verificar convite, definição de senha, login e POST autenticado contra Supabase real. Sem projeto/conta, registrar testes locais como locais; não marcar esta tarefa concluída.
 
 Teste mínimo de preservação, implementado com harness Auth e storage controlados:
 

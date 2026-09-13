@@ -56,7 +56,7 @@ Atualizada em 2026-09-13, durante a implementação da MOT-20 sobre a base integ
 | `codex/mot17-adaptador` | MOT-17 entregue pelo PR #30; implementação e verificação local concluídas | Codex |
 | `codex/mot18-api` | MOT-18 integrada pelo PR #31, CI verde | Codex |
 | `feat/mot19-shell-acessivel` | PR #29 atualizado sobre a MOT-18; shell e componentes preservam o proxy da API | Codex |
-| `codex/mot20-auth` | MOT-20 em execução; sessão, callback e rascunho implementados, convite real pendente | Codex |
+| `codex/mot20-auth` | PR #32; MOT-20 concluída com convite, rascunho e POST autenticado reais | Codex |
 
 Essa pilha e as MOT-16–MOT-18 foram integradas na `main` pelos PRs #21–#31. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
@@ -80,7 +80,11 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
    12 caracteres e rascunho mínimo por `owner_sub`. Falhas de storage preservam a
    edição em memória; JSON inválido não é apagado. A configuração pública real fica
    em arquivo local ignorado. O JWKS ES256 e os erros de login/callback foram
-   confirmados contra o serviço real; convite e primeiro acesso aguardam ação humana.
+   confirmados contra o serviço real. Após configurar SMTP próprio exigido pelo plano
+   Free atual, o convite real abriu o callback contratado, definiu a primeira senha e
+   autenticou. O nome persistiu após recarga, logout e novo login. Com o UUID somente
+   na allowlist local, a sessão, o exemplo privado e o POST `/api/v1/previas` reais
+   passaram; a resposta reproduziu `1026000.000000` e o SHA empacotado `a55df777`.
 
 4. **O que isso invalida.** Invalida os placeholders públicos da T4 e a indicação de
    que o Supabase ainda não havia sido provisionado. Não altera `motor/`, contratos

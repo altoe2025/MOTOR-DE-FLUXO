@@ -2,9 +2,9 @@
 
 ## Estado
 
-Implementação local na branch `codex/mot20-auth`, base `64bf303`. O projeto Supabase
-real está provisionado e seu JWKS público anuncia ES256/P-256. O gate de convite e
-primeiro acesso depende do envio humano do convite depois desta implementação.
+Implementação concluída na branch `codex/mot20-auth`, base `64bf303`, e publicada no
+PR #32. O projeto Supabase real está provisionado, seu JWKS público anuncia
+ES256/P-256 e o gate real de convite, primeiro acesso e API autenticada passou.
 
 ## Contratos implementados
 
@@ -46,6 +46,12 @@ Nesta revisão passaram 57 testes Vitest, typecheck, ESLint e build; a suíte Py
 permaneceu verde com 632 testes tanto no modo normal quanto sob `python -O` (dois
 testes de symlink ignorados no Windows). `motor/` permaneceu sem alterações.
 
-O teste real restante exige convidar uma conta pelo Dashboard, abrir o link na origem
-local configurada, definir a senha, obter o UUID público do usuário para a allowlist e
-confirmar login, logout, recarga, troca de conta e chamada autenticada ao FastAPI.
+O teste real usou convite emitido pelo Dashboard após configurar SMTP próprio e os
+templates `token_hash`. O callback abriu na origem compilada, definiu a primeira
+senha e autenticou. O nome do estudo persistiu após F5 e após logout seguido de novo
+login. Com o UUID guardado apenas na allowlist local, `GET /api/v1/session`, o exemplo
+privado e `POST /api/v1/previas` passaram com token emitido pelo Supabase real. O
+POST reproduziu `economia_periodo_brl = 1026000.000000` e
+`motor_build_sha = a55df777299b10c8e7564a50add16e6b21c4f494`. E-mail, senha,
+token e UUID não foram gravados no repositório. Troca de conta, expiração, refresh e
+sincronização entre abas permanecem cobertos pelos testes controlados.

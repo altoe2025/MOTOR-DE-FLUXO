@@ -2,15 +2,15 @@
 
 ## Estado
 
-T0–T4 estão **integradas na `main`** até o PR #29, commit `64bf303`; T5 está em
-execução na branch `codex/mot20-auth`. As oito tarefas foram
+T0–T4 estão **integradas na `main`** até o PR #29, commit `64bf303`; T5 foi concluída
+na branch `codex/mot20-auth` e publicada no PR #32. As oito tarefas foram
 cadastradas como MOT-15–MOT-22 no workspace **Felipe Bisca**, time
 **MOTOR DE FLUXO**, com as dependências nativas do plano. A base integrada foi
 publicada pelos PRs #21–#26 no commit `1aecc57`; MOT-16 e MOT-17 foram integradas
 pelos PRs #27–#30. A T3 acrescenta a API autenticada, limites operacionais e a
 distribuição segura do build React. O projeto Supabase real foi provisionado pelo
-responsável humano; ES256/JWKS e login inválido já foram confirmados, enquanto o
-convite e o primeiro acesso permanecem como gate real de T5.
+responsável humano. ES256/JWKS, convite, primeira senha, recuperação de rascunho e
+POST autenticado foram confirmados contra o serviço real.
 
 Fonte de execução: [plano técnico aprovado](../superpowers/plans/2026-09-11-frontend-etapa-1-plano-tecnico.md). As três referências indicadas no plano continuam obrigatórias.
 
@@ -63,7 +63,7 @@ Fonte de execução: [plano técnico aprovado](../superpowers/plans/2026-09-11-f
 | T2 | [MOT-17 — Adaptador único e validação de publicação](https://linear.app/felipe-bisca/issue/MOT-17/etapa-1-t2-adaptador-unico-e-validacao-de-publicacao) | Integrada pelo PR #30; portão real concluído |
 | T3 | [MOT-18 — FastAPI, autenticação e mesma origem](https://linear.app/felipe-bisca/issue/MOT-18/etapa-1-t3-fastapi-autenticacao-e-mesma-origem) | Integrada pelo PR #31; CI verde |
 | T4 | [MOT-19 — Shell e componentes acessíveis](https://linear.app/felipe-bisca/issue/MOT-19/etapa-1-t4-shell-e-componentes-acessiveis) | Integrada pelo PR #29 em `64bf303` |
-| T5 | [MOT-20 — Login, convite e recuperação de rascunho](https://linear.app/felipe-bisca/issue/MOT-20/etapa-1-t5-login-convite-e-recuperacao-de-rascunho) | Em andamento; implementação local concluída, convite real pendente |
+| T5 | [MOT-20 — Login, convite e recuperação de rascunho](https://linear.app/felipe-bisca/issue/MOT-20/etapa-1-t5-login-convite-e-recuperacao-de-rascunho) | Concluída no PR #32; gate Supabase real aprovado |
 | T6 | [MOT-21 — Cliente tipado e integração navegador–motor](https://linear.app/felipe-bisca/issue/MOT-21/etapa-1-t6-cliente-tipado-e-integracao-navegador-motor) | Backlog; bloqueada por MOT-20 |
 | T7 | [MOT-22 — Aceitação, CI e passagem para etapa 2](https://linear.app/felipe-bisca/issue/MOT-22/etapa-1-t7-aceitacao-ci-e-passagem-para-etapa-2) | Backlog; bloqueada por MOT-21 |
 
@@ -184,10 +184,11 @@ texto da navegação/fundo 12,85:1; foco/canvas 5,77:1; borda/superfície 4,58:1
 - O rascunho contém somente versão, `owner_sub`, `study_id`, nome e instante. A chave
   local é `motor-fluxo:draft:v1:<sub>`; conta diferente não lê o documento anterior,
   JSON corrompido é preservado e falha de storage mantém o valor em memória com aviso.
-- O JWKS público real respondeu com chave `ES256`, `EC`, curva `P-256`. Login inválido
-  e callback inválido foram exercitados no navegador contra o projeto real, com a URL
-  limpa antes de apresentar o erro. Convite, senha inicial e login válido aguardam a
-  ação humana de convidar a conta de teste.
+- O JWKS público real respondeu com chave `ES256`, `EC`, curva `P-256`. Login e
+  callback inválidos foram exercitados com URL limpa; convite, primeira senha, F5,
+  logout e novo login passaram no navegador real. A sessão e o exemplo privados e o
+  POST canônico passaram com token Supabase real, reproduzindo economia
+  `1026000.000000` e o SHA completo da branch.
 
 Detalhes e comandos: [registro da MOT-20](mot-20-implementacao.md).
 
