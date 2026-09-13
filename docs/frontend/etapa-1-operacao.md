@@ -2,14 +2,15 @@
 
 ## Estado
 
-T0–T3 estão **integradas na `main`** até o PR #31, commit `d6d488e`; T4 está no
-PR #29, atualizado sobre essa base. As oito tarefas foram
+T0–T4 estão **integradas na `main`** até o PR #29, commit `64bf303`; T5 foi concluída
+na branch `codex/mot20-auth` e publicada no PR #32. As oito tarefas foram
 cadastradas como MOT-15–MOT-22 no workspace **Felipe Bisca**, time
 **MOTOR DE FLUXO**, com as dependências nativas do plano. A base integrada foi
 publicada pelos PRs #21–#26 no commit `1aecc57`; MOT-16 e MOT-17 foram integradas
 pelos PRs #27–#30. A T3 acrescenta a API autenticada, limites operacionais e a
-distribuição segura do build React; o projeto Supabase real continua reservado aos
-gates T5/T7.
+distribuição segura do build React. O projeto Supabase real foi provisionado pelo
+responsável humano. ES256/JWKS, convite, primeira senha, recuperação de rascunho e
+POST autenticado foram confirmados contra o serviço real.
 
 Fonte de execução: [plano técnico aprovado](../superpowers/plans/2026-09-11-frontend-etapa-1-plano-tecnico.md). As três referências indicadas no plano continuam obrigatórias.
 
@@ -49,7 +50,9 @@ Fonte de execução: [plano técnico aprovado](../superpowers/plans/2026-09-11-f
 - [x] Revalidar Python 3.11 localmente: lock gerado, instalado, suíte normal e sob
   `-O` executadas com CPython 3.11.16. O CI repetirá essa evidência quando a branch
   for publicada.
-- [ ] Registrar responsável humano pelo provisionamento Supabase. Sua ausência não impede T1–T4 depois dos demais pré-requisitos, mas impede aceitar o login real na T5/T7.
+- [x] Gabriel provisionou o projeto Supabase, cadastro público/anônimo fechado,
+  redirects locais exatos, templates e chave atual ES256. URL e publishable key
+  ficam apenas na configuração local ignorada pelo Git.
 
 ## Cadastro no Linear
 
@@ -59,8 +62,8 @@ Fonte de execução: [plano técnico aprovado](../superpowers/plans/2026-09-11-f
 | T1 | [MOT-16 — Contratos, identidade e apresentação](https://linear.app/felipe-bisca/issue/MOT-16/etapa-1-t1-contratos-identidade-e-apresentacao) | Integrada pelo PR #27; contratos e gates verificados em Python 3.11/Node 24 |
 | T2 | [MOT-17 — Adaptador único e validação de publicação](https://linear.app/felipe-bisca/issue/MOT-17/etapa-1-t2-adaptador-unico-e-validacao-de-publicacao) | Integrada pelo PR #30; portão real concluído |
 | T3 | [MOT-18 — FastAPI, autenticação e mesma origem](https://linear.app/felipe-bisca/issue/MOT-18/etapa-1-t3-fastapi-autenticacao-e-mesma-origem) | Integrada pelo PR #31; CI verde |
-| T4 | [MOT-19 — Shell e componentes acessíveis](https://linear.app/felipe-bisca/issue/MOT-19/etapa-1-t4-shell-e-componentes-acessiveis) | PR #29 atualizado sobre a MOT-18; validação integrada concluída |
-| T5 | [MOT-20 — Login, convite e recuperação de rascunho](https://linear.app/felipe-bisca/issue/MOT-20/etapa-1-t5-login-convite-e-recuperacao-de-rascunho) | Backlog; bloqueada por MOT-18 e MOT-19 |
+| T4 | [MOT-19 — Shell e componentes acessíveis](https://linear.app/felipe-bisca/issue/MOT-19/etapa-1-t4-shell-e-componentes-acessiveis) | Integrada pelo PR #29 em `64bf303` |
+| T5 | [MOT-20 — Login, convite e recuperação de rascunho](https://linear.app/felipe-bisca/issue/MOT-20/etapa-1-t5-login-convite-e-recuperacao-de-rascunho) | Concluída no PR #32; gate Supabase real aprovado |
 | T6 | [MOT-21 — Cliente tipado e integração navegador–motor](https://linear.app/felipe-bisca/issue/MOT-21/etapa-1-t6-cliente-tipado-e-integracao-navegador-motor) | Backlog; bloqueada por MOT-20 |
 | T7 | [MOT-22 — Aceitação, CI e passagem para etapa 2](https://linear.app/felipe-bisca/issue/MOT-22/etapa-1-t7-aceitacao-ci-e-passagem-para-etapa-2) | Backlog; bloqueada por MOT-21 |
 
@@ -165,6 +168,29 @@ Na largura CSS de 640 px, equivalente a 200% sobre a área de 1280 px, os destin
 continuam alcançáveis e nenhum controle é cortado. Os contrastes medidos dos tokens
 reais foram: texto principal/canvas 11,80:1; texto secundário/superfície 5,87:1;
 texto da navegação/fundo 12,85:1; foco/canvas 5,77:1; borda/superfície 4,58:1.
+
+## T5 — sessão e rascunho por usuário
+
+- Cliente Supabase singleton usa somente URL e publishable key públicas, com
+  `detectSessionInUrl: false`; a sessão explícita é resolvida e sincronizada pelos
+  eventos do SDK com cleanup da inscrição.
+- Login, expiração, indisponibilidade, troca de conta e logout local têm estados
+  distintos. Logout e troca de identidade limpam o cache TanStack Query.
+- Callback aceita somente `token_hash` e `type=invite|recovery`, limpa imediatamente
+  a URL e fixa o próximo destino em `/auth/definir-senha`. O processamento é único
+  também sob `StrictMode`.
+- A senha inicial só é enviada por `updateUser` depois de uma sessão validada, exige
+  12 caracteres e preserva espaços digitados.
+- O rascunho contém somente versão, `owner_sub`, `study_id`, nome e instante. A chave
+  local é `motor-fluxo:draft:v1:<sub>`; conta diferente não lê o documento anterior,
+  JSON corrompido é preservado e falha de storage mantém o valor em memória com aviso.
+- O JWKS público real respondeu com chave `ES256`, `EC`, curva `P-256`. Login e
+  callback inválidos foram exercitados com URL limpa; convite, primeira senha, F5,
+  logout e novo login passaram no navegador real. A sessão e o exemplo privados e o
+  POST canônico passaram com token Supabase real, reproduzindo economia
+  `1026000.000000` e o SHA completo da branch.
+
+Detalhes e comandos: [registro da MOT-20](mot-20-implementacao.md).
 
 ## Arquivos preexistentes preservados
 

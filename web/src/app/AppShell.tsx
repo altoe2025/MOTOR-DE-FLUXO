@@ -1,5 +1,7 @@
 import { NavLink, Outlet } from 'react-router-dom';
 
+import { useAuth } from '../auth/AuthProvider';
+
 const destinations = [
   { to: '/carteira', label: 'Carteira' },
   { to: '/diagnostico', label: 'Diagnóstico' },
@@ -9,6 +11,7 @@ const destinations = [
 ];
 
 export function AppShell() {
+  const { userId, signOut } = useAuth();
   return (
     <div className="app-shell">
       <a className="skip-link" href="#main-content">Pular para o conteúdo</a>
@@ -28,7 +31,11 @@ export function AppShell() {
             ))}
           </ul>
         </nav>
-        <p className="session-label">Sessão local</p>
+        <div className="session-label">
+          <span>Sessão protegida</span>
+          <small title={userId ?? undefined}>Conta autenticada</small>
+          <button className="session-signout" type="button" onClick={() => void signOut()}>Sair</button>
+        </div>
       </aside>
       <section className="workspace">
         <header className="workspace-header">
