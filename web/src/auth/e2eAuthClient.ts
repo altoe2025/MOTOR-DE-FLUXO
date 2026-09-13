@@ -8,13 +8,25 @@ const session: AuthSession = Object.freeze({
   user: Object.freeze({ id: '00000000-0000-4000-8000-000000000021' }),
 });
 
-const sessionResponse = async () => ({ data: { session }, error: null });
+const expiredSession: AuthSession = Object.freeze({ ...session, expires_at: 1 });
+type StateReader = Pick<Storage, 'getItem'>;
 
-export function createE2eAuthClient(): AuthClient {
+export function createE2eAuthClient(state?: StateReader): AuthClient {
+  const reader = state ?? (typeof window === 'undefined'
+    ? { getItem: () => null }
+    : window.localStorage);
+  const isExpired = () => reader.getItem('motor-fluxo:e2e-session') === 'expired';
+  const sessionResponse = async () => ({
+    data: { session: isExpired() ? expiredSession : session },
+    error: null,
+  });
+  const refreshResponse = async () => isExpired()
+    ? { data: { session: null }, error: { message: 'controlled session expired' } }
+    : sessionResponse();
   return {
     auth: {
       getSession: sessionResponse,
-      refreshSession: sessionResponse,
+      refreshSession: refreshResponse,
       signInWithPassword: sessionResponse,
       signOut: async () => ({ error: null }),
       verifyOtp: sessionResponse,

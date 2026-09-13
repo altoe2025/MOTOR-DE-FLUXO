@@ -36,7 +36,12 @@ def adopt_request_id(request: Request, document: object) -> None:
 
 def validation_fields(error: ValidationError | RequestValidationError) -> list[dict[str, str]]:
     fields: list[dict[str, str]] = []
-    for item in error.errors(include_input=False, include_context=False):
+    safe_errors = (
+        error.errors()
+        if isinstance(error, RequestValidationError)
+        else error.errors(include_input=False, include_context=False)
+    )
+    for item in safe_errors:
         location = [str(part) for part in item.get("loc", ()) if part != "body"]
         fields.append(
             {

@@ -1,11 +1,13 @@
 # Mapa do repositório
 
-Índice para achar as coisas sem procurar. Estado de 2026-09-07.
+Índice para achar as coisas sem procurar. Estado técnico de branches atualizado em
+2026-09-13.
 
 ## Comece por aqui
 
-**Branch integrada: `main`.** A sensibilidade e o trabalho de varredura abaixo já
-foram integrados na `main`; a árvore registra a ordem histórica da pilha.
+**Branch integrada: `main` em `2953a2b`.** A sensibilidade, o fechamento funcional
+e as MOT-15–MOT-21 já foram integrados; a árvore abaixo registra apenas a ordem
+histórica da pilha de análises.
 
 ```
 main
@@ -15,8 +17,10 @@ main
              └─ analise/sensibilidade-custo    decomposição e exposição
 ```
 
-Ordem de merge concluída: #21 → #22 → #23 → #24. O PR #17 é de outro assunto,
-continua aberto e está deliberadamente separado.
+Ordem de merge da pilha concluída: #21 → #22 → #23 → #24. A fundação web foi
+integrada pelos PRs #25–#33. O PR #17 é de outro assunto, continua aberto e está
+deliberadamente separado. A MOT-22 segue na branch
+`codex/mot22-aceitacao-ci`, baseada em `2953a2b`.
 
 ```bash
 git checkout main

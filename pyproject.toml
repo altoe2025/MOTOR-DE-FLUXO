@@ -28,6 +28,10 @@ web-dev = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 
+[[tool.mypy.overrides]]
+module = ["motor", "motor.*"]
+follow_imports = "skip"
+
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"

@@ -157,6 +157,33 @@ def test_rejeita_algoritmo_e_urls_de_chave_indicados_pelo_token(keys):
     assert chamadas == 0
 
 
+def test_rejeita_token_sem_assinatura_sem_consultar_jwks(keys):
+    chamadas = 0
+
+    def responder(request):
+        nonlocal chamadas
+        chamadas += 1
+        return httpx.Response(500)
+
+    unsigned = jwt.encode(
+        {
+            "iss": ISSUER,
+            "aud": "authenticated",
+            "sub": str(USER_ID),
+            "role": "authenticated",
+            "iat": int(NOW.timestamp()),
+            "exp": int((NOW + timedelta(minutes=15)).timestamp()),
+        },
+        key="",
+        algorithm="none",
+        headers={"kid": "key-1"},
+    )
+
+    with pytest.raises(SessionInvalid):
+        verifier(keys, responder).verify(unsigned)
+    assert chamadas == 0
+
+
 def test_indisponibilidade_sem_cache_valido_retorna_auth_indisponivel(keys):
     private, _ = keys
 

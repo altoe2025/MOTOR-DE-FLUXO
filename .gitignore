@@ -1,9 +1,11 @@
 __pycache__/
 *.pyc
 .pytest_cache/
+.tmp/
 .venv*/
 .wheel-test*/
 build/
+dist/
 .worktrees/
 *.csv
 *.egg-info/
@@ -13,4 +15,6 @@ build/
 web/node_modules/
 web/dist/
 web/coverage/
+web/test-results/
+web/playwright-report/
 *.tsbuildinfo

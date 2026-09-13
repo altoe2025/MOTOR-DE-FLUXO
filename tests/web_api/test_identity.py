@@ -64,6 +64,27 @@ def test_build_changes_identity(reference_payload):
     assert execution_fingerprint(value, BUILD) != execution_fingerprint(value, "b" * 40)
 
 
+@pytest.mark.parametrize(
+    "mutation",
+    ["window", "cost", "legacy_to_natural"],
+)
+def test_scenario_and_temporal_policy_change_execution_identity(reference_payload, mutation):
+    changed = deepcopy(reference_payload)
+    if mutation == "window":
+        changed["cenario"]["janela_dias"] = 2
+    elif mutation == "cost":
+        changed["cenario"]["custo"]["spread_rail_bps"] = "26"
+    else:
+        changed["periodo"] = {
+            "modo": "NATURAL",
+            "dias_aquecimento": 0,
+            "periodo_medicao_dias": 1,
+        }
+    assert execution_fingerprint(
+        request(reference_payload), BUILD
+    ) != execution_fingerprint(request(changed), BUILD)
+
+
 def test_source_changes_only_evidence_identity(reference_payload):
     changed = deepcopy(reference_payload)
     changed["proveniencia"]["/ordens/0/valor_brl"]["fonte"] = "Estimativa revista"
