@@ -33,12 +33,12 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-09-12, depois da integração da base e da preparação do PR da
-fundação de contratos da etapa 1 do front-end.
+Atualizada em 2026-09-13, depois da integração da MOT-18 e da atualização da MOT-19
+sobre a nova base.
 
 | Branch | Situação | Dono |
 |---|---|---|
-| `main` | MOT-15 e MOT-16 integradas até o PR #27 (`d2a261b`), 558 testes passando | os dois |
+| `main` | MOT-15–MOT-18 integradas até o PR #31 (`d6d488e`), 627 testes passando | os dois |
 | `netting/p1` | spike do P1, **NÃO MERGEAR** — dominado, e agora sabemos que a folga é zero em N ≥ 50. Só local, nunca foi pro GitHub | Felipe |
 | `fix/semantica-remessa-p0` | PR #11, mergeada | Felipe |
 | `fix/previsao-temporal-e-colunas-csv` | PR #12, mergeada | Gabriel |
@@ -54,14 +54,41 @@ fundação de contratos da etapa 1 do front-end.
 | `codex/frontend-base-docs` | PR #25, design, ambiente e planejamento da etapa 1 mergeados | Codex |
 | `codex/fechamento-funcional-integracao` | PR #26, fechamento funcional mergeado após 504 testes e CI verde | Codex |
 | `codex/mot16-contratos` | PR #27 mergeada; contratos HTTP, identidade, apresentação, locks e CI corrigido | Codex |
-| `feat/mot19-shell-acessivel` | shell T4 e componentes acessíveis prontos para PR contra `main` | Codex |
+| `codex/mot17-adaptador` | MOT-17 entregue pelo PR #30; implementação e verificação local concluídas | Codex |
+| `codex/mot18-api` | MOT-18 integrada pelo PR #31, CI verde | Codex |
+| `feat/mot19-shell-acessivel` | PR #29 atualizado sobre a MOT-18; shell e componentes preservam o proxy da API | Codex |
 
-Essa pilha e a MOT-16 foram integradas na `main` pelos PRs #21–#27. O PR #17 continua aberto e
+Essa pilha e as MOT-16–MOT-18 foram integradas na `main` pelos PRs #21–#31. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
 ---
+
+## 2026-09-13 — Shell acessível atualizado sobre a API da etapa 1 (MOT-19)
+
+1. **Sintoma.** O PR #29 continha o shell e os componentes acessíveis, mas havia sido
+   aberto antes das MOT-17 e MOT-18 e passou a conflitar com a `main`, inclusive na
+   configuração do Vite.
+
+2. **Causa.** T3 e T4 avançaram em paralelo a partir da fundação comum. Ambas
+   precisavam acrescentar `web/vite.config.ts`: T3 para o proxy da API e T4 para
+   React e a preparação do Vitest.
+
+3. **O que foi feito.** A branch `feat/mot19-shell-acessivel` incorporou a `main` no
+   commit `d6d488e`. A resolução preserva `plugins: [react()]`, o setup do Vitest e
+   o proxy relativo `/api` para `127.0.0.1:8000`. O smoke do build real detectou que
+   o cache da T3 não reconhecia nomes Vite como `index-B6xOV8Ew.js`; a configuração
+   agora gera o manifesto Vite, e o FastAPI concede cache imutável somente aos assets
+   declarados nele, sem confundir nomes descritivos. A documentação da T4 foi
+   combinada com os registros de T2/T3. Passaram 632 testes Python normais e
+   sob `-O`, 31 testes Vitest, typecheck, ESLint, build e o smoke das cinco rotas pelo
+   FastAPI. Nenhum arquivo em `motor/` foi alterado pela T4.
+
+4. **O que isso invalida.** Invalida o estado anterior do PR #29 como conflitante e
+   a configuração Vite que continha apenas React/Vitest e a heurística de cache que
+   não distinguia com segurança bundles Vite de nomes descritivos. Não altera contratos,
+   autenticação, resultados ou números do motor.
 
 ## 2026-09-12 — Shell acessível da etapa 1 do front-end (MOT-19)
 
@@ -91,6 +118,60 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
    navegável ou base visual acessível. Não invalida qualquer número, cenário,
    varredura, contrato canônico ou resultado do motor; autenticação e execução real
    continuam fora desta entrega.
+
+## 2026-09-12 — API autenticada e mesma origem da etapa 1 (MOT-18)
+
+1. **Sintoma.** O adaptador real já produzia um resultado publicável, mas não havia
+   fronteira HTTP autenticada, limite de capacidade ou distribuição segura do build
+   React na mesma origem.
+
+2. **Causa.** Faltavam configuração validada, verificação local dos access tokens
+   Supabase, política de cache/rotação JWKS, rotas FastAPI, envelope uniforme de
+   erros, limites de transporte e fallback explícito das rotas da SPA.
+
+3. **O que foi feito.** Na branch `codex/mot18-api`, `servidor.app:create_app`
+   expõe health público e protege sessão, exemplo e prévia. O verificador aceita
+   somente ES256, issuer e audience exatos, claims temporais válidos, role
+   `authenticated`, UUID autorizado e usuário não anônimo; JWKS usa cache de cinco
+   minutos, timeout de cinco segundos e trava na rotação. A API limita corpo a
+   1 MiB, resposta a 8 MiB e execução a uma prévia, fora do event loop. Estáticos só
+   servem assets e rotas conhecidas contidas em `WEB_DIST_DIR`; o Vite encaminha
+   `/api` para o servidor local. Passaram 627 testes normais e sob `-O`, Ruff, mypy do servidor,
+   15 testes Vitest, typecheck, wheel instalada e regeneração determinística dos
+   contratos. Nenhum arquivo em `motor/` mudou.
+
+4. **O que isso invalida.** Invalida execução da prévia por uma rota sem sessão,
+   fallback genérico de SPA, CORS curinga e operação com múltiplos workers nesta
+   etapa. Não altera regras, resultados, varreduras ou números do motor. O projeto
+   Supabase real continua pendente e será validado nos gates T5/T7.
+
+## 2026-09-12 — Adaptador e portão de publicação da etapa 1 (MOT-17)
+
+1. **Sintoma.** Os contratos HTTP existiam, mas nenhuma fronteira executava a prévia
+   pelo motor nem impedia a publicação de um resultado corrompido, parcial ou com
+   identidade divergente.
+
+2. **Causa.** Faltavam a tradução única de DTOs para o domínio, o uso controlado da
+   API pública `motor.analise`, a validação independente das alocações e uma fixture
+   de resposta produzida pela execução real.
+
+3. **O que foi feito.** Na branch `codex/mot17-adaptador`, entregue pelo PR #30,
+   `motor_adapter.py`
+   constrói `ParametrosCusto`, `Ordem` e `Cenario`, executa uma análise `AGREGADO`,
+   preserva os modos `LEGADO`/`NATURAL` e monta o envelope apenas depois do portão.
+   `publication.py` valida decimais, referências, dias, conservação exata no objeto
+   e no JSON, coorte medida, taxa e identidade reconstruída do manifesto. A fixture
+   `contracts/fixtures/reference-result.json` é reproduzível por
+   `python -m servidor.generate_reference_result`. Passaram 575 testes normais, 575
+   sob `-O`, Ruff e mypy isolado de `servidor`; nenhum arquivo em `motor/` mudou. O
+   gerador lê a versão do `pyproject.toml`, mantendo a fixture idêntica mesmo quando
+   o checkout do CI ainda não está instalado como distribuição.
+
+4. **O que isso invalida.** Invalida fixtures de resposta inventadas manualmente e
+   qualquer integração que publique diretamente o retorno analítico sem o portão.
+   Não altera resultados, regras, varreduras ou números de aceitação do motor.
+
+---
 
 ## 2026-09-12 — Contratos, identidade e apresentação da etapa 1 (MOT-16)
 

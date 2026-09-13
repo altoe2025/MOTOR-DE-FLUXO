@@ -10,7 +10,7 @@
 
 **Spec:** [design aprovado](../specs/2026-09-11-frontend-motor-de-fluxo-design.md), [plano geral e distribuição de modelos](2026-09-11-frontend-plano-geral-execucao-modelos.md), [ambiente e workflow](2026-09-11-frontend-ambiente-e-workflow.md).
 
-**Status:** aprovado por Gabriel nesta conversa. T0–T7 foram cadastradas no Linear (workspace Felipe Bisca, time MOTOR DE FLUXO) como MOT-15–MOT-22, com as dependências nativas configuradas. A MOT-15 foi integrada na `main` pelos PRs #21–#26, commit `1aecc57`, confirmou os contratos públicos e passou o baseline. A MOT-16 foi integrada pelo PR #27, commit `d2a261b`, com a fundação de contratos e CI verde. Projeto Supabase ainda não provisionado. A autorização de cadastro das tarefas é específica; não autoriza criar conta, projeto Supabase, convites ou infraestrutura automaticamente.
+**Status:** aprovado por Gabriel nesta conversa. T0–T7 foram cadastradas no Linear (workspace Felipe Bisca, time MOTOR DE FLUXO) como MOT-15–MOT-22, com as dependências nativas configuradas. T0–T2 foram integradas na `main` até o PR #30, commit `21f0ce3`. A MOT-18/T3 está implementada na branch `codex/mot18-api`, aguardando revisão e CI. Projeto Supabase ainda não provisionado. A autorização de cadastro das tarefas é específica; não autoriza criar conta, projeto Supabase, convites ou infraestrutura automaticamente.
 
 ## 1. Restrições globais
 
@@ -461,8 +461,8 @@ it('preserva precisão e explicita unidade', () => {
 
 **Consome:** `PreviaRequest` e identidade. **Produz:** `executar_previa(request, *, build_sha, relogio) -> PreviewEnvelope`; `validar_publicacao(...)` da seção 5.7. Relógio injetável para teste. `uuid4` e relógio pertencem ao servidor; nada de I/O dentro do motor.
 
-- [ ] Escrever teste de equivalência entre chamada direta a `analisar` e envelope, usando a mesma entrada e relógio fixo.
-- [ ] Escrever o teste de aceitação em BRL e USD abaixo; verificar que ele falha porque o adaptador não existe.
+- [x] Escrever teste de equivalência entre chamada direta a `analisar` e envelope, usando a mesma entrada e relógio fixo.
+- [x] Escrever o teste de aceitação em BRL e USD abaixo; verificar que ele falha porque o adaptador não existe.
 
 ```python
 def test_previa_preserva_aceitacao(reference_request, clock):
@@ -477,11 +477,11 @@ def test_previa_preserva_aceitacao(reference_request, clock):
     assert a.volume_remetido_periodo_brl == Decimal("37800000")
 ```
 
-- [ ] Construir `ParametrosCusto`, `Ordem`, `Cenario` e manifesto com os campos da seção 5.5; executar `AGREGADO`. `LEGADO` passa `configuracao_temporal=None`; `NATURAL` passa a configuração pública e valida horizonte real após preparação.
-- [ ] Serializar pelo método público, validar schema, conservar e então montar envelope. Não expor resultados por cliente do fechamento, mesmo que disponíveis em outros modos.
-- [ ] Acrescentar casos: vazio, uma direção, duas direções balanceadas, cobertura parcial, prazo além da medição, aquecimento e campos corrompidos depois de serializar.
-- [ ] Gerar fixture `reference-result.json` pelo adaptador com relógio/UUID de teste controlados; testes da UI passam a usar esse resultado, nunca um objeto inventado.
-- [ ] Rodar testes focalizados e a suíte do motor da base, verificar `git diff -- motor` vazio e registrar commit/Diário.
+- [x] Construir `ParametrosCusto`, `Ordem`, `Cenario` e manifesto com os campos da seção 5.5; executar `AGREGADO`. `LEGADO` passa `configuracao_temporal=None`; `NATURAL` passa a configuração pública e valida horizonte real após preparação.
+- [x] Serializar pelo método público, validar schema, conservar e então montar envelope. Não expor resultados por cliente do fechamento, mesmo que disponíveis em outros modos.
+- [x] Acrescentar casos: vazio, uma direção, duas direções balanceadas, cobertura parcial, prazo além da medição, aquecimento e campos corrompidos depois de serializar.
+- [x] Gerar fixture `reference-result.json` pelo adaptador com relógio/UUID de teste controlados; testes da UI passam a usar esse resultado, nunca um objeto inventado.
+- [x] Rodar testes focalizados e a suíte do motor da base, verificar `git diff -- motor` vazio e registrar commit/Diário.
 
 **Gate:** resultado do adaptador igual ao motor; corrupção bloqueia publicação. Baseline de aceitação é R$ 2.370.600,00 = US$ 439.000,00; netado R$ 1.344.600,00 = US$ 249.000,00; economia R$ 1.026.000,00 = US$ 190.000,00; taxa formatada 58,82%.
 
@@ -491,8 +491,8 @@ def test_previa_preserva_aceitacao(reference_request, clock):
 
 **Interfaces:** `create_app(settings: Settings | None = None, verifier: TokenVerifier | None = None) -> FastAPI`; `TokenVerifier.verify(token: str) -> AuthenticatedUser`; `AuthenticatedUser(user_id: UUID)`. Implementação real default é JWKS; testes podem injetar verificador, sem parâmetro controlável pelo request. `require_user` é dependência das três rotas privadas.
 
-- [ ] Escrever testes de ausência de Bearer, assinatura errada, token expirado, issuer/audience incorretos, UUID não permitido e serviço JWKS indisponível. Tokens de teste são assinados com chave temporária local; não usar token real em fixture.
-- [ ] Verificar que o adaptador não foi chamado quando a autenticação falha:
+- [x] Escrever testes de ausência de Bearer, assinatura errada, token expirado, issuer/audience incorretos, UUID não permitido e serviço JWKS indisponível. Tokens de teste são assinados com chave temporária local; não usar token real em fixture.
+- [x] Verificar que o adaptador não foi chamado quando a autenticação falha:
 
 ```python
 def test_unauthenticated_does_not_run(client, reference_payload, adapter_spy):
@@ -501,12 +501,12 @@ def test_unauthenticated_does_not_run(client, reference_payload, adapter_spy):
     adapter_spy.assert_not_called()
 ```
 
-- [ ] Implementar Settings, JWKS e allowlist conforme 4.3, health/session e erros sanitizados. Validar configuração inconsistente no startup; não registrar Authorization, URL com token ou corpo.
-- [ ] Implementar GET do exemplo fixo e POST limitado. Verificar 429 com primeira execução mantida por barreira de teste; verificar liberação depois de sucesso e erro.
-- [ ] Implementar estáticos só para `assets` e fallback de rotas conhecidas da SPA. Caminhos resolvidos devem permanecer em `WEB_DIST_DIR`; `/api/*`, `/assets/ausente.js` e tentativas `../` não retornam index.html. `index.html` sem cache duradouro; assets com hash podem ter cache imutável.
-- [ ] Configurar Vite dev proxy de `/api` para `127.0.0.1:8000`; API do cliente é sempre relativa. Sem CORS curinga. Produção não precisa de CORS para navegador da mesma origem.
-- [ ] Rodar integração via HTTP com JSON efetivo, não só construção Python. Contratos errados geram o código previsto. Confirmar health responde durante cálculo e expirado não executa.
-- [ ] Rodar testes de pacote instalado e rotas estáticas; registrar verificação e commit/Diário.
+- [x] Implementar Settings, JWKS e allowlist conforme 4.3, health/session e erros sanitizados. Validar configuração inconsistente no startup; não registrar Authorization, URL com token ou corpo.
+- [x] Implementar GET do exemplo fixo e POST limitado. Verificar 429 com primeira execução mantida por barreira de teste; verificar liberação depois de sucesso e erro.
+- [x] Implementar estáticos só para `assets` e fallback de rotas conhecidas da SPA. Caminhos resolvidos devem permanecer em `WEB_DIST_DIR`; `/api/*`, `/assets/ausente.js` e tentativas `../` não retornam index.html. `index.html` sem cache duradouro; assets com hash podem ter cache imutável.
+- [x] Configurar Vite dev proxy de `/api` para `127.0.0.1:8000`; API do cliente é sempre relativa. Sem CORS curinga. Produção não precisa de CORS para navegador da mesma origem.
+- [x] Rodar integração via HTTP com JSON efetivo, não só construção Python. Contratos errados geram o código previsto. Confirmar health responde durante cálculo e expirado não executa.
+- [x] Rodar testes de pacote instalado e rotas estáticas; registrar verificação e commit/Diário.
 
 **Gate:** nenhuma análise sem sessão válida; não há bypass; rotas profundas e API coexistem. Supabase real ainda é gate separado da T5/T7.
 
@@ -516,9 +516,9 @@ def test_unauthenticated_does_not_run(client, reference_payload, adapter_spy):
 
 **Interfaces:** `AppShell` recebe rotas filhas; cinco destinos fixos. `ComparisonSummary` e `CostTable` recebem somente campos já validados do envelope e chamam formatadores; não computam economia.
 
-- [ ] Completar projeto Vite React TS, `strict: true`, scripts da seção 10 e lock npm. Mantê-lo em `web/`, sem scaffolding na raiz Python.
-- [ ] Registrar composição da seção 6 na documentação operacional, com screenshot de login e shell em desktop produzido durante implementação.
-- [ ] Escrever teste de cinco destinos e estado ativo; criar router declarativo. Rotas: `/login`, `/auth/callback`, `/auth/definir-senha`, `/carteira`, `/diagnostico`, `/comparar`, `/replay`, `/premissas`. Raiz redireciona para Carteira depois de resolver sessão.
+- [x] Completar projeto Vite React TS, `strict: true`, scripts da seção 10 e lock npm. Mantê-lo em `web/`, sem scaffolding na raiz Python.
+- [x] Registrar composição da seção 6 na documentação operacional, com screenshot de login e shell em desktop produzido durante implementação.
+- [x] Escrever teste de cinco destinos e estado ativo; criar router declarativo. Rotas: `/login`, `/auth/callback`, `/auth/definir-senha`, `/carteira`, `/diagnostico`, `/comparar`, `/replay`, `/premissas`. Raiz redireciona para Carteira depois de resolver sessão.
 
 ```typescript
 it('identifica o destino atual sem esconder os demais', () => {
@@ -531,10 +531,10 @@ it('identifica o destino atual sem esconder os demais', () => {
 
 `renderShellAt(path)` é helper de teste com MemoryRouter e provedores controlados, criado no próprio arquivo de teste; não requer sessão Supabase real.
 
-- [ ] Implementar tokens, UI nativa e estados vazios. Não usar arquivos `fluxo-cambio.html` ou dashboard externo como fonte.
-- [ ] Adicionar testes de label/erro/foco, teclado no tooltip e mensagens de execução; nenhum campo fica somente com placeholder.
-- [ ] Inspecionar desktop e zoom, medir contraste e corrigir tokens reais. Usar screenshot como evidência visual; não aprovar layout só porque compilou.
-- [ ] Rodar Vitest, typecheck, lint e build; registrar screenshots e commit/Diário.
+- [x] Implementar tokens, UI nativa e estados vazios. Não usar arquivos `fluxo-cambio.html` ou dashboard externo como fonte.
+- [x] Adicionar testes de label/erro/foco, teclado no tooltip e mensagens de execução; nenhum campo fica somente com placeholder.
+- [x] Inspecionar desktop e zoom, medir contraste e corrigir tokens reais. Usar screenshot como evidência visual; não aprovar layout só porque compilou.
+- [x] Rodar Vitest, typecheck, lint e build; registrar screenshots e commit/Diário.
 
 **Gate:** navegação utilizável e composição aprovada dentro do design; ausência de funcionalidades não é apresentada como análise concluída.
 
@@ -741,7 +741,7 @@ Consultadas em 2026-09-11; sustentam mecanismos de biblioteca, não substituem d
 - [Supabase — usuários e convites](https://supabase.com/docs/guides/auth/users), [senha](https://supabase.com/docs/guides/auth/passwords), [templates de e-mail](https://supabase.com/docs/guides/auth/auth-email-templates) e [verifyOtp](https://supabase.com/docs/reference/javascript/auth-verifyotp): fluxo de acesso e callbacks controlados.
 - [FastAPI — lifespan](https://fastapi.tiangolo.com/advanced/events/) e [estáticos](https://fastapi.tiangolo.com/tutorial/static-files/): lifecycle de recursos e montagem de assets; fallback SPA e separação `/api` são responsabilidade da aplicação.
 
-**Próximo passo de execução:** iniciar MOT-17/T2 em worktree própria baseada na
-`main`, consumindo os contratos fechados. T4 também está liberada,
+**Próximo passo de execução:** integrar MOT-17/T2 e iniciar MOT-18/T3 em worktree
+própria baseada na `main`. T4 também está liberada,
 mas não há necessidade de execução simultânea. O cadastro não cria automaticamente
 projeto Supabase, convites ou infraestrutura.

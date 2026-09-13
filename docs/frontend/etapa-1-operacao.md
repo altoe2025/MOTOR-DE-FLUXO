@@ -2,13 +2,14 @@
 
 ## Estado
 
-T0 e T1 estão **integradas na `main`**. As oito tarefas foram
+T0–T3 estão **integradas na `main`** até o PR #31, commit `d6d488e`; T4 está no
+PR #29, atualizado sobre essa base. As oito tarefas foram
 cadastradas como MOT-15–MOT-22 no workspace **Felipe Bisca**, time
 **MOTOR DE FLUXO**, com as dependências nativas do plano. A base integrada foi
-publicada pelos PRs #21–#26 no commit `1aecc57`; a MOT-16 foi integrada pelo PR #27,
-levando a `main` a `d2a261b`. A T1 acrescenta contratos, identidade,
-apresentação, geração e locks; não executa o adaptador T2, autenticação/API funcional
-T3 ou interface T4.
+publicada pelos PRs #21–#26 no commit `1aecc57`; MOT-16 e MOT-17 foram integradas
+pelos PRs #27–#30. A T3 acrescenta a API autenticada, limites operacionais e a
+distribuição segura do build React; o projeto Supabase real continua reservado aos
+gates T5/T7.
 
 Fonte de execução: [plano técnico aprovado](../superpowers/plans/2026-09-11-frontend-etapa-1-plano-tecnico.md). As três referências indicadas no plano continuam obrigatórias.
 
@@ -56,9 +57,9 @@ Fonte de execução: [plano técnico aprovado](../superpowers/plans/2026-09-11-f
 |---|---|---|
 | T0 | [MOT-15 — Confirmar base Git e pré-requisitos](https://linear.app/felipe-bisca/issue/MOT-15/etapa-1-t0-confirmar-base-git-e-pre-requisitos) | Concluída; base integrada e baseline verificados |
 | T1 | [MOT-16 — Contratos, identidade e apresentação](https://linear.app/felipe-bisca/issue/MOT-16/etapa-1-t1-contratos-identidade-e-apresentacao) | Integrada pelo PR #27; contratos e gates verificados em Python 3.11/Node 24 |
-| T2 | [MOT-17 — Adaptador único e validação de publicação](https://linear.app/felipe-bisca/issue/MOT-17/etapa-1-t2-adaptador-unico-e-validacao-de-publicacao) | Backlog; liberada pela conclusão de MOT-16 |
-| T3 | [MOT-18 — FastAPI, autenticação e mesma origem](https://linear.app/felipe-bisca/issue/MOT-18/etapa-1-t3-fastapi-autenticacao-e-mesma-origem) | Backlog; bloqueada por MOT-17 |
-| T4 | [MOT-19 — Shell e componentes acessíveis](https://linear.app/felipe-bisca/issue/MOT-19/etapa-1-t4-shell-e-componentes-acessiveis) | Pronta para revisão em PR; depende apenas da MOT-16 |
+| T2 | [MOT-17 — Adaptador único e validação de publicação](https://linear.app/felipe-bisca/issue/MOT-17/etapa-1-t2-adaptador-unico-e-validacao-de-publicacao) | Integrada pelo PR #30; portão real concluído |
+| T3 | [MOT-18 — FastAPI, autenticação e mesma origem](https://linear.app/felipe-bisca/issue/MOT-18/etapa-1-t3-fastapi-autenticacao-e-mesma-origem) | Integrada pelo PR #31; CI verde |
+| T4 | [MOT-19 — Shell e componentes acessíveis](https://linear.app/felipe-bisca/issue/MOT-19/etapa-1-t4-shell-e-componentes-acessiveis) | PR #29 atualizado sobre a MOT-18; validação integrada concluída |
 | T5 | [MOT-20 — Login, convite e recuperação de rascunho](https://linear.app/felipe-bisca/issue/MOT-20/etapa-1-t5-login-convite-e-recuperacao-de-rascunho) | Backlog; bloqueada por MOT-18 e MOT-19 |
 | T6 | [MOT-21 — Cliente tipado e integração navegador–motor](https://linear.app/felipe-bisca/issue/MOT-21/etapa-1-t6-cliente-tipado-e-integracao-navegador-motor) | Backlog; bloqueada por MOT-20 |
 | T7 | [MOT-22 — Aceitação, CI e passagem para etapa 2](https://linear.app/felipe-bisca/issue/MOT-22/etapa-1-t7-aceitacao-ci-e-passagem-para-etapa-2) | Backlog; bloqueada por MOT-21 |
@@ -80,15 +81,54 @@ Dependências nativas verificadas: T1 depende de T0; T2 de T1; T3 de T2; T4 de T
 
 Detalhes, decisões e comandos: [registro da MOT-16](mot-16-implementacao.md).
 
+## T2 — evidência operacional
+
+- [x] Adaptador único constrói o domínio diretamente dos DTOs e chama `analisar`
+  uma vez, somente em modo `AGREGADO` e pelas interfaces públicas do motor.
+- [x] Modos `LEGADO` e `NATURAL` preservam horizonte, aquecimento, coorte medida e
+  liquidação posterior à medição.
+- [x] Portão independente valida finitude, referências, dias, tipos, conservação
+  exata por ordem/global/coorte, volumes medidos, taxa, identidade do manifesto e
+  roundtrip do JSON canônico.
+- [x] Fixture `reference-result.json` é gerada pelo adaptador real com relógio,
+  UUID e SHA controlados e reproduz os números de aceitação.
+- [x] Passaram 575 testes normais, 575 sob `python -O`, Ruff e mypy isolado da
+  camada `servidor`; `git diff -- motor` permaneceu vazio. O mypy integral ainda
+  atravessa imports e encontra 31 apontamentos preexistentes em `motor/analise`.
+
+Detalhes, decisões e comandos: [registro da MOT-17](mot-17-implementacao.md).
+
+## T3 — evidência operacional
+
+- [x] Factory FastAPI real com health público e session, exemplo e prévia protegidos
+  por Bearer verificado no servidor.
+- [x] Verificador ES256/JWKS valida emissor, audience exata, tempo, UUID, role e
+  allowlist; cache de cinco minutos, timeout de cinco segundos e atualização de
+  `kid` desconhecido são protegidos por trava.
+- [x] Corpo limitado a 1 MiB antes do parse, contratos limitam 1.000 ordens, uma
+  prévia executa por vez e resposta acima de 8 MiB falha sem truncar.
+- [x] Build React é servido somente nas rotas SPA conhecidas; API, assets ausentes,
+  traversal e links resolvidos para fora do dist nunca recebem `index.html`.
+- [x] Proxy Vite relativo `/api` aponta para `127.0.0.1:8000`; não há CORS curinga.
+- [x] Passaram 627 testes Python normais e sob `-O`, Ruff, mypy da camada `servidor`, 15 testes
+  Vitest, typecheck, wheel instalada fora do checkout e regeneração determinística
+  dos quatro artefatos de contrato. Dois testes de symlink foram ignorados porque o
+  Windows deste ambiente não permite criá-los; a contenção também é verificada em
+  produção antes de servir cada caminho.
+
+Detalhes, configuração e comandos: [registro da MOT-18](mot-18-implementacao.md).
+
 ## T4 — shell, tokens e componentes acessíveis
 
-Implementado na branch `feat/mot19-shell-acessivel`, baseada em `main` no commit
-`e2eef656812de835924c10d35a233d303a53195f`. A entrega mantém o escopo de T4:
+Implementado na branch `feat/mot19-shell-acessivel` e atualizado sobre `main` no
+commit `d6d488ee060a0d58ef2a3f0802ee442f505fd10b`. A entrega mantém o escopo de T4:
 não faz autenticação Supabase, chamadas ao adaptador/motor, IndexedDB, gráficos,
 replay funcional ou mudanças em `motor/`.
 
 - O bootstrap Vite/React/TypeScript estrito está em `web/`, com scripts `dev`,
   `build`, `typecheck`, `lint` e `test:unit`.
+- A configuração integrada preserva React, setup do Vitest e proxy relativo `/api`
+  para o FastAPI em `127.0.0.1:8000`.
 - `AppShell` entrega navegação vertical de 224 px, skip link, estado ativo com
   `aria-current`, cabeçalho do estudo e cinco destinos vazios: Carteira,
   Diagnóstico, Comparar cenários, Replay e Dados e premissas.
@@ -103,6 +143,10 @@ replay funcional ou mudanças em `motor/`.
 - Os testes cobrem rotas, destino ativo, labels/erros, foco após navegação, teclado
   no tooltip e estados `aria-busy`/`alert`. Nenhum campo depende exclusivamente de
   placeholder.
+- A validação integrada passou com 632 testes Python normais e sob `-O`, 31 testes
+  Vitest, typecheck, ESLint e build. O build real foi servido pelo FastAPI nas cinco
+  rotas profundas; somente os bundles declarados no manifesto Vite recebem cache
+  imutável, enquanto nomes descritivos permanecem com `no-cache`.
 
 ### Evidência visual
 
