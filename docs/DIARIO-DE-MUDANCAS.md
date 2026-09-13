@@ -33,12 +33,12 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-09-12, depois da integração da base e da preparação do PR da
-fundação de contratos da etapa 1 do front-end.
+Atualizada em 2026-09-12, depois da implementação local do adaptador e do portão de
+publicação da etapa 1 do front-end.
 
 | Branch | Situação | Dono |
 |---|---|---|
-| `main` | MOT-15 e MOT-16 integradas até o PR #27 (`d2a261b`), 558 testes passando | os dois |
+| `main` | MOT-15 e MOT-16 integradas até o PR #28 (`e2eef65`), 558 testes passando | os dois |
 | `netting/p1` | spike do P1, **NÃO MERGEAR** — dominado, e agora sabemos que a folga é zero em N ≥ 50. Só local, nunca foi pro GitHub | Felipe |
 | `fix/semantica-remessa-p0` | PR #11, mergeada | Felipe |
 | `fix/previsao-temporal-e-colunas-csv` | PR #12, mergeada | Gabriel |
@@ -54,11 +54,40 @@ fundação de contratos da etapa 1 do front-end.
 | `codex/frontend-base-docs` | PR #25, design, ambiente e planejamento da etapa 1 mergeados | Codex |
 | `codex/fechamento-funcional-integracao` | PR #26, fechamento funcional mergeado após 504 testes e CI verde | Codex |
 | `codex/mot16-contratos` | PR #27 mergeada; contratos HTTP, identidade, apresentação, locks e CI corrigido | Codex |
+| `codex/mot17-adaptador` | MOT-17 entregue pelo PR #30; implementação e verificação local concluídas | Codex |
 
-Essa pilha e a MOT-16 foram integradas na `main` pelos PRs #21–#27. O PR #17 continua aberto e
+Essa pilha e a MOT-16 foram integradas na `main` pelos PRs #21–#28. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+---
+
+## 2026-09-12 — Adaptador e portão de publicação da etapa 1 (MOT-17)
+
+1. **Sintoma.** Os contratos HTTP existiam, mas nenhuma fronteira executava a prévia
+   pelo motor nem impedia a publicação de um resultado corrompido, parcial ou com
+   identidade divergente.
+
+2. **Causa.** Faltavam a tradução única de DTOs para o domínio, o uso controlado da
+   API pública `motor.analise`, a validação independente das alocações e uma fixture
+   de resposta produzida pela execução real.
+
+3. **O que foi feito.** Na branch `codex/mot17-adaptador`, entregue pelo PR #30,
+   `motor_adapter.py`
+   constrói `ParametrosCusto`, `Ordem` e `Cenario`, executa uma análise `AGREGADO`,
+   preserva os modos `LEGADO`/`NATURAL` e monta o envelope apenas depois do portão.
+   `publication.py` valida decimais, referências, dias, conservação exata no objeto
+   e no JSON, coorte medida, taxa e identidade reconstruída do manifesto. A fixture
+   `contracts/fixtures/reference-result.json` é reproduzível por
+   `python -m servidor.generate_reference_result`. Passaram 575 testes normais, 575
+   sob `-O`, Ruff e mypy isolado de `servidor`; nenhum arquivo em `motor/` mudou. O
+   gerador lê a versão do `pyproject.toml`, mantendo a fixture idêntica mesmo quando
+   o checkout do CI ainda não está instalado como distribuição.
+
+4. **O que isso invalida.** Invalida fixtures de resposta inventadas manualmente e
+   qualquer integração que publique diretamente o retorno analítico sem o portão.
+   Não altera resultados, regras, varreduras ou números de aceitação do motor.
 
 ---
 

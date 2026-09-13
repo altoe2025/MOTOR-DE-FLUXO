@@ -461,8 +461,8 @@ it('preserva precisão e explicita unidade', () => {
 
 **Consome:** `PreviaRequest` e identidade. **Produz:** `executar_previa(request, *, build_sha, relogio) -> PreviewEnvelope`; `validar_publicacao(...)` da seção 5.7. Relógio injetável para teste. `uuid4` e relógio pertencem ao servidor; nada de I/O dentro do motor.
 
-- [ ] Escrever teste de equivalência entre chamada direta a `analisar` e envelope, usando a mesma entrada e relógio fixo.
-- [ ] Escrever o teste de aceitação em BRL e USD abaixo; verificar que ele falha porque o adaptador não existe.
+- [x] Escrever teste de equivalência entre chamada direta a `analisar` e envelope, usando a mesma entrada e relógio fixo.
+- [x] Escrever o teste de aceitação em BRL e USD abaixo; verificar que ele falha porque o adaptador não existe.
 
 ```python
 def test_previa_preserva_aceitacao(reference_request, clock):
@@ -477,11 +477,11 @@ def test_previa_preserva_aceitacao(reference_request, clock):
     assert a.volume_remetido_periodo_brl == Decimal("37800000")
 ```
 
-- [ ] Construir `ParametrosCusto`, `Ordem`, `Cenario` e manifesto com os campos da seção 5.5; executar `AGREGADO`. `LEGADO` passa `configuracao_temporal=None`; `NATURAL` passa a configuração pública e valida horizonte real após preparação.
-- [ ] Serializar pelo método público, validar schema, conservar e então montar envelope. Não expor resultados por cliente do fechamento, mesmo que disponíveis em outros modos.
-- [ ] Acrescentar casos: vazio, uma direção, duas direções balanceadas, cobertura parcial, prazo além da medição, aquecimento e campos corrompidos depois de serializar.
-- [ ] Gerar fixture `reference-result.json` pelo adaptador com relógio/UUID de teste controlados; testes da UI passam a usar esse resultado, nunca um objeto inventado.
-- [ ] Rodar testes focalizados e a suíte do motor da base, verificar `git diff -- motor` vazio e registrar commit/Diário.
+- [x] Construir `ParametrosCusto`, `Ordem`, `Cenario` e manifesto com os campos da seção 5.5; executar `AGREGADO`. `LEGADO` passa `configuracao_temporal=None`; `NATURAL` passa a configuração pública e valida horizonte real após preparação.
+- [x] Serializar pelo método público, validar schema, conservar e então montar envelope. Não expor resultados por cliente do fechamento, mesmo que disponíveis em outros modos.
+- [x] Acrescentar casos: vazio, uma direção, duas direções balanceadas, cobertura parcial, prazo além da medição, aquecimento e campos corrompidos depois de serializar.
+- [x] Gerar fixture `reference-result.json` pelo adaptador com relógio/UUID de teste controlados; testes da UI passam a usar esse resultado, nunca um objeto inventado.
+- [x] Rodar testes focalizados e a suíte do motor da base, verificar `git diff -- motor` vazio e registrar commit/Diário.
 
 **Gate:** resultado do adaptador igual ao motor; corrupção bloqueia publicação. Baseline de aceitação é R$ 2.370.600,00 = US$ 439.000,00; netado R$ 1.344.600,00 = US$ 249.000,00; economia R$ 1.026.000,00 = US$ 190.000,00; taxa formatada 58,82%.
 
@@ -741,7 +741,7 @@ Consultadas em 2026-09-11; sustentam mecanismos de biblioteca, não substituem d
 - [Supabase — usuários e convites](https://supabase.com/docs/guides/auth/users), [senha](https://supabase.com/docs/guides/auth/passwords), [templates de e-mail](https://supabase.com/docs/guides/auth/auth-email-templates) e [verifyOtp](https://supabase.com/docs/reference/javascript/auth-verifyotp): fluxo de acesso e callbacks controlados.
 - [FastAPI — lifespan](https://fastapi.tiangolo.com/advanced/events/) e [estáticos](https://fastapi.tiangolo.com/tutorial/static-files/): lifecycle de recursos e montagem de assets; fallback SPA e separação `/api` são responsabilidade da aplicação.
 
-**Próximo passo de execução:** iniciar MOT-17/T2 em worktree própria baseada na
-`main`, consumindo os contratos fechados. T4 também está liberada,
+**Próximo passo de execução:** integrar MOT-17/T2 e iniciar MOT-18/T3 em worktree
+própria baseada na `main`. T4 também está liberada,
 mas não há necessidade de execução simultânea. O cadastro não cria automaticamente
 projeto Supabase, convites ou infraestrutura.

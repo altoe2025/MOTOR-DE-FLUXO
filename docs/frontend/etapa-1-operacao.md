@@ -2,11 +2,12 @@
 
 ## Estado
 
-T0 e T1 estão **integradas na `main`**. As oito tarefas foram
+T0 e T1 estão **integradas na `main`**; T2 foi entregue pelo PR #30 na branch
+`codex/mot17-adaptador`. As oito tarefas foram
 cadastradas como MOT-15–MOT-22 no workspace **Felipe Bisca**, time
 **MOTOR DE FLUXO**, com as dependências nativas do plano. A base integrada foi
-publicada pelos PRs #21–#26 no commit `1aecc57`; a MOT-16 foi integrada pelo PR #27,
-levando a `main` a `d2a261b`. A T1 acrescenta contratos, identidade,
+publicada pelos PRs #21–#26 no commit `1aecc57`; a MOT-16 e seu fechamento documental
+foram integrados pelos PRs #27–#28, levando a `main` a `e2eef65`. A T1 acrescenta contratos, identidade,
 apresentação, geração e locks; não executa o adaptador T2, autenticação/API funcional
 T3 ou interface T4.
 
@@ -56,7 +57,7 @@ Fonte de execução: [plano técnico aprovado](../superpowers/plans/2026-09-11-f
 |---|---|---|
 | T0 | [MOT-15 — Confirmar base Git e pré-requisitos](https://linear.app/felipe-bisca/issue/MOT-15/etapa-1-t0-confirmar-base-git-e-pre-requisitos) | Concluída; base integrada e baseline verificados |
 | T1 | [MOT-16 — Contratos, identidade e apresentação](https://linear.app/felipe-bisca/issue/MOT-16/etapa-1-t1-contratos-identidade-e-apresentacao) | Integrada pelo PR #27; contratos e gates verificados em Python 3.11/Node 24 |
-| T2 | [MOT-17 — Adaptador único e validação de publicação](https://linear.app/felipe-bisca/issue/MOT-17/etapa-1-t2-adaptador-unico-e-validacao-de-publicacao) | Backlog; liberada pela conclusão de MOT-16 |
+| T2 | [MOT-17 — Adaptador único e validação de publicação](https://linear.app/felipe-bisca/issue/MOT-17/etapa-1-t2-adaptador-unico-e-validacao-de-publicacao) | PR #30; implementação e verificação local concluídas |
 | T3 | [MOT-18 — FastAPI, autenticação e mesma origem](https://linear.app/felipe-bisca/issue/MOT-18/etapa-1-t3-fastapi-autenticacao-e-mesma-origem) | Backlog; bloqueada por MOT-17 |
 | T4 | [MOT-19 — Shell e componentes acessíveis](https://linear.app/felipe-bisca/issue/MOT-19/etapa-1-t4-shell-e-componentes-acessiveis) | Backlog; liberada pela conclusão de MOT-16 |
 | T5 | [MOT-20 — Login, convite e recuperação de rascunho](https://linear.app/felipe-bisca/issue/MOT-20/etapa-1-t5-login-convite-e-recuperacao-de-rascunho) | Backlog; bloqueada por MOT-18 e MOT-19 |
@@ -79,6 +80,21 @@ Dependências nativas verificadas: T1 depende de T0; T2 de T1; T3 de T2; T4 de T
   checkout; geração repetida com hashes idênticos.
 
 Detalhes, decisões e comandos: [registro da MOT-16](mot-16-implementacao.md).
+
+## T2 — evidência operacional
+
+- [x] Adaptador único constrói o domínio diretamente dos DTOs e chama `analisar`
+  uma vez, somente em modo `AGREGADO` e pelas interfaces públicas do motor.
+- [x] Modos `LEGADO` e `NATURAL` preservam horizonte, aquecimento, coorte medida e
+  liquidação posterior à medição.
+- [x] Portão independente valida finitude, referências, dias, tipos, conservação
+  exata por ordem/global/coorte, volumes medidos, taxa, identidade do manifesto e
+  roundtrip do JSON canônico.
+- [x] Fixture `reference-result.json` é gerada pelo adaptador real com relógio,
+  UUID e SHA controlados e reproduz os números de aceitação.
+- [x] Passaram 575 testes normais, 575 sob `python -O`, Ruff e mypy isolado da
+  camada `servidor`; `git diff -- motor` permaneceu vazio. O mypy integral ainda
+  atravessa imports e encontra 31 apontamentos preexistentes em `motor/analise`.
 
 ## Arquivos preexistentes preservados
 
