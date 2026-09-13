@@ -39,10 +39,12 @@ sintético fixo e encerra a própria instância ao final, sem processo órfão.
 ## Gate Supabase real
 
 O build de produção foi iniciado com a URL, publishable key e allowlist dos arquivos
-locais ignorados herdados da MOT-20. A aplicação alcançou o login do projeto real
-sem expor configuração. O navegador isolado desta execução não tinha sessão salva;
-concluir o clique manual pela nova tela exige login local pela pessoa autorizada.
-Não há e-mail, senha, token ou UUID real no repositório ou nesta evidência.
+locais ignorados herdados da MOT-20. Após login local pela pessoa autorizada, o
+Bearer real foi validado pelo JWKS público e o percurso Carteira → FastAPI →
+adaptador → motor → Diagnóstico reproduziu R$ 1.026.000,00, 58,82%, `PREVIA`,
+fingerprint, origem sintética e aviso de não calibração. O nome `teste` permaneceu
+após uma primeira falha causada pela sandbox sem acesso de saída ao JWKS e depois da
+navegação. Nenhum e-mail, senha, token ou UUID real foi lido ou registrado.
 
 ## Comandos de verificação
 

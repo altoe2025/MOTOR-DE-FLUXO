@@ -57,7 +57,7 @@ Atualizada em 2026-09-13, durante a implementação da MOT-21 sobre a base integ
 | `codex/mot18-api` | MOT-18 integrada pelo PR #31, CI verde | Codex |
 | `feat/mot19-shell-acessivel` | PR #29 atualizado sobre a MOT-18; shell e componentes preservam o proxy da API | Codex |
 | `codex/mot20-auth` | PR #32, mergeada na `main`; MOT-20 concluída com convite, rascunho e POST autenticado reais | Codex |
-| `codex/mot21-client-integracao` | MOT-21 em execução sobre `835c7ca` | Codex |
+| `codex/mot21-client-integracao` | PR #33 aberto sobre `835c7ca`; implementação, CI e gate Supabase real verdes | Codex |
 
 Essa pilha e as MOT-16–MOT-20 foram integradas na `main` pelos PRs #21–#32. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
@@ -83,13 +83,16 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
    o envelope aceito como snapshot imutável. Carteira executa o GET e o POST reais;
    Diagnóstico apresenta apenas os números canônicos, a origem sintética e o aviso
    de não calibração. Um build E2E controlado percorre navegador → FastAPI →
-   adaptador → motor sem mock de resposta nem credencial pessoal.
+   adaptador → motor sem mock de resposta nem credencial pessoal. No gate manual, o
+   build de produção autenticou pelo Supabase real e reproduziu R$ 1.026.000,00,
+   58,82%, `PREVIA`, fingerprint e aviso de não calibração; o nome do estudo foi
+   preservado após uma falha inicial de conectividade do JWKS.
 
 4. **O que isso invalida.** Invalida o botão sem ação e os estados vazios de
    Carteira/Diagnóstico como representação da T6. Não altera `motor/`, regras de
    cálculo, contratos financeiros, calibração ou persistência da etapa 2. A
-   evidência real de login/POST da MOT-20 continua válida, mas não substitui o gate
-   manual da nova tela com uma sessão Supabase real.
+   evidência real de login/POST da MOT-20 continua válida e agora foi complementada
+   pelo gate manual da nova tela com uma sessão Supabase real.
 
 ## 2026-09-13 — Sessão Supabase e rascunho isolado (MOT-20)
 
