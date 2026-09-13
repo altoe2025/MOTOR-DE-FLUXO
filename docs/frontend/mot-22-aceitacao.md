@@ -3,8 +3,10 @@
 ## Estado e base
 
 A execução ocorre na branch `codex/mot22-aceitacao-ci`, criada da `origin/main`
-`2953a2b6993f52f8f94841eb1cce46dae80a0608`, merge do PR #33. A MOT-22 permanece
-em execução até o PR ser revisado; merge exige autorização separada.
+`2953a2b6993f52f8f94841eb1cce46dae80a0608`, merge do PR #33. A entrega foi
+publicada no PR #34 pelo commit `a7ca867f57083b89b430c96be1ea823397e46b26`;
+seu primeiro workflow `acceptance` passou em 1m52s. A MOT-22 aguarda revisão e o
+merge exige autorização separada.
 
 ## Gate automatizado
 
@@ -94,8 +96,8 @@ não bloqueante para esta etapa.
 - Limites: corpo de 1 MiB, até 1.000 ordens, resposta de 8 MiB, uma prévia por
   processo, timeout do cliente em 30 s, uma repetição apenas para GET transitório e
   nenhuma repetição automática de POST.
-- Base integrada da etapa 1: `2953a2b`; o SHA da entrega da MOT-22 será registrado
-  no PR e no Linear depois da publicação.
+- Base integrada da etapa 1: `2953a2b`; primeira entrega verificada da MOT-22:
+  `a7ca867`, no PR #34.
 - Persistência de estudos, IndexedDB/migrações, autoria participante→geração,
   variantes, comparação, replay completo, execução assíncrona e calibração seguem
   pendentes das etapas posteriores.

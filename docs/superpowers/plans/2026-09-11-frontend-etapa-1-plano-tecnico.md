@@ -10,7 +10,7 @@
 
 **Spec:** [design aprovado](../specs/2026-09-11-frontend-motor-de-fluxo-design.md), [plano geral e distribuição de modelos](2026-09-11-frontend-plano-geral-execucao-modelos.md), [ambiente e workflow](2026-09-11-frontend-ambiente-e-workflow.md).
 
-**Status:** aprovado por Gabriel nesta conversa. T0–T6 foram integradas na `main` até `2953a2b`, pelo PR #33, com convite, primeiro acesso, rascunho, cliente tipado e percurso navegador–motor reais. T7/MOT-22 está em execução.
+**Status:** aprovado por Gabriel nesta conversa. T0–T6 foram integradas na `main` até `2953a2b`, pelo PR #33, com convite, primeiro acesso, rascunho, cliente tipado e percurso navegador–motor reais. T7/MOT-22 foi publicada no PR #34 pelo commit `a7ca867`, com o primeiro CI verde; revisão e merge estão pendentes.
 
 ## 1. Restrições globais
 
@@ -605,15 +605,15 @@ test('referência chega ao motor e retorna seus valores', async ({page}) => {
 
 **Responsável:** Sol, Medium; revisão Astra delimitada a identidade/conservação/autenticação se houver mudança material desses contratos. Terra corrige acabamento. **Arquivos:** CI, E2E, operação e Diário.
 
-- [ ] Criar launcher de testes Python isolado de produção; factory injeta somente verificador de sessão de teste, mantendo DTOs, adaptador, serialização e estáticos reais. O teste real usa app sem overrides e credenciais do ambiente.
-- [ ] Configurar CI em PRs, inclusive bases empilhadas autorizadas; workflow atual filtra somente `main`. Testes de motor permanecem em Python 3.11; testes web/API incluem Node 24, instalação travada, typecheck, lint, unitários, build e Playwright Chromium.
-- [ ] Regerar OpenAPI/tipos e falhar CI se `git diff --exit-code -- contracts web/src/api/generated.ts web/src/api/schemas.json web/src/api/validators.ts` não estiver vazio. Não atualizar snapshot automaticamente para fazer teste passar.
-- [ ] Executar matriz da seção 9, suíte normal e sob `-O`, pacote instalado e teste do build servido pelo FastAPI. `-O` pode avisar sobre asserts de testes; invariantes de produção continuam ativos.
-- [ ] Verificar bundle e arquivos adicionados quanto a chaves secretas e credenciais. Supabase publishable key é pública e esperada; não marcar toda ocorrência de “supabase” como vazamento. Nenhum valor service-role ou OpenAI pode aparecer.
-- [ ] Inspecionar login, Carteira, Prévia e sessão expirada em 1.280×800/1.440×900 e zoom 200%; anexar screenshots sem dados pessoais/tokens. Não tirar screenshot de callback com token na URL.
-- [ ] Registrar tempo da referência em cinco execuções locais e tamanho do envelope, sem transformar isso em benchmark da grade. Meta inicial: p95 das cinco medições até 5 s no ambiente anotado; se falhar, investigar antes do gate, sem inventar garantia para qualquer carteira.
-- [ ] Registrar evidências do Supabase real: cadastro fechado, login, callback, token recusado, logout, rascunho e conta diferente. Testes de E2E real não rodam em PR de fork com segredos.
-- [ ] Atualizar Diário, revisar PRs na ordem, confirmar CI e entregar guia da etapa 2: schemas, rotas, comandos, limites, SHAs e decisões pendentes. Merge/publicação exigem autorização própria; não são efeitos automáticos da aprovação do plano.
+- [x] Criar launcher de testes Python isolado de produção; factory injeta somente verificador de sessão de teste, mantendo DTOs, adaptador, serialização e estáticos reais. O teste real usa app sem overrides e credenciais do ambiente.
+- [x] Configurar CI em PRs, inclusive bases empilhadas autorizadas; workflow atual filtra somente `main`. Testes de motor permanecem em Python 3.11; testes web/API incluem Node 24, instalação travada, typecheck, lint, unitários, build e Playwright Chromium.
+- [x] Regerar OpenAPI/tipos e falhar CI se `git diff --exit-code -- contracts web/src/api/generated.ts web/src/api/schemas.json web/src/api/validators.ts` não estiver vazio. Não atualizar snapshot automaticamente para fazer teste passar.
+- [x] Executar matriz da seção 9, suíte normal e sob `-O`, pacote instalado e teste do build servido pelo FastAPI. `-O` pode avisar sobre asserts de testes; invariantes de produção continuam ativos.
+- [x] Verificar bundle e arquivos adicionados quanto a chaves secretas e credenciais. Supabase publishable key é pública e esperada; não marcar toda ocorrência de “supabase” como vazamento. Nenhum valor service-role ou OpenAI pode aparecer.
+- [x] Inspecionar login, Carteira, Prévia e sessão expirada em 1.280×800/1.440×900 e zoom 200%; anexar screenshots sem dados pessoais/tokens. Não tirar screenshot de callback com token na URL.
+- [x] Registrar tempo da referência em cinco execuções locais e tamanho do envelope, sem transformar isso em benchmark da grade. Meta inicial: p95 das cinco medições até 5 s no ambiente anotado; se falhar, investigar antes do gate, sem inventar garantia para qualquer carteira.
+- [x] Registrar evidências do Supabase real: cadastro fechado, login, callback, token recusado, logout, rascunho e conta diferente. Testes de E2E real não rodam em PR de fork com segredos.
+- [x] Atualizar Diário, revisar PRs na ordem, confirmar CI e entregar guia da etapa 2: schemas, rotas, comandos, limites, SHAs e decisões pendentes. Merge/publicação exigem autorização própria; não são efeitos automáticos da aprovação do plano.
 
 **Gate final:** todos os oito critérios da seção 3.1 demonstrados. Se faltar Supabase, declarar incremento local parcial e impedir avanço anunciado como etapa 1 concluída.
 

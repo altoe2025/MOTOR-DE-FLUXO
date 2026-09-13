@@ -216,6 +216,8 @@ Detalhes e comandos: [registro da MOT-21](mot-21-implementacao.md).
 
 ## T7 — aceitação, CI e handoff
 
+- A entrega está publicada no PR #34 pelo commit `a7ca867`; o primeiro workflow
+  `acceptance` passou em 1m52s. Revisão e autorização de merge permanecem pendentes.
 - A CI de pull request cobre Python 3.11, Node 24, locks, geração sem diff,
   Pytest normal/otimizado, Ruff, mypy do servidor, wheel instalada, Vitest,
   typecheck, ESLint, build, scanner de credenciais, Chromium e percurso same-origin.

@@ -19,8 +19,8 @@ main
 
 Ordem de merge da pilha concluída: #21 → #22 → #23 → #24. A fundação web foi
 integrada pelos PRs #25–#33. O PR #17 é de outro assunto, continua aberto e está
-deliberadamente separado. A MOT-22 segue na branch
-`codex/mot22-aceitacao-ci`, baseada em `2953a2b`.
+deliberadamente separado. A MOT-22 segue no PR #34, branch
+`codex/mot22-aceitacao-ci` baseada em `2953a2b`, com o primeiro CI verde.
 
 ```bash
 git checkout main

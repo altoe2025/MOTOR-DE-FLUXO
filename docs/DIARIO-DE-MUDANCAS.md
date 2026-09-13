@@ -58,7 +58,7 @@ Atualizada em 2026-09-13, durante a implementação da MOT-22 sobre a base integ
 | `feat/mot19-shell-acessivel` | PR #29 atualizado sobre a MOT-18; shell e componentes preservam o proxy da API | Codex |
 | `codex/mot20-auth` | PR #32, mergeada na `main`; MOT-20 concluída com convite, rascunho e POST autenticado reais | Codex |
 | `codex/mot21-client-integracao` | PR #33 mergeado na `main`; implementação, CI e gate Supabase real verdes | Codex |
-| `codex/mot22-aceitacao-ci` | MOT-22/T7 em execução sobre `2953a2b`; aceitação, CI e handoff da etapa 1 | Codex |
+| `codex/mot22-aceitacao-ci` | PR #34 aberto sobre `2953a2b`; commit `a7ca867` com aceitação/CI/handoff e primeiro CI verde | Codex |
 
 Essa pilha e as MOT-16–MOT-21 foram integradas na `main` pelos PRs #21–#33. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
@@ -67,7 +67,7 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 
 ---
 
-## 2026-09-13 — Início da aceitação e CI da etapa 1 (MOT-22)
+## 2026-09-13 — Aceitação e CI da etapa 1 (MOT-22)
 
 1. **Sintoma.** A integração navegador–motor já estava na `main`, mas a CI ainda
    executava apenas a suíte Python e não demonstrava todos os gates de aceitação,
@@ -87,7 +87,9 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
    casos explícitos de identidade temporal, JWT sem assinatura e conservação do
    documento público. O handoff documenta contratos, rotas, limites e pendências da
    etapa 2. A sessão Supabase real existente repetiu o percurso até o motor sem
-   inserir ou registrar credenciais.
+   inserir ou registrar credenciais. O commit `a7ca867` foi publicado no PR #34 e
+   seu primeiro workflow `acceptance` passou em 1m52s; o merge continua dependendo
+   de autorização final.
 
 4. **O que isso invalida.** Invalida registros que apresentavam o PR #33 como
    aberto, a MOT-21 em execução, a MOT-22 bloqueada ou a CI como apenas Python. Não
