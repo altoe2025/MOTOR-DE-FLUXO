@@ -2,14 +2,14 @@
 
 ## Estado
 
-T0 e T1 estão **integradas na `main`**; T2 foi entregue pelo PR #30 na branch
-`codex/mot17-adaptador`. As oito tarefas foram
+T0–T2 estão **integradas na `main`** até o PR #30, commit `21f0ce3`; T3 foi
+implementada na branch `codex/mot18-api` e aguarda revisão e CI. As oito tarefas foram
 cadastradas como MOT-15–MOT-22 no workspace **Felipe Bisca**, time
 **MOTOR DE FLUXO**, com as dependências nativas do plano. A base integrada foi
-publicada pelos PRs #21–#26 no commit `1aecc57`; a MOT-16 e seu fechamento documental
-foram integrados pelos PRs #27–#28, levando a `main` a `e2eef65`. A T1 acrescenta contratos, identidade,
-apresentação, geração e locks; não executa o adaptador T2, autenticação/API funcional
-T3 ou interface T4.
+publicada pelos PRs #21–#26 no commit `1aecc57`; MOT-16 e MOT-17 foram integradas
+pelos PRs #27–#30. A T3 acrescenta a API autenticada, limites operacionais e a
+distribuição segura do build React; o projeto Supabase real continua reservado aos
+gates T5/T7.
 
 Fonte de execução: [plano técnico aprovado](../superpowers/plans/2026-09-11-frontend-etapa-1-plano-tecnico.md). As três referências indicadas no plano continuam obrigatórias.
 
@@ -57,9 +57,9 @@ Fonte de execução: [plano técnico aprovado](../superpowers/plans/2026-09-11-f
 |---|---|---|
 | T0 | [MOT-15 — Confirmar base Git e pré-requisitos](https://linear.app/felipe-bisca/issue/MOT-15/etapa-1-t0-confirmar-base-git-e-pre-requisitos) | Concluída; base integrada e baseline verificados |
 | T1 | [MOT-16 — Contratos, identidade e apresentação](https://linear.app/felipe-bisca/issue/MOT-16/etapa-1-t1-contratos-identidade-e-apresentacao) | Integrada pelo PR #27; contratos e gates verificados em Python 3.11/Node 24 |
-| T2 | [MOT-17 — Adaptador único e validação de publicação](https://linear.app/felipe-bisca/issue/MOT-17/etapa-1-t2-adaptador-unico-e-validacao-de-publicacao) | PR #30; implementação e verificação local concluídas |
-| T3 | [MOT-18 — FastAPI, autenticação e mesma origem](https://linear.app/felipe-bisca/issue/MOT-18/etapa-1-t3-fastapi-autenticacao-e-mesma-origem) | Backlog; bloqueada por MOT-17 |
-| T4 | [MOT-19 — Shell e componentes acessíveis](https://linear.app/felipe-bisca/issue/MOT-19/etapa-1-t4-shell-e-componentes-acessiveis) | Backlog; liberada pela conclusão de MOT-16 |
+| T2 | [MOT-17 — Adaptador único e validação de publicação](https://linear.app/felipe-bisca/issue/MOT-17/etapa-1-t2-adaptador-unico-e-validacao-de-publicacao) | Integrada pelo PR #30; portão real concluído |
+| T3 | [MOT-18 — FastAPI, autenticação e mesma origem](https://linear.app/felipe-bisca/issue/MOT-18/etapa-1-t3-fastapi-autenticacao-e-mesma-origem) | Em progresso; implementação local e verificações concluídas |
+| T4 | [MOT-19 — Shell e componentes acessíveis](https://linear.app/felipe-bisca/issue/MOT-19/etapa-1-t4-shell-e-componentes-acessiveis) | PR #29 aberto; precisa ser atualizado sobre a base integrada |
 | T5 | [MOT-20 — Login, convite e recuperação de rascunho](https://linear.app/felipe-bisca/issue/MOT-20/etapa-1-t5-login-convite-e-recuperacao-de-rascunho) | Backlog; bloqueada por MOT-18 e MOT-19 |
 | T6 | [MOT-21 — Cliente tipado e integração navegador–motor](https://linear.app/felipe-bisca/issue/MOT-21/etapa-1-t6-cliente-tipado-e-integracao-navegador-motor) | Backlog; bloqueada por MOT-20 |
 | T7 | [MOT-22 — Aceitação, CI e passagem para etapa 2](https://linear.app/felipe-bisca/issue/MOT-22/etapa-1-t7-aceitacao-ci-e-passagem-para-etapa-2) | Backlog; bloqueada por MOT-21 |
@@ -95,6 +95,28 @@ Detalhes, decisões e comandos: [registro da MOT-16](mot-16-implementacao.md).
 - [x] Passaram 575 testes normais, 575 sob `python -O`, Ruff e mypy isolado da
   camada `servidor`; `git diff -- motor` permaneceu vazio. O mypy integral ainda
   atravessa imports e encontra 31 apontamentos preexistentes em `motor/analise`.
+
+Detalhes, decisões e comandos: [registro da MOT-17](mot-17-implementacao.md).
+
+## T3 — evidência operacional
+
+- [x] Factory FastAPI real com health público e session, exemplo e prévia protegidos
+  por Bearer verificado no servidor.
+- [x] Verificador ES256/JWKS valida emissor, audience exata, tempo, UUID, role e
+  allowlist; cache de cinco minutos, timeout de cinco segundos e atualização de
+  `kid` desconhecido são protegidos por trava.
+- [x] Corpo limitado a 1 MiB antes do parse, contratos limitam 1.000 ordens, uma
+  prévia executa por vez e resposta acima de 8 MiB falha sem truncar.
+- [x] Build React é servido somente nas rotas SPA conhecidas; API, assets ausentes,
+  traversal e links resolvidos para fora do dist nunca recebem `index.html`.
+- [x] Proxy Vite relativo `/api` aponta para `127.0.0.1:8000`; não há CORS curinga.
+- [x] Passaram 627 testes Python normais e sob `-O`, Ruff, mypy da camada `servidor`, 15 testes
+  Vitest, typecheck, wheel instalada fora do checkout e regeneração determinística
+  dos quatro artefatos de contrato. Dois testes de symlink foram ignorados porque o
+  Windows deste ambiente não permite criá-los; a contenção também é verificada em
+  produção antes de servir cada caminho.
+
+Detalhes, configuração e comandos: [registro da MOT-18](mot-18-implementacao.md).
 
 ## Arquivos preexistentes preservados
 

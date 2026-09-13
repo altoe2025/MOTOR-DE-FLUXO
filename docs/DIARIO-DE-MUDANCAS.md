@@ -38,7 +38,7 @@ publicação da etapa 1 do front-end.
 
 | Branch | Situação | Dono |
 |---|---|---|
-| `main` | MOT-15 e MOT-16 integradas até o PR #28 (`e2eef65`), 558 testes passando | os dois |
+| `main` | MOT-15–MOT-17 integradas até o PR #30 (`21f0ce3`), 575 testes passando | os dois |
 | `netting/p1` | spike do P1, **NÃO MERGEAR** — dominado, e agora sabemos que a folga é zero em N ≥ 50. Só local, nunca foi pro GitHub | Felipe |
 | `fix/semantica-remessa-p0` | PR #11, mergeada | Felipe |
 | `fix/previsao-temporal-e-colunas-csv` | PR #12, mergeada | Gabriel |
@@ -55,6 +55,7 @@ publicação da etapa 1 do front-end.
 | `codex/fechamento-funcional-integracao` | PR #26, fechamento funcional mergeado após 504 testes e CI verde | Codex |
 | `codex/mot16-contratos` | PR #27 mergeada; contratos HTTP, identidade, apresentação, locks e CI corrigido | Codex |
 | `codex/mot17-adaptador` | MOT-17 entregue pelo PR #30; implementação e verificação local concluídas | Codex |
+| `codex/mot18-api` | MOT-18 implementada e verificada localmente; aguarda revisão e CI | Codex |
 
 Essa pilha e a MOT-16 foram integradas na `main` pelos PRs #21–#28. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
@@ -62,6 +63,32 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
 ---
+
+## 2026-09-12 — API autenticada e mesma origem da etapa 1 (MOT-18)
+
+1. **Sintoma.** O adaptador real já produzia um resultado publicável, mas não havia
+   fronteira HTTP autenticada, limite de capacidade ou distribuição segura do build
+   React na mesma origem.
+
+2. **Causa.** Faltavam configuração validada, verificação local dos access tokens
+   Supabase, política de cache/rotação JWKS, rotas FastAPI, envelope uniforme de
+   erros, limites de transporte e fallback explícito das rotas da SPA.
+
+3. **O que foi feito.** Na branch `codex/mot18-api`, `servidor.app:create_app`
+   expõe health público e protege sessão, exemplo e prévia. O verificador aceita
+   somente ES256, issuer e audience exatos, claims temporais válidos, role
+   `authenticated`, UUID autorizado e usuário não anônimo; JWKS usa cache de cinco
+   minutos, timeout de cinco segundos e trava na rotação. A API limita corpo a
+   1 MiB, resposta a 8 MiB e execução a uma prévia, fora do event loop. Estáticos só
+   servem assets e rotas conhecidas contidas em `WEB_DIST_DIR`; o Vite encaminha
+   `/api` para o servidor local. Passaram 627 testes normais e sob `-O`, Ruff, mypy do servidor,
+   15 testes Vitest, typecheck, wheel instalada e regeneração determinística dos
+   contratos. Nenhum arquivo em `motor/` mudou.
+
+4. **O que isso invalida.** Invalida execução da prévia por uma rota sem sessão,
+   fallback genérico de SPA, CORS curinga e operação com múltiplos workers nesta
+   etapa. Não altera regras, resultados, varreduras ou números do motor. O projeto
+   Supabase real continua pendente e será validado nos gates T5/T7.
 
 ## 2026-09-12 — Adaptador e portão de publicação da etapa 1 (MOT-17)
 

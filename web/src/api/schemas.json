@@ -395,6 +395,21 @@
       "title": "HTTPValidationError",
       "type": "object"
     },
+    "HealthResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "const": "ok",
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "HealthResponse",
+      "type": "object"
+    },
     "InputSnapshot": {
       "additionalProperties": false,
       "properties": {
@@ -1028,6 +1043,21 @@
         "taxa_netabilidade"
       ],
       "title": "ResultadoLegadoDTO",
+      "type": "object"
+    },
+    "SessionResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "user_id": {
+          "format": "uuid",
+          "title": "User Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "user_id"
+      ],
+      "title": "SessionResponse",
       "type": "object"
     },
     "ValidationError": {

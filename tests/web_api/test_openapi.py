@@ -2,10 +2,13 @@
 
 import json
 from asyncio import run
+from uuid import UUID
 
 import httpx
 
 from servidor.app import create_schema_app
+from servidor.auth import AuthenticatedUser
+from servidor.config import Settings
 from servidor.export_openapi import export_openapi
 
 
@@ -15,7 +18,11 @@ def post_preview(payload):
         async with httpx.AsyncClient(
             transport=transport, base_url="http://test"
         ) as client:
-            return await client.post("/api/v1/previas", json=payload)
+            return await client.post(
+                "/api/v1/previas",
+                json=payload,
+                headers={"Authorization": "Bearer schema-test"},
+            )
 
     return run(request())
 
@@ -29,6 +36,10 @@ def test_openapi_exports_stable_contracts(tmp_path):
     schema = json.loads(first.read_text(encoding="utf-8"))
     assert "PreviaRequest" in schema["components"]["schemas"]
     assert "PreviewEnvelope" in schema["components"]["schemas"]
+    assert "HealthResponse" in schema["components"]["schemas"]
+    assert "SessionResponse" in schema["components"]["schemas"]
+    assert "/api/v1/health" in schema["paths"]
+    assert "/api/v1/session" in schema["paths"]
 
 
 def test_preview_identity_fields_are_constrained_in_schema(tmp_path):
@@ -52,3 +63,44 @@ def test_http_rejects_numeric_money_before_placeholder_handler(reference_payload
 def test_valid_preview_request_reaches_closed_schema_handler(reference_payload):
     response = post_preview(reference_payload)
     assert response.status_code == 501
+
+
+def test_aplicacao_real_serve_o_mesmo_openapi_canonico_com_bearer():
+    from servidor.app import create_app
+
+    user_id = UUID("00000000-0000-4000-8000-000000000101")
+
+    class Verifier:
+        def verify(self, token: str) -> AuthenticatedUser:
+            return AuthenticatedUser(user_id)
+
+    settings = Settings.model_validate(
+        {
+            "app_env": "test",
+            "supabase_url": "https://projeto.supabase.co",
+            "supabase_jwt_issuer": "https://projeto.supabase.co/auth/v1",
+            "supabase_jwt_audience": "authenticated",
+            "supabase_allowed_user_ids": frozenset({user_id}),
+            "motor_build_sha": "a" * 40,
+        }
+    )
+
+    canonical = create_schema_app().openapi()
+    served = create_app(settings, Verifier()).openapi()
+
+    assert served == canonical
+    assert "HTTPBearer" in canonical["components"]["securitySchemes"]
+    assert "security" not in canonical["paths"]["/api/v1/health"]["get"]
+    for path, method in (
+        ("/api/v1/session", "get"),
+        ("/api/v1/examples/reference", "get"),
+        ("/api/v1/previas", "post"),
+    ):
+        assert canonical["paths"][path][method]["security"] == [{"HTTPBearer": []}]
+    preview = canonical["paths"]["/api/v1/previas"]["post"]
+    assert preview["requestBody"]["content"]["application/json"]["schema"] == {
+        "$ref": "#/components/schemas/PreviaRequest"
+    }
+    assert preview["responses"]["200"]["content"]["application/json"]["schema"] == {
+        "$ref": "#/components/schemas/PreviewEnvelope"
+    }

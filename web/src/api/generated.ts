@@ -16,6 +16,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Health Schema */
+        get: operations["health_schema_api_v1_health_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/previas": {
         parameters: {
             query?: never;
@@ -27,6 +44,23 @@ export interface paths {
         put?: never;
         /** Preview Schema */
         post: operations["preview_schema_api_v1_previas_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/session": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Session Schema */
+        get: operations["session_schema_api_v1_session_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -168,6 +202,14 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** HealthResponse */
+        HealthResponse: {
+            /**
+             * Status
+             * @constant
+             */
+            status: "ok";
         };
         /** InputSnapshot */
         InputSnapshot: {
@@ -434,6 +476,14 @@ export interface components {
             /** Taxa Netabilidade */
             taxa_netabilidade: string;
         };
+        /** SessionResponse */
+        SessionResponse: {
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+        };
         /** ValidationError */
         ValidationError: {
             /** Context */
@@ -476,6 +526,26 @@ export interface operations {
             };
         };
     };
+    health_schema_api_v1_health_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HealthResponse"];
+                };
+            };
+        };
+    };
     preview_schema_api_v1_previas_post: {
         parameters: {
             query?: never;
@@ -505,6 +575,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    session_schema_api_v1_session_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionResponse"];
                 };
             };
         };
