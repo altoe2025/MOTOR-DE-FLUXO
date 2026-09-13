@@ -54,7 +54,7 @@ publicação da etapa 1 do front-end.
 | `codex/frontend-base-docs` | PR #25, design, ambiente e planejamento da etapa 1 mergeados | Codex |
 | `codex/fechamento-funcional-integracao` | PR #26, fechamento funcional mergeado após 504 testes e CI verde | Codex |
 | `codex/mot16-contratos` | PR #27 mergeada; contratos HTTP, identidade, apresentação, locks e CI corrigido | Codex |
-| `codex/mot17-adaptador` | MOT-17 implementada e verificada localmente; aguardando PR | Codex |
+| `codex/mot17-adaptador` | MOT-17 entregue pelo PR #30; implementação e verificação local concluídas | Codex |
 
 Essa pilha e a MOT-16 foram integradas na `main` pelos PRs #21–#28. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
@@ -73,7 +73,8 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
    API pública `motor.analise`, a validação independente das alocações e uma fixture
    de resposta produzida pela execução real.
 
-3. **O que foi feito.** Na branch `codex/mot17-adaptador`, `motor_adapter.py`
+3. **O que foi feito.** Na branch `codex/mot17-adaptador`, entregue pelo PR #30,
+   `motor_adapter.py`
    constrói `ParametrosCusto`, `Ordem` e `Cenario`, executa uma análise `AGREGADO`,
    preserva os modos `LEGADO`/`NATURAL` e monta o envelope apenas depois do portão.
    `publication.py` valida decimais, referências, dias, conservação exata no objeto

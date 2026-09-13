@@ -2,8 +2,8 @@
 
 ## Estado
 
-T0 e T1 estão **integradas na `main`**; T2 está implementada na branch
-`codex/mot17-adaptador`, aguardando PR. As oito tarefas foram
+T0 e T1 estão **integradas na `main`**; T2 foi entregue pelo PR #30 na branch
+`codex/mot17-adaptador`. As oito tarefas foram
 cadastradas como MOT-15–MOT-22 no workspace **Felipe Bisca**, time
 **MOTOR DE FLUXO**, com as dependências nativas do plano. A base integrada foi
 publicada pelos PRs #21–#26 no commit `1aecc57`; a MOT-16 e seu fechamento documental
@@ -57,7 +57,7 @@ Fonte de execução: [plano técnico aprovado](../superpowers/plans/2026-09-11-f
 |---|---|---|
 | T0 | [MOT-15 — Confirmar base Git e pré-requisitos](https://linear.app/felipe-bisca/issue/MOT-15/etapa-1-t0-confirmar-base-git-e-pre-requisitos) | Concluída; base integrada e baseline verificados |
 | T1 | [MOT-16 — Contratos, identidade e apresentação](https://linear.app/felipe-bisca/issue/MOT-16/etapa-1-t1-contratos-identidade-e-apresentacao) | Integrada pelo PR #27; contratos e gates verificados em Python 3.11/Node 24 |
-| T2 | [MOT-17 — Adaptador único e validação de publicação](https://linear.app/felipe-bisca/issue/MOT-17/etapa-1-t2-adaptador-unico-e-validacao-de-publicacao) | Em andamento; implementação e verificação local concluídas na branch `codex/mot17-adaptador` |
+| T2 | [MOT-17 — Adaptador único e validação de publicação](https://linear.app/felipe-bisca/issue/MOT-17/etapa-1-t2-adaptador-unico-e-validacao-de-publicacao) | PR #30; implementação e verificação local concluídas |
 | T3 | [MOT-18 — FastAPI, autenticação e mesma origem](https://linear.app/felipe-bisca/issue/MOT-18/etapa-1-t3-fastapi-autenticacao-e-mesma-origem) | Backlog; bloqueada por MOT-17 |
 | T4 | [MOT-19 — Shell e componentes acessíveis](https://linear.app/felipe-bisca/issue/MOT-19/etapa-1-t4-shell-e-componentes-acessiveis) | Backlog; liberada pela conclusão de MOT-16 |
 | T5 | [MOT-20 — Login, convite e recuperação de rascunho](https://linear.app/felipe-bisca/issue/MOT-20/etapa-1-t5-login-convite-e-recuperacao-de-rascunho) | Backlog; bloqueada por MOT-18 e MOT-19 |
