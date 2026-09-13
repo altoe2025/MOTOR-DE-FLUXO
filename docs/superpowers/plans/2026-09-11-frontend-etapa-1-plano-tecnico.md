@@ -10,7 +10,7 @@
 
 **Spec:** [design aprovado](../specs/2026-09-11-frontend-motor-de-fluxo-design.md), [plano geral e distribuição de modelos](2026-09-11-frontend-plano-geral-execucao-modelos.md), [ambiente e workflow](2026-09-11-frontend-ambiente-e-workflow.md).
 
-**Status:** aprovado por Gabriel nesta conversa. T0–T5 foram integradas na `main` até `835c7ca`, pelo PR #32, com convite, primeiro acesso, rascunho e POST autenticado reais. T6/MOT-21 está em execução; T7 aguarda sua integração.
+**Status:** aprovado por Gabriel nesta conversa. T0–T6 foram integradas na `main` até `2953a2b`, pelo PR #33, com convite, primeiro acesso, rascunho, cliente tipado e percurso navegador–motor reais. T7/MOT-22 foi integrada pelo PR #34 depois da autorização final e do gate protegido `pytest` verde.
 
 ## 1. Restrições globais
 
@@ -577,14 +577,14 @@ it('expiração não perde o nome e outra conta não o recebe', async () => {
 
 **Interfaces:** `getReferenceExample(signal?) -> Promise<ReferenceExample>`; `runPreview(input: PreviaRequest, signal?) -> Promise<PreviewEnvelope>`; ambas obtêm Bearer no instante da chamada pelo SDK. `ApiError` contém `{status, code, message, fields, requestId}` sem dados secretos.
 
-- [ ] Escrever testes de resposta incompatível, decimal incorreto, 401/403/429/503, timeout e referência trocada. POST nunca tem retry automático.
-- [ ] Implementar cliente com validação runtime da resposta antes de cache/render. Rejeitar JSON inválido e resposta HTML da API. Tempo limite usa AbortController e expõe mensagem de espera encerrada, não conclusão de cancelamento do motor.
-- [ ] Criar QueryClient por sessão de usuário; queries GET podem repetir uma vez em erro transitório, nunca em 401/403. Mutations `retry: false`; invalidar/cache limpar na troca de conta. Resultado não desaparece por refetch em foco.
-- [ ] Ligar **Executar exemplo de referência**: obter fixture da API, criar request UUID/IDs locais, enviar snapshot e manter registro do request atual em provider acima das rotas. Botão bloqueado enquanto ativo; navegação não duplica envio.
-- [ ] Verificar `request_id`, `scenario_id` e revisão antes de aplicar resposta. Resposta tardia de outra sessão/estudo é descartada. Guardar envelope imutável; estado local do formulário não pode modificar `input_snapshot` recebido.
-- [ ] Renderizar em Diagnóstico a prévia e decomposição vindas do agregado canônico. Não calcular `baseline - netado` em JS: usar `economia_periodo_brl`. Mostrar origem sintética e aviso de não calibração.
-- [ ] Demonstrar falha de servidor após preencher nome e durante request: nome preservado, saída anterior identificada, nova execução só por ação do usuário. Não alegar consulta offline de estudo salvo completo antes da etapa 2.
-- [ ] Rodar percurso Playwright com API e motor reais; auth controlado no launcher de testes. Fazer o percurso manual/automatizado com Auth real para gate final.
+- [x] Escrever testes de resposta incompatível, decimal incorreto, 401/403/429/503, timeout e referência trocada. POST nunca tem retry automático.
+- [x] Implementar cliente com validação runtime da resposta antes de cache/render. Rejeitar JSON inválido e resposta HTML da API. Tempo limite usa AbortController e expõe mensagem de espera encerrada, não conclusão de cancelamento do motor.
+- [x] Criar QueryClient por sessão de usuário; queries GET podem repetir uma vez em erro transitório, nunca em 401/403. Mutations `retry: false`; invalidar/cache limpar na troca de conta. Resultado não desaparece por refetch em foco.
+- [x] Ligar **Executar exemplo de referência**: obter fixture da API, criar request UUID/IDs locais, enviar snapshot e manter registro do request atual em provider acima das rotas. Botão bloqueado enquanto ativo; navegação não duplica envio.
+- [x] Verificar `request_id`, `scenario_id` e revisão antes de aplicar resposta. Resposta tardia de outra sessão/estudo é descartada. Guardar envelope imutável; estado local do formulário não pode modificar `input_snapshot` recebido.
+- [x] Renderizar em Diagnóstico a prévia e decomposição vindas do agregado canônico. Não calcular `baseline - netado` em JS: usar `economia_periodo_brl`. Mostrar origem sintética e aviso de não calibração.
+- [x] Demonstrar falha de servidor após preencher nome e durante request: nome preservado, saída anterior identificada, nova execução só por ação do usuário. Não alegar consulta offline de estudo salvo completo antes da etapa 2.
+- [x] Rodar percurso Playwright com API e motor reais; auth controlado no launcher de testes. Fazer o percurso manual/automatizado com Auth real para gate final.
 
 ```typescript
 test('referência chega ao motor e retorna seus valores', async ({page}) => {
@@ -605,15 +605,15 @@ test('referência chega ao motor e retorna seus valores', async ({page}) => {
 
 **Responsável:** Sol, Medium; revisão Astra delimitada a identidade/conservação/autenticação se houver mudança material desses contratos. Terra corrige acabamento. **Arquivos:** CI, E2E, operação e Diário.
 
-- [ ] Criar launcher de testes Python isolado de produção; factory injeta somente verificador de sessão de teste, mantendo DTOs, adaptador, serialização e estáticos reais. O teste real usa app sem overrides e credenciais do ambiente.
-- [ ] Configurar CI em PRs, inclusive bases empilhadas autorizadas; workflow atual filtra somente `main`. Testes de motor permanecem em Python 3.11; testes web/API incluem Node 24, instalação travada, typecheck, lint, unitários, build e Playwright Chromium.
-- [ ] Regerar OpenAPI/tipos e falhar CI se `git diff --exit-code -- contracts web/src/api/generated.ts web/src/api/schemas.json web/src/api/validators.ts` não estiver vazio. Não atualizar snapshot automaticamente para fazer teste passar.
-- [ ] Executar matriz da seção 9, suíte normal e sob `-O`, pacote instalado e teste do build servido pelo FastAPI. `-O` pode avisar sobre asserts de testes; invariantes de produção continuam ativos.
-- [ ] Verificar bundle e arquivos adicionados quanto a chaves secretas e credenciais. Supabase publishable key é pública e esperada; não marcar toda ocorrência de “supabase” como vazamento. Nenhum valor service-role ou OpenAI pode aparecer.
-- [ ] Inspecionar login, Carteira, Prévia e sessão expirada em 1.280×800/1.440×900 e zoom 200%; anexar screenshots sem dados pessoais/tokens. Não tirar screenshot de callback com token na URL.
-- [ ] Registrar tempo da referência em cinco execuções locais e tamanho do envelope, sem transformar isso em benchmark da grade. Meta inicial: p95 das cinco medições até 5 s no ambiente anotado; se falhar, investigar antes do gate, sem inventar garantia para qualquer carteira.
-- [ ] Registrar evidências do Supabase real: cadastro fechado, login, callback, token recusado, logout, rascunho e conta diferente. Testes de E2E real não rodam em PR de fork com segredos.
-- [ ] Atualizar Diário, revisar PRs na ordem, confirmar CI e entregar guia da etapa 2: schemas, rotas, comandos, limites, SHAs e decisões pendentes. Merge/publicação exigem autorização própria; não são efeitos automáticos da aprovação do plano.
+- [x] Criar launcher de testes Python isolado de produção; factory injeta somente verificador de sessão de teste, mantendo DTOs, adaptador, serialização e estáticos reais. O teste real usa app sem overrides e credenciais do ambiente.
+- [x] Configurar CI em PRs, inclusive bases empilhadas autorizadas; workflow atual filtra somente `main`. Testes de motor permanecem em Python 3.11; testes web/API incluem Node 24, instalação travada, typecheck, lint, unitários, build e Playwright Chromium.
+- [x] Regerar OpenAPI/tipos e falhar CI se `git diff --exit-code -- contracts web/src/api/generated.ts web/src/api/schemas.json web/src/api/validators.ts` não estiver vazio. Não atualizar snapshot automaticamente para fazer teste passar.
+- [x] Executar matriz da seção 9, suíte normal e sob `-O`, pacote instalado e teste do build servido pelo FastAPI. `-O` pode avisar sobre asserts de testes; invariantes de produção continuam ativos.
+- [x] Verificar bundle e arquivos adicionados quanto a chaves secretas e credenciais. Supabase publishable key é pública e esperada; não marcar toda ocorrência de “supabase” como vazamento. Nenhum valor service-role ou OpenAI pode aparecer.
+- [x] Inspecionar login, Carteira, Prévia e sessão expirada em 1.280×800/1.440×900 e zoom 200%; anexar screenshots sem dados pessoais/tokens. Não tirar screenshot de callback com token na URL.
+- [x] Registrar tempo da referência em cinco execuções locais e tamanho do envelope, sem transformar isso em benchmark da grade. Meta inicial: p95 das cinco medições até 5 s no ambiente anotado; se falhar, investigar antes do gate, sem inventar garantia para qualquer carteira.
+- [x] Registrar evidências do Supabase real: cadastro fechado, login, callback, token recusado, logout, rascunho e conta diferente. Testes de E2E real não rodam em PR de fork com segredos.
+- [x] Atualizar Diário, revisar PRs na ordem, confirmar CI e entregar guia da etapa 2: schemas, rotas, comandos, limites, SHAs e decisões pendentes. Merge/publicação exigem autorização própria; não são efeitos automáticos da aprovação do plano.
 
 **Gate final:** todos os oito critérios da seção 3.1 demonstrados. Se faltar Supabase, declarar incremento local parcial e impedir avanço anunciado como etapa 1 concluída.
 
@@ -741,7 +741,6 @@ Consultadas em 2026-09-11; sustentam mecanismos de biblioteca, não substituem d
 - [Supabase — usuários e convites](https://supabase.com/docs/guides/auth/users), [senha](https://supabase.com/docs/guides/auth/passwords), [templates de e-mail](https://supabase.com/docs/guides/auth/auth-email-templates) e [verifyOtp](https://supabase.com/docs/reference/javascript/auth-verifyotp): fluxo de acesso e callbacks controlados.
 - [FastAPI — lifespan](https://fastapi.tiangolo.com/advanced/events/) e [estáticos](https://fastapi.tiangolo.com/tutorial/static-files/): lifecycle de recursos e montagem de assets; fallback SPA e separação `/api` são responsabilidade da aplicação.
 
-**Próximo passo de execução:** integrar MOT-17/T2 e iniciar MOT-18/T3 em worktree
-própria baseada na `main`. T4 também está liberada,
-mas não há necessidade de execução simultânea. O cadastro não cria automaticamente
-projeto Supabase, convites ou infraestrutura.
+**Próximo passo de execução:** concluir a MOT-22/T7 na branch
+`codex/mot22-aceitacao-ci`, validar todos os gates da etapa 1 e preparar o handoff
+para a etapa 2. Merge e avanço anunciado continuam sujeitos à autorização própria.

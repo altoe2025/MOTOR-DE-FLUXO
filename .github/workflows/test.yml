@@ -3,16 +3,74 @@ name: test
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
+  pull_request: {}
+
+permissions:
+  contents: read
 
 jobs:
   pytest:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: python -m pip install -r requirements/web-dev.lock
-      - run: python -m pytest -q
+          cache: pip
+          cache-dependency-path: requirements/web-dev.lock
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install locked Python dependencies
+        run: |
+          python -m pip install -r requirements/web-dev.lock
+          python -m pip install --no-deps -e .
+
+      - name: Install locked web dependencies
+        run: npm --prefix web ci
+
+      - name: Regenerate public contracts
+        run: |
+          python -m servidor.export_openapi
+          npm --prefix web run generate:api
+          git diff --exit-code -- contracts web/src/api/generated.ts web/src/api/schemas.json web/src/api/validators.ts
+
+      - name: Verify Python
+        run: |
+          python -m pytest -q
+          python -O -m pytest -q
+          python -m ruff check servidor tests/web_api
+          python -m mypy servidor
+
+      - name: Verify installed wheel
+        shell: bash
+        run: |
+          python -m build --wheel
+          python -m pip install --force-reinstall --no-deps dist/*.whl
+          cd "$(mktemp -d)"
+          python -c "from importlib.resources import files; import motor, servidor; assert (files('motor') / 'cenarios' / 'exemplo_amanda.yaml').is_file()"
+
+      - name: Verify web
+        run: |
+          npm --prefix web run typecheck
+          npm --prefix web run lint
+          npm --prefix web run test:unit
+          npm --prefix web run build
+
+      - name: Scan tracked files and production bundle
+        run: python -m tests.web_api.scan_credentials
+
+      - name: Install Chromium
+        run: npx --prefix web playwright install --with-deps chromium
+
+      - name: Run same-origin browser acceptance
+        run: npm --prefix web run test:e2e
+
+      - name: Measure the reference envelope
+        run: python -m tests.web_api.measure_reference --max-p95-ms 5000

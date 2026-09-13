@@ -33,11 +33,11 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-09-13, durante a implementação da MOT-21 sobre a base integrada.
+Atualizada em 2026-09-13, durante a implementação da MOT-22 sobre a base integrada.
 
 | Branch | Situação | Dono |
 |---|---|---|
-| `main` | MOT-15–MOT-20 integradas até o PR #32 (`835c7ca`), 632 testes passando | os dois |
+| `main` | MOT-15–MOT-22 integradas até o PR #34, com o gate protegido `pytest` verde | os dois |
 | `netting/p1` | spike do P1, **NÃO MERGEAR** — dominado, e agora sabemos que a folga é zero em N ≥ 50. Só local, nunca foi pro GitHub | Felipe |
 | `fix/semantica-remessa-p0` | PR #11, mergeada | Felipe |
 | `fix/previsao-temporal-e-colunas-csv` | PR #12, mergeada | Gabriel |
@@ -57,14 +57,48 @@ Atualizada em 2026-09-13, durante a implementação da MOT-21 sobre a base integ
 | `codex/mot18-api` | MOT-18 integrada pelo PR #31, CI verde | Codex |
 | `feat/mot19-shell-acessivel` | PR #29 atualizado sobre a MOT-18; shell e componentes preservam o proxy da API | Codex |
 | `codex/mot20-auth` | PR #32, mergeada na `main`; MOT-20 concluída com convite, rascunho e POST autenticado reais | Codex |
-| `codex/mot21-client-integracao` | PR #33 aberto sobre `835c7ca`; implementação, CI e gate Supabase real verdes | Codex |
+| `codex/mot21-client-integracao` | PR #33 mergeado na `main`; implementação, CI e gate Supabase real verdes | Codex |
+| `codex/mot22-aceitacao-ci` | PR #34 mergeada na `main`; aceitação, CI e handoff da etapa 1 entregues | Codex |
 
-Essa pilha e as MOT-16–MOT-20 foram integradas na `main` pelos PRs #21–#32. O PR #17 continua aberto e
+Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
 ---
+
+## 2026-09-13 — Aceitação e CI da etapa 1 (MOT-22)
+
+1. **Sintoma.** A integração navegador–motor já estava na `main`, mas a CI ainda
+   executava apenas a suíte Python e não demonstrava todos os gates de aceitação,
+   empacotamento, geração, navegador e autenticação previstos para encerrar a etapa 1.
+
+2. **Causa.** A MOT-21 entregou deliberadamente o cliente e o percurso funcional.
+   A matriz consolidada, o endurecimento da CI, as evidências visuais e o handoff
+   pertencem à T7/MOT-22.
+
+3. **O que foi feito.** A branch `codex/mot22-aceitacao-ci` foi criada em worktree
+   isolado a partir da `origin/main` `2953a2b`, que contém o merge do PR #33. A CI
+   passou a cobrir Python 3.11/Node 24, geração sem diff, suíte normal/otimizada,
+   Ruff, mypy, wheel instalada, todos os gates web, scanner de credenciais,
+   Chromium same-origin e medição da referência. O Playwright separa autenticação
+   controlada de autenticação real opt-in e registra capturas de login, Carteira,
+   Diagnóstico, sessão expirada, dois desktops e zoom de 200%. A matriz ganhou
+   casos explícitos de identidade temporal, JWT sem assinatura e conservação do
+   documento público. O handoff documenta contratos, rotas, limites e pendências da
+   etapa 2. A sessão Supabase real existente repetiu o percurso até o motor sem
+   inserir ou registrar credenciais. O commit `a7ca867` foi publicado no PR #34 e
+   seu primeiro workflow `acceptance` passou em 1m52s; o merge continua dependendo
+   de autorização final. Quando a autorização foi concedida, o merge normal revelou
+   que a proteção da `main` ainda exigia o nome histórico de check `pytest`, enquanto
+   o workflow novo publicava `acceptance`. Um teste de regressão passou a fixar esse
+   contrato e o identificador do job foi restaurado sem remover nenhum gate.
+
+4. **O que isso invalida.** Invalida registros que apresentavam o PR #33 como
+   aberto, a MOT-21 em execução, a MOT-22 bloqueada ou a CI como apenas Python. Não
+   altera contratos financeiros, regras do motor, calibração ou resultados
+   numéricos. A medição de 11,2 ms/7.152 bytes vale somente para cinco execuções do
+   exemplo no ambiente anotado e não substitui benchmark de carteiras futuras.
 
 ## 2026-09-13 — Cliente tipado e percurso navegador–motor (MOT-21)
 

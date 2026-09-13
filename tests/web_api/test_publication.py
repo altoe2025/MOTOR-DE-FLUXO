@@ -90,6 +90,34 @@ def test_publicacao_rejeita_json_corrompido(execution):
         )
 
 
+@pytest.mark.parametrize("mutation", ["unknown_order", "missing", "duplicate", "invalid_type"])
+def test_publicacao_rejeita_alocacoes_publicas_inconsistentes(execution, mutation):
+    cenario, resultado = execution
+    documento = json.loads(resultado_para_json(resultado))
+    alocacoes = documento["agregado"]["execucao_completa"]["ciclos"][0]["alocacoes"]
+    if mutation == "unknown_order":
+        alocacoes[0]["ordem_id"] = "ordem-inexistente"
+    elif mutation == "missing":
+        alocacoes.pop(0)
+    elif mutation == "duplicate":
+        alocacoes.append(dict(alocacoes[0]))
+    else:
+        alocacoes[0]["tipo"] = "OUTRO"
+
+    with pytest.raises(ResultadoInvalido, match="RESULTADO_INVALIDO"):
+        validar_publicacao(cenario, resultado, json.dumps(documento))
+
+
+def test_publicacao_preserva_economia_negativa_sem_recalcular(execution):
+    cenario, resultado = execution
+    negativo = replace(
+        resultado,
+        agregado=replace(resultado.agregado, economia_periodo_brl=Decimal("-1.25")),
+    )
+
+    validar_publicacao(cenario, negativo, resultado_para_json(negativo))
+
+
 def test_publicacao_rejeita_json_com_secao_individual(execution):
     cenario, resultado = execution
     documento = json.loads(resultado_para_json(resultado))

@@ -2,8 +2,8 @@
 
 ## Estado
 
-T0–T5 estão **integradas na `main`** até o PR #32, commit `835c7ca`; T6 está em
-execução na branch `codex/mot21-client-integracao`, baseada nesse commit. As oito tarefas foram
+T0–T6 estão **integradas na `main`** até o PR #33, commit `2953a2b`; T7 está em
+execução na branch `codex/mot22-aceitacao-ci`, baseada nesse commit. As oito tarefas foram
 cadastradas como MOT-15–MOT-22 no workspace **Felipe Bisca**, time
 **MOTOR DE FLUXO**, com as dependências nativas do plano. A base integrada foi
 publicada pelos PRs #21–#26 no commit `1aecc57`; MOT-16 e MOT-17 foram integradas
@@ -64,8 +64,8 @@ Fonte de execução: [plano técnico aprovado](../superpowers/plans/2026-09-11-f
 | T3 | [MOT-18 — FastAPI, autenticação e mesma origem](https://linear.app/felipe-bisca/issue/MOT-18/etapa-1-t3-fastapi-autenticacao-e-mesma-origem) | Integrada pelo PR #31; CI verde |
 | T4 | [MOT-19 — Shell e componentes acessíveis](https://linear.app/felipe-bisca/issue/MOT-19/etapa-1-t4-shell-e-componentes-acessiveis) | Integrada pelo PR #29 em `64bf303` |
 | T5 | [MOT-20 — Login, convite e recuperação de rascunho](https://linear.app/felipe-bisca/issue/MOT-20/etapa-1-t5-login-convite-e-recuperacao-de-rascunho) | Integrada na `main` pelo PR #32; gate Supabase real aprovado |
-| T6 | [MOT-21 — Cliente tipado e integração navegador–motor](https://linear.app/felipe-bisca/issue/MOT-21/etapa-1-t6-cliente-tipado-e-integracao-navegador-motor) | Em execução na branch `codex/mot21-client-integracao`, base `835c7ca` |
-| T7 | [MOT-22 — Aceitação, CI e passagem para etapa 2](https://linear.app/felipe-bisca/issue/MOT-22/etapa-1-t7-aceitacao-ci-e-passagem-para-etapa-2) | Backlog; bloqueada por MOT-21 |
+| T6 | [MOT-21 — Cliente tipado e integração navegador–motor](https://linear.app/felipe-bisca/issue/MOT-21/etapa-1-t6-cliente-tipado-e-integracao-navegador-motor) | Integrada pelo PR #33 em `2953a2b`; CI pós-merge e gate Supabase real verdes |
+| T7 | [MOT-22 — Aceitação, CI e passagem para etapa 2](https://linear.app/felipe-bisca/issue/MOT-22/etapa-1-t7-aceitacao-ci-e-passagem-para-etapa-2) | Em execução na branch `codex/mot22-aceitacao-ci`, base `2953a2b` |
 
 Dependências nativas verificadas: T1 depende de T0; T2 de T1; T3 de T2; T4 de T1; T5 de T3 e T4; T6 de T5; T7 de T6. Não atribuir a pessoas com base nos nomes dos modelos; a distribuição Astra/Sol/Terra é orientação de execução, não identidade de membro do Linear.
 
@@ -213,6 +213,30 @@ Detalhes e comandos: [registro da MOT-20](mot-20-implementacao.md).
   são coletadas nem registradas.
 
 Detalhes e comandos: [registro da MOT-21](mot-21-implementacao.md).
+
+## T7 — aceitação, CI e handoff
+
+- A entrega foi integrada pelo PR #34. O primeiro workflow `acceptance` passou em
+  1m52s; antes do merge, o job recuperou o nome protegido `pytest` e repetiu todos
+  os mesmos gates.
+- A CI de pull request cobre Python 3.11, Node 24, locks, geração sem diff,
+  Pytest normal/otimizado, Ruff, mypy do servidor, wheel instalada, Vitest,
+  typecheck, ESLint, build, scanner de credenciais, Chromium e percurso same-origin.
+- O Playwright separa o projeto controlado `local` do projeto opt-in `real-auth`.
+  O primeiro injeta apenas o verificador; o segundo nunca recebe o bypass nem roda
+  em PR sem ambiente protegido.
+- A matriz da etapa 1 ganhou casos explícitos de política temporal/identidade,
+  algoritmo JWT `none` e corrupção de alocações públicas.
+- Cinco execuções finais da referência tiveram p95 de 11,2 ms e envelope
+  máximo de 7.152 bytes em Windows/CPython 3.12.14.
+- Login, Carteira, Diagnóstico canônico, sessão expirada, os dois desktops e zoom
+  de 200% foram inspecionados em capturas sem dados pessoais ou tokens.
+- A sessão Supabase real existente repetiu o percurso até o motor. Os gates humanos
+  de cadastro fechado, convite, primeira senha, logout e isolamento permanecem
+  sustentados pelas evidências integradas das MOT-20/MOT-21, sem repetir ações de
+  conta desnecessárias.
+
+Detalhes, matriz, capturas e handoff: [registro da MOT-22](mot-22-aceitacao.md).
 
 ## Arquivos preexistentes preservados
 
