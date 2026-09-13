@@ -516,9 +516,9 @@ def test_unauthenticated_does_not_run(client, reference_payload, adapter_spy):
 
 **Interfaces:** `AppShell` recebe rotas filhas; cinco destinos fixos. `ComparisonSummary` e `CostTable` recebem somente campos já validados do envelope e chamam formatadores; não computam economia.
 
-- [ ] Completar projeto Vite React TS, `strict: true`, scripts da seção 10 e lock npm. Mantê-lo em `web/`, sem scaffolding na raiz Python.
-- [ ] Registrar composição da seção 6 na documentação operacional, com screenshot de login e shell em desktop produzido durante implementação.
-- [ ] Escrever teste de cinco destinos e estado ativo; criar router declarativo. Rotas: `/login`, `/auth/callback`, `/auth/definir-senha`, `/carteira`, `/diagnostico`, `/comparar`, `/replay`, `/premissas`. Raiz redireciona para Carteira depois de resolver sessão.
+- [x] Completar projeto Vite React TS, `strict: true`, scripts da seção 10 e lock npm. Mantê-lo em `web/`, sem scaffolding na raiz Python.
+- [x] Registrar composição da seção 6 na documentação operacional, com screenshot de login e shell em desktop produzido durante implementação.
+- [x] Escrever teste de cinco destinos e estado ativo; criar router declarativo. Rotas: `/login`, `/auth/callback`, `/auth/definir-senha`, `/carteira`, `/diagnostico`, `/comparar`, `/replay`, `/premissas`. Raiz redireciona para Carteira depois de resolver sessão.
 
 ```typescript
 it('identifica o destino atual sem esconder os demais', () => {
@@ -531,10 +531,10 @@ it('identifica o destino atual sem esconder os demais', () => {
 
 `renderShellAt(path)` é helper de teste com MemoryRouter e provedores controlados, criado no próprio arquivo de teste; não requer sessão Supabase real.
 
-- [ ] Implementar tokens, UI nativa e estados vazios. Não usar arquivos `fluxo-cambio.html` ou dashboard externo como fonte.
-- [ ] Adicionar testes de label/erro/foco, teclado no tooltip e mensagens de execução; nenhum campo fica somente com placeholder.
-- [ ] Inspecionar desktop e zoom, medir contraste e corrigir tokens reais. Usar screenshot como evidência visual; não aprovar layout só porque compilou.
-- [ ] Rodar Vitest, typecheck, lint e build; registrar screenshots e commit/Diário.
+- [x] Implementar tokens, UI nativa e estados vazios. Não usar arquivos `fluxo-cambio.html` ou dashboard externo como fonte.
+- [x] Adicionar testes de label/erro/foco, teclado no tooltip e mensagens de execução; nenhum campo fica somente com placeholder.
+- [x] Inspecionar desktop e zoom, medir contraste e corrigir tokens reais. Usar screenshot como evidência visual; não aprovar layout só porque compilou.
+- [x] Rodar Vitest, typecheck, lint e build; registrar screenshots e commit/Diário.
 
 **Gate:** navegação utilizável e composição aprovada dentro do design; ausência de funcionalidades não é apresentada como análise concluída.
 

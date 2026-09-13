@@ -2,8 +2,8 @@
 
 ## Estado
 
-T0–T2 estão **integradas na `main`** até o PR #30, commit `21f0ce3`; T3 foi
-implementada na branch `codex/mot18-api` e aguarda revisão e CI. As oito tarefas foram
+T0–T3 estão **integradas na `main`** até o PR #31, commit `d6d488e`; T4 está no
+PR #29, atualizado sobre essa base. As oito tarefas foram
 cadastradas como MOT-15–MOT-22 no workspace **Felipe Bisca**, time
 **MOTOR DE FLUXO**, com as dependências nativas do plano. A base integrada foi
 publicada pelos PRs #21–#26 no commit `1aecc57`; MOT-16 e MOT-17 foram integradas
@@ -58,8 +58,8 @@ Fonte de execução: [plano técnico aprovado](../superpowers/plans/2026-09-11-f
 | T0 | [MOT-15 — Confirmar base Git e pré-requisitos](https://linear.app/felipe-bisca/issue/MOT-15/etapa-1-t0-confirmar-base-git-e-pre-requisitos) | Concluída; base integrada e baseline verificados |
 | T1 | [MOT-16 — Contratos, identidade e apresentação](https://linear.app/felipe-bisca/issue/MOT-16/etapa-1-t1-contratos-identidade-e-apresentacao) | Integrada pelo PR #27; contratos e gates verificados em Python 3.11/Node 24 |
 | T2 | [MOT-17 — Adaptador único e validação de publicação](https://linear.app/felipe-bisca/issue/MOT-17/etapa-1-t2-adaptador-unico-e-validacao-de-publicacao) | Integrada pelo PR #30; portão real concluído |
-| T3 | [MOT-18 — FastAPI, autenticação e mesma origem](https://linear.app/felipe-bisca/issue/MOT-18/etapa-1-t3-fastapi-autenticacao-e-mesma-origem) | Em progresso; implementação local e verificações concluídas |
-| T4 | [MOT-19 — Shell e componentes acessíveis](https://linear.app/felipe-bisca/issue/MOT-19/etapa-1-t4-shell-e-componentes-acessiveis) | PR #29 aberto; precisa ser atualizado sobre a base integrada |
+| T3 | [MOT-18 — FastAPI, autenticação e mesma origem](https://linear.app/felipe-bisca/issue/MOT-18/etapa-1-t3-fastapi-autenticacao-e-mesma-origem) | Integrada pelo PR #31; CI verde |
+| T4 | [MOT-19 — Shell e componentes acessíveis](https://linear.app/felipe-bisca/issue/MOT-19/etapa-1-t4-shell-e-componentes-acessiveis) | PR #29 atualizado sobre a MOT-18; validação integrada concluída |
 | T5 | [MOT-20 — Login, convite e recuperação de rascunho](https://linear.app/felipe-bisca/issue/MOT-20/etapa-1-t5-login-convite-e-recuperacao-de-rascunho) | Backlog; bloqueada por MOT-18 e MOT-19 |
 | T6 | [MOT-21 — Cliente tipado e integração navegador–motor](https://linear.app/felipe-bisca/issue/MOT-21/etapa-1-t6-cliente-tipado-e-integracao-navegador-motor) | Backlog; bloqueada por MOT-20 |
 | T7 | [MOT-22 — Aceitação, CI e passagem para etapa 2](https://linear.app/felipe-bisca/issue/MOT-22/etapa-1-t7-aceitacao-ci-e-passagem-para-etapa-2) | Backlog; bloqueada por MOT-21 |
@@ -117,6 +117,54 @@ Detalhes, decisões e comandos: [registro da MOT-17](mot-17-implementacao.md).
   produção antes de servir cada caminho.
 
 Detalhes, configuração e comandos: [registro da MOT-18](mot-18-implementacao.md).
+
+## T4 — shell, tokens e componentes acessíveis
+
+Implementado na branch `feat/mot19-shell-acessivel` e atualizado sobre `main` no
+commit `d6d488ee060a0d58ef2a3f0802ee442f505fd10b`. A entrega mantém o escopo de T4:
+não faz autenticação Supabase, chamadas ao adaptador/motor, IndexedDB, gráficos,
+replay funcional ou mudanças em `motor/`.
+
+- O bootstrap Vite/React/TypeScript estrito está em `web/`, com scripts `dev`,
+  `build`, `typecheck`, `lint` e `test:unit`.
+- A configuração integrada preserva React, setup do Vitest e proxy relativo `/api`
+  para o FastAPI em `127.0.0.1:8000`.
+- `AppShell` entrega navegação vertical de 224 px, skip link, estado ativo com
+  `aria-current`, cabeçalho do estudo e cinco destinos vazios: Carteira,
+  Diagnóstico, Comparar cenários, Replay e Dados e premissas.
+- As rotas públicas são `/login`, `/auth/callback` e `/auth/definir-senha`; a raiz
+  aguarda a resolução do estado de sessão e então redireciona para `/carteira`.
+  Elas são estruturas visuais: nenhum fluxo de autenticação real é apresentado como
+  concluído.
+- `Button`, `TextField`, `InlineNotice`, `EmptyState`, `DefinitionTooltip`,
+  `ComparisonSummary` e `CostTable` usam HTML nativo. Os dois componentes de
+  apresentação recebem `PreviewEnvelope` e somente formatam campos canônicos com os
+  formatadores da MOT-16; não recalculam economia.
+- Os testes cobrem rotas, destino ativo, labels/erros, foco após navegação, teclado
+  no tooltip e estados `aria-busy`/`alert`. Nenhum campo depende exclusivamente de
+  placeholder.
+- A validação integrada passou com 632 testes Python normais e sob `-O`, 31 testes
+  Vitest, typecheck, ESLint e build. O build real foi servido pelo FastAPI nas cinco
+  rotas profundas; somente os bundles declarados no manifesto Vite recebem cache
+  imutável, enquanto nomes descritivos permanecem com `no-cache`.
+
+### Evidência visual
+
+Capturas produzidas com o servidor Vite local e Edge, em 2026-09-12:
+
+![Shell em 1280 por 800](evidencias/mot19-shell-1280x800.png)
+
+![Shell em 1440 por 900](evidencias/mot19-shell-1440x900.png)
+
+![Login em 1280 por 800](evidencias/mot19-login-1280x800.png)
+
+![Shell na largura equivalente a zoom de 200%](evidencias/mot19-shell-zoom200-equivalente-640x800.png)
+
+Em 1280×800 e 1440×900, o shell preserva navegação, conteúdo e estados vazios.
+Na largura CSS de 640 px, equivalente a 200% sobre a área de 1280 px, os destinos
+continuam alcançáveis e nenhum controle é cortado. Os contrastes medidos dos tokens
+reais foram: texto principal/canvas 11,80:1; texto secundário/superfície 5,87:1;
+texto da navegação/fundo 12,85:1; foco/canvas 5,77:1; borda/superfície 4,58:1.
 
 ## Arquivos preexistentes preservados
 

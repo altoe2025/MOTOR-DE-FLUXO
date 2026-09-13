@@ -9,7 +9,10 @@
     "npm": ">=11 <12"
   },
   "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
     "generate:api": "node scripts/generate-api.mjs",
+    "lint": "eslint .",
     "typecheck": "tsc -b --pretty false",
     "test:unit": "vitest run"
   },

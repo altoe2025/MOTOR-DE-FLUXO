@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 from uuid import UUID
 
@@ -24,6 +25,28 @@ def static_client(tmp_path: Path):
     (dist / "assets" / "app.a1b2c3d4.js").write_text(
         "console.log('ok')", encoding="utf-8"
     )
+    (dist / "assets" / "index-B6xOV8Ew.js").write_text(
+        "console.log('vite')", encoding="utf-8"
+    )
+    (dist / ".vite").mkdir()
+    (dist / ".vite" / "manifest.json").write_text(
+        json.dumps(
+            {
+                "index.html": {
+                    "file": "assets/index-B6xOV8Ew.js",
+                    "isEntry": True,
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    for filename in (
+        "app-user-content.js",
+        "application-bootstrap.js",
+        "app-download.js",
+        "app-runtime1.js",
+    ):
+        (dist / "assets" / filename).write_text("sem hash", encoding="utf-8")
     settings = Settings.model_validate(
         {
             "app_env": "test",
@@ -53,11 +76,28 @@ def test_rotas_spa_conhecidas_recebem_index_sem_cache_duradouro(static_client, p
     assert response.headers["cache-control"] == "no-cache"
 
 
-def test_asset_com_hash_recebe_cache_imutavel(static_client):
-    response = static_client.get("/assets/app.a1b2c3d4.js")
+@pytest.mark.parametrize("asset", ["app.a1b2c3d4.js", "index-B6xOV8Ew.js"])
+def test_asset_com_hash_recebe_cache_imutavel(static_client, asset):
+    response = static_client.get(f"/assets/{asset}")
 
     assert response.status_code == 200
     assert response.headers["cache-control"] == "public, max-age=31536000, immutable"
+
+
+@pytest.mark.parametrize(
+    "asset",
+    [
+        "app-user-content.js",
+        "application-bootstrap.js",
+        "app-download.js",
+        "app-runtime1.js",
+    ],
+)
+def test_asset_sem_hash_nao_recebe_cache_imutavel(static_client, asset):
+    response = static_client.get(f"/assets/{asset}")
+
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-cache"
 
 
 @pytest.mark.parametrize(

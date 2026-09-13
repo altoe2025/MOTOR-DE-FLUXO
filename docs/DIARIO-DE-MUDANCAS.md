@@ -33,12 +33,12 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-09-12, depois da implementação local do adaptador e do portão de
-publicação da etapa 1 do front-end.
+Atualizada em 2026-09-13, depois da integração da MOT-18 e da atualização da MOT-19
+sobre a nova base.
 
 | Branch | Situação | Dono |
 |---|---|---|
-| `main` | MOT-15–MOT-17 integradas até o PR #30 (`21f0ce3`), 575 testes passando | os dois |
+| `main` | MOT-15–MOT-18 integradas até o PR #31 (`d6d488e`), 627 testes passando | os dois |
 | `netting/p1` | spike do P1, **NÃO MERGEAR** — dominado, e agora sabemos que a folga é zero em N ≥ 50. Só local, nunca foi pro GitHub | Felipe |
 | `fix/semantica-remessa-p0` | PR #11, mergeada | Felipe |
 | `fix/previsao-temporal-e-colunas-csv` | PR #12, mergeada | Gabriel |
@@ -55,14 +55,69 @@ publicação da etapa 1 do front-end.
 | `codex/fechamento-funcional-integracao` | PR #26, fechamento funcional mergeado após 504 testes e CI verde | Codex |
 | `codex/mot16-contratos` | PR #27 mergeada; contratos HTTP, identidade, apresentação, locks e CI corrigido | Codex |
 | `codex/mot17-adaptador` | MOT-17 entregue pelo PR #30; implementação e verificação local concluídas | Codex |
-| `codex/mot18-api` | MOT-18 implementada e verificada localmente; aguarda revisão e CI | Codex |
+| `codex/mot18-api` | MOT-18 integrada pelo PR #31, CI verde | Codex |
+| `feat/mot19-shell-acessivel` | PR #29 atualizado sobre a MOT-18; shell e componentes preservam o proxy da API | Codex |
 
-Essa pilha e a MOT-16 foram integradas na `main` pelos PRs #21–#28. O PR #17 continua aberto e
+Essa pilha e as MOT-16–MOT-18 foram integradas na `main` pelos PRs #21–#31. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
 ---
+
+## 2026-09-13 — Shell acessível atualizado sobre a API da etapa 1 (MOT-19)
+
+1. **Sintoma.** O PR #29 continha o shell e os componentes acessíveis, mas havia sido
+   aberto antes das MOT-17 e MOT-18 e passou a conflitar com a `main`, inclusive na
+   configuração do Vite.
+
+2. **Causa.** T3 e T4 avançaram em paralelo a partir da fundação comum. Ambas
+   precisavam acrescentar `web/vite.config.ts`: T3 para o proxy da API e T4 para
+   React e a preparação do Vitest.
+
+3. **O que foi feito.** A branch `feat/mot19-shell-acessivel` incorporou a `main` no
+   commit `d6d488e`. A resolução preserva `plugins: [react()]`, o setup do Vitest e
+   o proxy relativo `/api` para `127.0.0.1:8000`. O smoke do build real detectou que
+   o cache da T3 não reconhecia nomes Vite como `index-B6xOV8Ew.js`; a configuração
+   agora gera o manifesto Vite, e o FastAPI concede cache imutável somente aos assets
+   declarados nele, sem confundir nomes descritivos. A documentação da T4 foi
+   combinada com os registros de T2/T3. Passaram 632 testes Python normais e
+   sob `-O`, 31 testes Vitest, typecheck, ESLint, build e o smoke das cinco rotas pelo
+   FastAPI. Nenhum arquivo em `motor/` foi alterado pela T4.
+
+4. **O que isso invalida.** Invalida o estado anterior do PR #29 como conflitante e
+   a configuração Vite que continha apenas React/Vitest e a heurística de cache que
+   não distinguia com segurança bundles Vite de nomes descritivos. Não altera contratos,
+   autenticação, resultados ou números do motor.
+
+## 2026-09-12 — Shell acessível da etapa 1 do front-end (MOT-19)
+
+1. **Sintoma.** A MOT-16 entregava tipos gerados, validação, formatadores e
+   repositório local, mas o diretório `web/` ainda não tinha uma aplicação React
+   inicializável, rotas, navegação, estados vazios ou componentes acessíveis para
+   consumir esses contratos.
+
+2. **Causa.** O plano separou deliberadamente a fundação de contratos (T1) da
+   composição visual e da navegação (T4), para que o browser não reinventasse DTOs,
+   validações ou cálculos antes de existir o adaptador do motor.
+
+3. **O que foi feito.** Na branch `feat/mot19-shell-acessivel`, baseada em
+   `main` no commit `e2eef65`, foi completado o bootstrap Vite/React/TypeScript em
+   `web/`, com `AppShell`, tokens, CSS desktop, rotas públicas e os cinco destinos
+   analíticos vazios. Foram criados Button, TextField, InlineNotice, EmptyState,
+   DefinitionTooltip, ComparisonSummary e CostTable. Os componentes de comparação e
+   custo aceitam somente `PreviewEnvelope` e usam os formatadores da MOT-16, sem
+   cálculo de economia. Testes Vitest cobrem navegação, rota ativa, labels, erro,
+   foco, teclado no tooltip e mensagens de execução. A inspeção visual e de zoom,
+   incluindo contrastes dos tokens, está documentada em
+   `docs/frontend/etapa-1-operacao.md` com quatro capturas locais. Não houve alteração
+   em `motor/`, autenticação real, chamadas HTTP, adaptador, IndexedDB, gráficos ou
+   replay funcional.
+
+4. **O que isso invalida.** Invalida a afirmação de que a etapa 1 não possui shell
+   navegável ou base visual acessível. Não invalida qualquer número, cenário,
+   varredura, contrato canônico ou resultado do motor; autenticação e execução real
+   continuam fora desta entrega.
 
 ## 2026-09-12 — API autenticada e mesma origem da etapa 1 (MOT-18)
 
