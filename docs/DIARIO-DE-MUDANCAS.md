@@ -80,8 +80,10 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
    `publication.py` valida decimais, referências, dias, conservação exata no objeto
    e no JSON, coorte medida, taxa e identidade reconstruída do manifesto. A fixture
    `contracts/fixtures/reference-result.json` é reproduzível por
-   `python -m servidor.generate_reference_result`. Passaram 574 testes normais, 574
-   sob `-O`, Ruff e mypy isolado de `servidor`; nenhum arquivo em `motor/` mudou.
+   `python -m servidor.generate_reference_result`. Passaram 575 testes normais, 575
+   sob `-O`, Ruff e mypy isolado de `servidor`; nenhum arquivo em `motor/` mudou. O
+   gerador lê a versão do `pyproject.toml`, mantendo a fixture idêntica mesmo quando
+   o checkout do CI ainda não está instalado como distribuição.
 
 4. **O que isso invalida.** Invalida fixtures de resposta inventadas manualmente e
    qualquer integração que publique diretamente o retorno analítico sem o portão.

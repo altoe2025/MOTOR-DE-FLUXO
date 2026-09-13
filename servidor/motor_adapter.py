@@ -86,6 +86,7 @@ def executar_previa(
         build_sha=build_sha,
         relogio=relogio,
         id_factory=uuid4,
+        version_factory=_versao_motor,
     )
 
 
@@ -95,8 +96,10 @@ def _executar_previa(
     build_sha: str,
     relogio: Callable[[], datetime],
     id_factory: Callable[[], UUID],
+    version_factory: Callable[[str], str],
 ) -> PreviewEnvelope:
     build_sha = _BUILD_SHA_ADAPTER.validate_python(build_sha, strict=True)
+    versao_executada = version_factory(build_sha)
     cenario = construir_cenario(request.cenario)
     temporal = None
     drenagem = "LEGADO"
@@ -122,7 +125,7 @@ def _executar_previa(
         metodo_percentil="NAO_APLICAVEL",
         drenagem=drenagem,
         relogio=relogio,
-        versao_motor=_versao_motor(build_sha),
+        versao_motor=versao_executada,
     )
     resultado = analisar(
         cenario,
@@ -130,7 +133,7 @@ def _executar_previa(
         manifesto,
         configuracao_temporal=temporal,
     )
-    if resultado.manifesto.versao_motor != _versao_motor(build_sha):
+    if resultado.manifesto.versao_motor != versao_executada:
         raise ResultadoInvalido(
             "RESULTADO_INVALIDO: versão executada diverge do SHA solicitado"
         )

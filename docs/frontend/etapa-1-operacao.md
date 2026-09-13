@@ -92,7 +92,7 @@ Detalhes, decisões e comandos: [registro da MOT-16](mot-16-implementacao.md).
   roundtrip do JSON canônico.
 - [x] Fixture `reference-result.json` é gerada pelo adaptador real com relógio,
   UUID e SHA controlados e reproduz os números de aceitação.
-- [x] Passaram 574 testes normais, 574 sob `python -O`, Ruff e mypy isolado da
+- [x] Passaram 575 testes normais, 575 sob `python -O`, Ruff e mypy isolado da
   camada `servidor`; `git diff -- motor` permaneceu vazio. O mypy integral ainda
   atravessa imports e encontra 31 apontamentos preexistentes em `motor/analise`.
 

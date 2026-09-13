@@ -1,6 +1,7 @@
 import json
 from datetime import UTC, datetime
 from decimal import Decimal
+from importlib.metadata import PackageNotFoundError
 from pathlib import Path
 from uuid import UUID
 
@@ -15,7 +16,7 @@ from motor.analise import (
 )
 from servidor.contracts.input import PreviaRequest
 from servidor.generate_reference_result import generate_reference_result
-from servidor.motor_adapter import construir_cenario, executar_previa
+from servidor.motor_adapter import _versao_motor, construir_cenario, executar_previa
 from servidor.publication import ResultadoInvalido
 
 BUILD_SHA = "a" * 40
@@ -50,7 +51,7 @@ def test_previa_equivale_a_chamada_publica_do_motor(reference_request, fixed_ids
         metodo_percentil="NAO_APLICAVEL",
         drenagem="LEGADO",
         relogio=lambda: NOW,
-        versao_motor=f"0.1.0+{BUILD_SHA}",
+        versao_motor=_versao_motor(BUILD_SHA),
     )
     direto = analisar(cenario, ConfiguracaoAnalise(ModoAnalise.AGREGADO), manifesto)
 
@@ -188,6 +189,19 @@ def test_fixture_de_resultado_e_reproduzivel(tmp_path: Path):
     documento = json.loads(primeira.read_text(encoding="utf-8"))
     assert documento["result"]["agregado"]["economia_periodo_brl"] == "1026000.000000"
     assert documento["execution_id"] == "00000000-0000-4000-8000-000000000010"
+
+
+def test_fixture_independe_de_metadata_do_pacote_instalado(tmp_path: Path, monkeypatch):
+    def pacote_ausente(*args, **kwargs):
+        raise PackageNotFoundError
+
+    monkeypatch.setattr("servidor.motor_adapter.version", pacote_ausente)
+
+    gerada = generate_reference_result(tmp_path / "sem-metadata.json")
+
+    assert gerada.read_bytes() == Path(
+        "contracts/fixtures/reference-result.json"
+    ).read_bytes()
 
 
 def test_build_invalido_e_rejeitado_antes_de_executar(reference_request, monkeypatch):
