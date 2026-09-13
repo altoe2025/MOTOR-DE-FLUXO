@@ -10,7 +10,7 @@
 
 **Spec:** [design aprovado](../specs/2026-09-11-frontend-motor-de-fluxo-design.md), [plano geral e distribuição de modelos](2026-09-11-frontend-plano-geral-execucao-modelos.md), [ambiente e workflow](2026-09-11-frontend-ambiente-e-workflow.md).
 
-**Status:** aprovado por Gabriel nesta conversa. T0–T7 foram cadastradas no Linear (workspace Felipe Bisca, time MOTOR DE FLUXO) como MOT-15–MOT-22, com as dependências nativas configuradas. T0–T2 foram integradas na `main` até o PR #30, commit `21f0ce3`. A MOT-18/T3 está implementada na branch `codex/mot18-api`, aguardando revisão e CI. Projeto Supabase ainda não provisionado. A autorização de cadastro das tarefas é específica; não autoriza criar conta, projeto Supabase, convites ou infraestrutura automaticamente.
+**Status:** aprovado por Gabriel nesta conversa. T0–T4 foram integradas na `main` até `64bf303`; T5/MOT-20 está em execução na branch `codex/mot20-auth`. Gabriel provisionou o projeto Supabase com ES256, cadastro fechado e redirects locais. Convite e primeiro acesso reais permanecem ações humanas do gate T5; T6/T7 aguardam sua conclusão.
 
 ## 1. Restrições globais
 

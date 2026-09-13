@@ -33,12 +33,11 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-09-13, depois da integração da MOT-18 e da atualização da MOT-19
-sobre a nova base.
+Atualizada em 2026-09-13, durante a implementação da MOT-20 sobre a base integrada.
 
 | Branch | Situação | Dono |
 |---|---|---|
-| `main` | MOT-15–MOT-18 integradas até o PR #31 (`d6d488e`), 627 testes passando | os dois |
+| `main` | MOT-15–MOT-19 integradas até o PR #29 (`64bf303`), 632 testes passando | os dois |
 | `netting/p1` | spike do P1, **NÃO MERGEAR** — dominado, e agora sabemos que a folga é zero em N ≥ 50. Só local, nunca foi pro GitHub | Felipe |
 | `fix/semantica-remessa-p0` | PR #11, mergeada | Felipe |
 | `fix/previsao-temporal-e-colunas-csv` | PR #12, mergeada | Gabriel |
@@ -57,6 +56,7 @@ sobre a nova base.
 | `codex/mot17-adaptador` | MOT-17 entregue pelo PR #30; implementação e verificação local concluídas | Codex |
 | `codex/mot18-api` | MOT-18 integrada pelo PR #31, CI verde | Codex |
 | `feat/mot19-shell-acessivel` | PR #29 atualizado sobre a MOT-18; shell e componentes preservam o proxy da API | Codex |
+| `codex/mot20-auth` | MOT-20 em execução; sessão, callback e rascunho implementados, convite real pendente | Codex |
 
 Essa pilha e as MOT-16–MOT-18 foram integradas na `main` pelos PRs #21–#31. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
@@ -64,6 +64,27 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
 ---
+
+## 2026-09-13 — Sessão Supabase e rascunho isolado (MOT-20)
+
+1. **Sintoma.** O shell integrado ainda exibia um formulário desabilitado, não
+   resolvia sessão e não preservava sequer o nome do estudo durante expiração ou
+   troca de conta.
+
+2. **Causa.** A MOT-19 entregou deliberadamente apenas a estrutura visual; cliente
+   Supabase, callback controlado, senha inicial e recuperação local pertencem à T5.
+
+3. **O que foi feito.** A branch `codex/mot20-auth`, baseada em `64bf303`, adiciona
+   cliente Supabase singleton, provider com cinco estados, login/logout/refresh,
+   callback `token_hash` idempotente sob StrictMode, definição de senha com mínimo de
+   12 caracteres e rascunho mínimo por `owner_sub`. Falhas de storage preservam a
+   edição em memória; JSON inválido não é apagado. A configuração pública real fica
+   em arquivo local ignorado. O JWKS ES256 e os erros de login/callback foram
+   confirmados contra o serviço real; convite e primeiro acesso aguardam ação humana.
+
+4. **O que isso invalida.** Invalida os placeholders públicos da T4 e a indicação de
+   que o Supabase ainda não havia sido provisionado. Não altera `motor/`, contratos
+   financeiros, números de aceitação ou a API da MOT-18.
 
 ## 2026-09-13 — Shell acessível atualizado sobre a API da etapa 1 (MOT-19)
 
