@@ -15,6 +15,7 @@ export default defineConfig({
     manifest: true,
   },
   test: {
+    exclude: ["e2e/**", "node_modules/**", "dist/**"],
     setupFiles: ["./src/test/setup.ts"],
   },
 });

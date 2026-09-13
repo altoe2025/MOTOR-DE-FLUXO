@@ -10,7 +10,7 @@
 
 **Spec:** [design aprovado](../specs/2026-09-11-frontend-motor-de-fluxo-design.md), [plano geral e distribuição de modelos](2026-09-11-frontend-plano-geral-execucao-modelos.md), [ambiente e workflow](2026-09-11-frontend-ambiente-e-workflow.md).
 
-**Status:** aprovado por Gabriel nesta conversa. T0–T4 foram integradas na `main` até `64bf303`; T5/MOT-20 foi concluída no PR #32 com convite, primeiro acesso, rascunho e POST autenticado reais. T6/T7 aguardam integração e execução.
+**Status:** aprovado por Gabriel nesta conversa. T0–T5 foram integradas na `main` até `835c7ca`, pelo PR #32, com convite, primeiro acesso, rascunho e POST autenticado reais. T6/MOT-21 está em execução; T7 aguarda sua integração.
 
 ## 1. Restrições globais
 

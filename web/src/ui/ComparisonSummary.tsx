@@ -8,9 +8,9 @@ export function ComparisonSummary({ envelope }: { envelope: PreviewEnvelope }) {
       <p className="eyebrow">Prévia canônica</p>
       <h2 id="comparison-summary-title">Resumo da comparação</h2>
       <dl>
-        <div><dt>Economia no período</dt><dd>{formatMoney(aggregate.economia_periodo_brl)}</dd></div>
+        <div><dt>Economia no período</dt><dd data-testid="economia-brl">{formatMoney(aggregate.economia_periodo_brl)}</dd></div>
         <div><dt>Volume compensado</dt><dd>{formatMoney(aggregate.volume_casado_periodo_brl)}</dd></div>
-        <div><dt>Taxa de netabilidade</dt><dd>{formatFraction(aggregate.taxa_netabilidade_periodo)}</dd></div>
+        <div><dt>Taxa de netabilidade</dt><dd data-testid="netabilidade">{formatFraction(aggregate.taxa_netabilidade_periodo)}</dd></div>
       </dl>
     </section>
   );

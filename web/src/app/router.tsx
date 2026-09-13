@@ -3,7 +3,8 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 
 import { useAuth } from '../auth/AuthProvider';
 import { CallbackPage, LoginPage, PasswordPage } from '../auth/AuthPages';
-import { DraftPortfolio } from '../study/DraftPortfolio';
+import { PortfolioPage } from '../pages/PortfolioPage';
+import { PreviewPage } from '../pages/PreviewPage';
 import { EmptyState } from '../ui/EmptyState';
 import { AppShell } from './AppShell';
 
@@ -43,8 +44,8 @@ export function AppRoutes() {
       <Route path="/auth/callback" element={<CallbackPage />} />
       <Route path="/auth/definir-senha" element={<PasswordPage />} />
       <Route element={<ProtectedShell />}>
-        <Route path="/carteira" element={<DraftPortfolio />} />
-        <Route path="/diagnostico" element={<Destination title="Diagnóstico" description="Os resultados robustos serão apresentados quando uma execução estiver disponível." emptyTitle="Nenhum diagnóstico disponível" emptyDescription="Execute uma prévia e um diagnóstico para examinar a carteira." />} />
+        <Route path="/carteira" element={<PortfolioPage />} />
+        <Route path="/diagnostico" element={<PreviewPage />} />
         <Route path="/comparar" element={<Destination title="Comparar cenários" description="Variantes compatíveis serão comparadas com a mesma base de evidência." emptyTitle="Nenhum cenário para comparar" emptyDescription="Crie variantes compatíveis a partir de uma carteira." />} />
         <Route path="/replay" element={<Destination title="Replay" description="Uma repetição específica poderá ser inspecionada dia a dia." emptyTitle="Nenhum replay disponível" emptyDescription="O replay depende de uma execução reproduzível." />} />
         <Route path="/premissas" element={<Destination title="Dados e premissas" description="Período, política e custos aparecerão com sua proveniência." emptyTitle="Nenhuma premissa carregada" emptyDescription="As premissas serão exibidas quando a carteira estiver disponível." />} />

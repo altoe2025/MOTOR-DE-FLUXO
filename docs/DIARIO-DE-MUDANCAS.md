@@ -33,11 +33,11 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-09-13, durante a implementação da MOT-20 sobre a base integrada.
+Atualizada em 2026-09-13, durante a implementação da MOT-21 sobre a base integrada.
 
 | Branch | Situação | Dono |
 |---|---|---|
-| `main` | MOT-15–MOT-19 integradas até o PR #29 (`64bf303`), 632 testes passando | os dois |
+| `main` | MOT-15–MOT-20 integradas até o PR #32 (`835c7ca`), 632 testes passando | os dois |
 | `netting/p1` | spike do P1, **NÃO MERGEAR** — dominado, e agora sabemos que a folga é zero em N ≥ 50. Só local, nunca foi pro GitHub | Felipe |
 | `fix/semantica-remessa-p0` | PR #11, mergeada | Felipe |
 | `fix/previsao-temporal-e-colunas-csv` | PR #12, mergeada | Gabriel |
@@ -56,14 +56,43 @@ Atualizada em 2026-09-13, durante a implementação da MOT-20 sobre a base integ
 | `codex/mot17-adaptador` | MOT-17 entregue pelo PR #30; implementação e verificação local concluídas | Codex |
 | `codex/mot18-api` | MOT-18 integrada pelo PR #31, CI verde | Codex |
 | `feat/mot19-shell-acessivel` | PR #29 atualizado sobre a MOT-18; shell e componentes preservam o proxy da API | Codex |
-| `codex/mot20-auth` | PR #32; MOT-20 concluída com convite, rascunho e POST autenticado reais | Codex |
+| `codex/mot20-auth` | PR #32, mergeada na `main`; MOT-20 concluída com convite, rascunho e POST autenticado reais | Codex |
+| `codex/mot21-client-integracao` | PR #33 aberto sobre `835c7ca`; implementação, CI e gate Supabase real verdes | Codex |
 
-Essa pilha e as MOT-16–MOT-18 foram integradas na `main` pelos PRs #21–#31. O PR #17 continua aberto e
+Essa pilha e as MOT-16–MOT-20 foram integradas na `main` pelos PRs #21–#32. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
 ---
+
+## 2026-09-13 — Cliente tipado e percurso navegador–motor (MOT-21)
+
+1. **Sintoma.** A sessão e a API estavam integradas, mas o botão do exemplo ainda
+   não chamava o servidor e o Diagnóstico não recebia um envelope validado do motor.
+
+2. **Causa.** A T5 encerrou deliberadamente no login e no rascunho por conta. O
+   cliente HTTP, a política de repetição, a identidade da execução e o estado da
+   prévia pertencem à T6.
+
+3. **O que foi feito.** A branch `codex/mot21-client-integracao`, baseada em
+   `835c7ca`, adiciona cliente tipado com Bearer obtido por chamada, timeout e
+   `ApiError` sanitizado; valida GET, entrada e envelope em runtime; cria um
+   `QueryClient` por usuário e nunca repete mutações. O fluxo bloqueia duplicatas,
+   rejeita respostas de outra conta, estudo, cenário, revisão ou request e preserva
+   o envelope aceito como snapshot imutável. Carteira executa o GET e o POST reais;
+   Diagnóstico apresenta apenas os números canônicos, a origem sintética e o aviso
+   de não calibração. Um build E2E controlado percorre navegador → FastAPI →
+   adaptador → motor sem mock de resposta nem credencial pessoal. No gate manual, o
+   build de produção autenticou pelo Supabase real e reproduziu R$ 1.026.000,00,
+   58,82%, `PREVIA`, fingerprint e aviso de não calibração; o nome do estudo foi
+   preservado após uma falha inicial de conectividade do JWKS.
+
+4. **O que isso invalida.** Invalida o botão sem ação e os estados vazios de
+   Carteira/Diagnóstico como representação da T6. Não altera `motor/`, regras de
+   cálculo, contratos financeiros, calibração ou persistência da etapa 2. A
+   evidência real de login/POST da MOT-20 continua válida e agora foi complementada
+   pelo gate manual da nova tela com uma sessão Supabase real.
 
 ## 2026-09-13 — Sessão Supabase e rascunho isolado (MOT-20)
 
