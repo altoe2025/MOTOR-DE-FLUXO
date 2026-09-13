@@ -10,7 +10,7 @@
 
 **Spec:** [design aprovado](../specs/2026-09-11-frontend-motor-de-fluxo-design.md), [plano geral e distribuição de modelos](2026-09-11-frontend-plano-geral-execucao-modelos.md), [ambiente e workflow](2026-09-11-frontend-ambiente-e-workflow.md).
 
-**Status:** aprovado por Gabriel nesta conversa. T0–T7 foram cadastradas no Linear (workspace Felipe Bisca, time MOTOR DE FLUXO) como MOT-15–MOT-22, com as dependências nativas configuradas. A MOT-15 foi integrada na `main` pelos PRs #21–#26, commit `1aecc57`, confirmou os contratos públicos e passou o baseline. A MOT-16 foi integrada pelo PR #27, commit `d2a261b`, com a fundação de contratos e CI verde. Projeto Supabase ainda não provisionado. A autorização de cadastro das tarefas é específica; não autoriza criar conta, projeto Supabase, convites ou infraestrutura automaticamente.
+**Status:** aprovado por Gabriel nesta conversa. T0–T7 foram cadastradas no Linear (workspace Felipe Bisca, time MOTOR DE FLUXO) como MOT-15–MOT-22, com as dependências nativas configuradas. T0–T2 foram integradas na `main` até o PR #30, commit `21f0ce3`. A MOT-18/T3 está implementada na branch `codex/mot18-api`, aguardando revisão e CI. Projeto Supabase ainda não provisionado. A autorização de cadastro das tarefas é específica; não autoriza criar conta, projeto Supabase, convites ou infraestrutura automaticamente.
 
 ## 1. Restrições globais
 
@@ -491,8 +491,8 @@ def test_previa_preserva_aceitacao(reference_request, clock):
 
 **Interfaces:** `create_app(settings: Settings | None = None, verifier: TokenVerifier | None = None) -> FastAPI`; `TokenVerifier.verify(token: str) -> AuthenticatedUser`; `AuthenticatedUser(user_id: UUID)`. Implementação real default é JWKS; testes podem injetar verificador, sem parâmetro controlável pelo request. `require_user` é dependência das três rotas privadas.
 
-- [ ] Escrever testes de ausência de Bearer, assinatura errada, token expirado, issuer/audience incorretos, UUID não permitido e serviço JWKS indisponível. Tokens de teste são assinados com chave temporária local; não usar token real em fixture.
-- [ ] Verificar que o adaptador não foi chamado quando a autenticação falha:
+- [x] Escrever testes de ausência de Bearer, assinatura errada, token expirado, issuer/audience incorretos, UUID não permitido e serviço JWKS indisponível. Tokens de teste são assinados com chave temporária local; não usar token real em fixture.
+- [x] Verificar que o adaptador não foi chamado quando a autenticação falha:
 
 ```python
 def test_unauthenticated_does_not_run(client, reference_payload, adapter_spy):
@@ -501,12 +501,12 @@ def test_unauthenticated_does_not_run(client, reference_payload, adapter_spy):
     adapter_spy.assert_not_called()
 ```
 
-- [ ] Implementar Settings, JWKS e allowlist conforme 4.3, health/session e erros sanitizados. Validar configuração inconsistente no startup; não registrar Authorization, URL com token ou corpo.
-- [ ] Implementar GET do exemplo fixo e POST limitado. Verificar 429 com primeira execução mantida por barreira de teste; verificar liberação depois de sucesso e erro.
-- [ ] Implementar estáticos só para `assets` e fallback de rotas conhecidas da SPA. Caminhos resolvidos devem permanecer em `WEB_DIST_DIR`; `/api/*`, `/assets/ausente.js` e tentativas `../` não retornam index.html. `index.html` sem cache duradouro; assets com hash podem ter cache imutável.
-- [ ] Configurar Vite dev proxy de `/api` para `127.0.0.1:8000`; API do cliente é sempre relativa. Sem CORS curinga. Produção não precisa de CORS para navegador da mesma origem.
-- [ ] Rodar integração via HTTP com JSON efetivo, não só construção Python. Contratos errados geram o código previsto. Confirmar health responde durante cálculo e expirado não executa.
-- [ ] Rodar testes de pacote instalado e rotas estáticas; registrar verificação e commit/Diário.
+- [x] Implementar Settings, JWKS e allowlist conforme 4.3, health/session e erros sanitizados. Validar configuração inconsistente no startup; não registrar Authorization, URL com token ou corpo.
+- [x] Implementar GET do exemplo fixo e POST limitado. Verificar 429 com primeira execução mantida por barreira de teste; verificar liberação depois de sucesso e erro.
+- [x] Implementar estáticos só para `assets` e fallback de rotas conhecidas da SPA. Caminhos resolvidos devem permanecer em `WEB_DIST_DIR`; `/api/*`, `/assets/ausente.js` e tentativas `../` não retornam index.html. `index.html` sem cache duradouro; assets com hash podem ter cache imutável.
+- [x] Configurar Vite dev proxy de `/api` para `127.0.0.1:8000`; API do cliente é sempre relativa. Sem CORS curinga. Produção não precisa de CORS para navegador da mesma origem.
+- [x] Rodar integração via HTTP com JSON efetivo, não só construção Python. Contratos errados geram o código previsto. Confirmar health responde durante cálculo e expirado não executa.
+- [x] Rodar testes de pacote instalado e rotas estáticas; registrar verificação e commit/Diário.
 
 **Gate:** nenhuma análise sem sessão válida; não há bypass; rotas profundas e API coexistem. Supabase real ainda é gate separado da T5/T7.
 
