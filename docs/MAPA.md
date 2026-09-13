@@ -4,22 +4,22 @@
 
 ## Comece por aqui
 
-**Branch: `analise/sensibilidade-custo`.** A sensibilidade está empilhada sobre o
-trabalho de varredura. **Nada disso está na `main`.**
+**Branch integrada: `main`.** A sensibilidade e o trabalho de varredura abaixo já
+foram integrados na `main`; a árvore registra a ordem histórica da pilha.
 
 ```
 main
  └─ gabriel/metrica-tempo        PR #21   colunas de tempo no CSV
      └─ gabriel/varredura-completa  PR #22   a grade e o primeiro relatório
          └─ gabriel/mix-outbound      PR #23   5º mix, regrada, correções
-             └─ analise/sensibilidade-custo    decomposição e exposição  ← AQUI
+             └─ analise/sensibilidade-custo    decomposição e exposição
 ```
 
-Ordem de merge é #21 → #22 → #23. Nenhum foi mergeado. PR #17 é de outro assunto
-(cenários manuais) e está deliberadamente parado.
+Ordem de merge concluída: #21 → #22 → #23 → #24. O PR #17 é de outro assunto,
+continua aberto e está deliberadamente separado.
 
 ```bash
-git checkout analise/sensibilidade-custo
+git checkout main
 pip install pytest pyyaml numpy
 make test          # 262 testes; passa também sob `python -O -m pytest -q`
 ```

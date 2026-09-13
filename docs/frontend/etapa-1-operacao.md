@@ -2,8 +2,8 @@
 
 ## Estado
 
-T0–T4 estão **integradas na `main`** até o PR #29, commit `64bf303`; T5 foi concluída
-na branch `codex/mot20-auth` e publicada no PR #32. As oito tarefas foram
+T0–T5 estão **integradas na `main`** até o PR #32, commit `835c7ca`; T6 está em
+execução na branch `codex/mot21-client-integracao`, baseada nesse commit. As oito tarefas foram
 cadastradas como MOT-15–MOT-22 no workspace **Felipe Bisca**, time
 **MOTOR DE FLUXO**, com as dependências nativas do plano. A base integrada foi
 publicada pelos PRs #21–#26 no commit `1aecc57`; MOT-16 e MOT-17 foram integradas
@@ -63,8 +63,8 @@ Fonte de execução: [plano técnico aprovado](../superpowers/plans/2026-09-11-f
 | T2 | [MOT-17 — Adaptador único e validação de publicação](https://linear.app/felipe-bisca/issue/MOT-17/etapa-1-t2-adaptador-unico-e-validacao-de-publicacao) | Integrada pelo PR #30; portão real concluído |
 | T3 | [MOT-18 — FastAPI, autenticação e mesma origem](https://linear.app/felipe-bisca/issue/MOT-18/etapa-1-t3-fastapi-autenticacao-e-mesma-origem) | Integrada pelo PR #31; CI verde |
 | T4 | [MOT-19 — Shell e componentes acessíveis](https://linear.app/felipe-bisca/issue/MOT-19/etapa-1-t4-shell-e-componentes-acessiveis) | Integrada pelo PR #29 em `64bf303` |
-| T5 | [MOT-20 — Login, convite e recuperação de rascunho](https://linear.app/felipe-bisca/issue/MOT-20/etapa-1-t5-login-convite-e-recuperacao-de-rascunho) | Concluída no PR #32; gate Supabase real aprovado |
-| T6 | [MOT-21 — Cliente tipado e integração navegador–motor](https://linear.app/felipe-bisca/issue/MOT-21/etapa-1-t6-cliente-tipado-e-integracao-navegador-motor) | Backlog; bloqueada por MOT-20 |
+| T5 | [MOT-20 — Login, convite e recuperação de rascunho](https://linear.app/felipe-bisca/issue/MOT-20/etapa-1-t5-login-convite-e-recuperacao-de-rascunho) | Integrada na `main` pelo PR #32; gate Supabase real aprovado |
+| T6 | [MOT-21 — Cliente tipado e integração navegador–motor](https://linear.app/felipe-bisca/issue/MOT-21/etapa-1-t6-cliente-tipado-e-integracao-navegador-motor) | Em execução na branch `codex/mot21-client-integracao`, base `835c7ca` |
 | T7 | [MOT-22 — Aceitação, CI e passagem para etapa 2](https://linear.app/felipe-bisca/issue/MOT-22/etapa-1-t7-aceitacao-ci-e-passagem-para-etapa-2) | Backlog; bloqueada por MOT-21 |
 
 Dependências nativas verificadas: T1 depende de T0; T2 de T1; T3 de T2; T4 de T1; T5 de T3 e T4; T6 de T5; T7 de T6. Não atribuir a pessoas com base nos nomes dos modelos; a distribuição Astra/Sol/Terra é orientação de execução, não identidade de membro do Linear.
@@ -191,6 +191,28 @@ texto da navegação/fundo 12,85:1; foco/canvas 5,77:1; borda/superfície 4,58:1
   `1026000.000000` e o SHA completo da branch.
 
 Detalhes e comandos: [registro da MOT-20](mot-20-implementacao.md).
+
+## T6 — cliente tipado e integração navegador–motor
+
+- `getReferenceExample(signal?)` e `runPreview(input, signal?)` obtêm o Bearer no
+  instante de cada chamada, impõem timeout com `AbortController` e validam o JSON
+  pelo schema antes de devolver dados à interface.
+- `ApiError` conserva somente status, código, mensagem, campos públicos e request ID.
+  GET transitório pode repetir uma vez; POST nunca repete automaticamente.
+- Cada identidade recebe um `QueryClient` novo. A troca de conta limpa o cache,
+  aborta a espera ativa e descarta resultados tardios. Request, estudo, cenário e
+  revisão precisam coincidir antes da aceitação.
+- Carteira bloqueia duplicatas durante a execução. Uma falha preserva nome e
+  envelope anterior, e nova execução só ocorre por clique explícito.
+- Diagnóstico formata os campos canônicos recebidos; não recalcula custo, economia,
+  netabilidade, P0 ou EDF. O exemplo mostra R$ 1.026.000,00, 58,82%, origem
+  sintética e aviso de valores não calibrados.
+- O Playwright usa autenticação controlada, mas percorre FastAPI, adaptador e motor
+  reais. O gate manual abre o build de produção com o Supabase real e requer que a
+  pessoa autorizada já tenha uma sessão ou faça o login localmente; credenciais não
+  são coletadas nem registradas.
+
+Detalhes e comandos: [registro da MOT-21](mot-21-implementacao.md).
 
 ## Arquivos preexistentes preservados
 

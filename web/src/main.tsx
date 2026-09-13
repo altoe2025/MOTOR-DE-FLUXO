@@ -1,8 +1,8 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
+import { ApplicationProviders } from './app/providers';
 import { AppRoutes } from './app/router';
 import { AuthProvider } from './auth/AuthProvider';
 import './styles/tokens.css';
@@ -15,22 +15,17 @@ if (root === null) {
 }
 const rootElement = root;
 
-const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } } });
-
 async function bootstrap() {
-  const { getSupabaseAuthClient } = await import('./auth/supabaseClient');
-  const authClient = getSupabaseAuthClient();
+  const authClient = import.meta.env.MODE === 'e2e'
+    ? (await import('./auth/e2eAuthClient')).createE2eAuthClient()
+    : (await import('./auth/supabaseClient')).getSupabaseAuthClient();
   createRoot(rootElement).render(
     <StrictMode>
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider
-          client={authClient}
-          onIdentityChange={(previous, next) => { if (previous !== next) queryClient.clear(); }}
-          onSignedOut={() => queryClient.clear()}
-        >
+      <AuthProvider client={authClient}>
+        <ApplicationProviders>
           <BrowserRouter><AppRoutes /></BrowserRouter>
-        </AuthProvider>
-      </QueryClientProvider>
+        </ApplicationProviders>
+      </AuthProvider>
     </StrictMode>,
   );
 }

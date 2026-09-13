@@ -9,6 +9,8 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { AuthProvider } from '../auth/AuthProvider';
 import type { AuthClient, AuthSession } from '../auth/types';
+import type { ApiClient } from '../api/client';
+import { ApplicationProviders } from './providers';
 import { AppRoutes } from './router';
 
 function session(userId = 'user-a'): AuthSession {
@@ -32,9 +34,15 @@ function client(initial: AuthSession | null, options: { loginError?: string } = 
 }
 
 function renderAppAt(path: string, authClient: AuthClient = client(session())) {
+  const apiClient: ApiClient = {
+    getReferenceExample: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
+    runPreview: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
+  };
   return render(
     <AuthProvider client={authClient}>
-      <MemoryRouter initialEntries={[path]}><AppRoutes /></MemoryRouter>
+      <ApplicationProviders client={apiClient}>
+        <MemoryRouter initialEntries={[path]}><AppRoutes /></MemoryRouter>
+      </ApplicationProviders>
     </AuthProvider>,
   );
 }
