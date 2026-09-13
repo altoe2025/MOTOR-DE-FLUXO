@@ -10,7 +10,7 @@
 
 **Spec:** [design aprovado](../specs/2026-09-11-frontend-motor-de-fluxo-design.md), [plano geral e distribuição de modelos](2026-09-11-frontend-plano-geral-execucao-modelos.md), [ambiente e workflow](2026-09-11-frontend-ambiente-e-workflow.md).
 
-**Status:** aprovado por Gabriel nesta conversa. T0–T6 foram integradas na `main` até `2953a2b`, pelo PR #33, com convite, primeiro acesso, rascunho, cliente tipado e percurso navegador–motor reais. T7/MOT-22 foi publicada no PR #34 pelo commit `a7ca867`, com o primeiro CI verde; revisão e merge estão pendentes.
+**Status:** aprovado por Gabriel nesta conversa. T0–T6 foram integradas na `main` até `2953a2b`, pelo PR #33, com convite, primeiro acesso, rascunho, cliente tipado e percurso navegador–motor reais. T7/MOT-22 foi integrada pelo PR #34 depois da autorização final e do gate protegido `pytest` verde.
 
 ## 1. Restrições globais
 

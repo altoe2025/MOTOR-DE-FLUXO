@@ -4,9 +4,10 @@
 
 A execução ocorre na branch `codex/mot22-aceitacao-ci`, criada da `origin/main`
 `2953a2b6993f52f8f94841eb1cce46dae80a0608`, merge do PR #33. A entrega foi
-publicada no PR #34 pelo commit `a7ca867f57083b89b430c96be1ea823397e46b26`;
-seu primeiro workflow `acceptance` passou em 1m52s. A MOT-22 aguarda revisão e o
-merge exige autorização separada.
+publicada e integrada pelo PR #34, cuja primeira entrega foi o commit
+`a7ca867f57083b89b430c96be1ea823397e46b26`. O primeiro workflow `acceptance`
+passou em 1m52s; o gate final preservou o nome protegido `pytest` e manteve a mesma
+matriz. O merge ocorreu somente depois da autorização separada.
 
 ## Gate automatizado
 

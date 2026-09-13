@@ -19,6 +19,7 @@ def test_ci_covers_every_pull_request_and_locked_runtimes():
     triggers = workflow.get("on", workflow.get(True))
     assert isinstance(triggers, dict)
     assert triggers["pull_request"] == {}
+    assert "pytest" in workflow["jobs"]
 
     serialized = (ROOT / ".github/workflows/test.yml").read_text(encoding="utf-8")
     assert 'python-version: "3.11"' in serialized

@@ -5,8 +5,8 @@
 
 ## Comece por aqui
 
-**Branch integrada: `main` em `2953a2b`.** A sensibilidade, o fechamento funcional
-e as MOT-15–MOT-21 já foram integrados; a árvore abaixo registra apenas a ordem
+**Branch integrada: `main` pelo PR #34.** A sensibilidade, o fechamento funcional
+e as MOT-15–MOT-22 já foram integrados; a árvore abaixo registra apenas a ordem
 histórica da pilha de análises.
 
 ```
@@ -18,9 +18,9 @@ main
 ```
 
 Ordem de merge da pilha concluída: #21 → #22 → #23 → #24. A fundação web foi
-integrada pelos PRs #25–#33. O PR #17 é de outro assunto, continua aberto e está
-deliberadamente separado. A MOT-22 segue no PR #34, branch
-`codex/mot22-aceitacao-ci` baseada em `2953a2b`, com o primeiro CI verde.
+integrada pelos PRs #25–#34. O PR #17 é de outro assunto, continua aberto e está
+deliberadamente separado. A MOT-22 foi integrada pelo PR #34 a partir da branch
+`codex/mot22-aceitacao-ci`, baseada em `2953a2b`.
 
 ```bash
 git checkout main

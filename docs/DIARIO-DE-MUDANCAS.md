@@ -37,7 +37,7 @@ Atualizada em 2026-09-13, durante a implementação da MOT-22 sobre a base integ
 
 | Branch | Situação | Dono |
 |---|---|---|
-| `main` | MOT-15–MOT-21 integradas até o PR #33 (`2953a2b`), com CI pós-merge verde | os dois |
+| `main` | MOT-15–MOT-22 integradas até o PR #34, com o gate protegido `pytest` verde | os dois |
 | `netting/p1` | spike do P1, **NÃO MERGEAR** — dominado, e agora sabemos que a folga é zero em N ≥ 50. Só local, nunca foi pro GitHub | Felipe |
 | `fix/semantica-remessa-p0` | PR #11, mergeada | Felipe |
 | `fix/previsao-temporal-e-colunas-csv` | PR #12, mergeada | Gabriel |
@@ -58,9 +58,9 @@ Atualizada em 2026-09-13, durante a implementação da MOT-22 sobre a base integ
 | `feat/mot19-shell-acessivel` | PR #29 atualizado sobre a MOT-18; shell e componentes preservam o proxy da API | Codex |
 | `codex/mot20-auth` | PR #32, mergeada na `main`; MOT-20 concluída com convite, rascunho e POST autenticado reais | Codex |
 | `codex/mot21-client-integracao` | PR #33 mergeado na `main`; implementação, CI e gate Supabase real verdes | Codex |
-| `codex/mot22-aceitacao-ci` | PR #34 aberto sobre `2953a2b`; commit `a7ca867` com aceitação/CI/handoff e primeiro CI verde | Codex |
+| `codex/mot22-aceitacao-ci` | PR #34 mergeada na `main`; aceitação, CI e handoff da etapa 1 entregues | Codex |
 
-Essa pilha e as MOT-16–MOT-21 foram integradas na `main` pelos PRs #21–#33. O PR #17 continua aberto e
+Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
@@ -89,7 +89,10 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
    etapa 2. A sessão Supabase real existente repetiu o percurso até o motor sem
    inserir ou registrar credenciais. O commit `a7ca867` foi publicado no PR #34 e
    seu primeiro workflow `acceptance` passou em 1m52s; o merge continua dependendo
-   de autorização final.
+   de autorização final. Quando a autorização foi concedida, o merge normal revelou
+   que a proteção da `main` ainda exigia o nome histórico de check `pytest`, enquanto
+   o workflow novo publicava `acceptance`. Um teste de regressão passou a fixar esse
+   contrato e o identificador do job foi restaurado sem remover nenhum gate.
 
 4. **O que isso invalida.** Invalida registros que apresentavam o PR #33 como
    aberto, a MOT-21 em execução, a MOT-22 bloqueada ou a CI como apenas Python. Não
