@@ -23,6 +23,12 @@ from servidor.auth import (
 )
 from servidor.config import Settings
 from servidor.contracts.input import PreviaRequest
+from servidor.contracts.preparation import (
+    Capabilities,
+    CatalogResponse,
+    PreparationRequest,
+    PreparationResponse,
+)
 from servidor.contracts.preview import PreviewEnvelope, ReferenceExample
 from servidor.contracts.session import HealthResponse, SessionResponse
 from servidor.errors import ApiFailure, entrada_invalida, failure_response
@@ -170,6 +176,20 @@ def create_schema_app() -> FastAPI:
 
     @app.get("/api/v1/examples/reference", response_model=ReferenceExample)
     def reference_example_schema(_: SchemaBearer) -> ReferenceExample:
+        raise HTTPException(status_code=501, detail="endpoint disponível na T3")
+
+    @app.get("/api/v1/capabilities", response_model=Capabilities)
+    def capabilities_schema(_: SchemaBearer) -> Capabilities:
+        raise HTTPException(status_code=501, detail="endpoint disponível na T3")
+
+    @app.get("/api/v1/examples/catalog", response_model=CatalogResponse)
+    def catalog_schema(_: SchemaBearer) -> CatalogResponse:
+        raise HTTPException(status_code=501, detail="endpoint disponível na T3")
+
+    @app.post("/api/v1/preparacoes", response_model=PreparationResponse)
+    def preparation_schema(
+        _: SchemaBearer, request: PreparationRequest,
+    ) -> PreparationResponse:
         raise HTTPException(status_code=501, detail="endpoint disponível na T3")
 
     @app.post("/api/v1/previas", response_model=PreviewEnvelope)

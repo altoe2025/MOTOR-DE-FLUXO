@@ -33,7 +33,7 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-09-13, durante a implementação da MOT-22 sobre a base integrada.
+Atualizada em 2026-09-14, durante a implementação da MOT-23 sobre a base integrada.
 
 | Branch | Situação | Dono |
 |---|---|---|
@@ -59,6 +59,7 @@ Atualizada em 2026-09-13, durante a implementação da MOT-22 sobre a base integ
 | `codex/mot20-auth` | PR #32, mergeada na `main`; MOT-20 concluída com convite, rascunho e POST autenticado reais | Codex |
 | `codex/mot21-client-integracao` | PR #33 mergeado na `main`; implementação, CI e gate Supabase real verdes | Codex |
 | `codex/mot22-aceitacao-ci` | PR #34 mergeada na `main`; aceitação, CI e handoff da etapa 1 entregues | Codex |
+| `codex/mot23-preparation-contracts` | MOT-23 implementada localmente; sem push, PR ou merge | Codex |
 
 Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
@@ -66,6 +67,53 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
 ---
+
+## 2026-09-14 — DTOs HTTP de preparação e catálogo (MOT-23)
+
+1. **Sintoma.** A Etapa 1 expunha somente o contrato de prévia com ordens
+   explícitas. Ainda não havia DTOs HTTP para autoria efetiva, preparação,
+   catálogo de perfis/exemplos ou capabilities, bloqueando T1, T3 e T8.
+
+2. **Causa.** Esses contratos pertencem à primeira missão da Etapa 2 e dependiam do
+   design/plano aprovados. Antecipá-los na Etapa 1 teria misturado a API estável
+   1.0.0 com geração autorada ainda não planejada.
+
+3. **O que foi feito.** A branch `codex/mot23-preparation-contracts`, baseada na
+   `origin/main` `a655d9d`, adiciona DTOs Pydantic fechados, validação semântica de
+   participantes, seed textual, decimais, tempo, custos e fontes estáveis por ID.
+   Cria fixture autorada sintética e fixtures de teste com deepcopy/relógio fixo;
+   expõe três schemas novos na factory canônica, sem endpoint funcional; regenera
+   OpenAPI, tipos e cinco validadores Ajv. TDD demonstrou import, schemas e limite
+   de mediana ausentes antes das correções. Ao final, 680 testes Python passaram
+   nos modos normal e `-O`, 90 Vitest passaram, e Ruff, mypy, typecheck, lint,
+   build e geração determinística ficaram verdes. `motor/` permaneceu intacto.
+
+4. **O que isso invalida.** Invalida a ausência de contratos HTTP para T1/T3/T8 e
+   qualquer tentativa de transportar seed/dinheiro como número. Não invalida os
+   envelopes, schemas, fixtures, resultados ou medições 1.0.0 da Etapa 1. Não
+   implementa catálogo real, geração, rotas de produção, IndexedDB, controlador ou
+   integração; esses itens continuam nas missões posteriores.
+
+## 2026-09-13 — Planejamento aprovado e missões da Etapa 2 (MOT-23–MOT-33)
+
+1. **Sintoma.** A Etapa 2 precisava de design e plano completos, vinculados a
+   missões executáveis após aprovação.
+
+2. **Causa.** A fundação MOT-15–22 não implementava autoria de carteiras, IndexedDB
+   ou preparação HTTP; faltava fechar contratos e dependências antes do código.
+
+3. **O que foi feito.** Design e plano aprovados e publicados no Linear com
+   autorização explícita para o conteúdo completo. Missões MOT-23–MOT-33 criadas
+   em Backlog no time MOTOR DE FLUXO, com modelos e dependências conferidos por
+   releitura. Documentos 2026-09-13-frontend-etapa-2-design.md,
+   2026-09-13-frontend-etapa-2-plano-tecnico.md e
+   2026-09-13-frontend-etapa-2-missoes-linear.md permanecem no worktree
+   `frontend-etapa-2-plano`, branch `codex/frontend-etapa-2-plano`. A primeira
+   tarefa é MOT-23/T2, antes de T1 conforme o plano.
+
+4. **O que isso invalida.** Invalida indicações de aprovação/cadastro pendentes.
+   Nada nas regras do motor, resultados ou CI da Etapa 1. Gates runtime da Etapa 2
+   continuavam futuros naquele registro.
 
 ## 2026-09-13 — Aceitação e CI da etapa 1 (MOT-22)
 

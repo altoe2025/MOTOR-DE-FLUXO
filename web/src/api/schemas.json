@@ -101,6 +101,127 @@
       "title": "AlocacaoDTO",
       "type": "object"
     },
+    "Capabilities": {
+      "additionalProperties": false,
+      "properties": {
+        "catalog_version": {
+          "const": "1.0.0",
+          "title": "Catalog Version",
+          "type": "string"
+        },
+        "generator_version": {
+          "const": "dimensionamento-v1",
+          "title": "Generator Version",
+          "type": "string"
+        },
+        "max_expected_orders": {
+          "const": 500,
+          "title": "Max Expected Orders",
+          "type": "integer"
+        },
+        "max_orders": {
+          "const": 1000,
+          "title": "Max Orders",
+          "type": "integer"
+        },
+        "motor_build_sha": {
+          "pattern": "^[0-9a-f]{40}$",
+          "title": "Motor Build Sha",
+          "type": "string"
+        },
+        "motor_schema_version": {
+          "const": "1.0.0",
+          "title": "Motor Schema Version",
+          "type": "string"
+        },
+        "preparation_version": {
+          "const": "1.0.0",
+          "title": "Preparation Version",
+          "type": "string"
+        },
+        "presentation_version": {
+          "const": "1.0.0",
+          "title": "Presentation Version",
+          "type": "string"
+        },
+        "preview_version": {
+          "const": "1.0.0",
+          "title": "Preview Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "preparation_version",
+        "preview_version",
+        "presentation_version",
+        "motor_schema_version",
+        "generator_version",
+        "catalog_version",
+        "motor_build_sha",
+        "max_orders",
+        "max_expected_orders"
+      ],
+      "title": "Capabilities",
+      "type": "object"
+    },
+    "CatalogResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "catalog_version": {
+          "const": "1.0.0",
+          "title": "Catalog Version",
+          "type": "string"
+        },
+        "costs": {
+          "$ref": "#/$defs/CustoEntrada"
+        },
+        "examples": {
+          "items": {
+            "$ref": "#/$defs/ExampleTemplate"
+          },
+          "maxItems": 5,
+          "minItems": 5,
+          "title": "Examples",
+          "type": "array"
+        },
+        "motor_build_sha": {
+          "pattern": "^[0-9a-f]{40}$",
+          "title": "Motor Build Sha",
+          "type": "string"
+        },
+        "profiles": {
+          "items": {
+            "$ref": "#/$defs/ProfileTemplate"
+          },
+          "maxItems": 6,
+          "minItems": 6,
+          "title": "Profiles",
+          "type": "array"
+        },
+        "recorded_at": {
+          "format": "date-time",
+          "title": "Recorded At",
+          "type": "string"
+        },
+        "source": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "catalog_version",
+        "motor_build_sha",
+        "profiles",
+        "examples",
+        "costs",
+        "source",
+        "recorded_at"
+      ],
+      "title": "CatalogResponse",
+      "type": "object"
+    },
     "CenarioEntrada": {
       "additionalProperties": false,
       "properties": {
@@ -321,6 +442,35 @@
       "title": "CustosDTO",
       "type": "object"
     },
+    "DerivedEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "inputs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Inputs",
+          "type": "array"
+        },
+        "rule": {
+          "enum": [
+            "dimensionamento-v1",
+            "geracao-v1",
+            "soma-ordens-v1"
+          ],
+          "title": "Rule",
+          "type": "string"
+        }
+      },
+      "required": [
+        "rule",
+        "inputs"
+      ],
+      "title": "DerivedEvidence",
+      "type": "object"
+    },
     "DiagnosticosExperimentaisDTO": {
       "additionalProperties": false,
       "properties": {
@@ -343,6 +493,179 @@
         "taxa_netabilidade_incremental"
       ],
       "title": "DiagnosticosExperimentaisDTO",
+      "type": "object"
+    },
+    "EffectiveInput": {
+      "additionalProperties": false,
+      "properties": {
+        "costs": {
+          "$ref": "#/$defs/CustoEntrada"
+        },
+        "measurement_days": {
+          "maximum": 365,
+          "minimum": 1,
+          "title": "Measurement Days",
+          "type": "integer"
+        },
+        "participants": {
+          "items": {
+            "$ref": "#/$defs/EffectiveParticipant"
+          },
+          "maxItems": 100,
+          "title": "Participants",
+          "type": "array"
+        },
+        "sources": {
+          "additionalProperties": {
+            "$ref": "#/$defs/EffectiveSource"
+          },
+          "title": "Sources",
+          "type": "object"
+        },
+        "warmup_days": {
+          "maximum": 365,
+          "minimum": 0,
+          "title": "Warmup Days",
+          "type": "integer"
+        },
+        "window_days": {
+          "maximum": 730,
+          "minimum": 1,
+          "title": "Window Days",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "participants",
+        "warmup_days",
+        "measurement_days",
+        "window_days",
+        "costs",
+        "sources"
+      ],
+      "title": "EffectiveInput",
+      "type": "object"
+    },
+    "EffectiveParticipant": {
+      "additionalProperties": false,
+      "properties": {
+        "deadline": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/ProfileDeadline"
+            },
+            {
+              "$ref": "#/$defs/FixedDeadline"
+            }
+          ],
+          "title": "Deadline"
+        },
+        "eh_efx": {
+          "title": "Eh Efx",
+          "type": "boolean"
+        },
+        "id": {
+          "format": "uuid",
+          "title": "Id",
+          "type": "string"
+        },
+        "monthly_volume_brl": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Monthly Volume Brl",
+          "type": "string"
+        },
+        "out_fraction": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Out Fraction",
+          "type": "string"
+        },
+        "profile": {
+          "enum": [
+            "remessa_outbound_massiva",
+            "psp_inbound",
+            "cripto_native_sem_fiat",
+            "payroll_fornecedor",
+            "exportador",
+            "tesouraria_corporativa"
+          ],
+          "title": "Profile",
+          "type": "string"
+        },
+        "purpose_in": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Purpose In",
+          "type": "string"
+        },
+        "purpose_out": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Purpose Out",
+          "type": "string"
+        },
+        "seed": {
+          "maxLength": 19,
+          "minLength": 1,
+          "pattern": "^(0|[1-9][0-9]*)$",
+          "title": "Seed",
+          "type": "string"
+        },
+        "ticket_median_brl": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Ticket Median Brl",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "profile",
+        "seed",
+        "monthly_volume_brl",
+        "ticket_median_brl",
+        "out_fraction",
+        "deadline",
+        "eh_efx",
+        "purpose_out",
+        "purpose_in"
+      ],
+      "title": "EffectiveParticipant",
+      "type": "object"
+    },
+    "EffectiveSource": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "PADRAO_SINTETICO",
+            "ESTIMATIVA_USUARIO"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "recorded_at": {
+          "format": "date-time",
+          "title": "Recorded At",
+          "type": "string"
+        },
+        "source": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "source",
+        "recorded_at"
+      ],
+      "title": "EffectiveSource",
       "type": "object"
     },
     "EstatisticaPrevia": {
@@ -380,6 +703,124 @@
         "percentile_method"
       ],
       "title": "EstatisticaPrevia",
+      "type": "object"
+    },
+    "ExampleParticipant": {
+      "additionalProperties": false,
+      "properties": {
+        "profile": {
+          "enum": [
+            "remessa_outbound_massiva",
+            "psp_inbound",
+            "cripto_native_sem_fiat",
+            "payroll_fornecedor",
+            "exportador",
+            "tesouraria_corporativa"
+          ],
+          "title": "Profile",
+          "type": "string"
+        },
+        "seed": {
+          "maxLength": 19,
+          "minLength": 1,
+          "pattern": "^(0|[1-9][0-9]*)$",
+          "title": "Seed",
+          "type": "string"
+        },
+        "template_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Template Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "template_id",
+        "profile",
+        "seed"
+      ],
+      "title": "ExampleParticipant",
+      "type": "object"
+    },
+    "ExampleTemplate": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "enum": [
+            "equilibrado",
+            "retail_pesado",
+            "corporativo_pesado",
+            "psp_dominante",
+            "outbound_extremo"
+          ],
+          "title": "Id",
+          "type": "string"
+        },
+        "label": {
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "participants": {
+          "items": {
+            "$ref": "#/$defs/ExampleParticipant"
+          },
+          "maxItems": 12,
+          "minItems": 12,
+          "title": "Participants",
+          "type": "array"
+        },
+        "weights": {
+          "additionalProperties": {
+            "maxLength": 80,
+            "minLength": 1,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "type": "string"
+          },
+          "propertyNames": {
+            "enum": [
+              "remessa_outbound_massiva",
+              "psp_inbound",
+              "cripto_native_sem_fiat",
+              "payroll_fornecedor",
+              "exportador",
+              "tesouraria_corporativa"
+            ]
+          },
+          "title": "Weights",
+          "type": "object"
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "weights",
+        "participants"
+      ],
+      "title": "ExampleTemplate",
+      "type": "object"
+    },
+    "FixedDeadline": {
+      "additionalProperties": false,
+      "properties": {
+        "days": {
+          "maximum": 365,
+          "minimum": 0,
+          "title": "Days",
+          "type": "integer"
+        },
+        "mode": {
+          "const": "FIXED",
+          "title": "Mode",
+          "type": "string"
+        }
+      },
+      "required": [
+        "mode",
+        "days"
+      ],
+      "title": "FixedDeadline",
       "type": "object"
     },
     "HTTPValidationError": {
@@ -697,6 +1138,220 @@
       "title": "PeriodoNatural",
       "type": "object"
     },
+    "PreparationParameter": {
+      "additionalProperties": false,
+      "properties": {
+        "cadence_monthly": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Cadence Monthly",
+          "type": "string"
+        },
+        "deadline_max": {
+          "maximum": 365,
+          "minimum": 0,
+          "title": "Deadline Max",
+          "type": "integer"
+        },
+        "deadline_min": {
+          "maximum": 365,
+          "minimum": 0,
+          "title": "Deadline Min",
+          "type": "integer"
+        },
+        "expected_period_brl": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Expected Period Brl",
+          "type": "string"
+        },
+        "participant_id": {
+          "format": "uuid",
+          "title": "Participant Id",
+          "type": "string"
+        },
+        "sigma": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Sigma",
+          "type": "string"
+        }
+      },
+      "required": [
+        "participant_id",
+        "sigma",
+        "cadence_monthly",
+        "expected_period_brl",
+        "deadline_min",
+        "deadline_max"
+      ],
+      "title": "PreparationParameter",
+      "type": "object"
+    },
+    "PreparationRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "expected_build_sha": {
+          "pattern": "^[0-9a-f]{40}$",
+          "title": "Expected Build Sha",
+          "type": "string"
+        },
+        "input": {
+          "$ref": "#/$defs/EffectiveInput"
+        },
+        "preparation_version": {
+          "const": "1.0.0",
+          "title": "Preparation Version",
+          "type": "string"
+        },
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "scenario_id": {
+          "format": "uuid",
+          "title": "Scenario Id",
+          "type": "string"
+        },
+        "scenario_revision": {
+          "minimum": 1,
+          "title": "Scenario Revision",
+          "type": "integer"
+        },
+        "study_id": {
+          "format": "uuid",
+          "title": "Study Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "preparation_version",
+        "request_id",
+        "study_id",
+        "scenario_id",
+        "scenario_revision",
+        "expected_build_sha",
+        "input"
+      ],
+      "title": "PreparationRequest",
+      "type": "object"
+    },
+    "PreparationResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "catalog_version": {
+          "const": "1.0.0",
+          "title": "Catalog Version",
+          "type": "string"
+        },
+        "composition": {
+          "items": {
+            "$ref": "#/$defs/RealizedComposition"
+          },
+          "title": "Composition",
+          "type": "array"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "derived_provenance": {
+          "additionalProperties": {
+            "$ref": "#/$defs/DerivedEvidence"
+          },
+          "title": "Derived Provenance",
+          "type": "object"
+        },
+        "generation_fingerprint": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Generation Fingerprint",
+          "type": "string"
+        },
+        "generator_version": {
+          "const": "dimensionamento-v1",
+          "title": "Generator Version",
+          "type": "string"
+        },
+        "input_snapshot": {
+          "$ref": "#/$defs/EffectiveInput"
+        },
+        "motor_build_sha": {
+          "pattern": "^[0-9a-f]{40}$",
+          "title": "Motor Build Sha",
+          "type": "string"
+        },
+        "orders": {
+          "items": {
+            "$ref": "#/$defs/OrdemEntrada"
+          },
+          "maxItems": 1000,
+          "title": "Orders",
+          "type": "array"
+        },
+        "parameters": {
+          "items": {
+            "$ref": "#/$defs/PreparationParameter"
+          },
+          "title": "Parameters",
+          "type": "array"
+        },
+        "preparation_id": {
+          "format": "uuid",
+          "title": "Preparation Id",
+          "type": "string"
+        },
+        "preparation_version": {
+          "const": "1.0.0",
+          "title": "Preparation Version",
+          "type": "string"
+        },
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "scenario_id": {
+          "format": "uuid",
+          "title": "Scenario Id",
+          "type": "string"
+        },
+        "scenario_revision": {
+          "minimum": 1,
+          "title": "Scenario Revision",
+          "type": "integer"
+        },
+        "study_id": {
+          "format": "uuid",
+          "title": "Study Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "preparation_version",
+        "preparation_id",
+        "request_id",
+        "study_id",
+        "scenario_id",
+        "scenario_revision",
+        "created_at",
+        "motor_build_sha",
+        "generator_version",
+        "catalog_version",
+        "generation_fingerprint",
+        "input_snapshot",
+        "orders",
+        "parameters",
+        "composition",
+        "derived_provenance"
+      ],
+      "title": "PreparationResponse",
+      "type": "object"
+    },
     "PresentationContract": {
       "additionalProperties": false,
       "properties": {
@@ -888,6 +1543,184 @@
         "presentation"
       ],
       "title": "PreviewEnvelope",
+      "type": "object"
+    },
+    "ProfileDeadline": {
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "const": "PROFILE",
+          "title": "Mode",
+          "type": "string"
+        }
+      },
+      "required": [
+        "mode"
+      ],
+      "title": "ProfileDeadline",
+      "type": "object"
+    },
+    "ProfileTemplate": {
+      "additionalProperties": false,
+      "properties": {
+        "cadence_monthly": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Cadence Monthly",
+          "type": "string"
+        },
+        "deadline_max": {
+          "maximum": 365,
+          "minimum": 0,
+          "title": "Deadline Max",
+          "type": "integer"
+        },
+        "deadline_min": {
+          "maximum": 365,
+          "minimum": 0,
+          "title": "Deadline Min",
+          "type": "integer"
+        },
+        "eh_efx": {
+          "title": "Eh Efx",
+          "type": "boolean"
+        },
+        "id": {
+          "enum": [
+            "remessa_outbound_massiva",
+            "psp_inbound",
+            "cripto_native_sem_fiat",
+            "payroll_fornecedor",
+            "exportador",
+            "tesouraria_corporativa"
+          ],
+          "title": "Id",
+          "type": "string"
+        },
+        "monthly_volume_brl": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Monthly Volume Brl",
+          "type": "string"
+        },
+        "out_fraction": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Out Fraction",
+          "type": "string"
+        },
+        "purpose_in": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Purpose In",
+          "type": "string"
+        },
+        "purpose_out": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Purpose Out",
+          "type": "string"
+        },
+        "sigma": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Sigma",
+          "type": "string"
+        },
+        "ticket_median_brl": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Ticket Median Brl",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "ticket_median_brl",
+        "sigma",
+        "cadence_monthly",
+        "monthly_volume_brl",
+        "out_fraction",
+        "deadline_min",
+        "deadline_max",
+        "eh_efx",
+        "purpose_out",
+        "purpose_in"
+      ],
+      "title": "ProfileTemplate",
+      "type": "object"
+    },
+    "RealizedComposition": {
+      "additionalProperties": false,
+      "properties": {
+        "in_brl": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "In Brl",
+          "type": "string"
+        },
+        "order_count": {
+          "maximum": 1000,
+          "minimum": 0,
+          "title": "Order Count",
+          "type": "integer"
+        },
+        "out_brl": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Out Brl",
+          "type": "string"
+        },
+        "out_fraction": {
+          "anyOf": [
+            {
+              "maxLength": 80,
+              "minLength": 1,
+              "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Out Fraction"
+        },
+        "participant_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Participant Id"
+        },
+        "total_brl": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Total Brl",
+          "type": "string"
+        }
+      },
+      "required": [
+        "participant_id",
+        "order_count",
+        "out_brl",
+        "in_brl",
+        "total_brl",
+        "out_fraction"
+      ],
+      "title": "RealizedComposition",
       "type": "object"
     },
     "ReferenceExample": {
