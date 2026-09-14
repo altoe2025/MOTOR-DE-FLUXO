@@ -33,7 +33,7 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-09-14, durante a implementação da MOT-23 sobre a base integrada.
+Atualizada em 2026-09-14, durante a implementação da MOT-24 sobre a base integrada.
 
 | Branch | Situação | Dono |
 |---|---|---|
@@ -59,7 +59,7 @@ Atualizada em 2026-09-14, durante a implementação da MOT-23 sobre a base integ
 | `codex/mot20-auth` | PR #32, mergeada na `main`; MOT-20 concluída com convite, rascunho e POST autenticado reais | Codex |
 | `codex/mot21-client-integracao` | PR #33 mergeado na `main`; implementação, CI e gate Supabase real verdes | Codex |
 | `codex/mot22-aceitacao-ci` | PR #34 mergeada na `main`; aceitação, CI e handoff da etapa 1 entregues | Codex |
-| `codex/mot23-preparation-contracts` | MOT-23 implementada localmente; sem push, PR ou merge | Codex |
+| `codex/mot23-preparation-contracts` | MOT-23 commitada e MOT-24 implementada localmente no encadeamento do PR A; sem push, PR ou merge | Codex |
 
 Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
@@ -67,6 +67,36 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
 ---
+
+## 2026-09-14 — Domínio local, schemas e fixtures de autoria (MOT-24)
+
+1. **Sintoma.** Após os DTOs HTTP da MOT-23, o frontend ainda possuía somente o
+   `StudyDocument` técnico 1.0.0 da Etapa 1. Não representava grupos, herança por
+   campo, texto parcial, identidades separadas, tentativas ou registros imutáveis.
+
+2. **Causa.** O documento autorado 2.0.0 e sua semântica pertencem à T1 da Etapa 2
+   e dependiam dos aliases HTTP gerados pela T2. Antecipá-los antes da MOT-23
+   duplicaria contratos e tornaria o cliente a fonte de formas HTTP manuais.
+
+3. **O que foi feito.** Na branch `codex/mot23-preparation-contracts`, encadeada
+   no commit `50fc384` da MOT-23, foram criados o modelo local fechado, schema
+   JSON/Ajv, parsers pt-BR sem `Number` para dinheiro, resolução de herança,
+   fingerprints numérico/evidencial/gerativo, duplicação com remapeamento e estado
+   de resultado. O `MemoryStudyRepository` passou a ser vinculado ao scope, com
+   clones nas fronteiras, CAS/idempotência, lixeira e erros públicos tipados. O
+   `fake-indexeddb` 6.2.5 foi travado para as próximas implementações do contrato.
+   TDD demonstrou módulos ausentes, API 1.0.0 do repositório, operation ID inválido,
+   operação repetida com intenção divergente, cenário/resposta tardia e mistura de
+   origem na chave numérica antes das correções. Os issues locais foram limitados
+   aos oito códigos públicos do plano. V1 terminou com 680 testes Python em cada
+   modo, 135 Vitest e todos os gates de
+   tipo/lint/build verdes; V2 foi determinístico e não alterou o contrato HTTP.
+
+4. **O que isso invalida.** Invalida o uso de `StudyDocument` 1.0.0 como formato
+   corrente editável e qualquer comparação por nome, posição ou `Number`. Não
+   invalida o envelope legado: ele permanece no ramo `LEGACY_EXPLICIT`. Não
+   implementa IndexedDB, migrações, autosave, formulários ou rotas reais; essas
+   responsabilidades continuam em MOT-26/MOT-27/MOT-28/MOT-30 e MOT-25.
 
 ## 2026-09-14 — DTOs HTTP de preparação e catálogo (MOT-23)
 

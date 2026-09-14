@@ -1,0 +1,470 @@
+{
+  "$id": "https://motor-de-fluxo.local/study/study.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+      "Digest": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{64}$"
+      },
+      "PreparationRecord": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "record_version": {
+            "const": "1.0.0"
+          },
+          "id": {
+            "$ref": "#/$defs/UUID"
+          },
+          "study_id": {
+            "$ref": "#/$defs/UUID"
+          },
+          "scope": {
+            "$ref": "#/$defs/Scope"
+          },
+          "received_at": {
+            "$ref": "#/$defs/UTC"
+          },
+          "envelope": {
+            "$ref": "https://motor-de-fluxo.local/contracts/schemas.json#/$defs/PreparationResponse"
+          }
+        },
+        "required": [
+          "record_version",
+          "id",
+          "study_id",
+          "scope",
+          "received_at",
+          "envelope"
+        ]
+      },
+      "ExecutionRecord": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "record_version": {
+            "const": "1.0.0"
+          },
+          "id": {
+            "$ref": "#/$defs/UUID"
+          },
+          "study_id": {
+            "$ref": "#/$defs/UUID"
+          },
+          "scope": {
+            "$ref": "#/$defs/Scope"
+          },
+          "received_at": {
+            "$ref": "#/$defs/UTC"
+          },
+          "preparation_id": {
+            "oneOf": [
+              {
+                "$ref": "#/$defs/UUID"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "authored_snapshot": {
+            "oneOf": [
+              {
+                "$ref": "#/$defs/AuthoredInput"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "preparation_snapshot": {
+            "oneOf": [
+              {
+                "$ref": "https://motor-de-fluxo.local/contracts/schemas.json#/$defs/PreparationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "request_snapshot": {
+            "$ref": "https://motor-de-fluxo.local/contracts/schemas.json#/$defs/PreviaRequest"
+          },
+          "numeric_key": {
+            "$ref": "#/$defs/Digest"
+          },
+          "evidence_key": {
+            "$ref": "#/$defs/Digest"
+          },
+          "envelope": {
+            "$ref": "https://motor-de-fluxo.local/contracts/schemas.json#/$defs/PreviewEnvelope"
+          }
+        },
+        "required": [
+          "record_version",
+          "id",
+          "study_id",
+          "scope",
+          "received_at",
+          "preparation_id",
+          "authored_snapshot",
+          "preparation_snapshot",
+          "request_snapshot",
+          "numeric_key",
+          "evidence_key",
+          "envelope"
+        ]
+      },
+      "OriginalRecord": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "study_id": {
+            "$ref": "#/$defs/UUID"
+          },
+          "source_version": {
+            "type": "string"
+          },
+          "captured_at": {
+            "$ref": "#/$defs/UTC"
+          },
+          "original_json": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "study_id",
+          "source_version",
+          "captured_at",
+          "original_json"
+        ]
+      },
+      "MigrationMarker": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "source_key": {
+            "type": "string"
+          },
+          "source_digest": {
+            "$ref": "#/$defs/Digest"
+          },
+          "study_id": {
+            "$ref": "#/$defs/UUID"
+          },
+          "state": {
+            "enum": [
+              "IMPORTED",
+              "DELETED"
+            ]
+          },
+          "migrated_at": {
+            "$ref": "#/$defs/UTC"
+          }
+        },
+        "required": [
+          "source_key",
+          "source_digest",
+          "study_id",
+          "state",
+          "migrated_at"
+        ]
+      },
+      "OwnerMeta": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "const": "quota"
+          },
+          "logical_bytes": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "study_count": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "key",
+          "logical_bytes",
+          "study_count"
+        ]
+      },
+      "StoredRecord": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "bytes": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "digest": {
+            "$ref": "#/$defs/Digest"
+          },
+          "value": {
+            "oneOf": [
+              {
+                "$ref": "#"
+              },
+              {
+                "$ref": "#/$defs/PreparationRecord"
+              },
+              {
+                "$ref": "#/$defs/ExecutionRecord"
+              },
+              {
+                "$ref": "#/$defs/OriginalRecord"
+              },
+              {
+                "$ref": "#/$defs/MigrationMarker"
+              },
+              {
+                "$ref": "#/$defs/OwnerMeta"
+              }
+            ]
+          }
+        },
+        "required": [
+          "bytes",
+          "digest",
+          "value"
+        ]
+      },
+    "UUID": { "type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$" },
+    "UTC": { "type": "string", "format": "date-time", "pattern": "Z$" },
+    "Source": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "enum": ["PADRAO_SINTETICO", "ESTIMATIVA_USUARIO"] },
+        "source": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "recorded_at": { "$ref": "#/$defs/UTC" }
+      },
+      "required": ["kind", "source", "recorded_at"]
+    },
+    "DraftField": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "raw": { "type": "string", "maxLength": 200 },
+        "origin": { "oneOf": [{ "$ref": "#/$defs/Source" }, { "type": "null" }] }
+      },
+      "required": ["raw", "origin"]
+    },
+    "Slot": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": { "mode": { "const": "inherit" } },
+          "required": ["mode"]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": { "mode": { "const": "own" }, "field": { "$ref": "#/$defs/DraftField" } },
+          "required": ["mode", "field"]
+        }
+      ]
+    },
+    "FieldMap": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "profile": { "$ref": "#/$defs/DraftField" },
+        "monthly_volume_brl": { "$ref": "#/$defs/DraftField" },
+        "ticket_median_brl": { "$ref": "#/$defs/DraftField" },
+        "out_fraction": { "$ref": "#/$defs/DraftField" },
+        "deadline_mode": { "$ref": "#/$defs/DraftField" },
+        "deadline_days": { "$ref": "#/$defs/DraftField" },
+        "eh_efx": { "$ref": "#/$defs/DraftField" },
+        "purpose_out": { "$ref": "#/$defs/DraftField" },
+        "purpose_in": { "$ref": "#/$defs/DraftField" }
+      },
+      "required": ["profile", "monthly_volume_brl", "ticket_median_brl", "out_fraction", "deadline_mode", "deadline_days", "eh_efx", "purpose_out", "purpose_in"]
+    },
+    "SlotMap": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "profile": { "$ref": "#/$defs/Slot" },
+        "monthly_volume_brl": { "$ref": "#/$defs/Slot" },
+        "ticket_median_brl": { "$ref": "#/$defs/Slot" },
+        "out_fraction": { "$ref": "#/$defs/Slot" },
+        "deadline_mode": { "$ref": "#/$defs/Slot" },
+        "deadline_days": { "$ref": "#/$defs/Slot" },
+        "eh_efx": { "$ref": "#/$defs/Slot" },
+        "purpose_out": { "$ref": "#/$defs/Slot" },
+        "purpose_in": { "$ref": "#/$defs/Slot" }
+      },
+      "required": ["profile", "monthly_volume_brl", "ticket_median_brl", "out_fraction", "deadline_mode", "deadline_days", "eh_efx", "purpose_out", "purpose_in"]
+    },
+    "Group": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/UUID" },
+        "name": { "type": "string", "maxLength": 120 },
+        "fields": { "$ref": "#/$defs/FieldMap" }
+      },
+      "required": ["id", "name", "fields"]
+    },
+    "Participant": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/UUID" },
+        "name": { "type": "string", "maxLength": 120 },
+        "group_id": { "oneOf": [{ "$ref": "#/$defs/UUID" }, { "type": "null" }] },
+        "seed": { "type": "string", "pattern": "^(0|[1-9][0-9]{0,18})$" },
+        "fields": { "$ref": "#/$defs/SlotMap" }
+      },
+      "required": ["id", "name", "group_id", "seed", "fields"]
+    },
+    "CostMap": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "iof_out": { "$ref": "#/$defs/DraftField" },
+        "iof_in": { "$ref": "#/$defs/DraftField" },
+        "carry_cnr": { "$ref": "#/$defs/DraftField" },
+        "spread_rail_bps": { "$ref": "#/$defs/DraftField" },
+        "custo_fixo_remessa": { "$ref": "#/$defs/DraftField" },
+        "custo_oportunidade_aa": { "$ref": "#/$defs/DraftField" },
+        "ptax": { "$ref": "#/$defs/DraftField" }
+      },
+      "required": ["iof_out", "iof_in", "carry_cnr", "spread_rail_bps", "custo_fixo_remessa", "custo_oportunidade_aa", "ptax"]
+    },
+    "IofDraft": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/UUID" },
+        "purpose": { "$ref": "#/$defs/DraftField" },
+        "direction": { "$ref": "#/$defs/DraftField" },
+        "rate": { "$ref": "#/$defs/DraftField" }
+      },
+      "required": ["id", "purpose", "direction", "rate"]
+    },
+    "AuthoredInput": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "portfolio_id": { "$ref": "#/$defs/UUID" },
+        "groups": { "type": "array", "maxItems": 20, "items": { "$ref": "#/$defs/Group" } },
+        "participants": { "type": "array", "maxItems": 100, "items": { "$ref": "#/$defs/Participant" } },
+        "costs": { "$ref": "#/$defs/CostMap" },
+        "iof_rules": { "type": "array", "maxItems": 100, "items": { "$ref": "#/$defs/IofDraft" } },
+        "warmup_days": { "$ref": "#/$defs/DraftField" },
+        "measurement_days": { "$ref": "#/$defs/DraftField" },
+        "window_days": { "$ref": "#/$defs/DraftField" },
+        "repetition": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 },
+        "template": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object", "additionalProperties": false,
+              "properties": {
+                "id": { "enum": ["equilibrado", "retail_pesado", "corporativo_pesado", "psp_dominante", "outbound_extremo"] },
+                "catalog_version": { "type": "string", "minLength": 1, "maxLength": 200 }
+              },
+              "required": ["id", "catalog_version"]
+            }
+          ]
+        }
+      },
+      "required": ["portfolio_id", "groups", "participants", "costs", "iof_rules", "warmup_days", "measurement_days", "window_days", "repetition", "template"]
+    },
+    "Scope": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "project_ref": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "owner_sub": { "$ref": "#/$defs/UUID" }
+      },
+      "required": ["project_ref", "owner_sub"]
+    },
+    "Attempt": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/UUID" },
+        "request_id": { "$ref": "#/$defs/UUID" },
+        "tab_id": { "$ref": "#/$defs/UUID" },
+        "session_epoch": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+        "scenario_revision": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 },
+        "started_at": { "$ref": "#/$defs/UTC" },
+        "phase": { "enum": ["PREPARANDO", "EXECUTANDO"] }
+      },
+      "required": ["id", "request_id", "tab_id", "session_epoch", "scenario_revision", "started_at", "phase"]
+    },
+    "FieldIssue": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "path": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "code": { "enum": ["OBRIGATORIO", "DECIMAL_INVALIDO", "FORA_DO_LIMITE", "INTEIRO_INVALIDO", "REFERENCIA_INVALIDA", "DUPLICADO", "ORIGEM_AUSENTE", "ORIGEM_INVALIDA"] },
+        "message": { "type": "string", "minLength": 1, "maxLength": 500 }
+      },
+      "required": ["path", "code", "message"]
+    },
+    "PublicFailure": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "code": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "message": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "fields": { "type": "array", "items": { "$ref": "#/$defs/FieldIssue" } },
+        "request_id": { "oneOf": [{ "$ref": "#/$defs/UUID" }, { "type": "null" }] }
+      },
+      "required": ["code", "message", "fields", "request_id"]
+    },
+    "AuthoredContent": {
+      "type": "object", "additionalProperties": false,
+      "properties": { "kind": { "const": "AUTHORED" }, "input": { "$ref": "#/$defs/AuthoredInput" } },
+      "required": ["kind", "input"]
+    },
+    "LegacyContent": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "LEGACY_EXPLICIT" },
+        "input": { "$ref": "https://motor-de-fluxo.local/contracts/schemas.json#/$defs/CenarioEntrada" },
+        "period": {
+          "oneOf": [
+            { "$ref": "https://motor-de-fluxo.local/contracts/schemas.json#/$defs/PeriodoLegado" },
+            { "$ref": "https://motor-de-fluxo.local/contracts/schemas.json#/$defs/PeriodoNatural" }
+          ]
+        },
+        "provenance": {
+          "type": "object",
+          "additionalProperties": { "$ref": "https://motor-de-fluxo.local/contracts/schemas.json#/$defs/OrigemValor" }
+        }
+      },
+      "required": ["kind", "input", "period", "provenance"]
+    }
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "study_schema_version": { "const": "2.0.0" },
+    "id": { "$ref": "#/$defs/UUID" },
+    "scope": { "$ref": "#/$defs/Scope" },
+    "name": { "type": "string", "maxLength": 120 },
+    "created_at": { "$ref": "#/$defs/UTC" },
+    "updated_at": { "$ref": "#/$defs/UTC" },
+    "created_by": { "$ref": "#/$defs/UUID" },
+    "updated_by": { "$ref": "#/$defs/UUID" },
+    "revision": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 },
+    "scenario_id": { "$ref": "#/$defs/UUID" },
+    "scenario_revision": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 },
+    "semantic_key": { "type": "string", "pattern": "^(|[0-9a-f]{64})$" },
+    "deleted_at": { "oneOf": [{ "$ref": "#/$defs/UTC" }, { "type": "null" }] },
+    "content": { "oneOf": [{ "$ref": "#/$defs/AuthoredContent" }, { "$ref": "#/$defs/LegacyContent" }] },
+    "current_preparation_id": { "oneOf": [{ "$ref": "#/$defs/UUID" }, { "type": "null" }] },
+    "execution_ids": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/UUID" } },
+    "attempt": { "oneOf": [{ "$ref": "#/$defs/Attempt" }, { "type": "null" }] },
+    "last_failure": { "oneOf": [{ "$ref": "#/$defs/PublicFailure" }, { "type": "null" }] },
+    "last_operation_id": { "$ref": "#/$defs/UUID" }
+  },
+  "required": ["study_schema_version", "id", "scope", "name", "created_at", "updated_at", "created_by", "updated_by", "revision", "scenario_id", "scenario_revision", "semantic_key", "deleted_at", "content", "current_preparation_id", "execution_ids", "attempt", "last_failure", "last_operation_id"]
+}
