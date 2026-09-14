@@ -14,3 +14,8 @@ ajv.addSchema(schemas);
 export const validatePreviaRequest = ajv.compile({ $ref: 'https://motor-de-fluxo.local/contracts/schemas.json#/$defs/PreviaRequest' });
 export const validatePreviewEnvelope = ajv.compile({ $ref: 'https://motor-de-fluxo.local/contracts/schemas.json#/$defs/PreviewEnvelope' });
 export const validateReferenceExample = ajv.compile({ $ref: 'https://motor-de-fluxo.local/contracts/schemas.json#/$defs/ReferenceExample' });
+export const validateEffectiveInput = ajv.compile({ $ref: 'https://motor-de-fluxo.local/contracts/schemas.json#/$defs/EffectiveInput' });
+export const validatePreparationRequest = ajv.compile({ $ref: 'https://motor-de-fluxo.local/contracts/schemas.json#/$defs/PreparationRequest' });
+export const validatePreparationResponse = ajv.compile({ $ref: 'https://motor-de-fluxo.local/contracts/schemas.json#/$defs/PreparationResponse' });
+export const validateCatalogResponse = ajv.compile({ $ref: 'https://motor-de-fluxo.local/contracts/schemas.json#/$defs/CatalogResponse' });
+export const validateCapabilities = ajv.compile({ $ref: 'https://motor-de-fluxo.local/contracts/schemas.json#/$defs/Capabilities' });

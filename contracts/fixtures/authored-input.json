@@ -1,0 +1,137 @@
+{
+  "preparation_version": "1.0.0",
+  "request_id": "00000000-0000-4000-8000-000000000010",
+  "study_id": "00000000-0000-4000-8000-000000000011",
+  "scenario_id": "00000000-0000-4000-8000-000000000012",
+  "scenario_revision": 1,
+  "expected_build_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "input": {
+    "participants": [
+      {
+        "id": "00000000-0000-4000-8000-000000000013",
+        "profile": "remessa_outbound_massiva",
+        "seed": "1",
+        "monthly_volume_brl": "10000",
+        "ticket_median_brl": "1000",
+        "out_fraction": "0.5",
+        "deadline": {
+          "mode": "FIXED",
+          "days": 7
+        },
+        "eh_efx": true,
+        "purpose_out": "ANEXO_V_REMESSA_TERCEIRO",
+        "purpose_in": "ANEXO_V_DISPONIBILIDADE"
+      }
+    ],
+    "warmup_days": 0,
+    "measurement_days": 30,
+    "window_days": 7,
+    "costs": {
+      "iof_out": "0.035",
+      "iof_in": "0.0038",
+      "carry_cnr": "0.0004",
+      "spread_rail_bps": "0",
+      "custo_fixo_remessa": "0",
+      "custo_oportunidade_aa": "0",
+      "ptax": "5.40",
+      "iof_por_finalidade": []
+    },
+    "sources": {
+      "/participants/00000000-0000-4000-8000-000000000013/profile": {
+        "kind": "PADRAO_SINTETICO",
+        "source": "motor/arquetipos.py:TODOS",
+        "recorded_at": "2026-09-13T00:00:00Z"
+      },
+      "/participants/00000000-0000-4000-8000-000000000013/monthly_volume_brl": {
+        "kind": "ESTIMATIVA_USUARIO",
+        "source": "Fixture sintética MOT-23",
+        "recorded_at": "2026-09-13T00:00:00Z"
+      },
+      "/participants/00000000-0000-4000-8000-000000000013/ticket_median_brl": {
+        "kind": "ESTIMATIVA_USUARIO",
+        "source": "Fixture sintética MOT-23",
+        "recorded_at": "2026-09-13T00:00:00Z"
+      },
+      "/participants/00000000-0000-4000-8000-000000000013/out_fraction": {
+        "kind": "ESTIMATIVA_USUARIO",
+        "source": "Fixture sintética MOT-23",
+        "recorded_at": "2026-09-13T00:00:00Z"
+      },
+      "/participants/00000000-0000-4000-8000-000000000013/deadline/mode": {
+        "kind": "ESTIMATIVA_USUARIO",
+        "source": "Fixture sintética MOT-23",
+        "recorded_at": "2026-09-13T00:00:00Z"
+      },
+      "/participants/00000000-0000-4000-8000-000000000013/deadline/days": {
+        "kind": "ESTIMATIVA_USUARIO",
+        "source": "Fixture sintética MOT-23",
+        "recorded_at": "2026-09-13T00:00:00Z"
+      },
+      "/participants/00000000-0000-4000-8000-000000000013/eh_efx": {
+        "kind": "PADRAO_SINTETICO",
+        "source": "motor/arquetipos.py:TODOS",
+        "recorded_at": "2026-09-13T00:00:00Z"
+      },
+      "/participants/00000000-0000-4000-8000-000000000013/purpose_out": {
+        "kind": "PADRAO_SINTETICO",
+        "source": "motor/arquetipos.py:TODOS",
+        "recorded_at": "2026-09-13T00:00:00Z"
+      },
+      "/participants/00000000-0000-4000-8000-000000000013/purpose_in": {
+        "kind": "PADRAO_SINTETICO",
+        "source": "motor/arquetipos.py:TODOS",
+        "recorded_at": "2026-09-13T00:00:00Z"
+      },
+      "/warmup_days": {
+        "kind": "PADRAO_SINTETICO",
+        "source": "Etapa 2: padrão temporal v1",
+        "recorded_at": "2026-09-13T00:00:00Z"
+      },
+      "/measurement_days": {
+        "kind": "PADRAO_SINTETICO",
+        "source": "Etapa 2: padrão temporal v1",
+        "recorded_at": "2026-09-13T00:00:00Z"
+      },
+      "/window_days": {
+        "kind": "PADRAO_SINTETICO",
+        "source": "Etapa 2: padrão temporal v1",
+        "recorded_at": "2026-09-13T00:00:00Z"
+      },
+      "/costs/iof_out": {
+        "kind": "PADRAO_SINTETICO",
+        "source": "motor/varredura.py:PARAMETROS_VARREDURA",
+        "recorded_at": "2026-09-13T00:00:00Z"
+      },
+      "/costs/iof_in": {
+        "kind": "PADRAO_SINTETICO",
+        "source": "motor/varredura.py:PARAMETROS_VARREDURA",
+        "recorded_at": "2026-09-13T00:00:00Z"
+      },
+      "/costs/carry_cnr": {
+        "kind": "PADRAO_SINTETICO",
+        "source": "motor/varredura.py:PARAMETROS_VARREDURA",
+        "recorded_at": "2026-09-13T00:00:00Z"
+      },
+      "/costs/spread_rail_bps": {
+        "kind": "PADRAO_SINTETICO",
+        "source": "motor/varredura.py:PARAMETROS_VARREDURA",
+        "recorded_at": "2026-09-13T00:00:00Z"
+      },
+      "/costs/custo_fixo_remessa": {
+        "kind": "PADRAO_SINTETICO",
+        "source": "motor/varredura.py:PARAMETROS_VARREDURA",
+        "recorded_at": "2026-09-13T00:00:00Z"
+      },
+      "/costs/custo_oportunidade_aa": {
+        "kind": "PADRAO_SINTETICO",
+        "source": "motor/varredura.py:PARAMETROS_VARREDURA",
+        "recorded_at": "2026-09-13T00:00:00Z"
+      },
+      "/costs/ptax": {
+        "kind": "PADRAO_SINTETICO",
+        "source": "motor/varredura.py:PARAMETROS_VARREDURA",
+        "recorded_at": "2026-09-13T00:00:00Z"
+      }
+    }
+  }
+}

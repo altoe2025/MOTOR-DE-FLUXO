@@ -1,4 +1,38 @@
 export interface paths {
+    "/api/v1/capabilities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Capabilities Schema */
+        get: operations["capabilities_schema_api_v1_capabilities_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/examples/catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Catalog Schema */
+        get: operations["catalog_schema_api_v1_examples_catalog_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/examples/reference": {
         parameters: {
             query?: never;
@@ -27,6 +61,23 @@ export interface paths {
         get: operations["health_schema_api_v1_health_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/preparacoes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Preparation Schema */
+        post: operations["preparation_schema_api_v1_preparacoes_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -103,6 +154,73 @@ export interface components {
             /** Valor Brl */
             valor_brl: string;
         };
+        /** Capabilities */
+        Capabilities: {
+            /**
+             * Catalog Version
+             * @constant
+             */
+            catalog_version: "1.0.0";
+            /**
+             * Generator Version
+             * @constant
+             */
+            generator_version: "dimensionamento-v1";
+            /**
+             * Max Expected Orders
+             * @constant
+             */
+            max_expected_orders: 500;
+            /**
+             * Max Orders
+             * @constant
+             */
+            max_orders: 1000;
+            /** Motor Build Sha */
+            motor_build_sha: string;
+            /**
+             * Motor Schema Version
+             * @constant
+             */
+            motor_schema_version: "1.0.0";
+            /**
+             * Preparation Version
+             * @constant
+             */
+            preparation_version: "1.0.0";
+            /**
+             * Presentation Version
+             * @constant
+             */
+            presentation_version: "1.0.0";
+            /**
+             * Preview Version
+             * @constant
+             */
+            preview_version: "1.0.0";
+        };
+        /** CatalogResponse */
+        CatalogResponse: {
+            /**
+             * Catalog Version
+             * @constant
+             */
+            catalog_version: "1.0.0";
+            costs: components["schemas"]["CustoEntrada"];
+            /** Examples */
+            examples: components["schemas"]["ExampleTemplate"][];
+            /** Motor Build Sha */
+            motor_build_sha: string;
+            /** Profiles */
+            profiles: components["schemas"]["ProfileTemplate"][];
+            /**
+             * Recorded At
+             * Format: date-time
+             */
+            recorded_at: string;
+            /** Source */
+            source: string;
+        };
         /** CenarioEntrada */
         CenarioEntrada: {
             custo: components["schemas"]["CustoEntrada"];
@@ -167,6 +285,16 @@ export interface components {
             /** Total */
             total: string;
         };
+        /** DerivedEvidence */
+        DerivedEvidence: {
+            /** Inputs */
+            inputs: string[];
+            /**
+             * Rule
+             * @enum {string}
+             */
+            rule: "dimensionamento-v1" | "geracao-v1" | "soma-ordens-v1";
+        };
         /** DiagnosticosExperimentaisDTO */
         DiagnosticosExperimentaisDTO: {
             /** Limite Intra Cliente Brl */
@@ -175,6 +303,66 @@ export interface components {
             taxa_netabilidade_incremental: null;
             /** Volume Casado Incremental Brl */
             volume_casado_incremental_brl: null;
+        };
+        /** EffectiveInput */
+        EffectiveInput: {
+            costs: components["schemas"]["CustoEntrada"];
+            /** Measurement Days */
+            measurement_days: number;
+            /** Participants */
+            participants: components["schemas"]["EffectiveParticipant"][];
+            /** Sources */
+            sources: {
+                [key: string]: components["schemas"]["EffectiveSource"];
+            };
+            /** Warmup Days */
+            warmup_days: number;
+            /** Window Days */
+            window_days: number;
+        };
+        /** EffectiveParticipant */
+        EffectiveParticipant: {
+            /** Deadline */
+            deadline: components["schemas"]["ProfileDeadline"] | components["schemas"]["FixedDeadline"];
+            /** Eh Efx */
+            eh_efx: boolean;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Monthly Volume Brl */
+            monthly_volume_brl: string;
+            /** Out Fraction */
+            out_fraction: string;
+            /**
+             * Profile
+             * @enum {string}
+             */
+            profile: "remessa_outbound_massiva" | "psp_inbound" | "cripto_native_sem_fiat" | "payroll_fornecedor" | "exportador" | "tesouraria_corporativa";
+            /** Purpose In */
+            purpose_in: string;
+            /** Purpose Out */
+            purpose_out: string;
+            /** Seed */
+            seed: string;
+            /** Ticket Median Brl */
+            ticket_median_brl: string;
+        };
+        /** EffectiveSource */
+        EffectiveSource: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "PADRAO_SINTETICO" | "ESTIMATIVA_USUARIO";
+            /**
+             * Recorded At
+             * Format: date-time
+             */
+            recorded_at: string;
+            /** Source */
+            source: string;
         };
         /** EstatisticaPrevia */
         EstatisticaPrevia: {
@@ -197,6 +385,44 @@ export interface components {
             repetition_id: string;
             /** Seed */
             seed: null;
+        };
+        /** ExampleParticipant */
+        ExampleParticipant: {
+            /**
+             * Profile
+             * @enum {string}
+             */
+            profile: "remessa_outbound_massiva" | "psp_inbound" | "cripto_native_sem_fiat" | "payroll_fornecedor" | "exportador" | "tesouraria_corporativa";
+            /** Seed */
+            seed: string;
+            /** Template Id */
+            template_id: string;
+        };
+        /** ExampleTemplate */
+        ExampleTemplate: {
+            /**
+             * Id
+             * @enum {string}
+             */
+            id: "equilibrado" | "retail_pesado" | "corporativo_pesado" | "psp_dominante" | "outbound_extremo";
+            /** Label */
+            label: string;
+            /** Participants */
+            participants: components["schemas"]["ExampleParticipant"][];
+            /** Weights */
+            weights: {
+                [key: string]: string;
+            };
+        };
+        /** FixedDeadline */
+        FixedDeadline: {
+            /** Days */
+            days: number;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            mode: "FIXED";
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -319,6 +545,112 @@ export interface components {
             /** Periodo Medicao Dias */
             periodo_medicao_dias: number;
         };
+        /** PreparationParameter */
+        PreparationParameter: {
+            /** Cadence Monthly */
+            cadence_monthly: string;
+            /** Deadline Max */
+            deadline_max: number;
+            /** Deadline Min */
+            deadline_min: number;
+            /** Expected Period Brl */
+            expected_period_brl: string;
+            /**
+             * Participant Id
+             * Format: uuid
+             */
+            participant_id: string;
+            /** Sigma */
+            sigma: string;
+        };
+        /** PreparationRequest */
+        PreparationRequest: {
+            /** Expected Build Sha */
+            expected_build_sha: string;
+            input: components["schemas"]["EffectiveInput"];
+            /**
+             * Preparation Version
+             * @constant
+             */
+            preparation_version: "1.0.0";
+            /**
+             * Request Id
+             * Format: uuid
+             */
+            request_id: string;
+            /**
+             * Scenario Id
+             * Format: uuid
+             */
+            scenario_id: string;
+            /** Scenario Revision */
+            scenario_revision: number;
+            /**
+             * Study Id
+             * Format: uuid
+             */
+            study_id: string;
+        };
+        /** PreparationResponse */
+        PreparationResponse: {
+            /**
+             * Catalog Version
+             * @constant
+             */
+            catalog_version: "1.0.0";
+            /** Composition */
+            composition: components["schemas"]["RealizedComposition"][];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Derived Provenance */
+            derived_provenance: {
+                [key: string]: components["schemas"]["DerivedEvidence"];
+            };
+            /** Generation Fingerprint */
+            generation_fingerprint: string;
+            /**
+             * Generator Version
+             * @constant
+             */
+            generator_version: "dimensionamento-v1";
+            input_snapshot: components["schemas"]["EffectiveInput"];
+            /** Motor Build Sha */
+            motor_build_sha: string;
+            /** Orders */
+            orders: components["schemas"]["OrdemEntrada"][];
+            /** Parameters */
+            parameters: components["schemas"]["PreparationParameter"][];
+            /**
+             * Preparation Id
+             * Format: uuid
+             */
+            preparation_id: string;
+            /**
+             * Preparation Version
+             * @constant
+             */
+            preparation_version: "1.0.0";
+            /**
+             * Request Id
+             * Format: uuid
+             */
+            request_id: string;
+            /**
+             * Scenario Id
+             * Format: uuid
+             */
+            scenario_id: string;
+            /** Scenario Revision */
+            scenario_revision: number;
+            /**
+             * Study Id
+             * Format: uuid
+             */
+            study_id: string;
+        };
         /** PresentationContract */
         PresentationContract: {
             /**
@@ -429,6 +761,57 @@ export interface components {
              */
             study_id: string;
         };
+        /** ProfileDeadline */
+        ProfileDeadline: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            mode: "PROFILE";
+        };
+        /** ProfileTemplate */
+        ProfileTemplate: {
+            /** Cadence Monthly */
+            cadence_monthly: string;
+            /** Deadline Max */
+            deadline_max: number;
+            /** Deadline Min */
+            deadline_min: number;
+            /** Eh Efx */
+            eh_efx: boolean;
+            /**
+             * Id
+             * @enum {string}
+             */
+            id: "remessa_outbound_massiva" | "psp_inbound" | "cripto_native_sem_fiat" | "payroll_fornecedor" | "exportador" | "tesouraria_corporativa";
+            /** Monthly Volume Brl */
+            monthly_volume_brl: string;
+            /** Out Fraction */
+            out_fraction: string;
+            /** Purpose In */
+            purpose_in: string;
+            /** Purpose Out */
+            purpose_out: string;
+            /** Sigma */
+            sigma: string;
+            /** Ticket Median Brl */
+            ticket_median_brl: string;
+        };
+        /** RealizedComposition */
+        RealizedComposition: {
+            /** In Brl */
+            in_brl: string;
+            /** Order Count */
+            order_count: number;
+            /** Out Brl */
+            out_brl: string;
+            /** Out Fraction */
+            out_fraction: string | null;
+            /** Participant Id */
+            participant_id: string | null;
+            /** Total Brl */
+            total_brl: string;
+        };
         /** ReferenceExample */
         ReferenceExample: {
             cenario: components["schemas"]["CenarioEntrada"];
@@ -506,6 +889,46 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    capabilities_schema_api_v1_capabilities_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Capabilities"];
+                };
+            };
+        };
+    };
+    catalog_schema_api_v1_examples_catalog_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogResponse"];
+                };
+            };
+        };
+    };
     reference_example_schema_api_v1_examples_reference_get: {
         parameters: {
             query?: never;
@@ -542,6 +965,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HealthResponse"];
+                };
+            };
+        };
+    };
+    preparation_schema_api_v1_preparacoes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PreparationRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreparationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
