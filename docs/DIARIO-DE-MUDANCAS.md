@@ -37,7 +37,7 @@ Atualizada em 2026-09-16, após o gate final da política de autonetting prefere
 
 | Branch | Situação | Dono |
 |---|---|---|
-| `main` | MOT-15–MOT-22 integradas até o PR #34, com o gate protegido `pytest` verde | os dois |
+| `main` | Autonetting preferencial MOT-35–MOT-46 integrado pelo PR #36, com o gate protegido `pytest` verde | os dois |
 | `netting/p1` | spike do P1, **NÃO MERGEAR** — dominado, e agora sabemos que a folga é zero em N ≥ 50. Só local, nunca foi pro GitHub | Felipe |
 | `fix/semantica-remessa-p0` | PR #11, mergeada | Felipe |
 | `fix/previsao-temporal-e-colunas-csv` | PR #12, mergeada | Gabriel |
@@ -59,7 +59,7 @@ Atualizada em 2026-09-16, após o gate final da política de autonetting prefere
 | `codex/mot20-auth` | PR #32, mergeada na `main`; MOT-20 concluída com convite, rascunho e POST autenticado reais | Codex |
 | `codex/mot21-client-integracao` | PR #33 mergeado na `main`; implementação, CI e gate Supabase real verdes | Codex |
 | `codex/mot22-aceitacao-ci` | PR #34 mergeada na `main`; aceitação, CI e handoff da etapa 1 entregues | Codex |
-| `codex/autonetting-preferencial` | PR #36 aberto; gate protegido em correção, sem regenerar a grade | Codex |
+| `codex/autonetting-preferencial` | PR #36 mergeado na `main`; grade histórica não regenerada | Codex |
 
 Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
@@ -89,7 +89,9 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
    apresentação garantem consumo direto dos campos canônicos nos demais valores.
    Ao abrir o PR #36, a CI aprovou 672 testes nos dois modos e Ruff, mas revelou
    que o Mypy não estreitava o tipo da origem validada por pertinência a conjunto;
-   a validação passou a explicitar `str`, sem mudar o comportamento publicado.
+   a validação passou a explicitar `str`, sem mudar o comportamento publicado. A
+   correção passou no Mypy, no Ruff e no novo gate protegido; o PR #36 foi mergeado
+   na `main` no commit `78d4a59cc6ec61790f723e4781ef29a0703c06db`.
 
 4. **O que isso invalida.** Nada além da anotação de que a verificação estava
    pendente. A branch foi publicada no PR #36 após o push direto à `main` ser
