@@ -38,14 +38,22 @@ viraria degrau: 0,05% e 0,00% seriam a mesma linha.
 | `taxa_netabilidade` | `volume_casado_brl / volume_bruto_brl` |
 | `teto_netabilidade` | o melhor que QUALQUER política conseguiria nesta pool |
 | `eficiencia_vs_teto` | quanto do teto a política extraiu |
-| `limite_intra_cliente_brl` | diagnóstico da interpretação antiga em que as ordens seriam fluxo bruto do cliente |
-| `volume_casado_incremental_brl` | casado menos o limite intra; preservado por compatibilidade, não é a métrica comercial vigente |
-| `taxa_netabilidade_incremental` | diagnóstico alternativo sobre o bruto; **não descontar** sob o contrato de entrada líquida confirmado em 2026-09-07 |
+| `volume_autonetting_brl` | volume `CASADO` observado entre OUT e IN simultaneamente abertos do mesmo cliente, contando as duas pernas |
+| `volume_netting_multilateral_brl` | volume `CASADO` observado na fase residual entre clientes, contando as duas pernas |
+| `taxa_autonetting` | `volume_autonetting_brl / volume_bruto_brl` |
+| `taxa_netting_multilateral` | `volume_netting_multilateral_brl / volume_bruto_brl` |
 
-Contrato vigente: cada `Ordem` já é a posição líquida que o cliente decidiu enviar
-ao orquestrador. Por isso a economia do modelo compara cada posição executando
-sozinha com a pool; aplicar novamente o limite intra faria uma segunda dedução de
-netting dentro do cliente. Ver `docs/RELATORIO-SENSIBILIDADE-CUSTO.md`.
+As identidades são exatas:
+
+```text
+volume_autonetting_brl + volume_netting_multilateral_brl = volume_casado_brl
+taxa_autonetting + taxa_netting_multilateral = taxa_netabilidade
+```
+
+As três colunas antigas `limite_intra_cliente_brl`,
+`volume_casado_incremental_brl` e `taxa_netabilidade_incremental` eram estimativas
+anuais sem sobreposição temporal. Elas só existem em CSVs legados e não são
+convertidas nas métricas observadas novas.
 
 ### Custo
 
@@ -118,7 +126,7 @@ faixa, nunca uma estatística sozinha.
 | `n_seeds` | quantas sementes entraram |
 | `n_ordens_p50` | mediana do tamanho da pool |
 | `taxa_netabilidade_p50`, `teto_netabilidade_p50`, `eficiencia_vs_teto_p50` | medianas |
-| `taxa_netabilidade_incremental_p50` | mediana da incremental |
+| `taxa_autonetting_p50`, `taxa_netting_multilateral_p50` | medianas das parcelas observadas por mecanismo |
 | `economia_pct_min` … `economia_pct_max` | faixa da economia entre sementes (min, p25, p50, p75, max) |
 | `economia_brl_min`, `economia_brl_p50` | pior semente e mediana, em reais |
 | `frac_seeds_positiva` | fração das sementes em que a economia foi positiva |

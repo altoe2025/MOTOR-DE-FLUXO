@@ -122,6 +122,12 @@ def analisar(
         )
         if autonetting_medido + multilateral_medido != casado_medido:
             raise ValueError("decomposição do casamento diverge da coorte medida")
+        taxa_netabilidade_medido = (
+            casado_medido / bruto_medido if bruto_medido else Decimal(0)
+        )
+        taxa_autonetting_medido = (
+            autonetting_medido / bruto_medido if bruto_medido else Decimal(0)
+        )
         agregado = AgregadoCanonico(
             execucao_completa=cheio,
             ids_ordens_medidas=execucao.ids_ordens_medidas,
@@ -137,14 +143,10 @@ def analisar(
             economia_periodo_brl=_somar_exato(
                 e.ganho_realizado_brl for e in ledger_periodo
             ),
-            taxa_netabilidade_periodo=(
-                casado_medido / bruto_medido if bruto_medido else Decimal(0)
-            ),
-            taxa_autonetting_periodo=(
-                autonetting_medido / bruto_medido if bruto_medido else Decimal(0)
-            ),
+            taxa_netabilidade_periodo=taxa_netabilidade_medido,
+            taxa_autonetting_periodo=taxa_autonetting_medido,
             taxa_netting_multilateral_periodo=(
-                multilateral_medido / bruto_medido if bruto_medido else Decimal(0)
+                taxa_netabilidade_medido - taxa_autonetting_medido
             ),
             mecanismos=resultados_por_mecanismo(ledger_periodo),
         )

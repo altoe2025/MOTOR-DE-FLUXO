@@ -56,9 +56,10 @@ def _ponto_falso(nome_mix: str, economia_pct: str) -> PontoVarredura:
         taxa_netabilidade=zero,
         teto_netabilidade=zero,
         eficiencia_vs_teto=zero,
-        limite_intra_cliente_brl=zero,
-        volume_casado_incremental_brl=zero,
-        taxa_netabilidade_incremental=zero,
+        volume_autonetting_brl=zero,
+        volume_netting_multilateral_brl=zero,
+        taxa_autonetting=zero,
+        taxa_netting_multilateral=zero,
         baseline_total_brl=Decimal(100),
         baseline_iof_brl=zero,
         baseline_carry_brl=zero,
@@ -115,9 +116,7 @@ def test_resumo_carrega_o_teto_e_a_eficiencia_medianos():
         assert resumo.eficiencia_vs_teto_p50 == esperado_ef
 
 
-def test_resumo_carrega_a_netabilidade_incremental_mediana():
-    """O número que interessa para a proposta comercial precisa estar no resumo,
-    ao lado da netabilidade bruta — senão só a bruta é citada."""
+def test_resumo_carrega_as_duas_parcelas_observadas_da_netabilidade():
     grade = _grade()
     for resumo in resumir(grade):
         do_grupo = [
@@ -126,10 +125,10 @@ def test_resumo_carrega_a_netabilidade_incremental_mediana():
             if (p.nome_mix, p.n_clientes, p.janela_dias)
             == (resumo.nome_mix, resumo.n_clientes, resumo.janela_dias)
         ]
-        valores = sorted(p.taxa_netabilidade_incremental for p in do_grupo)
-        esperado = valores[1]
-        assert resumo.taxa_netabilidade_incremental_p50 == esperado
-        assert resumo.taxa_netabilidade_incremental_p50 <= resumo.taxa_netabilidade_p50
+        autonetting = sorted(p.taxa_autonetting for p in do_grupo)
+        multilaterais = sorted(p.taxa_netting_multilateral for p in do_grupo)
+        assert resumo.taxa_autonetting_p50 == autonetting[1]
+        assert resumo.taxa_netting_multilateral_p50 == multilaterais[1]
 
 
 def test_nao_mistura_celulas_diferentes():

@@ -59,7 +59,7 @@ Atualizada em 2026-09-13, durante a implementação da MOT-22 sobre a base integ
 | `codex/mot20-auth` | PR #32, mergeada na `main`; MOT-20 concluída com convite, rascunho e POST autenticado reais | Codex |
 | `codex/mot21-client-integracao` | PR #33 mergeado na `main`; implementação, CI e gate Supabase real verdes | Codex |
 | `codex/mot22-aceitacao-ci` | PR #34 mergeada na `main`; aceitação, CI e handoff da etapa 1 entregues | Codex |
-| `codex/autonetting-preferencial` | ledger e atribuição contábil concluídos até a MOT-39; CSV, API e UI em propagação | Codex |
+| `codex/autonetting-preferencial` | CSV e CLI migrados até a MOT-40; API e UI em propagação | Codex |
 
 Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
@@ -67,6 +67,26 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
 ---
+
+## 2026-09-16 — CSV e CLI com mecanismos observados (MOT-40)
+
+1. **Sintoma.** A varredura e a CLI ainda publicavam o limite anual intracliente e
+   a métrica incremental da interpretação antiga, embora o motor já medisse a
+   origem de cada casamento em seu fechamento real.
+
+2. **Causa.** `montar_ponto` recalculava uma aproximação por cliente, ignorando a
+   sobreposição temporal, em vez de consumir as métricas de `simular`.
+
+3. **O que foi feito.** Pontos, resumos, CSV completo, script oficial e CLI agora
+   expõem autonetting e netting multilateral observados. Um caso em que OUT e IN do
+   mesmo cliente não coexistem comprova autonetting zero. As taxas preservam tanto
+   a razão total quanto a soma exata das parcelas sob precisão Decimal finita. Os
+   76 testes focados passaram; na suíte integral, 652 passaram e as 15 falhas
+   restantes estão restritas ao DTO/API ainda em schema 1.0.0.
+
+4. **O que isso invalida.** Leitores dependentes das três colunas incrementais
+   antigas precisam tratar esses CSVs como schema legado. A grade histórica não foi
+   sobrescrita nem regenerada.
 
 ## 2026-09-16 — Ledger e custos por mecanismo (MOT-39)
 

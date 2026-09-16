@@ -64,11 +64,13 @@ def simular(cenario: Cenario) -> Resultado:
             elif alocacao.origem_casamento is OrigemCasamento.INTER_CLIENTE:
                 volume_netting_multilateral += alocacao.valor_brl
     volume_casado = volume_autonetting + volume_netting_multilateral
+    taxa_netabilidade = volume_casado / total if total else Decimal(0)
     taxa_autonetting = volume_autonetting / total if total else Decimal(0)
-    taxa_netting_multilateral = (
-        volume_netting_multilateral / total if total else Decimal(0)
-    )
-    taxa_netabilidade = taxa_autonetting + taxa_netting_multilateral
+    # Complemento contábil: preserva simultaneamente `taxa_netabilidade ==
+    # volume_casado / total` e a soma exata das duas parcelas sob precisão Decimal
+    # finita. A diferença para a divisão direta do volume multilateral, quando
+    # existe, é somente o último resíduo de arredondamento.
+    taxa_netting_multilateral = taxa_netabilidade - taxa_autonetting
 
     return Resultado(
         ciclos=ciclos,
