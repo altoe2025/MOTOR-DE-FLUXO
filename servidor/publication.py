@@ -16,7 +16,7 @@ from motor.analise import (
     criar_manifesto,
     resultado_para_json,
 )
-from motor.dominio import Cenario, TipoAlocacao
+from motor.dominio import Cenario, OrigemCasamento, TipoAlocacao
 from servidor.contracts.output import ResultadoCanonicoDTO
 
 
@@ -54,6 +54,7 @@ def _validar_conservacao_objeto(
     ordens = {ordem.id: ordem for ordem in cenario.ordens}
     por_ordem: dict[str, Fraction] = defaultdict(Fraction)
     por_tipo: dict[TipoAlocacao, Fraction] = defaultdict(Fraction)
+    por_origem: dict[OrigemCasamento, Fraction] = defaultdict(Fraction)
 
     for ciclo in resultado.agregado.execucao_completa.ciclos:
         casado_ciclo = Fraction()
@@ -75,8 +76,13 @@ def _validar_conservacao_objeto(
             por_ordem[alocacao.ordem_id] += valor
             por_tipo[alocacao.tipo] += valor
             if alocacao.tipo is TipoAlocacao.CASADO:
+                if not isinstance(alocacao.origem_casamento, OrigemCasamento):
+                    _falhar("alocação CASADO sem origem válida")
+                por_origem[alocacao.origem_casamento] += valor
                 casado_ciclo += valor
             else:
+                if alocacao.origem_casamento is not None:
+                    _falhar("alocação REMETIDO não pode ter origem de casamento")
                 remetido_ciclo += valor
         if casado_ciclo != 2 * _fracao(ciclo.casado):
             _falhar("volume CASADO do ciclo diverge das alocações")
@@ -100,18 +106,26 @@ def _validar_conservacao_objeto(
     ids = set(ids_medidos)
     bruto_medido = sum((_fracao(ordens[oid].valor_brl) for oid in ids), Fraction())
     casado_medido = Fraction()
+    autonetting_medido = Fraction()
+    multilateral_medido = Fraction()
     remetido_medido = Fraction()
     for ciclo in agregado.execucao_completa.ciclos:
         for alocacao in ciclo.alocacoes:
             if alocacao.ordem_id in ids:
                 if alocacao.tipo is TipoAlocacao.CASADO:
                     casado_medido += _fracao(alocacao.valor_brl)
+                    if alocacao.origem_casamento is OrigemCasamento.INTRA_CLIENTE:
+                        autonetting_medido += _fracao(alocacao.valor_brl)
+                    else:
+                        multilateral_medido += _fracao(alocacao.valor_brl)
                 else:
                     remetido_medido += _fracao(alocacao.valor_brl)
 
     esperados = (
         ("volume_bruto_periodo_brl", bruto_medido),
         ("volume_casado_periodo_brl", casado_medido),
+        ("volume_autonetting_periodo_brl", autonetting_medido),
+        ("volume_netting_multilateral_periodo_brl", multilateral_medido),
         ("volume_remetido_periodo_brl", remetido_medido),
     )
     for nome, esperado in esperados:
@@ -119,6 +133,8 @@ def _validar_conservacao_objeto(
             _falhar(f"{nome} diverge das alocações medidas")
     if casado_medido + remetido_medido != bruto_medido:
         _falhar("volumes medidos não conservam a coorte")
+    if autonetting_medido + multilateral_medido != casado_medido:
+        _falhar("mecanismos medidos não reconciliam com o casamento")
     taxa = agregado.taxa_netabilidade_periodo
     if not taxa.is_finite() or not Decimal(0) <= taxa <= Decimal(1):
         _falhar("taxa de netabilidade fora de [0,1]")
@@ -129,6 +145,16 @@ def _validar_conservacao_objeto(
     )
     if taxa != taxa_esperada:
         _falhar("taxa de netabilidade diverge dos volumes medidos")
+    taxa_autonetting_esperada = (
+        Decimal(autonetting_medido.numerator)
+        / Decimal(autonetting_medido.denominator)
+        / (Decimal(bruto_medido.numerator) / Decimal(bruto_medido.denominator))
+        if bruto_medido else Decimal(0)
+    )
+    if agregado.taxa_autonetting_periodo != taxa_autonetting_esperada:
+        _falhar("taxa de autonetting diverge dos volumes medidos")
+    if agregado.taxa_netting_multilateral_periodo != taxa - taxa_autonetting_esperada:
+        _falhar("taxa multilateral diverge dos volumes medidos")
 
 
 def _validar_identidade(cenario: Cenario, resultado: ResultadoCanonico) -> None:
@@ -167,7 +193,7 @@ def _validar_identidade(cenario: Cenario, resultado: ResultadoCanonico) -> None:
         _falhar(f"identidade do manifesto inválida: {erro}")
     if manifesto != esperado:
         _falhar("identidade do manifesto diverge da configuração")
-    if manifesto.schema_version != "1.0.0":
+    if manifesto.schema_version != "2.0.0":
         _falhar("schema_version incompatível")
     if (
         manifesto.mixes
@@ -195,6 +221,7 @@ def _validar_conservacao_documento(cenario: Cenario, documento: dict[str, object
     ordens = {ordem.id: Fraction(ordem.valor_brl) for ordem in cenario.ordens}
     por_ordem: dict[str, Fraction] = defaultdict(Fraction)
     por_tipo: dict[str, Fraction] = defaultdict(Fraction)
+    por_origem: dict[str, Fraction] = defaultdict(Fraction)
     try:
         agregado = documento["agregado"]
         if not isinstance(agregado, dict):
@@ -213,10 +240,20 @@ def _validar_conservacao_documento(cenario: Cenario, documento: dict[str, object
                     _falhar("alocação inválida no JSON")
                 ordem_id = alocacao.get("ordem_id")
                 tipo = alocacao.get("tipo")
+                origem = alocacao.get("origem_casamento")
+                origem_validada: str | None = None
                 if not isinstance(ordem_id, str) or ordem_id not in ordens:
                     _falhar("alocação pública referencia ordem desconhecida")
                 if tipo not in {"CASADO", "REMETIDO"}:
                     _falhar("tipo de alocação público inválido")
+                if tipo == "CASADO":
+                    if not isinstance(origem, str) or origem not in {
+                        "INTRA_CLIENTE", "INTER_CLIENTE",
+                    }:
+                        _falhar("origem pública de casamento inválida")
+                    origem_validada = origem
+                elif origem is not None:
+                    _falhar("remessa pública não aceita origem de casamento")
                 valor = _decimal_do_json(
                     alocacao.get("valor_brl"),
                     f"ciclos[{indice_ciclo}].alocacoes[{indice_alocacao}].valor_brl",
@@ -225,6 +262,10 @@ def _validar_conservacao_documento(cenario: Cenario, documento: dict[str, object
                     _falhar("valor público de alocação deve ser positivo")
                 por_ordem[ordem_id] += valor
                 por_tipo[tipo] += valor
+                if tipo == "CASADO":
+                    if origem_validada is None:
+                        _falhar("origem pública de casamento ausente após validação")
+                    por_origem[origem_validada] += valor
 
         if por_ordem != ordens:
             _falhar("JSON público viola conservação por ordem")
@@ -239,6 +280,8 @@ def _validar_conservacao_documento(cenario: Cenario, documento: dict[str, object
         ids = set(ids_medidos)
         bruto = sum((ordens[ordem_id] for ordem_id in ids), Fraction())
         casado = Fraction()
+        autonetting = Fraction()
+        multilateral = Fraction()
         remetido = Fraction()
         for ciclo in ciclos:
             for alocacao in ciclo["alocacoes"]:
@@ -246,11 +289,17 @@ def _validar_conservacao_documento(cenario: Cenario, documento: dict[str, object
                     valor = Fraction(Decimal(alocacao["valor_brl"]))
                     if alocacao["tipo"] == "CASADO":
                         casado += valor
+                        if alocacao["origem_casamento"] == "INTRA_CLIENTE":
+                            autonetting += valor
+                        else:
+                            multilateral += valor
                     else:
                         remetido += valor
         esperados = {
             "volume_bruto_periodo_brl": bruto,
             "volume_casado_periodo_brl": casado,
+            "volume_autonetting_periodo_brl": autonetting,
+            "volume_netting_multilateral_periodo_brl": multilateral,
             "volume_remetido_periodo_brl": remetido,
         }
         for campo, esperado in esperados.items():

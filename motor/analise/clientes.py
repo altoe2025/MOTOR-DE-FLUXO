@@ -18,9 +18,15 @@ from dataclasses import replace
 from decimal import Decimal, localcontext
 from typing import Iterable
 
-from motor.analise.modelo import EventoCliente, ResultadoCliente, ResumoDiaCliente
+from motor.analise.modelo import (
+    DestinoContabil,
+    EventoCliente,
+    ResultadoCliente,
+    ResultadoMecanismo,
+    ResumoDiaCliente,
+)
 from motor.custo import Custos, aliquota_iof, custo_baseline
-from motor.dominio import Alocacao, Cenario, TipoAlocacao
+from motor.dominio import Alocacao, Cenario, OrigemCasamento, TipoAlocacao
 from motor.simulacao import Resultado
 
 _ZERO = Decimal(0)
@@ -166,6 +172,16 @@ def _resumir(cliente_id: str, eventos: tuple[EventoCliente, ...]) -> ResultadoCl
                 e.valor_brl for e in itens if e.tipo == "ORDEM_CONHECIDA"
             ),
             volume_casado_brl=_somar_exato(e.valor_brl for e in itens if e.tipo == "CASADO"),
+            volume_autonetting_brl=_somar_exato(
+                e.valor_brl
+                for e in itens
+                if e.origem_casamento is OrigemCasamento.INTRA_CLIENTE
+            ),
+            volume_netting_multilateral_brl=_somar_exato(
+                e.valor_brl
+                for e in itens
+                if e.origem_casamento is OrigemCasamento.INTER_CLIENTE
+            ),
             volume_remetido_brl=_somar_exato(e.valor_brl for e in itens if e.tipo == "REMETIDO"),
             baseline_brl=baseline.total, custo_netado_brl=netado.total,
             ganho_dia_brl=ganho, ganho_acumulado_brl=acumulado,
@@ -177,6 +193,12 @@ def _resumir(cliente_id: str, eventos: tuple[EventoCliente, ...]) -> ResultadoCl
     return ResultadoCliente(
         cliente_id=cliente_id, volume_bruto_brl=bruto,
         volume_casado_brl=_somar_exato(d.volume_casado_brl for d in historico),
+        volume_autonetting_brl=_somar_exato(
+            d.volume_autonetting_brl for d in historico
+        ),
+        volume_netting_multilateral_brl=_somar_exato(
+            d.volume_netting_multilateral_brl for d in historico
+        ),
         volume_remetido_brl=_somar_exato(d.volume_remetido_brl for d in historico),
         baseline=baseline, netado=netado, ganho_proprio_brl=ganho,
         ganho_proprio_bps=ganho / bruto * Decimal(10000) if bruto else _ZERO,
@@ -184,10 +206,49 @@ def _resumir(cliente_id: str, eventos: tuple[EventoCliente, ...]) -> ResultadoCl
     )
 
 
-def analisar_clientes(
+def resultados_por_mecanismo(
+    eventos: tuple[EventoCliente, ...],
+) -> tuple[ResultadoMecanismo, ...]:
+    """Agrupa o rateio técnico existente; não cria um novo contrafactual."""
+
+    def destino_de(evento: EventoCliente) -> DestinoContabil | None:
+        if evento.tipo == "REMETIDO":
+            return DestinoContabil.REMETIDO
+        if evento.origem_casamento is OrigemCasamento.INTRA_CLIENTE:
+            return DestinoContabil.INTRA_CLIENTE
+        if evento.origem_casamento is OrigemCasamento.INTER_CLIENTE:
+            return DestinoContabil.INTER_CLIENTE
+        return None
+
+    por_destino: dict[DestinoContabil, list[EventoCliente]] = {
+        destino: [] for destino in DestinoContabil
+    }
+    for evento in eventos:
+        destino = destino_de(evento)
+        if destino is not None:
+            por_destino[destino].append(evento)
+
+    mecanismos = []
+    for destino in DestinoContabil:
+        itens = por_destino[destino]
+        baseline = _somar_custos(evento.baseline for evento in itens)
+        netado = _somar_custos(evento.netado for evento in itens)
+        mecanismos.append(
+            ResultadoMecanismo(
+                destino=destino,
+                volume_brl=_somar_exato(evento.valor_brl for evento in itens),
+                baseline_atribuido_brl=baseline.total,
+                custo_netado_brl=netado.total,
+                economia_brl=baseline.total - netado.total,
+            )
+        )
+    return tuple(mecanismos)
+
+
+def construir_ledger(
     cenario: Cenario, resultado: Resultado,
-) -> tuple[tuple[EventoCliente, ...], tuple[ResultadoCliente, ...]]:
-    """Explica uma execução completa de P0 pelos eventos de cada cliente.
+) -> tuple[EventoCliente, ...]:
+    """Explica uma execução completa de P0 pelos eventos contábeis.
 
     Recebe o Resultado correspondente ao cenário, sem executar nova simulação.
     O volume casado inclui as duas pernas, tal como as alocações do agregado.
@@ -265,45 +326,66 @@ def analisar_clientes(
                 baseline=baseline, netado=netado,
                 ganho_realizado_brl=baseline.total - netado.total,
                 eh_efx=ordem.eh_efx,
+                origem_casamento=alocacao.origem_casamento,
             ))
     eventos.sort(key=lambda e: (
         _dia(e), e.dia_resolucao is not None, e.cliente_id, e.ordem_id, e.evento_id,
     ))
     _reconciliar_ledger(eventos, resultado)
-    ledger = tuple(eventos)
+    return tuple(eventos)
+
+
+def _resumir_clientes(
+    ledger: tuple[EventoCliente, ...],
+) -> tuple[ResultadoCliente, ...]:
     por_cliente: dict[str, list[EventoCliente]] = defaultdict(list)
     for evento in ledger:
         por_cliente[evento.cliente_id].append(evento)
-    clientes = tuple(_resumir(cid, tuple(itens)) for cid, itens in sorted(por_cliente.items()))
-    return ledger, clientes
+    return tuple(
+        _resumir(cid, tuple(itens)) for cid, itens in sorted(por_cliente.items())
+    )
+
+
+def analisar_clientes(
+    cenario: Cenario, resultado: Resultado,
+) -> tuple[tuple[EventoCliente, ...], tuple[ResultadoCliente, ...]]:
+    """Explica uma execução completa de P0 pelos eventos e por cliente."""
+    ledger = construir_ledger(cenario, resultado)
+    return ledger, _resumir_clientes(ledger)
+
+
+def filtrar_ledger(
+    ledger: tuple[EventoCliente, ...], ids_ordens: tuple[str, ...],
+) -> tuple[EventoCliente, ...]:
+    """Recorta e reconcilia o ledger sem construir resumos por cliente."""
+    ids = frozenset(ids_ordens)
+    eventos = [evento for evento in ledger if evento.ordem_id in ids]
+    if not eventos:
+        return ()
+    alvo = Resultado(
+        ciclos=(),
+        baseline=_somar_custos(evento.baseline for evento in eventos),
+        netado=_somar_custos(evento.netado for evento in eventos),
+        economia=_somar_exato(evento.ganho_realizado_brl for evento in eventos),
+        volume_casado_brl=_ZERO,
+        volume_autonetting_brl=_ZERO,
+        volume_netting_multilateral_brl=_ZERO,
+        taxa_netabilidade=_ZERO,
+        taxa_autonetting=_ZERO,
+        taxa_netting_multilateral=_ZERO,
+    )
+    _reconciliar_ledger(eventos, alvo)
+    return tuple(eventos)
 
 
 def filtrar_analise_clientes(
     ledger: tuple[EventoCliente, ...], ids_ordens: tuple[str, ...],
 ) -> tuple[tuple[EventoCliente, ...], tuple[ResultadoCliente, ...]]:
     """Publica uma coorte sem refazer o rateio técnico da execução integral."""
-    ids = frozenset(ids_ordens)
-    eventos = [evento for evento in ledger if evento.ordem_id in ids]
-    if not eventos:
+    ledger_coorte = filtrar_ledger(ledger, ids_ordens)
+    if not ledger_coorte:
         return (), ()
-    alvo = Resultado(
-        ciclos=(),
-        baseline=_somar_custos(evento.baseline for evento in eventos),
-        netado=_somar_custos(evento.netado for evento in eventos),
-        economia=_somar_exato(evento.ganho_realizado_brl for evento in eventos),
-        taxa_netabilidade=_ZERO,
-    )
-    # Aplica à coorte a mesma política canônica de restos usada no ledger integral.
-    _reconciliar_ledger(eventos, alvo)
-    ledger_coorte = tuple(eventos)
-    por_cliente: dict[str, list[EventoCliente]] = defaultdict(list)
-    for evento in ledger_coorte:
-        por_cliente[evento.cliente_id].append(evento)
-    clientes = tuple(
-        _resumir(cliente_id, tuple(itens))
-        for cliente_id, itens in sorted(por_cliente.items())
-    )
-    return ledger_coorte, clientes
+    return ledger_coorte, _resumir_clientes(ledger_coorte)
 
 
 def resultado_cliente_vazio(cliente_id: str) -> ResultadoCliente:

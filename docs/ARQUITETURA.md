@@ -37,8 +37,11 @@ faz dele um contrato neutro que as duas camadas leem.
 ## Política P0 (etapa atual)
 
 Janela fixa de `janela_dias` dias: o lote fecha a cada `janela_dias`, ou quando alguma
-ordem aberta vence, ou no fim do horizonte. Ao fechar, casa `min(pendente_out,
-pendente_in)` cobrindo cada lado em ordem **EDF** (`(dia_limite, id)`).
+ordem aberta vence, ou no fim do horizonte. Ao fechar, executa duas fases: primeiro
+casa todo volume possível entre OUT e IN do mesmo `cliente_id`; depois casa os saldos
+entre clientes. Cada fase preserva **EDF** (`(dia_limite, id)`), mas a preferência
+intracliente supera o EDF global. Ela não antecipa o fechamento nem usa ordens ainda
+desconhecidas.
 
 O que sobra **permanece aberto** e só é remetido quando a ordem atinge o próprio
 `dia_limite`. O vencimento de uma ordem força a saída apenas daquela ordem, nunca do
@@ -55,8 +58,9 @@ Cobertura parcial existe: uma ordem de 10 pode ser coberta em 6 no dia 5 e 4 no 
 Isso quebra dois pressupostos do desenho original — não há `dia_executada` único (a
 espera fica indefinida), e a mesma ordem aparece em vários `Ciclo`.
 
-`Alocacao(ordem_id, dia, valor_brl, tipo)` é a parcela de uma ordem resolvida num dia,
-com `tipo ∈ {CASADO, REMETIDO}`. O invariante é:
+`Alocacao(ordem_id, dia, valor_brl, tipo, origem_casamento)` é a parcela de uma ordem
+resolvida num dia, com `tipo ∈ {CASADO, REMETIDO}`. Alocação `CASADO` registra origem
+`INTRA_CLIENTE` ou `INTER_CLIENTE`; `REMETIDO` exige origem nula. O invariante é:
 
     Σ alocações de um ordem_id, em todos os ciclos  ==  valor_brl da ordem
 
@@ -71,6 +75,21 @@ por ciclo e infla o denominador.
 - `netting.py` — implementado (`executar_p0`, política P0).
 - `custo.py` — implementado (`custo_baseline`, `custo_netado`).
 - `simulacao.py` — implementado (`simular`, junta netting + custo).
+
+## Contrato da camada anterior ao motor
+
+O contrato HTTP recebe uma lista de operações explícitas, não uma posição que o
+adaptador possa pré-compensar. `construir_cenario` preserva quantidade, identidade,
+cliente e direção: inclusive quando o mesmo cliente possui simultaneamente uma ordem
+`OUT` e outra `IN`. É a política P0, no fechamento, que classifica eventual casamento
+como intracliente.
+
+Um importador futuro de planilhas ou PDFs pode normalizar e validar os documentos,
+mas não pode eliminar pontas opostas nem consolidar linhas com atributos distintos.
+Agregação documental só é compatível quando coincidem `cliente_id`, direção,
+`dia_conhecida`, `dia_limite`, finalidade e `eh_efx`; corredor e moeda também farão
+parte dessa chave quando existirem no domínio. O importador em si não faz parte desta
+etapa.
 
 ## Costuras de extensão
 

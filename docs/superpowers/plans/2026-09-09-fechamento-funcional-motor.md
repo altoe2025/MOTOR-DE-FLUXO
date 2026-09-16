@@ -1,5 +1,10 @@
 # Fechamento Funcional do Motor Implementation Plan
 
+> **PLANO HISTÓRICO CONCLUÍDO:** tarefas e snippets registram a implementação do
+> schema anterior. A política e o contrato público vigentes são os do plano de
+> autonetting preferencial de 2026-09-16; métricas incrementais citadas abaixo são
+> legado e não devem ser reintroduzidas.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Corrigir os defeitos confirmados nos relatórios e entregar um resultado analítico canônico, reconciliado e capaz de explicar ganho e contribuição por cliente.
@@ -12,10 +17,12 @@
 
 ## Global Constraints
 
-- Preservar P0, EDF, desempate por ID, baseline imediato e fórmulas de custo atuais.
-- Não implementar autonetting temporal anterior à pool.
+- Preservar os gatilhos P0, o baseline e as fórmulas de custo; desde 2026-09-16,
+  autonetting intracliente precede EDF/id multilateral em cada fechamento.
+- Não implementar pré-netting, fechamento antecipado ou look-ahead anterior à P0.
 - Permitir casamento entre ordens OUT e IN do mesmo cliente e incluí-lo na economia oficial.
-- Manter os três indicadores incrementais somente em `diagnosticos_experimentais`.
+- Os três indicadores incrementais pertencem apenas ao schema histórico desta etapa;
+  foram removidos do schema 2.0.0.
 - Manter `eh_efx` apenas como metadado e não ativar `visibilidade_dias_min/max`.
 - Não incluir front-end, calendário civil, preços, dados reais, moedas/corredores ou regras jurídicas.
 - Usar `Decimal` em todos os cálculos financeiros; JSON representa dinheiro e taxas por texto decimal.
@@ -601,7 +608,8 @@ def test_seeds_duplicadas_sao_rejeitadas():
         validar_seeds_unicas((1, 1, 2))
 ```
 
-Adicionar regressão `_formatar("taxa_netabilidade_incremental", Decimal("0.0049")) == Decimal("0.004900")` enquanto o campo legado existir.
+Registro histórico: a regressão de `taxa_netabilidade_incremental` existia enquanto
+o campo legado fazia parte do schema 1.0.0; não se aplica ao schema 2.0.0.
 
 - [ ] **Step 2: Confirmar divergência atual**
 
@@ -1161,7 +1169,9 @@ Configurar W=1/2/3 no produto principal e W=7 no comando de estresse. Criar em `
 
 Agrupar registros pela chave `(mix, n_clientes, seed, demais parâmetros exceto W)`, exigir exatamente os mesmos pares em todos os W e calcular as opções não dominadas: uma janela domina outra somente quando tem economia maior ou igual e espera menor ou igual, com pelo menos uma desigualdade estrita. Sem `limite_espera_dias`, publicar o trade-off sem recomendação. Com limite, escolher a maior economia média entre as janelas que atendem ao limite, desempatar por menor espera e depois menor W; se nenhuma atender, não recomendar.
 
-Atualizar o dicionário com schemas canônicos, definição correta de truncamento, percentil empírico e diagnóstico incremental experimental. Marcar os números dos relatórios existentes como `LEGADO — gerado antes do schema canônico` sem alterar os CSVs antigos.
+Atualizar o dicionário com os schemas então canônicos, definição correta de
+truncamento, percentil empírico e o diagnóstico incremental hoje legado. Marcar os
+números dos relatórios existentes como históricos sem alterar os CSVs antigos.
 
 - [ ] **Step 4: Rodar testes da configuração e documentação**
 
@@ -1285,7 +1295,9 @@ git commit -m "analise: regenera resultados pelo motor canonico (MOT-14)"
 
 - [ ] **Step 1: Atualizar documentação operacional**
 
-Registrar comandos oficiais, quatro modos de análise, ledger, manifesto, limitações de custos, diagnóstico incremental experimental, W=1/2/3 e W=7 de estresse. Atualizar a contagem de testes somente depois da coleta real.
+Registrar comandos oficiais, quatro modos de análise, ledger, manifesto, limitações
+de custos, o diagnóstico incremental histórico, W=1/2/3 e W=7 de estresse. Atualizar
+a contagem de testes somente depois da coleta real.
 
 - [ ] **Step 2: Rodar a suíte normal completa**
 

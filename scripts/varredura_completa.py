@@ -66,11 +66,8 @@ COLUNAS_AGREGADA = (
     "dias_espera_p90_volume_remetido_p50",
     "pct_volume_espera_truncada_p50",
     "fracao_in_realizada_p50",
-    # O piso do valor que o motor de fato adiciona, descontado o que cada cliente
-    # casaria sozinho na propria tesouraria. Sobe para o agregado porque a economia
-    # bruta INCLUI autonetting, e em mixes OUT-pesados o incremental e zero: sem
-    # esta coluna ao lado, a economia bruta seria lida como valor do produto.
-    "taxa_netabilidade_incremental_p50",
+    "taxa_autonetting_p50",
+    "taxa_netting_multilateral_p50",
     "taxa_netabilidade_p50",
 )
 
@@ -177,8 +174,12 @@ def agregar(linhas) -> list[dict]:
                 "fracao_in_realizada_p50": percentil_empirico(
                     sorted(r["fracao_in_realizada"] for r in do_grupo), Decimal("0.50")
                 ),
-                "taxa_netabilidade_incremental_p50": percentil_empirico(
-                    sorted(r["taxa_netabilidade_incremental"] for r in do_grupo),
+                "taxa_autonetting_p50": percentil_empirico(
+                    sorted(r["taxa_autonetting"] for r in do_grupo),
+                    Decimal("0.50"),
+                ),
+                "taxa_netting_multilateral_p50": percentil_empirico(
+                    sorted(r["taxa_netting_multilateral"] for r in do_grupo),
                     Decimal("0.50"),
                 ),
                 "taxa_netabilidade_p50": percentil_empirico(

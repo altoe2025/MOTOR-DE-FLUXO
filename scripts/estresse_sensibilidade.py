@@ -111,7 +111,7 @@ RESSALVAS = (
     "# Testes analiticos, nao cotacao nem previsao comercial.",
     "# Base hipotetica: spread=25 bps, tarifa fixa=R$40 e carry=4 bps.",
     "# IOF incerto: BENS_SERVICOS OUT=38 bps e ATIVOS_VIRTUAIS OUT=350 bps na base.",
-    "# Cada Ordem e uma posicao liquida; nao ha deducao adicional de autonetting.",
+    "# A politica da grade de entrada deve ser lida no manifesto; arquivos antigos sao legado EDF global.",
     "# Cada semente representa uma carteira-ano sintetica de 365 dias.",
 )
 

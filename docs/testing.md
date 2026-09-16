@@ -2,9 +2,10 @@
 
 ## Contexto
 
-Confirmado por inspeção em 2026-09-06: a suíte tem 15 arquivos em `tests/` e 251
-testes coletados pelo `pytest`, todos passando — tanto em `pytest -q` quanto em
-`python -O -m pytest -q`.
+Reconferido em 2026-09-16 na branch `codex/autonetting-preferencial`: a suíte Python
+tem **670 testes aprovados e 2 ignorados**, tanto na execução normal quanto sob
+`python -O`. O front-end tem **89 testes unitários aprovados**; build, lint e os
+**3 testes Playwright** também passam.
 
 ## Decisão
 
@@ -26,6 +27,10 @@ Um arquivo de teste por módulo (ou por aspecto do módulo), espelhando
 - `test_cli.py` — a CLI em `motor/__main__.py`.
 - `test_integracao.py` — ponta a ponta, netting + custo juntos.
 - `test_oraculo_p0.py` — oráculo diferencial (ver abaixo).
+- `test_analise_*.py`, `test_resultado_canonico.py` e
+  `test_serializacao_canonica.py` — ledger, agregados, mecanismos e JSON canônico.
+- `tests/web_api/` — contrato HTTP estrito, adaptador, publicação, identidade,
+  autenticação e servidor estático.
 
 ### O oráculo diferencial do P0
 
@@ -62,7 +67,41 @@ make test              # suíte completa (pytest -q)
 pytest tests/test_netting.py -q   # um arquivo
 pytest -k nome_do_teste -q        # um teste isolado
 python -O -m pytest -q            # sem asserts: ver a regra abaixo
+npm --prefix web run test:unit
+npm --prefix web run build
+npm --prefix web run lint
+npm --prefix web run test:e2e
 ```
+
+### Gate do autonetting preferencial — 2026-09-16
+
+Executado sobre a base `a655d9d9fc166507e084b71bce98f2b601fb5d79`, com schema
+de resultado `2.0.0`:
+
+| Verificação | Resultado |
+|---|---|
+| `python -m pytest -q` | 670 aprovados, 2 ignorados |
+| `python -O -m pytest -q` | 670 aprovados, 2 ignorados |
+| `npm --prefix web run test:unit` | 89 aprovados em 14 arquivos |
+| `npm --prefix web run build` | aprovado |
+| `npm --prefix web run lint` | aprovado |
+| `npm --prefix web run test:e2e` | 3 aprovados |
+
+Os quatro geradores oficiais (`export_openapi`, fixtures de entrada e saída e
+`generate:api`) foram executados duas vezes; a árvore permaneceu sem diferenças.
+`git diff --check` não encontrou erro de whitespace.
+
+A aceitação confrontou as alocações do motor com os três mecanismos do JSON. Os
+volumes abaixo estão na ordem **intracliente / intercliente / remetido**:
+
+- Amanda: `0 / 54.000.000 / 37.800.000` BRL;
+- A OUT 100, A IN 70, B IN 50: `140 / 60 / 20` BRL;
+- preferência intracliente sobre deadline externo: `200 / 0 / 100` BRL.
+
+O Playwright percorreu Amanda pelo servidor real local. Para os dois cenários
+sintéticos, o adaptador real publicou os mesmos volumes e origens do ledger; os
+testes unitários do front usam valores canônicos não deriváveis e comprovam que a
+tela os apresenta diretamente, sem recomputar mecanismos no navegador.
 
 ### Invariante de correção não pode ser `assert`
 
@@ -93,7 +132,7 @@ como já escritos e rodados — o que é verdade naquela branch, não na `main`.
 
 Enquanto o PR #17 não for mergeado, **não trate os 7 cenários manuais como regressão
 disponível** — não há arquivo para rodar na `main`. Decidir o destino do PR #17 é do
-Gabriel; até lá, a regressão efetiva do repo são os 251 testes do `pytest` — com o
+Gabriel; até lá, a regressão efetiva do repo são os testes do `pytest` — com o
 oráculo diferencial cobrindo boa parte do que os 7 cenários manuais cobririam, já que
 ele confere a política contra uma segunda implementação em vez de contra uma previsão
 escrita à mão.

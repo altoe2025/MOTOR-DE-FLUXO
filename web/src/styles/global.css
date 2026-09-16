@@ -44,10 +44,18 @@ a { color: inherit; }
 .definition-tooltip { display: inline-block; position: relative; }
 .definition-trigger { background: transparent; border: 0; border-bottom: 1px dotted currentcolor; color: var(--accent); cursor: help; padding: 0; }
 .tooltip-content { background: var(--nav); border-radius: var(--radius); color: var(--on-nav); display: block; font-size: 0.875rem; left: 0; line-height: 1.4; margin-top: var(--space-2); padding: var(--space-2) var(--space-3); position: absolute; top: 100%; width: max-content; max-width: 280px; z-index: 2; }
-.comparison-summary dl { display: grid; gap: var(--space-4); grid-template-columns: repeat(3, minmax(0, 1fr)); margin: var(--space-4) 0 0; }
-.comparison-summary dl div { border-left: 1px solid var(--border); padding-left: var(--space-3); }
+.comparison-summary .headline-metrics { display: grid; gap: var(--space-4); grid-template-columns: repeat(3, minmax(0, 1fr)); margin: var(--space-4) 0 0; }
+.comparison-summary .headline-metrics > div { border-left: 1px solid var(--border); padding-left: var(--space-3); }
 .comparison-summary dt { color: var(--muted); font-size: 0.8125rem; }
-.comparison-summary dd { font-size: 1.5rem; font-variant-numeric: tabular-nums; font-weight: 700; margin: var(--space-1) 0 0; }
+.comparison-summary dd { font-size: 1.5rem; font-variant-numeric: tabular-nums; font-weight: 700; margin: var(--space-1) 0 0; overflow-wrap: anywhere; }
+.mechanism-composition { border-top: 1px solid var(--border); margin-top: var(--space-6); padding-top: var(--space-5); }
+.mechanism-composition h3 { font-family: var(--font-heading); font-size: 1.2rem; margin: 0; }
+.mechanism-composition > p { color: var(--muted); font-size: 0.875rem; margin: var(--space-1) 0 var(--space-4); }
+.mechanism-grid { display: grid; gap: var(--space-3); grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.mechanism-card { background: var(--canvas); border: 1px solid var(--border); border-radius: var(--radius); min-width: 0; padding: var(--space-4); }
+.mechanism-card h4 { font-size: 0.95rem; line-height: 1.35; margin: 0 0 var(--space-3); }
+.mechanism-card dl { display: grid; gap: var(--space-3); margin: 0; }
+.mechanism-card dd { font-size: 1rem; }
 .cost-table-section table { border-collapse: collapse; font-variant-numeric: tabular-nums; margin-top: var(--space-4); width: 100%; }
 .cost-table-section caption { color: var(--muted); margin-bottom: var(--space-2); text-align: left; }
 .cost-table-section th, .cost-table-section td { border-bottom: 1px solid var(--border); padding: var(--space-2); text-align: right; }
@@ -62,4 +70,4 @@ a { color: inherit; }
 .draft-card h2 { font-family: var(--font-heading); font-size: 1.5rem; margin: 0 0 var(--space-4); }
 .save-status { color: var(--muted); font-size: 0.875rem; margin: 0; }
 .session-loading { padding: var(--space-8); }
-@media (max-width: 760px) { .app-shell { grid-template-columns: 1fr; } .sidebar { gap: var(--space-4); } .destination-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } .workspace-header, .workspace-content { padding-left: var(--space-4); padding-right: var(--space-4); } .comparison-summary dl { grid-template-columns: 1fr; } }
+@media (max-width: 760px) { .app-shell { grid-template-columns: 1fr; } .sidebar { gap: var(--space-4); } .destination-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } .workspace-header, .workspace-content { padding-left: var(--space-4); padding-right: var(--space-4); } .comparison-summary .headline-metrics, .mechanism-grid { grid-template-columns: 1fr; } }

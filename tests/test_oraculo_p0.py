@@ -21,6 +21,10 @@ menos que o motor — casar cedo demais gasta contraparte escassa com ordem que 
 tinha folga, o mesmo motivo pelo qual o P1 guloso é dominado. O motor sempre esteve
 certo; era a sombra que descrevia outra política. Com a regra correta a concordância
 é exata, e é isso que este arquivo passa a proteger.
+
+Desde a política de autonetting preferencial, a sombra também executa duas fases em
+cada fechamento: primeiro por `cliente_id`, depois sobre os saldos globais. A ordem
+EDF/id continua sendo construída de forma independente da estrutura do motor.
 """
 
 from decimal import Decimal
@@ -160,22 +164,37 @@ def _sombra(ordens: tuple[Ordem, ...], *, remete_lote_inteiro: bool = False) -> 
         edf = lambda o: (o.dia_limite, o.id)  # noqa: E731 - EDF, desempate por id
         out = sorted((o for o in abertas if o.direcao is Direcao.OUT), key=edf)
         entrada = sorted((o for o in abertas if o.direcao is Direcao.IN), key=edf)
-        casado = min(
-            sum((pendente[o.id] for o in out), Decimal(0)),
-            sum((pendente[o.id] for o in entrada), Decimal(0)),
-        )
+        def casar(fila_out: list[Ordem], fila_in: list[Ordem]) -> None:
+            valor = min(
+                sum((pendente[o.id] for o in fila_out), Decimal(0)),
+                sum((pendente[o.id] for o in fila_in), Decimal(0)),
+            )
+            for fila in (fila_out, fila_in):
+                restante = valor
+                for ordem in fila:
+                    if restante <= 0:
+                        break
+                    usa = min(pendente[ordem.id], restante)
+                    if usa <= 0:
+                        continue
+                    pendente[ordem.id] -= usa
+                    restante -= usa
+                    linhas.append((ordem.id, dia, usa, "CASADO"))
 
-        for fila in (out, entrada):
-            restante = casado
-            for ordem in fila:
-                if restante <= 0:
-                    break
-                usa = min(pendente[ordem.id], restante)
-                if usa <= 0:
-                    continue
-                pendente[ordem.id] -= usa
-                restante -= usa
-                linhas.append((ordem.id, dia, usa, "CASADO"))
+        for cliente_id in sorted({ordem.cliente_id for ordem in abertas}):
+            casar(
+                [o for o in out if o.cliente_id == cliente_id and pendente[o.id] > 0],
+                [
+                    o
+                    for o in entrada
+                    if o.cliente_id == cliente_id and pendente[o.id] > 0
+                ],
+            )
+
+        casar(
+            [o for o in out if pendente[o.id] > 0],
+            [o for o in entrada if pendente[o.id] > 0],
+        )
 
         sobrevivem = []
         for ordem in abertas:

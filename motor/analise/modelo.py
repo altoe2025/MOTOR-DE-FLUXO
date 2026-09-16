@@ -11,7 +11,7 @@ from decimal import Decimal
 from enum import Enum
 
 from motor.custo import Custos
-from motor.dominio import ParametrosCusto
+from motor.dominio import OrigemCasamento, ParametrosCusto
 from motor.simulacao import Resultado
 
 
@@ -80,6 +80,13 @@ class EventoCliente:
     netado: Custos
     ganho_realizado_brl: Decimal
     eh_efx: bool
+    origem_casamento: OrigemCasamento | None = None
+
+    def __post_init__(self) -> None:
+        if self.tipo == "CASADO" and self.origem_casamento is None:
+            raise ValueError("evento CASADO exige origem_casamento")
+        if self.tipo != "CASADO" and self.origem_casamento is not None:
+            raise ValueError(f"evento {self.tipo} não aceita origem_casamento")
 
 
 @dataclass(frozen=True)
@@ -88,6 +95,8 @@ class ResumoDiaCliente:
     dia: int
     volume_conhecido_brl: Decimal
     volume_casado_brl: Decimal
+    volume_autonetting_brl: Decimal
+    volume_netting_multilateral_brl: Decimal
     volume_remetido_brl: Decimal
     baseline_brl: Decimal
     custo_netado_brl: Decimal
@@ -100,6 +109,8 @@ class ResultadoCliente:
     cliente_id: str
     volume_bruto_brl: Decimal
     volume_casado_brl: Decimal
+    volume_autonetting_brl: Decimal
+    volume_netting_multilateral_brl: Decimal
     volume_remetido_brl: Decimal
     baseline: Custos
     netado: Custos
@@ -122,27 +133,88 @@ class ContribuicaoMarginal:
     efeito_sobre_demais_bps: Decimal
 
 
+class DestinoContabil(str, Enum):
+    INTRA_CLIENTE = "INTRA_CLIENTE"
+    INTER_CLIENTE = "INTER_CLIENTE"
+    REMETIDO = "REMETIDO"
+
+
+@dataclass(frozen=True)
+class ResultadoMecanismo:
+    """Atribuição contábil por destino; não é um contrafactual causal."""
+
+    destino: DestinoContabil
+    volume_brl: Decimal
+    baseline_atribuido_brl: Decimal
+    custo_netado_brl: Decimal
+    economia_brl: Decimal
+
+    def __post_init__(self) -> None:
+        if self.economia_brl != self.baseline_atribuido_brl - self.custo_netado_brl:
+            raise ValueError("economia do mecanismo deve ser baseline menos custo netado")
+
+
 @dataclass(frozen=True)
 class AgregadoCanonico:
     execucao_completa: Resultado
     ids_ordens_medidas: tuple[str, ...]
     volume_bruto_periodo_brl: Decimal
     volume_casado_periodo_brl: Decimal
+    volume_autonetting_periodo_brl: Decimal
+    volume_netting_multilateral_periodo_brl: Decimal
     volume_remetido_periodo_brl: Decimal
     baseline_periodo: Custos
     netado_periodo: Custos
     economia_periodo_brl: Decimal
     taxa_netabilidade_periodo: Decimal
+    taxa_autonetting_periodo: Decimal
+    taxa_netting_multilateral_periodo: Decimal
+    mecanismos: tuple[ResultadoMecanismo, ...]
 
     def __post_init__(self) -> None:
         _exigir_tupla("ids_ordens_medidas", self.ids_ordens_medidas)
+        _exigir_tupla("mecanismos", self.mecanismos)
+        if tuple(m.destino for m in self.mecanismos) != tuple(DestinoContabil):
+            raise ValueError("mecanismos deve conter os três destinos na ordem canônica")
+        if (
+            self.volume_autonetting_periodo_brl
+            + self.volume_netting_multilateral_periodo_brl
+            != self.volume_casado_periodo_brl
+        ):
+            raise ValueError("volumes por mecanismo não reconciliam com volume casado")
+        if (
+            self.taxa_autonetting_periodo
+            + self.taxa_netting_multilateral_periodo
+            != self.taxa_netabilidade_periodo
+        ):
+            raise ValueError("taxas por mecanismo não reconciliam com netabilidade")
+        por_destino = {m.destino: m for m in self.mecanismos}
+        if (
+            por_destino[DestinoContabil.INTRA_CLIENTE].volume_brl
+            != self.volume_autonetting_periodo_brl
+            or por_destino[DestinoContabil.INTER_CLIENTE].volume_brl
+            != self.volume_netting_multilateral_periodo_brl
+            or por_destino[DestinoContabil.REMETIDO].volume_brl
+            != self.volume_remetido_periodo_brl
+        ):
+            raise ValueError("volumes dos mecanismos não reconciliam com o agregado")
+        if sum((m.baseline_atribuido_brl for m in self.mecanismos), Decimal(0)) != (
+            self.baseline_periodo.total
+        ):
+            raise ValueError("baseline dos mecanismos não reconcilia com o agregado")
+        if sum((m.custo_netado_brl for m in self.mecanismos), Decimal(0)) != (
+            self.netado_periodo.total
+        ):
+            raise ValueError("custo dos mecanismos não reconcilia com o agregado")
+        if sum((m.economia_brl for m in self.mecanismos), Decimal(0)) != (
+            self.economia_periodo_brl
+        ):
+            raise ValueError("economia dos mecanismos não reconcilia com o agregado")
 
 
 @dataclass(frozen=True)
 class DiagnosticosExperimentais:
-    limite_intra_cliente_brl: Decimal | None = None
-    volume_casado_incremental_brl: Decimal | None = None
-    taxa_netabilidade_incremental: Decimal | None = None
+    pass
 
 
 @dataclass(frozen=True)

@@ -11,9 +11,11 @@ from motor.analise import (
     AgregadoCanonico,
     ConfiguracaoAnalise,
     ConfiguracaoTemporal,
+    DestinoContabil,
     DiagnosticosExperimentais,
     ModoAnalise,
     ResultadoCanonico,
+    ResultadoMecanismo,
     analisar,
 )
 from motor.analise.serializacao import (
@@ -96,11 +98,32 @@ def resultado(manifesto, custo):
         ids_ordens_medidas=("o1",),
         volume_bruto_periodo_brl=Decimal("1000000.000000"),
         volume_casado_periodo_brl=Decimal("0.000000"),
+        volume_autonetting_periodo_brl=Decimal("0.000000"),
+        volume_netting_multilateral_periodo_brl=Decimal("0.000000"),
         volume_remetido_periodo_brl=Decimal("1000000.000000"),
         baseline_periodo=execucao.baseline,
         netado_periodo=execucao.netado,
-        economia_periodo_brl=Decimal("1026000.000000"),
+        economia_periodo_brl=execucao.economia,
         taxa_netabilidade_periodo=Decimal("0.000000"),
+        taxa_autonetting_periodo=Decimal("0.000000"),
+        taxa_netting_multilateral_periodo=Decimal("0.000000"),
+        mecanismos=(
+            ResultadoMecanismo(
+                DestinoContabil.INTRA_CLIENTE,
+                Decimal("0"), Decimal("0"), Decimal("0"), Decimal("0"),
+            ),
+            ResultadoMecanismo(
+                DestinoContabil.INTER_CLIENTE,
+                Decimal("0"), Decimal("0"), Decimal("0"), Decimal("0"),
+            ),
+            ResultadoMecanismo(
+                DestinoContabil.REMETIDO,
+                Decimal("1000000.000000"),
+                execucao.baseline.total,
+                execucao.netado.total,
+                execucao.economia,
+            ),
+        ),
     )
     return ResultadoCanonico(
         manifesto=manifesto,
@@ -116,7 +139,7 @@ def resultado(manifesto, custo):
 def test_json_preserva_decimal_como_texto(resultado):
     documento = json.loads(resultado_para_json(resultado))
 
-    assert documento["agregado"]["economia_periodo_brl"] == "1026000.000000"
+    assert documento["agregado"]["volume_bruto_periodo_brl"] == "1000000.000000"
     assert documento["manifesto"]["parametros_custo"]["carry_cnr"] == "0.000400"
 
 
@@ -236,7 +259,7 @@ def test_manifestos_com_parametros_diferentes_nao_podem_ser_combinados(manifesto
 
 
 def test_manifestos_com_schema_diferente_nao_podem_ser_combinados(manifesto):
-    incompativel = replace(manifesto, run_id="run-outro", schema_version="2.0.0")
+    incompativel = replace(manifesto, run_id="run-outro", schema_version="1.0.0")
 
     with pytest.raises(
         ValueError,

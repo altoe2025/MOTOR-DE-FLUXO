@@ -28,6 +28,11 @@ class TipoAlocacao(Enum):
     REMETIDO = "REMETIDO"  # atravessou de fato; é o que paga IOF de remessa
 
 
+class OrigemCasamento(Enum):
+    INTRA_CLIENTE = "INTRA_CLIENTE"
+    INTER_CLIENTE = "INTER_CLIENTE"
+
+
 def _decimal_finito_nao_negativo(nome: str, valor: Decimal) -> None:
     if not valor.is_finite() or valor < 0:
         raise ValueError(f"{nome} deve ser finito e não negativo, recebeu {valor!r}")
@@ -53,11 +58,16 @@ class Alocacao:
     dia: int
     valor_brl: Decimal
     tipo: TipoAlocacao
+    origem_casamento: OrigemCasamento | None = None
 
     def __post_init__(self) -> None:
         # ValueError, não assert: `python -O` remove asserts, e uma alocação de valor
         # zero ou negativo entraria em silêncio na soma de conservação.
         _decimal_finito_positivo("valor_brl de uma Alocacao", self.valor_brl)
+        if self.tipo is TipoAlocacao.CASADO and self.origem_casamento is None:
+            raise ValueError("Alocacao CASADO exige origem_casamento")
+        if self.tipo is TipoAlocacao.REMETIDO and self.origem_casamento is not None:
+            raise ValueError("Alocacao REMETIDO não aceita origem_casamento")
 
 
 @dataclass(frozen=True)

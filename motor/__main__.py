@@ -151,13 +151,10 @@ def _varredura(argv: list[str]) -> int:
             f"de um teto de {melhor.teto_netabilidade_p50:.1%}; "
             f"a política extraiu {melhor.eficiencia_vs_teto_p50:.1%} do possível"
         )
-        # A netabilidade bruta inclui o cliente casando o próprio fluxo, que ele
-        # faria sozinho na tesouraria. Sem esta linha, é a bruta que vai para a
-        # conversa comercial.
         print(
-            f"      descontado o que cada cliente casaria sozinho, sobram "
-            f"{melhor.taxa_netabilidade_incremental_p50:.1%} de netting que só "
-            f"existe por juntar clientes diferentes"
+            f"      composição observada: autonetting "
+            f"{melhor.taxa_autonetting_p50:.1%}; netting multilateral "
+            f"{melhor.taxa_netting_multilateral_p50:.1%}"
         )
 
     return 0

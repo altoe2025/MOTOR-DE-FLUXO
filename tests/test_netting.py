@@ -1,3 +1,4 @@
+import itertools
 import random
 from collections import defaultdict
 from decimal import Decimal
@@ -10,6 +11,7 @@ from motor.dominio import (
     Cenario,
     Ciclo,
     Direcao,
+    OrigemCasamento,
     Ordem,
     ParametrosCusto,
     TipoAlocacao,
@@ -191,6 +193,183 @@ def test_cobertura_parcial_prioriza_quem_vence_antes():
     assert remetidos[0].dia == 10
 
 
+def test_autonetting_precede_edf_global():
+    ordens = (
+        Ordem("a-out", "a", Direcao.OUT, Decimal("100"), 0, 10, False, "x"),
+        Ordem("a-in", "a", Direcao.IN, Decimal("100"), 0, 10, False, "x"),
+        Ordem("b-out", "b", Direcao.OUT, Decimal("100"), 0, 0, False, "x"),
+    )
+    cenario = Cenario(
+        ordens=ordens,
+        janela_dias=100,
+        horizonte_dias=10,
+        custo=_custo_zero(),
+    )
+
+    ciclos = executar_p0(cenario)
+
+    casadas = {
+        alocacao.ordem_id: alocacao
+        for ciclo in ciclos
+        for alocacao in ciclo.alocacoes
+        if alocacao.tipo is TipoAlocacao.CASADO
+    }
+    assert casadas.keys() == {"a-out", "a-in"}
+    assert all(
+        alocacao.origem_casamento is OrigemCasamento.INTRA_CLIENTE
+        for alocacao in casadas.values()
+    )
+    remetida_b = next(
+        alocacao
+        for ciclo in ciclos
+        for alocacao in ciclo.alocacoes
+        if alocacao.ordem_id == "b-out"
+    )
+    assert remetida_b.tipo is TipoAlocacao.REMETIDO
+    assert remetida_b.dia == 0
+    assert _por_ordem(ciclos) == {
+        "a-out": Decimal("100"),
+        "a-in": Decimal("100"),
+        "b-out": Decimal("100"),
+    }
+    assert len(ciclos) == 1
+    assert ciclos[0].casado == Decimal("100")
+    assert ciclos[0].residuo == Decimal("100")
+
+
+def test_autonetting_parcial_libera_apenas_excedente_para_pool():
+    ordens = (
+        Ordem("a-out", "a", Direcao.OUT, Decimal("100"), 0, 5, False, "x"),
+        Ordem("a-in", "a", Direcao.IN, Decimal("70"), 0, 5, False, "x"),
+        Ordem("b-in", "b", Direcao.IN, Decimal("50"), 0, 5, False, "x"),
+    )
+    cenario = Cenario(
+        ordens=ordens,
+        janela_dias=100,
+        horizonte_dias=5,
+        custo=_custo_zero(),
+    )
+
+    ciclos = executar_p0(cenario)
+
+    alocacoes = [alocacao for ciclo in ciclos for alocacao in ciclo.alocacoes]
+    assert any(
+        alocacao.ordem_id == "a-in"
+        and alocacao.valor_brl == Decimal("70")
+        and alocacao.origem_casamento is OrigemCasamento.INTRA_CLIENTE
+        for alocacao in alocacoes
+    )
+    assert any(
+        alocacao.ordem_id == "a-out"
+        and alocacao.valor_brl == Decimal("30")
+        and alocacao.origem_casamento is OrigemCasamento.INTER_CLIENTE
+        for alocacao in alocacoes
+    )
+    assert any(
+        alocacao.ordem_id == "b-in"
+        and alocacao.valor_brl == Decimal("20")
+        and alocacao.tipo is TipoAlocacao.REMETIDO
+        for alocacao in alocacoes
+    )
+    assert [
+        (
+            alocacao.ordem_id,
+            alocacao.valor_brl,
+            alocacao.tipo,
+            alocacao.origem_casamento,
+        )
+        for alocacao in alocacoes
+    ] == [
+        ("a-out", Decimal("70"), TipoAlocacao.CASADO, OrigemCasamento.INTRA_CLIENTE),
+        ("a-in", Decimal("70"), TipoAlocacao.CASADO, OrigemCasamento.INTRA_CLIENTE),
+        ("a-out", Decimal("30"), TipoAlocacao.CASADO, OrigemCasamento.INTER_CLIENTE),
+        ("b-in", Decimal("30"), TipoAlocacao.CASADO, OrigemCasamento.INTER_CLIENTE),
+        ("b-in", Decimal("20"), TipoAlocacao.REMETIDO, None),
+    ]
+    assert _por_ordem(ciclos) == {
+        "a-out": Decimal("100"),
+        "a-in": Decimal("70"),
+        "b-in": Decimal("50"),
+    }
+    assert ciclos[0].casado == Decimal("100")
+    assert ciclos[0].residuo == Decimal("20")
+
+
+def test_ordens_do_mesmo_cliente_sem_sobreposicao_nao_casam():
+    ordens = (
+        Ordem("a-out", "a", Direcao.OUT, Decimal("100"), 0, 0, False, "x"),
+        Ordem("a-in", "a", Direcao.IN, Decimal("100"), 1, 1, False, "x"),
+    )
+    cenario = Cenario(
+        ordens=ordens,
+        janela_dias=100,
+        horizonte_dias=1,
+        custo=_custo_zero(),
+    )
+
+    ciclos = executar_p0(cenario)
+
+    assert all(
+        alocacao.tipo is TipoAlocacao.REMETIDO
+        for ciclo in ciclos
+        for alocacao in ciclo.alocacoes
+    )
+    assert [(ciclo.dia, ciclo.casado, ciclo.residuo) for ciclo in ciclos] == [
+        (0, Decimal("0"), Decimal("100")),
+        (1, Decimal("0"), Decimal("100")),
+    ]
+    assert _por_ordem(ciclos) == {
+        "a-out": Decimal("100"),
+        "a-in": Decimal("100"),
+    }
+
+
+def test_autonetting_usa_edf_e_id_dentro_do_cliente():
+    ordens = (
+        Ordem("a-out-folgada", "a", Direcao.OUT, Decimal("100"), 0, 5, False, "x"),
+        Ordem("a-out-urgente", "a", Direcao.OUT, Decimal("100"), 0, 1, False, "x"),
+        Ordem("a-in", "a", Direcao.IN, Decimal("100"), 0, 1, False, "x"),
+    )
+    cenario = Cenario(
+        ordens=ordens,
+        janela_dias=100,
+        horizonte_dias=5,
+        custo=_custo_zero(),
+    )
+
+    ciclos = executar_p0(cenario)
+
+    ids_intra = {
+        alocacao.ordem_id
+        for ciclo in ciclos
+        for alocacao in ciclo.alocacoes
+        if alocacao.origem_casamento is OrigemCasamento.INTRA_CLIENTE
+    }
+    assert ids_intra == {"a-out-urgente", "a-in"}
+
+
+def test_resultado_independe_da_ordem_de_entrada_com_autonetting():
+    ordens = (
+        Ordem("a-out", "a", Direcao.OUT, Decimal("100"), 0, 3, False, "x"),
+        Ordem("a-in", "a", Direcao.IN, Decimal("60"), 0, 3, False, "x"),
+        Ordem("b-in", "b", Direcao.IN, Decimal("40"), 0, 3, False, "x"),
+    )
+    referencia = executar_p0(
+        Cenario(ordens=ordens, janela_dias=100, horizonte_dias=3, custo=_custo_zero())
+    )
+
+    for permutacao in itertools.permutations(ordens):
+        resultado = executar_p0(
+            Cenario(
+                ordens=permutacao,
+                janela_dias=100,
+                horizonte_dias=3,
+                custo=_custo_zero(),
+            )
+        )
+        assert resultado == referencia
+
+
 def test_nenhuma_ordem_vence_com_saldo_em_aberto():
     """Toda ordem tem que estar integralmente resolvida ao fim do seu dia_limite."""
     ordens = (
@@ -339,7 +518,7 @@ def test_cenario_temporal_bate_com_a_previsao_escrita_no_yaml():
     assert total_criado == total_alocado == Decimal("730")
 
 
-def test_saida_do_p0_e_bit_a_bit_a_mesma_de_sempre():
+def test_saida_do_p0_e_bit_a_bit_preserva_autonetting_preferencial():
     """Caracterização: trava a saída COMPLETA do P0 em 108 células da grade.
 
     Existe para proteger otimizações. `executar_p0` tem espaço grande para melhorar
@@ -349,9 +528,11 @@ def test_saida_do_p0_e_bit_a_bit_a_mesma_de_sempre():
     inclusive reordenação — que é justamente o erro fácil de cometer ao trocar as
     estruturas de dados, e que já mordeu este projeto uma vez.
 
-    Se este teste falhar, ou o refactor mudou o comportamento, ou a política mudou
-    de propósito. No segundo caso, recalcule o digest DE PROPÓSITO e diga no commit
-    o que mudou e por quê — nunca atualize o valor só para ficar verde.
+    O oráculo foi versionado quando a política passou a priorizar autonetting no
+    mesmo cliente. Além dos campos anteriores, inclui a origem do casamento. Se
+    este teste falhar, ou o refactor mudou o comportamento, ou a política mudou de
+    propósito. No segundo caso, recalcule o digest DE PROPÓSITO e diga no commit o
+    que mudou e por quê — nunca atualize o valor só para ficar verde.
     """
     import hashlib
 
@@ -377,13 +558,19 @@ def test_saida_do_p0_e_bit_a_bit_a_mesma_de_sempre():
                             f"|{ciclo.direcao_residuo.value}"
                         )
                         for a in ciclo.alocacoes:
+                            origem = (
+                                a.origem_casamento.value
+                                if a.origem_casamento is not None
+                                else "-"
+                            )
                             partes.append(
-                                f"  {a.ordem_id}|{a.dia}|{a.valor_brl}|{a.tipo.value}"
+                                f"  {a.ordem_id}|{a.dia}|{a.valor_brl}"
+                                f"|{a.tipo.value}|{origem}"
                             )
 
     digest = hashlib.sha256("\n".join(partes).encode()).hexdigest()
-    assert len(partes) == 87455
-    assert digest == "179ab6ddfd1c8b21ded5d447bb4aaf4a7ff072e31d6c491ddb20e7b2a6244e25"
+    assert len(partes) == 92776
+    assert digest == "74a49069e66345eaeaa67e17cc9eec0b72e396bcdc99bb6806ad5d2e0efbf0f7"
 
 
 def test_p0_nao_depende_da_ordem_de_entrada():

@@ -8,13 +8,40 @@ from uuid import UUID
 import pytest
 from pydantic import TypeAdapter, ValidationError
 
-from servidor.contracts.input import CampoDecimal, PreviaRequest
+from servidor.contracts.input import CampoDecimal, CenarioEntrada, PreviaRequest
 from servidor.contracts.primitives import DateTimeValue, UUIDValue
+from servidor.motor_adapter import construir_cenario
 
 
 def test_reference_preserves_decimal_text(reference_payload):
     request = PreviaRequest.model_validate_json(json.dumps(reference_payload))
     assert request.model_dump(mode="json")["cenario"] == reference_payload["cenario"]
+
+
+def test_input_preserves_opposite_legs_from_the_same_client(reference_payload):
+    scenario = deepcopy(reference_payload["cenario"])
+    out_order = deepcopy(scenario["ordens"][0])
+    in_order = deepcopy(scenario["ordens"][1])
+    out_order.update(id="same-client-out", cliente_id="same-client", direcao="OUT")
+    in_order.update(id="same-client-in", cliente_id="same-client", direcao="IN")
+    scenario["ordens"] = [out_order, in_order]
+
+    entry = CenarioEntrada.model_validate(scenario)
+    adapted = construir_cenario(entry)
+
+    assert [order.id for order in adapted.ordens] == [
+        "same-client-out",
+        "same-client-in",
+    ]
+    assert [order.cliente_id for order in adapted.ordens] == [
+        "same-client",
+        "same-client",
+    ]
+    assert [order.direcao.value for order in adapted.ordens] == ["OUT", "IN"]
+    description = CenarioEntrada.model_json_schema()["properties"]["ordens"][
+        "description"
+    ]
+    assert "não devem ser pré-netadas" in description
 
 
 def test_decimal_field_keeps_one_value_and_its_origin(reference_payload):

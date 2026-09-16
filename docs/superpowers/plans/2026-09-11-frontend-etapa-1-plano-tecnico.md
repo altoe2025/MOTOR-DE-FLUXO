@@ -1,5 +1,10 @@
 # Etapa 1 — Fundação e contrato com o motor — Implementation Plan
 
+> **ATUALIZAÇÃO DE CONTRATO:** a etapa foi entregue originalmente contra o schema
+> 1.0.0. O envelope HTTP continua 1.0.0, mas o resultado do motor passou ao schema
+> 2.0.0 com origem e composição por mecanismo. A tabela de DTOs abaixo já reflete o
+> contrato vigente; métricas incrementais antigas não devem voltar ao front-end.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans para executar este plano por tarefas; superpowers:subagent-driven-development é alternativa quando houver decisão explícita de delegação. Steps use checkbox (`- [ ]`) syntax for tracking. Leia as três referências abaixo antes da primeira tarefa. Este documento autoriza planejamento; a implementação começa após aprovação do Gabriel.
 
 **Goal:** entregar login por convite, estrutura desktop navegável e uma prévia de referência validada de ponta a ponta entre navegador, servidor e motor Python.
@@ -24,7 +29,8 @@
 - Não editar `motor/` nesta etapa. Se uma interface pública não atender ao contrato, registrar a incompatibilidade e resolver no fluxo do motor com seus donos; não importar funções privadas para contornar a fronteira.
 - `netting.py` e `custo.py` não se importam; `dominio.py` não importa outros módulos do projeto. Preservar pureza e seed explícita.
 - Conservação usa alocações por ordem, nunca soma de pendências dos ciclos. Invariantes de produção usam `raise`, nunca `assert`.
-- Cada ordem é posição líquida destinada à pool. Não descontar novamente as métricas experimentais de autonetting.
+- Cada ordem é uma operação explícita; OUT e IN do mesmo cliente não são pré-netados
+  pelo front-end ou adaptador. A UI só apresenta a composição calculada pela P0.
 - Não inferir pareamento entre empresas; não exibir ganhos individuais nesta etapa.
 - Nenhuma atualização automática de premissas, interpretação regulatória ou importação de contexto do Obsidian.
 - A etapa 1 não executa diagnóstico robusto, sete eixos, comparação, reprecificação, replay, chat ou relatório. Reserva fronteiras necessárias sem implementar esses recursos.
@@ -139,7 +145,7 @@ ConfiguracaoTemporal(dias_aquecimento: int, periodo_medicao_dias: int)
 criar_manifesto(*, parametros_custo, mixes, arquetipos, horizonte_dias,
                 periodo_medicao_dias, janela_dias, seeds, modo_analise,
                 custo_calibrado, metodo_percentil, drenagem, avisos=(),
-                run_ids_origem=(), relogio, versao_motor, schema_version="1.0.0")
+                run_ids_origem=(), relogio, versao_motor, schema_version="2.0.0")
 resultado_para_json(resultado: object) -> str
 ```
 
@@ -254,12 +260,12 @@ Definir DTOs de saída explícitos em `servidor/contracts/output.py`. A reflexã
 | DTO de saída | Campos exatos |
 |---|---|
 | `CustosDTO` | `iof`, `carry`, `spread`, `espera`, `fixo`, `total`, todos DecimalSaida |
-| `AlocacaoDTO` | `ordem_id: str`, `dia: int`, `valor_brl: DecimalSaida`, `tipo: CASADO|REMETIDO` |
+| `AlocacaoDTO` | `ordem_id: str`, `dia: int`, `valor_brl: DecimalSaida`, `tipo: CASADO|REMETIDO`, `origem_casamento: INTRA_CLIENTE|INTER_CLIENTE|null`, coerente com o tipo |
 | `CicloDTO` | `dia`, `alocacoes: list[AlocacaoDTO]`, `bruto_out`, `bruto_in`, `casado`, `residuo` (DecimalSaida), `direcao_residuo: OUT|IN` |
-| `ResultadoLegadoDTO` | `ciclos: list[CicloDTO]`, `baseline: CustosDTO`, `netado: CustosDTO`, `economia`, `taxa_netabilidade` (DecimalSaida) |
-| `AgregadoDTO` | `execucao_completa: ResultadoLegadoDTO`, `ids_ordens_medidas: list[str]`, `volume_bruto_periodo_brl`, `volume_casado_periodo_brl`, `volume_remetido_periodo_brl`, `economia_periodo_brl`, `taxa_netabilidade_periodo` (DecimalSaida), `baseline_periodo: CustosDTO`, `netado_periodo: CustosDTO` |
+| `ResultadoLegadoDTO` | ciclos/custos/economia, mais volumes e taxas de netabilidade total, autonetting e netting multilateral |
+| `AgregadoDTO` | execução, coorte, volumes e taxas total/intracliente/multilateral/remetido, custos, economia e três `ResultadoMecanismoDTO` reconciliados |
 | `ManifestoDTO` | `run_id`, `schema_version`, `versao_motor`, `criado_em_utc`, `hash_configuracao` (str); `run_ids_origem`, `mixes`, `arquetipos`, `avisos` (list[str]); `parametros_custo: CustoEntrada`; `horizonte_dias`, `periodo_medicao_dias`, `janela_dias` (int); `seeds: list[int]`; `modo_analise: AGREGADO`; `custo_calibrado: bool`; `metodo_percentil`, `drenagem` (str) |
-| `DiagnosticosExperimentaisDTO` | `limite_intra_cliente_brl`, `volume_casado_incremental_brl`, `taxa_netabilidade_incremental`, todos obrigatórios e `None` no modo contratado |
+| `DiagnosticosExperimentaisDTO` | objeto estrito vazio; os campos incrementais pertencem somente ao schema legado |
 | `ResultadoCanonicoDTO` | `manifesto: ManifestoDTO`, `agregado: AgregadoDTO`, `clientes`, `ledger_eventos`, `contribuicoes_marginais` (listas obrigatoriamente vazias, schema com maxItems=0); `diagnosticos_experimentais: DiagnosticosExperimentaisDTO`, `avisos: list[str]` |
 
 `DecimalSaida` aceita somente string no JSON, valida a gramática DecimalText e converte para `Decimal` dentro do DTO Python; serializer Pydantic retorna `format(valor, "f")`, sem quantização. Gerar schema em modo de serialização com tipo string e pattern explícitos. Assim os testes Python usam Decimal e o cliente recebe strings. Definir o validador por `BeforeValidator` e serializer por `PlainSerializer`, com `WithJsonSchema` de string na entrada e saída. Não aplicar aos decimais de resultado os limites de casas/volume dos inputs. DTO de saída rejeita campo extra para detectar alteração do contrato do motor. Teste compara `json.loads(resultado_para_json(resultado))` ao dump JSON do DTO, incluindo representação decimal e regra IOF em lista. Nenhum `dict[str, Any]` no resultado público.

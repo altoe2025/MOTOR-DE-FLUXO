@@ -2,9 +2,10 @@
 
 ## Projeto
 
-Este repositório implementa o Motor de Fluxo: simula netting multilateral de fluxo de
-câmbio e execução via política de janela fixa (P0), com prioridade de cobertura EDF
-(earliest deadline first) e desempate por order ID.
+Este repositório implementa o Motor de Fluxo: simula autonetting preferencial e
+netting multilateral de fluxo de câmbio via política de janela fixa (P0). Em cada
+fechamento, a cobertura intracliente vem primeiro; EDF (earliest deadline first),
+com desempate por order ID, ordena cada cliente e depois os saldos multilaterais.
 
 ## Fonte de verdade
 
@@ -83,21 +84,28 @@ ordem em parcelas. Não "otimize" essa distinção, mesmo que pareça reduzir cu
   de direções (ver `docs/adr-cost-bps.md`).
 - **Política P0**: janela fixa de `janela_dias` dias. O lote fecha no primeiro destes
   eventos: (1) já passaram `janela_dias` desde o último fechamento; (2) alguma ordem
-  aberta vence hoje; (3) o horizonte da simulação terminou. Ao fechar, casa
-  `min(pendente_out, pendente_in)` cobrindo cada lado em ordem EDF
-  (`(dia_limite, id)`). O que sobra **permanece aberto** e só vira remessa
+  aberta vence hoje; (3) o horizonte da simulação terminou. Ao fechar, casa primeiro
+  todo volume possível entre OUT e IN simultaneamente abertos do mesmo `cliente_id`;
+  depois aplica o netting multilateral aos saldos. EDF (`(dia_limite, id)`) vale
+  dentro de cada cliente e na fase residual. A preferência intracliente supera EDF
+  global, mas não antecipa fechamento nem olha ordens futuras. O que sobra
+  **permanece aberto** e só vira remessa
   (`Alocacao(REMETIDO)`) no dia em que a **própria ordem** atinge seu `dia_limite` —
   o vencimento de uma ordem força a saída só daquela ordem, nunca do lote inteiro
   (`motor/netting.py`).
 - **P1 não está implementado na `main`**: existiu como spike na branch local
   `netting/p1` (`executar_p1`, nunca mergeada — commit describes it as "política
   dominada"). Não referenciar `executar_p1` como código existente em `main`.
-- **`Alocacao(ordem_id, dia, valor_brl, tipo)`**, com `tipo ∈ {CASADO, REMETIDO}`, é a
+- **`Alocacao(ordem_id, dia, valor_brl, tipo, origem_casamento)`**, com
+  `tipo ∈ {CASADO, REMETIDO}`, é a
   granularidade em que vive o invariante de conservação: a soma das alocações de um
   `ordem_id`, em todos os ciclos, é igual ao `valor_brl` da ordem. Toda métrica de
   volume (netabilidade inclusive) se soma pelas alocações, nunca pelos
-  `bruto_out`/`bruto_in` dos ciclos.
-- **Prioridade de cobertura EDF com desempate por `id`** (ver `docs/adr-edf-tiebreak.md`).
+  `bruto_out`/`bruto_in` dos ciclos. `CASADO` exige origem `INTRA_CLIENTE` ou
+  `INTER_CLIENTE`; `REMETIDO` não aceita origem de casamento.
+- **Prioridade hierárquica**: intracliente antes de intercliente; EDF com desempate
+  por `id` dentro de cada nível (ver `docs/adr-autonetting-preferencial.md` e
+  `docs/adr-edf-tiebreak.md`).
 
 ## Número de aceitação
 
@@ -108,21 +116,21 @@ o código de `netting.py`/`custo.py` não bater nesse número quando implementad
 **o código está errado**, não o número. O mesmo número é cravado em
 `tests/test_varredura.py::test_celula_do_grid_reproduz_o_numero_de_aceitacao_da_amanda`.
 
-## Contrato de entrada líquida
+## Contrato de entrada explícita
 
-Decisão confirmada pelo Gabriel em 2026-09-07: cada `Ordem` que chega ao
-orquestrador já é a **posição líquida que o cliente decidiu colocar na pool**. O
-motor não recebe o fluxo bruto da empresa para fazer um segundo netting interno.
+Decisão confirmada pelo Gabriel em 2026-09-16: cada `Ordem` é uma operação explícita
+colocada na pool. OUT e IN do mesmo cliente chegam separados; o adaptador e futuros
+importadores não podem pré-netar essas pontas. A P0 decide o autonetting somente nos
+fechamentos em que ambas estejam simultaneamente abertas.
 
 Consequências para análise:
 
-- o contrafactual sem produto é cada posição líquida executando sozinha
-  (`custo_baseline`), não uma segunda P0 rodada por cliente;
+- o contrafactual sem produto continua sendo cada operação executando sozinha
+  (`custo_baseline`);
 - `economia_brl`/`economia_bps` mede a economia do modelo sob esse contrato;
 - `limite_intra_cliente_brl`, `volume_casado_incremental_brl` e
-  `taxa_netabilidade_incremental` pertencem à interpretação alternativa anterior
-  (ordens como fluxo bruto) e não devem ser descontados novamente na conversa de
-  produto;
+  `taxa_netabilidade_incremental` são métricas legadas e não pertencem ao resultado
+  vigente; use os volumes e taxas observados por origem de casamento;
 - os números continuam não sendo cotação: os volumes, mixes, spread, custo fixo e
   parte das alíquotas ainda não estão calibrados/confirmados.
 
@@ -150,14 +158,16 @@ qualquer medição nova, para não refazer o que já foi medido:
   de negócio; mantém fluxos em BRL explicitamente marcados como sintéticos.
 - `docs/dicionario-csv.md` — o significado de cada coluna dos CSVs.
 
-Os dois primeiros relatórios foram escritos antes de o contrato de entrada líquida
-acima ser confirmado e chamam parte da economia de "autonetting". Os números
-simulados continuam reproduzíveis, mas essa dedução comercial foi superada. A
-leitura vigente está no `RELATORIO-SENSIBILIDADE-CUSTO.md`.
+Esses relatórios foram produzidos com a política anterior, de EDF global, e são
+**legado histórico**. Os números permanecem reproduzíveis pelo código/CSV histórico,
+mas não descrevem execuções vigentes do autonetting preferencial. A medição nova só
+será feita primeiro numa amostra pequena e, depois, na grade completa mediante
+aprovação explícita do Gabriel.
 
-Estão nas branches `gabriel/metrica-tempo`, `gabriel/varredura-completa`,
-`gabriel/mix-outbound` (PRs #21, #22, #23) e
-`analise/sensibilidade-custo`, **não na `main`**.
+Foram desenvolvidos nas branches `gabriel/metrica-tempo`,
+`gabriel/varredura-completa`, `gabriel/mix-outbound` e
+`analise/sensibilidade-custo` (PRs #21–#24), hoje integradas à `main`. Seus números
+continuam identificados como legado da política anterior.
 
 ## Diário de mudanças
 
@@ -233,8 +243,9 @@ Se uma tarefa exigir editar arquivo fora da coluna da branch atual, **pare e avi
 
 ## Testes
 
-- A suíte atual possui **270 testes**, todos passando (`pytest -q`, reconferido em
-  2026-09-07).
+- A suíte possuía **669 testes passando e 2 ignorados** após a migração do contrato
+  público na MOT-41 (2026-09-16). A contagem final desta mudança deve ser atualizada
+  em `docs/testing.md` pela MOT-46.
 - A suíte também passa inteira sob **`python -O -m pytest -q`**. Isso não é detalhe:
   invariante de correção neste repo não pode ser `assert`, porque `-O` os remove. Se
   você adicionar um invariante que garante correção do resultado (conservação,
@@ -260,12 +271,11 @@ exige decisão do Gabriel + atualização dos cenários de regressão.
   `executar_p0` remete o que sobrou no fim para não quebrar a conservação. Isso
   concentra resíduo artificial no último dia. Registrado como efeito de borda
   desprezível acima de ~180 dias — não confirmado por teste dedicado.
-- **A direção é sorteada por ordem, não por cliente.** Isso produz posições líquidas
-  de direções diferentes para o mesmo cliente ao longo do ano sintético. Pela decisão
-  de entrada líquida, essas ordens já são o que o cliente escolheu colocar na pool e
-  não sofrem uma segunda dedução de autonetting. As colunas `limite_intra_cliente_brl`
-  e `taxa_netabilidade_incremental` continuam no CSV por compatibilidade e como
-  diagnóstico da interpretação antiga; não são a métrica comercial vigente.
+- **A direção é sorteada por ordem, não por cliente.** Isso produz operações de
+  direções diferentes para o mesmo cliente ao longo do ano sintético. Pela política
+  vigente, elas podem fazer autonetting apenas quando coexistem abertas no mesmo
+  fechamento. As colunas incrementais antigas foram removidas do schema novo; CSVs
+  históricos que ainda as contenham são legado.
 - **`visibilidade_dias_min/max` do arquétipo não entra na geração.** O campo documenta
   a intenção de modelar antecedência de forecast separada de `dia_conhecida`; há um
   TODO explícito em `motor/geracao.py`. Hoje é campo inerte.
@@ -290,7 +300,7 @@ exige decisão do Gabriel + atualização dos cenários de regressão.
 
 ## Atualização
 
-Última revisão: 2026-09-07.
+Última revisão: 2026-09-16.
 
 Sempre que uma decisão técnica desta lista mudar, atualizar esta seção no mesmo
 commit da mudança de código. Um AGENTS.md desatualizado é pior que nenhum, porque o

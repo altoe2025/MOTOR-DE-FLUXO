@@ -10,7 +10,10 @@ com folga para casar depois e quem é forçado a sair.
 ## Decisão
 
 O motor usa **EDF** (earliest deadline first) — `(dia_limite, id)` — em vez de FIFO
-(ordem de chegada). Confirmado no docstring de `motor/netting.py`:
+(ordem de chegada), mas dentro da hierarquia definida pelo
+[`adr-autonetting-preferencial.md`](adr-autonetting-preferencial.md): primeiro EDF/id
+em cada cliente; depois EDF/id nos saldos intercliente. A preferência intracliente
+supera EDF global. Confirmado no docstring de `motor/netting.py`:
 
 > "Cobrir primeiro quem tem menos folga libera a restrição mais apertada e deixa as
 > ordens folgadas abertas para casar depois. FIFO seria errado: com buffers
@@ -26,7 +29,7 @@ ponto (mix, N, W) sob várias seeds e resume o eixo de seeds em mediana e faixa.
 dispersão entre seeds só é exposta para **`economia_pct`**, que tem
 `min`/`p25`/`p50`/`p75`/`max` em `ResumoCelula`; as demais métricas
 (`taxa_netabilidade`, `teto_netabilidade`, `eficiencia_vs_teto`,
-`taxa_netabilidade_incremental`) saem só como mediana `p50`. O
+`taxa_autonetting`, `taxa_netting_multilateral`) saem só como mediana `p50`. O
 `motor/__main__.py` observa, no cabeçalho da CLI de varredura, que "a dispersão entre
 seeds é maior que a diferença entre mixes" em algumas regiões da grade — ou seja, o
 resultado de uma única execução pode não ser representativo, e a faixa entre
@@ -48,6 +51,8 @@ relevante para decisão sob risco), isso é uma mudança de código
   mude o critério de prioridade de cobertura precisa justificar por que EDF deixou de
   ser o critério certo — e não pode reintroduzir FIFO sem entender por que ele foi
   descartado.
+- Aplicar EDF global antes da preferência intracliente não é uma implementação deste
+  ADR: é a política anterior, superada em 2026-09-16.
 - Testes que dependem de reprodutibilidade entre seeds (toda a suíte de varredura)
   quebram silenciosamente se o desempate por `id` for removido ou tornado
   não-determinístico.

@@ -133,6 +133,24 @@ def test_varredura_sem_saida_resumo_nao_cria_o_arquivo(tmp_path):
     assert not resumo.exists()
 
 
+def test_varredura_relata_a_composicao_observada(capsys, tmp_path):
+    destino = tmp_path / "grade.csv"
+
+    codigo = main(
+        [
+            "motor", "varredura", "--saida", str(destino),
+            "--mixes", "equilibrado", "--n", "2", "--w", "1",
+            "--seeds", "1", "--horizonte", "30",
+        ]
+    )
+
+    saida = capsys.readouterr().out
+    assert codigo == 0
+    assert "composição observada: autonetting" in saida
+    assert "netting multilateral" in saida
+    assert "descontado o que cada cliente casaria sozinho" not in saida
+
+
 def test_help_do_modo_cenario_nao_tenta_abrir_o_flag_como_arquivo():
     """`--help` caía no caminho do cenário e o loader tentava abrir um arquivo
     chamado "--help", derrubando a CLI com FileNotFoundError."""

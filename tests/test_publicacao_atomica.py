@@ -6,9 +6,11 @@ import pytest
 
 from motor.analise import (
     AgregadoCanonico,
+    DestinoContabil,
     DiagnosticosExperimentais,
     ModoAnalise,
     ResultadoCanonico,
+    ResultadoMecanismo,
 )
 from motor.analise import serializacao
 from motor.analise.serializacao import (
@@ -64,11 +66,32 @@ def pacote_execucao() -> PacoteExecucao:
             ids_ordens_medidas=("o1",),
             volume_bruto_periodo_brl=Decimal("100"),
             volume_casado_periodo_brl=Decimal("0"),
+            volume_autonetting_periodo_brl=Decimal("0"),
+            volume_netting_multilateral_periodo_brl=Decimal("0"),
             volume_remetido_periodo_brl=Decimal("100"),
             baseline_periodo=execucao.baseline,
             netado_periodo=execucao.netado,
-            economia_periodo_brl=Decimal("0"),
+            economia_periodo_brl=execucao.economia,
             taxa_netabilidade_periodo=Decimal("0"),
+            taxa_autonetting_periodo=Decimal("0"),
+            taxa_netting_multilateral_periodo=Decimal("0"),
+            mecanismos=(
+                ResultadoMecanismo(
+                    DestinoContabil.INTRA_CLIENTE,
+                    Decimal("0"), Decimal("0"), Decimal("0"), Decimal("0"),
+                ),
+                ResultadoMecanismo(
+                    DestinoContabil.INTER_CLIENTE,
+                    Decimal("0"), Decimal("0"), Decimal("0"), Decimal("0"),
+                ),
+                ResultadoMecanismo(
+                    DestinoContabil.REMETIDO,
+                    Decimal("100"),
+                    execucao.baseline.total,
+                    execucao.netado.total,
+                    execucao.economia,
+                ),
+            ),
         ),
         clientes=(),
         ledger_eventos=(),

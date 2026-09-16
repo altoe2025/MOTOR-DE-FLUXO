@@ -33,7 +33,7 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-09-13, durante a implementação da MOT-22 sobre a base integrada.
+Atualizada em 2026-09-16, após o gate final da política de autonetting preferencial.
 
 | Branch | Situação | Dono |
 |---|---|---|
@@ -59,6 +59,7 @@ Atualizada em 2026-09-13, durante a implementação da MOT-22 sobre a base integ
 | `codex/mot20-auth` | PR #32, mergeada na `main`; MOT-20 concluída com convite, rascunho e POST autenticado reais | Codex |
 | `codex/mot21-client-integracao` | PR #33 mergeado na `main`; implementação, CI e gate Supabase real verdes | Codex |
 | `codex/mot22-aceitacao-ci` | PR #34 mergeada na `main`; aceitação, CI e handoff da etapa 1 entregues | Codex |
+| `codex/autonetting-preferencial` | PR #36 aberto; gate protegido em correção, sem regenerar a grade | Codex |
 
 Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
@@ -66,6 +67,255 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
 ---
+
+## 2026-09-16 — Gate final do autonetting preferencial (MOT-46)
+
+1. **Sintoma.** Código, contrato, front-end e amostra já estavam implementados, mas
+   faltava um gate único que comprovasse a árvore completa, os artefatos gerados e
+   a concordância entre motor, JSON e apresentação.
+
+2. **Causa.** As verificações anteriores eram focadas por tarefa. A regeneração da
+   grade também não poderia ser usada como atalho, pois continua condicionada à
+   aprovação explícita do Gabriel.
+
+3. **O que foi feito.** Sobre a base
+   `a655d9d9fc166507e084b71bce98f2b601fb5d79`, as execuções normal e `python -O`
+   aprovaram 670 testes e ignoraram 2; o front aprovou 89 testes unitários, build,
+   lint e 3 testes e2e. Os geradores oficiais foram rodados duas vezes sem diff. No
+   schema 2.0.0, ledger e JSON reconciliaram os mecanismos intracliente /
+   intercliente / remetido em Amanda (`0 / 54.000.000 / 37.800.000`), no caso A
+   OUT 100/A IN 70/B IN 50 (`140 / 60 / 20`) e no caso que força preferência sobre
+   deadline externo (`200 / 0 / 100`). A UI real percorreu Amanda; regressões de
+   apresentação garantem consumo direto dos campos canônicos nos demais valores.
+   Ao abrir o PR #36, a CI aprovou 672 testes nos dois modos e Ruff, mas revelou
+   que o Mypy não estreitava o tipo da origem validada por pertinência a conjunto;
+   a validação passou a explicitar `str`, sem mudar o comportamento publicado.
+
+4. **O que isso invalida.** Nada além da anotação de que a verificação estava
+   pendente. A branch foi publicada no PR #36 após o push direto à `main` ser
+   corretamente recusado pela proteção. Não houve regeneração das 27.000 rodadas;
+   a MOT-47 continua bloqueada até nova aprovação explícita.
+
+## 2026-09-16 — Amostra pareada do autonetting (MOT-45)
+
+1. **Sintoma.** O comportamento estava testado, mas ainda não havia uma medição
+   pareada do impacto econômico nem estimativa atual do custo de regeneração.
+
+2. **Causa.** A grade histórica usa EDF global e não separa os mecanismos novos;
+   sobrescrevê-la antes de uma fumaça contrariaria o gate aprovado.
+
+3. **O que foi feito.** Duas seeds do mix equilibrado em W=1/7 foram executadas com
+   as mesmas ordens nas duas políticas. Todas as identidades fecharam; autonetting
+   ficou entre 10,74% e 13,20%. A preferência reduziu a netabilidade total entre
+   0,094 e 0,999 p.p., enquanto a economia caiu em duas células e subiu em duas por
+   causa do mix de IOF remetido. Uma fumaça de 180 rodadas projetou ~28 minutos de
+   motor para a grade neste ambiente. Scripts derivados deixaram de declarar o
+   contrato antigo de posição líquida. O cenário Amanda permaneceu em 58,82%.
+
+4. **O que isso invalida.** A suposição de que dar prioridade ao autonetting sempre
+   preservaria a netabilidade ou moveria a economia no mesmo sentido. A amostra não
+   substitui a grade e não autoriza a MOT-47.
+
+## 2026-09-16 — Fonte de verdade do autonetting preferencial (MOT-44)
+
+1. **Sintoma.** Documentos normativos ainda diziam que cada ordem era posição
+   líquida e que EDF global governava a seleção, embora o motor já priorizasse a
+   contraparte do próprio cliente.
+
+2. **Causa.** A decisão nova tinha sido propagada pelo código em etapas, mas AGENTS,
+   MAPA, ADRs, planos de front-end e relatórios históricos ainda misturavam as duas
+   semânticas.
+
+3. **O que foi feito.** O ADR de autonetting registra as duas fases, alternativas
+   rejeitadas e consequências. AGENTS, arquitetura, MAPA, ADR de EDF, Model B e
+   planos dependentes foram alinhados ao schema 2.0.0. A especificação e o plano
+   aprovados entraram na branch. Relatórios e CSVs antigos foram preservados, mas
+   marcados como legado da política EDF global.
+
+4. **O que isso invalida.** O contrato de “posição líquida já enviada à pool”, a
+   prioridade EDF global pura, os diagnósticos incrementais como conclusão vigente e
+   as 27.000 simulações antigas como representação da política nova. A regeneração
+   integral continua proibida até amostra e aprovação explícita do Gabriel.
+
+## 2026-09-16 — Entrada sem pré-netting silencioso (MOT-43)
+
+1. **Sintoma.** O adaptador já preservava operações, mas o contrato público e a
+   arquitetura não proibiam explicitamente que um importador futuro eliminasse as
+   pontas opostas do mesmo cliente antes da P0.
+
+2. **Causa.** A semântica da lista `ordens` não estava descrita no schema, e não
+   havia regressão que atravessasse DTO e adaptador com OUT e IN do mesmo cliente.
+
+3. **O que foi feito.** O schema agora define `ordens` como operações explícitas
+   que não devem ser pré-netadas. Um teste comprova que as duas pontas permanecem
+   duas `Ordem` distintas. Os documentos de arquitetura fixam a fronteira do
+   importador e a chave mínima de agregação compatível. OpenAPI e tipos gerados
+   foram atualizados; os 42 testes de contratos/adaptador e o typecheck passaram.
+
+4. **O que isso invalida.** Importadores que entreguem apenas o saldo OUT–IN de um
+   cliente ou consolidem linhas com prazo, finalidade ou classificação diferentes.
+   O importador documental completo continua fora desta entrega.
+
+## 2026-09-16 — Composição do netting na prévia (MOT-42)
+
+1. **Sintoma.** A API já publicava autonetting, netting multilateral e remessa,
+   mas a prévia mostrava somente o volume casado e a taxa total.
+
+2. **Causa.** `ComparisonSummary` ainda consumia apenas os três indicadores do
+   contrato anterior e não apresentava a lista de mecanismos do schema 2.0.0.
+
+3. **O que foi feito.** A prévia agora mostra os três destinos com volume recebido
+   da API, as taxas intracliente e multilateral e a atribuição contábil de custo e
+   economia. Testes usam valores não deriváveis para impedir reconstrução por
+   subtração no navegador. Os 89 testes unitários, o build, o lint e os três fluxos
+   e2e passaram. A tela foi inspecionada em 1280×800, 1440×900 e 200%; uma quebra
+   de valores longos encontrada no zoom foi corrigida.
+
+4. **O que isso invalida.** Capturas e expectativas do front-end que tratem o
+   volume compensado como uma parcela indivisível. Nenhum valor é recalculado no
+   navegador e os avisos de dados sintéticos e custos não calibrados permanecem.
+
+## 2026-09-16 — Contrato público do autonetting (MOT-41)
+
+1. **Sintoma.** O motor e o CSV já distinguiam autonetting de netting
+   multilateral, mas a API continuava expondo o schema 1.0.0 sem origem nas
+   alocações nem métricas e custos por mecanismo.
+
+2. **Causa.** DTOs, portão de publicação, identidade, OpenAPI, fixture de
+   referência e tipos TypeScript ainda refletiam o resultado anterior à nova
+   política.
+
+3. **O que foi feito.** O resultado público passou ao schema 2.0.0. Alocações
+   casadas carregam origem obrigatória; execução e agregado expõem volumes e taxas
+   intracliente/multilaterais; e o agregado publica os três destinos contábeis com
+   custos reconciliados. O portão valida essas identidades no objeto e no JSON.
+   OpenAPI, fixture e clientes gerados foram atualizados por seus geradores
+   oficiais, com hashes idênticos numa segunda geração. Os 48 testes da fronteira
+   HTTP passaram.
+
+4. **O que isso invalida.** Consumidores do resultado 1.0.0 precisam migrar para o
+   schema 2.0.0; a versão do envelope HTTP permanece 1.0.0. A fixture pública foi
+   recalculada, mas a grade histórica completa não foi regenerada.
+
+## 2026-09-16 — CSV e CLI com mecanismos observados (MOT-40)
+
+1. **Sintoma.** A varredura e a CLI ainda publicavam o limite anual intracliente e
+   a métrica incremental da interpretação antiga, embora o motor já medisse a
+   origem de cada casamento em seu fechamento real.
+
+2. **Causa.** `montar_ponto` recalculava uma aproximação por cliente, ignorando a
+   sobreposição temporal, em vez de consumir as métricas de `simular`.
+
+3. **O que foi feito.** Pontos, resumos, CSV completo, script oficial e CLI agora
+   expõem autonetting e netting multilateral observados. Um caso em que OUT e IN do
+   mesmo cliente não coexistem comprova autonetting zero. As taxas preservam tanto
+   a razão total quanto a soma exata das parcelas sob precisão Decimal finita. Os
+   76 testes focados passaram; na suíte integral, 652 passaram e as 15 falhas
+   restantes estão restritas ao DTO/API ainda em schema 1.0.0.
+
+4. **O que isso invalida.** Leitores dependentes das três colunas incrementais
+   antigas precisam tratar esses CSVs como schema legado. A grade histórica não foi
+   sobrescrita nem regenerada.
+
+## 2026-09-16 — Ledger e custos por mecanismo (MOT-39)
+
+1. **Sintoma.** Os volumes agregados já distinguiam autonetting e multilateral,
+   mas eventos, resumos por cliente e custos ainda perdiam essa origem.
+
+2. **Causa.** O ledger copiava apenas `CASADO`/`REMETIDO`, e o resultado agregado
+   não possuía uma classificação contábil dos custos rateados existentes.
+
+3. **O que foi feito.** Eventos casados agora exigem `OrigemCasamento`; resumos
+   diários e por cliente separam os dois mecanismos. O agregado publica, em ordem
+   canônica, `INTRA_CLIENTE`, `INTER_CLIENTE` e `REMETIDO`, com volume, baseline
+   atribuído, custo netado e economia reconciliados. O modo agregado constrói apenas
+   o ledger necessário, sem materializar resumos por cliente. Nenhuma fórmula de
+   IOF, carry, spread, espera ou custo fixo mudou. Os 174 testes relacionados
+   passaram.
+
+4. **O que isso invalida.** Consumidores do resultado canônico precisam aceitar a
+   lista obrigatória de mecanismos e os novos campos do ledger/cliente. Tratar a
+   decomposição como contrafactual causal continua incorreto: ela é atribuição
+   contábil do rateio técnico existente.
+
+## 2026-09-16 — Métricas observadas por mecanismo (MOT-38)
+
+1. **Sintoma.** A execução sabia quais alocações eram intracliente ou multilaterais,
+   mas o resultado publicava apenas a netabilidade total e mantinha diagnósticos da
+   interpretação antiga como se fossem aproximações úteis.
+
+2. **Causa.** A origem ainda não era agregada em `Resultado` nem no recorte temporal
+   do resultado canônico.
+
+3. **O que foi feito.** `Resultado` e `AgregadoCanonico` agora publicam volumes e
+   taxas observados de autonetting e netting multilateral. O recorte temporal soma
+   somente alocações das ordens medidas, e o domínio analítico rejeita decomposições
+   que não reconciliem exatamente. Os três diagnósticos incrementais antigos foram
+   removidos do modelo novo. Os 70 testes focados passaram.
+
+4. **O que isso invalida.** `limite_intra_cliente_brl`,
+   `volume_casado_incremental_brl` e `taxa_netabilidade_incremental` não pertencem
+   ao resultado canônico vigente. DTOs, CSVs e fixtures antigas ainda precisam da
+   migração versionada prevista nas próximas tarefas antes da suíte integral voltar
+   a ficar verde.
+
+## 2026-09-16 — Aceitação comportamental do autonetting (MOT-37)
+
+1. **Sintoma.** A política em duas fases possuía regressões discriminantes, mas os
+   três exemplos centrais ainda não fixavam o resultado completo nem sua passagem
+   pelo orquestrador de simulação.
+
+2. **Causa.** A MOT-36 concentrou-se na implementação mínima da seleção e nos
+   invariantes já existentes.
+
+3. **O que foi feito.** Os cenários de preferência sobre EDF global, autonetting
+   parcial e ausência de sobreposição temporal agora conferem IDs, valores, dias,
+   origens, remessas e conservação por ordem. Um teste de integração confirma que
+   `simular` preserva a decomposição executada. O oráculo diferencial independente
+   também passou a reproduzir explicitamente as duas fases e concorda nas carteiras
+   densas e esparsas. Os testes relacionados passaram.
+
+4. **O que isso invalida.** Nada além de expectativas que tratem a preferência
+   intracliente como opcional; não altera novamente o algoritmo nem os custos.
+
+## 2026-09-16 — Autonetting preferencial na P0 (MOT-36)
+
+1. **Sintoma.** O EDF global podia usar a entrada de um cliente para cobrir outro
+   participante mesmo quando o primeiro cliente possuía OUT e IN simultaneamente
+   abertos no mesmo fechamento.
+
+2. **Causa.** `cliente_id` não participava do algoritmo: toda ordem aberta entrava
+   diretamente numa única fila por direção.
+
+3. **O que foi feito.** Cada fechamento P0 agora executa duas fases determinísticas:
+   primeiro autonetting por cliente e depois netting multilateral apenas dos saldos.
+   EDF com desempate por ID continua valendo dentro de cada cliente e na fase
+   residual. Gatilhos, ausência de look-ahead, vencimentos e conservação foram
+   preservados. A regressão cobre preferência sobre EDF global, parcialidade,
+   sobreposição temporal e ordem de entrada; 33 testes relacionados passaram.
+
+4. **O que isso invalida.** Resultados de simulações, digests e CSVs produzidos pela
+   política anterior deixam de representar o comportamento vigente quando um mesmo
+   cliente tem as duas pontas abertas. A grade histórica permanece como legado e
+   não será regenerada sem aprovação explícita após a amostra planejada.
+
+## 2026-09-16 — Origem auditável dos casamentos (MOT-35)
+
+1. **Sintoma.** Uma alocação `CASADO` informava que o volume não atravessou a
+   fronteira, mas não distinguia autonetting do mesmo cliente e netting multilateral.
+
+2. **Causa.** O domínio só registrava `CASADO` ou `REMETIDO`, porque `cliente_id`
+   ainda não participava da política de casamento.
+
+3. **O que foi feito.** A branch `codex/autonetting-preferencial`, baseada em
+   `origin/main` no commit `a655d9d`, adicionou `OrigemCasamento` e tornou a origem
+   obrigatória para alocações casadas e proibida para remessas. Enquanto a política
+   em duas fases não entra na MOT-36, o algoritmo vigente rotula seus casamentos
+   como `INTER_CLIENTE`. A regressão direta passou junto com 151 testes consumidores.
+
+4. **O que isso invalida.** Ainda não altera números nem prioridade de execução.
+   Consumidores que construíam manualmente uma alocação `CASADO` precisam informar
+   sua origem; a serialização pública só será versionada na etapa própria.
 
 ## 2026-09-13 — Aceitação e CI da etapa 1 (MOT-22)
 

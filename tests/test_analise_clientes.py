@@ -3,7 +3,13 @@ from decimal import Decimal, getcontext, localcontext
 
 import pytest
 
-from motor.analise import analisar_clientes
+from motor.analise import (
+    ConfiguracaoAnalise,
+    ModoAnalise,
+    analisar,
+    analisar_clientes,
+    criar_manifesto,
+)
 from motor.analise.clientes import filtrar_analise_clientes
 from motor.custo import custo_baseline
 from motor.dominio import Cenario, Direcao, Ordem, ParametrosCusto
@@ -53,6 +59,12 @@ def _reconciliar(cenario):
     bruto = sum((o.valor_brl for o in cenario.ordens), D(0))
     assert sum((c.volume_bruto_brl for c in clientes), D(0)) == bruto
     assert sum((c.volume_casado_brl + c.volume_remetido_brl for c in clientes), D(0)) == bruto
+    assert _soma(c.volume_autonetting_brl for c in clientes) == (
+        resultado.volume_autonetting_brl
+    )
+    assert _soma(c.volume_netting_multilateral_brl for c in clientes) == (
+        resultado.volume_netting_multilateral_brl
+    )
     for indice, cliente in enumerate(clientes):
         ganho_esperado = cliente.baseline.total - cliente.netado.total
         if indice == len(clientes) - 1:
@@ -68,6 +80,70 @@ def _reconciliar(cenario):
 def test_rateio_dos_clientes_fecha_com_o_agregado():
     _reconciliar(_cenario(_ordem("a", "a", Direcao.OUT, "1000"),
                          _ordem("b", "b", Direcao.IN, "600")))
+
+
+def test_ledger_e_agregado_reconciliam_os_tres_mecanismos():
+    cenario = _cenario(
+        _ordem("a-out", "a", Direcao.OUT, "100", limite=5),
+        _ordem("a-in", "a", Direcao.IN, "70", limite=5),
+        _ordem("b-in", "b", Direcao.IN, "50", limite=5),
+        janela=100,
+        horizonte=5,
+    )
+    manifesto = criar_manifesto(
+        parametros_custo=cenario.custo,
+        mixes=("teste",),
+        arquetipos=("teste",),
+        horizonte_dias=cenario.horizonte_dias,
+        periodo_medicao_dias=cenario.horizonte_dias + 1,
+        janela_dias=cenario.janela_dias,
+        seeds=(),
+        modo_analise=ModoAnalise.POR_CLIENTE,
+        custo_calibrado=False,
+        metodo_percentil="NAO_APLICAVEL",
+        drenagem="LEGADO",
+        versao_motor="teste",
+    )
+
+    resultado = analisar(
+        cenario,
+        ConfiguracaoAnalise(ModoAnalise.POR_CLIENTE),
+        manifesto,
+    )
+
+    intra = _soma(
+        evento.valor_brl
+        for evento in resultado.ledger_eventos
+        if evento.tipo == "CASADO"
+        and evento.origem_casamento.value == "INTRA_CLIENTE"
+    )
+    inter = _soma(
+        evento.valor_brl
+        for evento in resultado.ledger_eventos
+        if evento.tipo == "CASADO"
+        and evento.origem_casamento.value == "INTER_CLIENTE"
+    )
+    assert intra == resultado.agregado.volume_autonetting_periodo_brl == D("140")
+    assert inter == resultado.agregado.volume_netting_multilateral_periodo_brl == D("60")
+    assert [mecanismo.destino.value for mecanismo in resultado.agregado.mecanismos] == [
+        "INTRA_CLIENTE",
+        "INTER_CLIENTE",
+        "REMETIDO",
+    ]
+    assert _soma(m.volume_brl for m in resultado.agregado.mecanismos) == D("220")
+    assert _soma(m.baseline_atribuido_brl for m in resultado.agregado.mecanismos) == (
+        resultado.agregado.baseline_periodo.total
+    )
+    assert _soma(m.custo_netado_brl for m in resultado.agregado.mecanismos) == (
+        resultado.agregado.netado_periodo.total
+    )
+    assert _soma(m.economia_brl for m in resultado.agregado.mecanismos) == (
+        resultado.agregado.economia_periodo_brl
+    )
+    por_cliente = {cliente.cliente_id: cliente for cliente in resultado.clientes}
+    assert por_cliente["a"].volume_autonetting_brl == D("140")
+    assert por_cliente["a"].volume_netting_multilateral_brl == D("30")
+    assert por_cliente["b"].volume_netting_multilateral_brl == D("30")
 
 
 def test_coorte_filtrada_preserva_rateio_e_reconcilia_residuos_decimal():

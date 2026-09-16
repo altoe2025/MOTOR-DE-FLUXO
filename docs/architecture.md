@@ -18,7 +18,7 @@ Módulos, por ordem de dependência:
 | Módulo | Responsabilidade | Importa de dentro do projeto |
 |---|---|---|
 | `motor/dominio.py` | Entidades imutáveis (`Direcao`, `Ordem`, `ParametrosCusto`, `Cenario`, `Alocacao`, `Ciclo`, `Arquetipo`) e `carregar_cenario(path)` | nada |
-| `motor/netting.py` | Casamento OUT/IN dentro da janela P0 (`executar_p0`), produz `Ciclo` | só `dominio` |
+| `motor/netting.py` | P0 em duas fases por fechamento: autonetting intracliente e saldo multilateral (`executar_p0`), produz `Ciclo` | só `dominio` |
 | `motor/custo.py` | Precificação de cada `Ciclo`: IOF, carry de CNR, spread, custo de oportunidade, custo fixo (`custo_baseline`, `custo_netado`) | só `dominio` |
 | `motor/simulacao.py` | Orquestra `netting` + `custo` (`simular`); função pura | `dominio`, `netting`, `custo` |
 | `motor/geracao.py` + `motor/arquetipos.py` | Geração sintética de ordens por arquétipo de cliente | `dominio` |
@@ -42,3 +42,25 @@ Testes em `tests/` espelham essa mesma divisão por módulo (ver
   `cliente_id`. Ver `docs/adr-model-b.md`.
 
 Para contexto de negócio e proveniência, consultar o vault Obsidian.
+
+## Fronteira de entrada e importadores
+
+`servidor/contracts/input.py` recebe operações explícitas. O adaptador converte cada
+`OrdemEntrada` em uma `Ordem` sem compensar, eliminar ou fundir as pontas: um `OUT` e
+um `IN` do mesmo `cliente_id` chegam separados à P0, que decide o autonetting no
+fechamento correspondente.
+
+Planilhas e PDFs pertencem a uma camada anterior, ainda não implementada. Essa camada
+pode sanitizar formatos, mas não pode fazer pré-netting silencioso. Uma agregação de
+linhas só preserva o comportamento atual quando todos estes campos forem idênticos:
+
+- `cliente_id`;
+- direção;
+- `dia_conhecida`;
+- `dia_limite`;
+- finalidade;
+- `eh_efx`;
+- corredor e moeda, quando esses campos forem adicionados ao domínio.
+
+Diferença em qualquer componente mantém operações separadas, pois pode alterar a
+prioridade, o custo ou a origem do casamento.
