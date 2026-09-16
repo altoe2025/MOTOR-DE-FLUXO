@@ -96,11 +96,15 @@ def resultado(manifesto, custo):
         ids_ordens_medidas=("o1",),
         volume_bruto_periodo_brl=Decimal("1000000.000000"),
         volume_casado_periodo_brl=Decimal("0.000000"),
+        volume_autonetting_periodo_brl=Decimal("0.000000"),
+        volume_netting_multilateral_periodo_brl=Decimal("0.000000"),
         volume_remetido_periodo_brl=Decimal("1000000.000000"),
         baseline_periodo=execucao.baseline,
         netado_periodo=execucao.netado,
         economia_periodo_brl=Decimal("1026000.000000"),
         taxa_netabilidade_periodo=Decimal("0.000000"),
+        taxa_autonetting_periodo=Decimal("0.000000"),
+        taxa_netting_multilateral_periodo=Decimal("0.000000"),
     )
     return ResultadoCanonico(
         manifesto=manifesto,

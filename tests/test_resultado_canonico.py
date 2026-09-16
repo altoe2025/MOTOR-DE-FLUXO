@@ -55,9 +55,13 @@ def resultado():
         execucao_completa=execucao, ids_ordens_medidas=("o1",),
         volume_bruto_periodo_brl=Decimal("100"),
         volume_casado_periodo_brl=Decimal("0"),
+        volume_autonetting_periodo_brl=Decimal("0"),
+        volume_netting_multilateral_periodo_brl=Decimal("0"),
         volume_remetido_periodo_brl=Decimal("100"),
         baseline_periodo=execucao.baseline, netado_periodo=execucao.netado,
         economia_periodo_brl=Decimal("0"), taxa_netabilidade_periodo=Decimal("0"),
+        taxa_autonetting_periodo=Decimal("0"),
+        taxa_netting_multilateral_periodo=Decimal("0"),
     )
     return ResultadoCanonico(
         manifesto, agregado, (), (), (), DiagnosticosExperimentais(), (),
@@ -169,7 +173,23 @@ def test_contrato_preserva_resultado_legado_e_parametros_estruturados(resultado)
     }
     assert resultado.manifesto.periodo_medicao_dias == resultado.manifesto.horizonte_dias == 1
     assert resultado.clientes == resultado.ledger_eventos == resultado.contribuicoes_marginais == ()
-    assert resultado.diagnosticos_experimentais.limite_intra_cliente_brl is None
+    assert resultado.diagnosticos_experimentais == DiagnosticosExperimentais()
+
+
+def test_agregado_rejeita_decomposicao_de_volume_inconsistente(resultado):
+    with pytest.raises(ValueError, match="volumes por mecanismo"):
+        replace(
+            resultado.agregado,
+            volume_autonetting_periodo_brl=Decimal("1"),
+        )
+
+
+def test_agregado_rejeita_decomposicao_de_taxa_inconsistente(resultado):
+    with pytest.raises(ValueError, match="taxas por mecanismo"):
+        replace(
+            resultado.agregado,
+            taxa_autonetting_periodo=Decimal("0.1"),
+        )
 
 
 @pytest.mark.parametrize("modo", ["AGREGADO", "INVALIDO", None])
@@ -184,7 +204,6 @@ def test_contratos_sao_imutaveis(resultado, detalhe):
         (ConfiguracaoAnalise(ModoAnalise.AGREGADO), "modo"),
         (resultado, "avisos"), (resultado.manifesto, "run_id"),
         (resultado.agregado, "ids_ordens_medidas"),
-        (resultado.diagnosticos_experimentais, "limite_intra_cliente_brl"),
         (cliente, "cliente_id"), (evento, "evento_id"), (marginal, "cliente_id"),
         (cliente.historico_diario[0], "dia"),
     )

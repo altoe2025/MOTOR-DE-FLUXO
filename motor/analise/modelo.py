@@ -128,21 +128,35 @@ class AgregadoCanonico:
     ids_ordens_medidas: tuple[str, ...]
     volume_bruto_periodo_brl: Decimal
     volume_casado_periodo_brl: Decimal
+    volume_autonetting_periodo_brl: Decimal
+    volume_netting_multilateral_periodo_brl: Decimal
     volume_remetido_periodo_brl: Decimal
     baseline_periodo: Custos
     netado_periodo: Custos
     economia_periodo_brl: Decimal
     taxa_netabilidade_periodo: Decimal
+    taxa_autonetting_periodo: Decimal
+    taxa_netting_multilateral_periodo: Decimal
 
     def __post_init__(self) -> None:
         _exigir_tupla("ids_ordens_medidas", self.ids_ordens_medidas)
+        if (
+            self.volume_autonetting_periodo_brl
+            + self.volume_netting_multilateral_periodo_brl
+            != self.volume_casado_periodo_brl
+        ):
+            raise ValueError("volumes por mecanismo não reconciliam com volume casado")
+        if (
+            self.taxa_autonetting_periodo
+            + self.taxa_netting_multilateral_periodo
+            != self.taxa_netabilidade_periodo
+        ):
+            raise ValueError("taxas por mecanismo não reconciliam com netabilidade")
 
 
 @dataclass(frozen=True)
 class DiagnosticosExperimentais:
-    limite_intra_cliente_brl: Decimal | None = None
-    volume_casado_incremental_brl: Decimal | None = None
-    taxa_netabilidade_incremental: Decimal | None = None
+    pass
 
 
 @dataclass(frozen=True)

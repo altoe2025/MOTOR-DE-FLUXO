@@ -291,7 +291,12 @@ def filtrar_analise_clientes(
         baseline=_somar_custos(evento.baseline for evento in eventos),
         netado=_somar_custos(evento.netado for evento in eventos),
         economia=_somar_exato(evento.ganho_realizado_brl for evento in eventos),
+        volume_casado_brl=_ZERO,
+        volume_autonetting_brl=_ZERO,
+        volume_netting_multilateral_brl=_ZERO,
         taxa_netabilidade=_ZERO,
+        taxa_autonetting=_ZERO,
+        taxa_netting_multilateral=_ZERO,
     )
     # Aplica à coorte a mesma política canônica de restos usada no ledger integral.
     _reconciliar_ledger(eventos, alvo)

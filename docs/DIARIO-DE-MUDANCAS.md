@@ -59,7 +59,7 @@ Atualizada em 2026-09-13, durante a implementação da MOT-22 sobre a base integ
 | `codex/mot20-auth` | PR #32, mergeada na `main`; MOT-20 concluída com convite, rascunho e POST autenticado reais | Codex |
 | `codex/mot21-client-integracao` | PR #33 mergeado na `main`; implementação, CI e gate Supabase real verdes | Codex |
 | `codex/mot22-aceitacao-ci` | PR #34 mergeada na `main`; aceitação, CI e handoff da etapa 1 entregues | Codex |
-| `codex/autonetting-preferencial` | política e aceitação comportamental concluídas até a MOT-37; propagação em andamento | Codex |
+| `codex/autonetting-preferencial` | métricas canônicas concluídas até a MOT-38; ledger, API e UI em propagação | Codex |
 
 Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
@@ -67,6 +67,27 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
 ---
+
+## 2026-09-16 — Métricas observadas por mecanismo (MOT-38)
+
+1. **Sintoma.** A execução sabia quais alocações eram intracliente ou multilaterais,
+   mas o resultado publicava apenas a netabilidade total e mantinha diagnósticos da
+   interpretação antiga como se fossem aproximações úteis.
+
+2. **Causa.** A origem ainda não era agregada em `Resultado` nem no recorte temporal
+   do resultado canônico.
+
+3. **O que foi feito.** `Resultado` e `AgregadoCanonico` agora publicam volumes e
+   taxas observados de autonetting e netting multilateral. O recorte temporal soma
+   somente alocações das ordens medidas, e o domínio analítico rejeita decomposições
+   que não reconciliem exatamente. Os três diagnósticos incrementais antigos foram
+   removidos do modelo novo. Os 70 testes focados passaram.
+
+4. **O que isso invalida.** `limite_intra_cliente_brl`,
+   `volume_casado_incremental_brl` e `taxa_netabilidade_incremental` não pertencem
+   ao resultado canônico vigente. DTOs, CSVs e fixtures antigas ainda precisam da
+   migração versionada prevista nas próximas tarefas antes da suíte integral voltar
+   a ficar verde.
 
 ## 2026-09-16 — Aceitação comportamental do autonetting (MOT-37)
 

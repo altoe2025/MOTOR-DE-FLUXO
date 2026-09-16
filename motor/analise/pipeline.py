@@ -15,7 +15,7 @@ from motor.analise.modelo import (
 )
 from motor.analise.temporal import ConfiguracaoTemporal, preparar_execucao_temporal
 from motor.analise.serializacao import reidentificar_manifesto
-from motor.dominio import Cenario, TipoAlocacao
+from motor.dominio import Cenario, OrigemCasamento, TipoAlocacao
 from motor.simulacao import simular
 
 
@@ -66,6 +66,10 @@ def analisar(
                 a.valor_brl for ciclo in cheio.ciclos for a in ciclo.alocacoes
                 if a.tipo is TipoAlocacao.CASADO
             ),
+            volume_autonetting_periodo_brl=cheio.volume_autonetting_brl,
+            volume_netting_multilateral_periodo_brl=(
+                cheio.volume_netting_multilateral_brl
+            ),
             volume_remetido_periodo_brl=_somar_exato(
                 a.valor_brl for ciclo in cheio.ciclos for a in ciclo.alocacoes
                 if a.tipo is TipoAlocacao.REMETIDO
@@ -73,6 +77,8 @@ def analisar(
             baseline_periodo=cheio.baseline, netado_periodo=cheio.netado,
             economia_periodo_brl=cheio.economia,
             taxa_netabilidade_periodo=cheio.taxa_netabilidade,
+            taxa_autonetting_periodo=cheio.taxa_autonetting,
+            taxa_netting_multilateral_periodo=cheio.taxa_netting_multilateral,
         )
     else:
         ledger_integral, _ = analisar_clientes(cenario_execucao, cheio)
@@ -86,11 +92,30 @@ def analisar(
         casado_medido = _somar_exato(
             evento.valor_brl for evento in ledger_medido if evento.tipo == "CASADO"
         )
+        ids_medidos = frozenset(execucao.ids_ordens_medidas)
+        autonetting_medido = _somar_exato(
+            alocacao.valor_brl
+            for ciclo in cheio.ciclos
+            for alocacao in ciclo.alocacoes
+            if alocacao.ordem_id in ids_medidos
+            and alocacao.origem_casamento is OrigemCasamento.INTRA_CLIENTE
+        )
+        multilateral_medido = _somar_exato(
+            alocacao.valor_brl
+            for ciclo in cheio.ciclos
+            for alocacao in ciclo.alocacoes
+            if alocacao.ordem_id in ids_medidos
+            and alocacao.origem_casamento is OrigemCasamento.INTER_CLIENTE
+        )
+        if autonetting_medido + multilateral_medido != casado_medido:
+            raise ValueError("decomposição do casamento diverge da coorte medida")
         agregado = AgregadoCanonico(
             execucao_completa=cheio,
             ids_ordens_medidas=execucao.ids_ordens_medidas,
             volume_bruto_periodo_brl=bruto_medido,
             volume_casado_periodo_brl=casado_medido,
+            volume_autonetting_periodo_brl=autonetting_medido,
+            volume_netting_multilateral_periodo_brl=multilateral_medido,
             volume_remetido_periodo_brl=_somar_exato(
                 evento.valor_brl for evento in ledger_medido if evento.tipo == "REMETIDO"
             ),
@@ -101,6 +126,12 @@ def analisar(
             ),
             taxa_netabilidade_periodo=(
                 casado_medido / bruto_medido if bruto_medido else Decimal(0)
+            ),
+            taxa_autonetting_periodo=(
+                autonetting_medido / bruto_medido if bruto_medido else Decimal(0)
+            ),
+            taxa_netting_multilateral_periodo=(
+                multilateral_medido / bruto_medido if bruto_medido else Decimal(0)
             ),
         )
         bruto = bruto_medido

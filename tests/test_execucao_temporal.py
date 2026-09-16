@@ -111,6 +111,16 @@ def test_agregado_oficial_contem_somente_a_coorte_medida(
     assert sum((c.netado.total for c in resultado.clientes), D(0)) == (
         resultado.agregado.netado_periodo.total
     )
+    assert (
+        resultado.agregado.volume_autonetting_periodo_brl
+        + resultado.agregado.volume_netting_multilateral_periodo_brl
+        == resultado.agregado.volume_casado_periodo_brl
+    )
+    assert (
+        resultado.agregado.taxa_autonetting_periodo
+        + resultado.agregado.taxa_netting_multilateral_periodo
+        == resultado.agregado.taxa_netabilidade_periodo
+    )
     assert resultado.agregado.execucao_completa.ciclos[-1].dia == 42
     assert resultado.manifesto.drenagem == "NATURAL"
     assert resultado.manifesto.periodo_medicao_dias == 30
