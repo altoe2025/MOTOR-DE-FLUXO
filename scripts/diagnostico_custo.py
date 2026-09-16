@@ -21,19 +21,19 @@ ordem_por_id = {o.id: o for o in pool}
 bruto = sum((o.valor_brl for o in pool), Decimal(0))
 
 # --- Parte 3: decomposicao a partir das alocacoes, nao da subtracao dos totais ---
-iof_evit = Decimal(0); casado_vol = Decimal(0); interno = Decimal(0)
+iof_evit = Decimal(0); casado_vol = Decimal(0); carry_criado = Decimal(0)
 for c in ciclos:
     for a in c.alocacoes:
         o = ordem_por_id[a.ordem_id]
         if a.tipo is TipoAlocacao.CASADO:
             iof_evit += a.valor_brl * aliquota_iof(cen.custo, o.finalidade, o.direcao)
             casado_vol += a.valor_brl
-            interno += a.valor_brl * cen.custo.carry_cnr
+            carry_criado += a.valor_brl * cen.custo.carry_cnr
 spread_evit = casado_vol * cen.custo.spread_rail_bps / BPS
 n_ciclos_com_residuo = sum(1 for c in ciclos if c.residuo > 0)
 fixo_evit = (len(pool) - n_ciclos_com_residuo) * cen.custo.custo_fixo_remessa
 economia = b.total - n.total
-soma = iof_evit + spread_evit + fixo_evit - interno
+soma = iof_evit + spread_evit + fixo_evit - carry_criado
 
 print(f"POOL mix={MIX} N={N} H={H} seed={SEED} W={W} ordens={len(pool)} ciclos={len(ciclos)}")
 print(f"bruto={bruto:.2f} casado(2 pernas)={casado_vol:.2f} netab={casado_vol/bruto:.4f}")
@@ -41,7 +41,7 @@ print(f"BASE iof={b.iof:.2f} carry={b.carry:.2f} spread={b.spread:.2f} espera={b
 print(f"NET  iof={n.iof:.2f} carry={n.carry:.2f} spread={n.spread:.2f} espera={n.espera:.2f} fixo={n.fixo:.2f} tot={n.total:.2f}")
 print("--- DECOMPOSICAO ---")
 for nome, v in [("iof_evitado", iof_evit), ("spread_evitado", spread_evit),
-                ("custo_fixo_evitado", Decimal(fixo_evit)), ("custo_interno_criado", -interno)]:
+                ("custo_fixo_evitado", Decimal(fixo_evit)), ("carry_cnr_criado", -carry_criado)]:
     print(f"{nome:22s} {v:>16.2f}  {v/economia*100:>7.2f}%")
 print(f"{'SOMA':22s} {soma:>16.2f}   economia={economia:.2f}  delta={soma-economia:.10f}  FECHOU={soma==economia}")
 

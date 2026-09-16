@@ -62,7 +62,7 @@ RESSALVAS = (
     "# O caso central reaproveita tickets, cadencias e dispersoes sinteticas de motor/arquetipos.py.",
     "# Os casos baixo e alto aplicam 0,5x e 2,0x ao volume central; esses multiplicadores nao vieram de dados observados.",
     "# Wise, Nomad, AstroPay e BCB sao referencias publicas de escala, nao fontes do fluxo projetado.",
-    "# Cada Ordem continua sendo a posicao liquida que o cliente decidiu enviar; nao ha autonetting adicional.",
+    "# A politica da grade de entrada deve ser lida no manifesto; arquivos antigos sao legado EDF global.",
 )
 
 REFERENCIAS_PUBLICAS = (

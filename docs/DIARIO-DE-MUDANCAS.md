@@ -59,7 +59,7 @@ Atualizada em 2026-09-13, durante a implementação da MOT-22 sobre a base integ
 | `codex/mot20-auth` | PR #32, mergeada na `main`; MOT-20 concluída com convite, rascunho e POST autenticado reais | Codex |
 | `codex/mot21-client-integracao` | PR #33 mergeado na `main`; implementação, CI e gate Supabase real verdes | Codex |
 | `codex/mot22-aceitacao-ci` | PR #34 mergeada na `main`; aceitação, CI e handoff da etapa 1 entregues | Codex |
-| `codex/autonetting-preferencial` | Regra consolidada em código, contratos, UI e docs até a MOT-44; amostra pendente | Codex |
+| `codex/autonetting-preferencial` | Amostra pareada concluída até a MOT-45; verificação final pendente | Codex |
 
 Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
@@ -67,6 +67,26 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
 ---
+
+## 2026-09-16 — Amostra pareada do autonetting (MOT-45)
+
+1. **Sintoma.** O comportamento estava testado, mas ainda não havia uma medição
+   pareada do impacto econômico nem estimativa atual do custo de regeneração.
+
+2. **Causa.** A grade histórica usa EDF global e não separa os mecanismos novos;
+   sobrescrevê-la antes de uma fumaça contrariaria o gate aprovado.
+
+3. **O que foi feito.** Duas seeds do mix equilibrado em W=1/7 foram executadas com
+   as mesmas ordens nas duas políticas. Todas as identidades fecharam; autonetting
+   ficou entre 10,74% e 13,20%. A preferência reduziu a netabilidade total entre
+   0,094 e 0,999 p.p., enquanto a economia caiu em duas células e subiu em duas por
+   causa do mix de IOF remetido. Uma fumaça de 180 rodadas projetou ~28 minutos de
+   motor para a grade neste ambiente. Scripts derivados deixaram de declarar o
+   contrato antigo de posição líquida. O cenário Amanda permaneceu em 58,82%.
+
+4. **O que isso invalida.** A suposição de que dar prioridade ao autonetting sempre
+   preservaria a netabilidade ou moveria a economia no mesmo sentido. A amostra não
+   substitui a grade e não autoriza a MOT-47.
 
 ## 2026-09-16 — Fonte de verdade do autonetting preferencial (MOT-44)
 

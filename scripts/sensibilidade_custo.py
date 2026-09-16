@@ -1,13 +1,12 @@
-"""Sensibilidade economica da grade sob o contrato de entrada liquida.
+"""Sensibilidade economica da grade sob o contrato de operacoes explicitas.
 
 Ha duas leituras complementares:
 
 1. A grade publicada de 27.000 linhas e reaproveitada para decompor a economia
    do modelo e medir, sem nova simulacao, as derivadas de spread, custo fixo e carry.
 2. Para N=8 e N=12, as bases de IOF sao abertas por finalidade e direcao. O
-   contrafactual aprovado e cada posicao liquida executando sozinha; nao se aplica
-   uma segunda rodada de netting dentro do cliente, pois o orquestrador ja recebe
-   somente o que o proprio cliente decidiu colocar na pool.
+   contrafactual e cada operacao executando sozinha. Na pool, a P0 vigente faz
+   autonetting preferencial por fechamento antes do saldo multilateral.
 
 Os parametros de custo nao afetam a alocacao da P0. Por isso a rotina extrai as
 bases de incidencia uma vez e permite reprecifica-las sem regenerar a carteira.
@@ -87,14 +86,14 @@ METRICAS_PRODUTO = (
 )
 
 RESSALVAS_GRADE = (
-    "# Contrato de leitura: cada Ordem e uma posicao liquida que o cliente decidiu enviar ao orquestrador.",
-    "# O baseline executa cada posicao liquida sozinha; nao ha segunda deducao de autonetting.",
+    "# Contrato vigente: cada Ordem e uma operacao explicita; OUT e IN nao chegam pre-netados.",
+    "# O baseline executa cada operacao sozinha; a politica da grade depende do manifesto de origem.",
     "# Spread, custo fixo e duas regras de IOF ainda nao sao dados calibrados/confirmados.",
 )
 
 RESSALVAS_PRODUTO = (
-    "# Economia do produto = custo de cada posicao liquida executada sozinha - custo da pool.",
-    "# Nao se roda P0 por cliente: a entrada ja e liquida por decisao de negocio.",
+    "# Economia do produto = custo de cada operacao executada sozinha - custo da pool.",
+    "# A P0 faz autonetting preferencial no fechamento; importadores nao pre-netam as operacoes.",
     "# Valores em bps; BRL sintetico nao deve ser apresentado como projecao comercial.",
 )
 
@@ -154,7 +153,7 @@ def extrair_bases(ciclos: Iterable[Ciclo], ordens: Iterable[Ordem]) -> BasesPrec
 
 
 def bases_do_baseline(ordens: Iterable[Ordem]) -> BasesPrecificacao:
-    """Cada posicao liquida cruza sozinha no dia em que fica conhecida."""
+    """Cada operacao cruza sozinha no dia em que fica conhecida."""
 
     ordens = tuple(ordens)
     por_chave: dict[tuple[str, Direcao], Decimal] = defaultdict(Decimal)
@@ -372,7 +371,7 @@ def avaliar_produto(
     horizonte: int = HORIZONTE_PADRAO,
     custo: ParametrosCusto = PARAMETROS_VARREDURA,
 ) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
-    """Avalia a pool contra cada posicao liquida executada sozinha."""
+    """Avalia a pool contra cada operacao executada sozinha."""
 
     pool = montar_pool_do_ponto(MIXES[nome_mix], n_clientes, horizonte, seed)
     volume = sum((ordem.valor_brl for ordem in pool), Decimal(0))
