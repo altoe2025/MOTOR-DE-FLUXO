@@ -7,16 +7,18 @@ from motor.analise import (
     AgregadoCanonico,
     ConfiguracaoAnalise,
     ContribuicaoMarginal,
+    DestinoContabil,
     DiagnosticosExperimentais,
     EventoCliente,
     ManifestoExecucao,
     ModoAnalise,
     ResultadoCanonico,
     ResultadoCliente,
+    ResultadoMecanismo,
     ResumoDiaCliente,
 )
 from motor.custo import Custos
-from motor.dominio import Cenario, Direcao, Ordem, ParametrosCusto
+from motor.dominio import Cenario, Direcao, Ordem, OrigemCasamento, ParametrosCusto
 from motor.simulacao import simular
 
 
@@ -62,6 +64,29 @@ def resultado():
         economia_periodo_brl=Decimal("0"), taxa_netabilidade_periodo=Decimal("0"),
         taxa_autonetting_periodo=Decimal("0"),
         taxa_netting_multilateral_periodo=Decimal("0"),
+        mecanismos=(
+            ResultadoMecanismo(
+                DestinoContabil.INTRA_CLIENTE,
+                Decimal("0"),
+                Decimal("0"),
+                Decimal("0"),
+                Decimal("0"),
+            ),
+            ResultadoMecanismo(
+                DestinoContabil.INTER_CLIENTE,
+                Decimal("0"),
+                Decimal("0"),
+                Decimal("0"),
+                Decimal("0"),
+            ),
+            ResultadoMecanismo(
+                DestinoContabil.REMETIDO,
+                Decimal("100"),
+                execucao.baseline.total,
+                execucao.netado.total,
+                Decimal("0"),
+            ),
+        ),
     )
     return ResultadoCanonico(
         manifesto, agregado, (), (), (), DiagnosticosExperimentais(), (),
@@ -72,9 +97,11 @@ def resultado():
 def detalhe():
     zero = Decimal("0")
     custos = Custos(zero, zero, zero, zero, zero, zero)
-    dia = ResumoDiaCliente("c1", 0, Decimal("100"), zero, zero, zero, zero, zero, zero)
+    dia = ResumoDiaCliente(
+        "c1", 0, Decimal("100"), zero, zero, zero, zero, zero, zero, zero, zero,
+    )
     cliente = ResultadoCliente(
-        "c1", Decimal("100"), zero, Decimal("100"), custos, custos,
+        "c1", Decimal("100"), zero, zero, zero, Decimal("100"), custos, custos,
         Decimal("-2"), Decimal("-200"), (dia,),
     )
     evento = EventoCliente(
@@ -192,6 +219,28 @@ def test_agregado_rejeita_decomposicao_de_taxa_inconsistente(resultado):
         )
 
 
+def test_evento_casado_exige_origem(detalhe):
+    _, evento, _ = detalhe
+    with pytest.raises(ValueError, match="CASADO exige origem_casamento"):
+        replace(evento, tipo="CASADO")
+
+
+def test_evento_remetido_rejeita_origem(detalhe):
+    _, evento, _ = detalhe
+    with pytest.raises(ValueError, match="REMETIDO não aceita origem_casamento"):
+        replace(
+            evento,
+            tipo="REMETIDO",
+            origem_casamento=OrigemCasamento.INTER_CLIENTE,
+        )
+
+
+def test_mecanismo_rejeita_economia_que_nao_reconcilia(resultado):
+    mecanismo = resultado.agregado.mecanismos[-1]
+    with pytest.raises(ValueError, match="baseline menos custo netado"):
+        replace(mecanismo, economia_brl=Decimal("1"))
+
+
 @pytest.mark.parametrize("modo", ["AGREGADO", "INVALIDO", None])
 def test_manifesto_rejeita_modo_que_burlaria_restricoes_de_secoes(resultado, modo):
     with pytest.raises(ValueError, match="modo_analise"):
@@ -216,7 +265,7 @@ def test_colecoes_de_resultados_rejeitam_listas_mutaveis(resultado, detalhe):
     objetos_campos = (
         (resultado, ("clientes", "ledger_eventos", "contribuicoes_marginais", "avisos")),
         (resultado.manifesto, ("run_ids_origem", "mixes", "arquetipos", "seeds", "avisos")),
-        (resultado.agregado, ("ids_ordens_medidas",)),
+        (resultado.agregado, ("ids_ordens_medidas", "mecanismos")),
         (detalhe[0], ("historico_diario",)),
     )
     for objeto, campos in objetos_campos:

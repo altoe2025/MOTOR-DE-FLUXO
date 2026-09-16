@@ -59,7 +59,7 @@ Atualizada em 2026-09-13, durante a implementação da MOT-22 sobre a base integ
 | `codex/mot20-auth` | PR #32, mergeada na `main`; MOT-20 concluída com convite, rascunho e POST autenticado reais | Codex |
 | `codex/mot21-client-integracao` | PR #33 mergeado na `main`; implementação, CI e gate Supabase real verdes | Codex |
 | `codex/mot22-aceitacao-ci` | PR #34 mergeada na `main`; aceitação, CI e handoff da etapa 1 entregues | Codex |
-| `codex/autonetting-preferencial` | métricas canônicas concluídas até a MOT-38; ledger, API e UI em propagação | Codex |
+| `codex/autonetting-preferencial` | ledger e atribuição contábil concluídos até a MOT-39; CSV, API e UI em propagação | Codex |
 
 Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
@@ -67,6 +67,27 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
 ---
+
+## 2026-09-16 — Ledger e custos por mecanismo (MOT-39)
+
+1. **Sintoma.** Os volumes agregados já distinguiam autonetting e multilateral,
+   mas eventos, resumos por cliente e custos ainda perdiam essa origem.
+
+2. **Causa.** O ledger copiava apenas `CASADO`/`REMETIDO`, e o resultado agregado
+   não possuía uma classificação contábil dos custos rateados existentes.
+
+3. **O que foi feito.** Eventos casados agora exigem `OrigemCasamento`; resumos
+   diários e por cliente separam os dois mecanismos. O agregado publica, em ordem
+   canônica, `INTRA_CLIENTE`, `INTER_CLIENTE` e `REMETIDO`, com volume, baseline
+   atribuído, custo netado e economia reconciliados. O modo agregado constrói apenas
+   o ledger necessário, sem materializar resumos por cliente. Nenhuma fórmula de
+   IOF, carry, spread, espera ou custo fixo mudou. Os 174 testes relacionados
+   passaram.
+
+4. **O que isso invalida.** Consumidores do resultado canônico precisam aceitar a
+   lista obrigatória de mecanismos e os novos campos do ledger/cliente. Tratar a
+   decomposição como contrafactual causal continua incorreto: ela é atribuição
+   contábil do rateio técnico existente.
 
 ## 2026-09-16 — Métricas observadas por mecanismo (MOT-38)
 

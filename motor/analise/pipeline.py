@@ -5,8 +5,9 @@ from __future__ import annotations
 from decimal import Decimal
 
 from motor.analise.clientes import (
-    _somar_custos, _somar_exato, analisar_clientes, filtrar_analise_clientes,
-    resultado_cliente_vazio,
+    _somar_custos, _somar_exato, analisar_clientes, construir_ledger,
+    filtrar_analise_clientes, filtrar_ledger, resultado_cliente_vazio,
+    resultados_por_mecanismo,
 )
 from motor.analise.marginal import _contribuicao_com_resultado
 from motor.analise.modelo import (
@@ -56,7 +57,13 @@ def analisar(
 
     cheio = simular(cenario_execucao)
     bruto = _somar_exato(o.valor_brl for o in cenario_execucao.ordens)
-    clientes_medidos = ledger_medido = ()
+    if modo is ModoAnalise.AGREGADO:
+        ledger_integral = construir_ledger(cenario_execucao, cheio)
+        clientes_integrais = ()
+    else:
+        ledger_integral, clientes_integrais = analisar_clientes(cenario_execucao, cheio)
+    ledger_periodo = ledger_integral
+    clientes_periodo = clientes_integrais
     if execucao is None:
         agregado = AgregadoCanonico(
             execucao_completa=cheio,
@@ -79,18 +86,24 @@ def analisar(
             taxa_netabilidade_periodo=cheio.taxa_netabilidade,
             taxa_autonetting_periodo=cheio.taxa_autonetting,
             taxa_netting_multilateral_periodo=cheio.taxa_netting_multilateral,
+            mecanismos=resultados_por_mecanismo(ledger_periodo),
         )
     else:
-        ledger_integral, _ = analisar_clientes(cenario_execucao, cheio)
-        ledger_medido, clientes_medidos = filtrar_analise_clientes(
-            ledger_integral, execucao.ids_ordens_medidas,
-        )
+        if modo is ModoAnalise.AGREGADO:
+            ledger_periodo = filtrar_ledger(
+                ledger_integral, execucao.ids_ordens_medidas,
+            )
+            clientes_periodo = ()
+        else:
+            ledger_periodo, clientes_periodo = filtrar_analise_clientes(
+                ledger_integral, execucao.ids_ordens_medidas,
+            )
         bruto_medido = _somar_exato(
-            evento.valor_brl for evento in ledger_medido
+            evento.valor_brl for evento in ledger_periodo
             if evento.tipo == "ORDEM_CONHECIDA"
         )
         casado_medido = _somar_exato(
-            evento.valor_brl for evento in ledger_medido if evento.tipo == "CASADO"
+            evento.valor_brl for evento in ledger_periodo if evento.tipo == "CASADO"
         )
         ids_medidos = frozenset(execucao.ids_ordens_medidas)
         autonetting_medido = _somar_exato(
@@ -117,12 +130,12 @@ def analisar(
             volume_autonetting_periodo_brl=autonetting_medido,
             volume_netting_multilateral_periodo_brl=multilateral_medido,
             volume_remetido_periodo_brl=_somar_exato(
-                evento.valor_brl for evento in ledger_medido if evento.tipo == "REMETIDO"
+                evento.valor_brl for evento in ledger_periodo if evento.tipo == "REMETIDO"
             ),
-            baseline_periodo=_somar_custos(e.baseline for e in ledger_medido),
-            netado_periodo=_somar_custos(e.netado for e in ledger_medido),
+            baseline_periodo=_somar_custos(e.baseline for e in ledger_periodo),
+            netado_periodo=_somar_custos(e.netado for e in ledger_periodo),
             economia_periodo_brl=_somar_exato(
-                e.ganho_realizado_brl for e in ledger_medido
+                e.ganho_realizado_brl for e in ledger_periodo
             ),
             taxa_netabilidade_periodo=(
                 casado_medido / bruto_medido if bruto_medido else Decimal(0)
@@ -133,6 +146,7 @@ def analisar(
             taxa_netting_multilateral_periodo=(
                 multilateral_medido / bruto_medido if bruto_medido else Decimal(0)
             ),
+            mecanismos=resultados_por_mecanismo(ledger_periodo),
         )
         bruto = bruto_medido
         manifesto = reidentificar_manifesto(
@@ -142,10 +156,7 @@ def analisar(
         )
     ledger, clientes, contribuicoes = (), (), ()
     if modo is not ModoAnalise.AGREGADO:
-        if execucao is None:
-            ledger, clientes = analisar_clientes(cenario_execucao, cheio)
-        else:
-            ledger, clientes = ledger_medido, clientes_medidos
+        ledger, clientes = ledger_periodo, clientes_periodo
         por_id = {c.cliente_id: c for c in clientes}
         contribuicoes = tuple(
             _contribuicao_com_resultado(
