@@ -18,11 +18,20 @@ const envelope = {
     agregado: {
       economia_periodo_brl: '1000',
       taxa_netabilidade_periodo: '0.5882',
+      taxa_autonetting_periodo: '0.1337',
+      taxa_netting_multilateral_periodo: '0.2725',
       volume_bruto_periodo_brl: '2400',
       volume_casado_periodo_brl: '1411.68',
+      volume_autonetting_periodo_brl: '111',
+      volume_netting_multilateral_periodo_brl: '222',
       volume_remetido_periodo_brl: '988.32',
       baseline_periodo: { total: '1800', iof: '800', spread: '400', fixo: '300', carry: '200', espera: '100' },
       netado_periodo: { total: '800', iof: '300', spread: '200', fixo: '150', carry: '100', espera: '50' },
+      mecanismos: [
+        { destino: 'INTRA_CLIENTE', volume_brl: '321', baseline_atribuido_brl: '500', custo_netado_brl: '100', economia_brl: '400' },
+        { destino: 'INTER_CLIENTE', volume_brl: '654', baseline_atribuido_brl: '700', custo_netado_brl: '250', economia_brl: '450' },
+        { destino: 'REMETIDO', volume_brl: '777', baseline_atribuido_brl: '600', custo_netado_brl: '450', economia_brl: '150' },
+      ],
     },
   },
 } as unknown as PreviewEnvelope;
@@ -86,6 +95,12 @@ describe('accessible UI primitives', () => {
 
     expect(screen.getByText(/R\$\s+1\.000,00/)).toBeVisible();
     expect(screen.getByText('58,82%')).toBeVisible();
+    expect(screen.getByRole('group', { name: 'Autonetting — mesmo participante' })).toHaveTextContent(/R\$\s+321,00/);
+    expect(screen.getByRole('group', { name: 'Autonetting — mesmo participante' })).toHaveTextContent('13,37%');
+    expect(screen.getByRole('group', { name: 'Netting multilateral — entre participantes' })).toHaveTextContent(/R\$\s+654,00/);
+    expect(screen.getByRole('group', { name: 'Netting multilateral — entre participantes' })).toHaveTextContent('27,25%');
+    expect(screen.getByRole('group', { name: 'Remetido — cruzou a fronteira' })).toHaveTextContent(/R\$\s+777,00/);
+    expect(screen.getByText('Atribuição contábil de custo e economia')).toBeVisible();
     expect(screen.getByRole('row', { name: /Total.*R\$\s+1\.800,00.*R\$\s+800,00/ })).toBeVisible();
   });
 });

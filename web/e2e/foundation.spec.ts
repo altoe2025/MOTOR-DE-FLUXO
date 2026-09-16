@@ -70,7 +70,22 @@ test('login, portfolio, preview and expired session remain usable at acceptance 
   await expect(page.getByRole('button', { name: 'Executar exemplo de referência' })).toBeEnabled({ timeout: 30_000 });
   await page.getByRole('link', { name: 'Diagnóstico' }).click();
   await expect(page.getByTestId('economia-brl')).toHaveText('R$ 1.026.000,00');
-  await page.screenshot({ path: testInfo.outputPath('diagnostico-1440x900.png'), fullPage: true });
+  for (const viewport of [{ width: 1280, height: 800 }, { width: 1440, height: 900 }]) {
+    await page.setViewportSize(viewport);
+    await expect(page.getByRole('group', { name: 'Autonetting — mesmo participante' })).toBeVisible();
+    await expect(page.getByRole('group', { name: 'Netting multilateral — entre participantes' })).toBeVisible();
+    await expect(page.getByRole('group', { name: 'Remetido — cruzou a fronteira' })).toBeVisible();
+    await expect(page.getByText(/Valores não calibrados/)).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath(`diagnostico-${viewport.width}x${viewport.height}.png`), fullPage: true });
+  }
+
+  await page.evaluate(() => { document.documentElement.style.zoom = '200%'; });
+  await expect(page.getByRole('group', { name: 'Autonetting — mesmo participante' })).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Netting multilateral — entre participantes' })).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Remetido — cruzou a fronteira' })).toBeVisible();
+  await expect(page.getByText(/Valores não calibrados/)).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath('diagnostico-zoom-200.png'), fullPage: true });
+  await page.evaluate(() => { document.documentElement.style.zoom = ''; });
 
   await page.goto('/carteira');
   await page.evaluate(() => { document.documentElement.style.zoom = '200%'; });

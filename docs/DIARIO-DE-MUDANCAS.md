@@ -59,7 +59,7 @@ Atualizada em 2026-09-13, durante a implementação da MOT-22 sobre a base integ
 | `codex/mot20-auth` | PR #32, mergeada na `main`; MOT-20 concluída com convite, rascunho e POST autenticado reais | Codex |
 | `codex/mot21-client-integracao` | PR #33 mergeado na `main`; implementação, CI e gate Supabase real verdes | Codex |
 | `codex/mot22-aceitacao-ci` | PR #34 mergeada na `main`; aceitação, CI e handoff da etapa 1 entregues | Codex |
-| `codex/autonetting-preferencial` | Contrato público 2.0.0 migrado até a MOT-41; UI em propagação | Codex |
+| `codex/autonetting-preferencial` | Motor, contrato 2.0.0 e UI migrados até a MOT-42 | Codex |
 
 Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
@@ -67,6 +67,25 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
 ---
+
+## 2026-09-16 — Composição do netting na prévia (MOT-42)
+
+1. **Sintoma.** A API já publicava autonetting, netting multilateral e remessa,
+   mas a prévia mostrava somente o volume casado e a taxa total.
+
+2. **Causa.** `ComparisonSummary` ainda consumia apenas os três indicadores do
+   contrato anterior e não apresentava a lista de mecanismos do schema 2.0.0.
+
+3. **O que foi feito.** A prévia agora mostra os três destinos com volume recebido
+   da API, as taxas intracliente e multilateral e a atribuição contábil de custo e
+   economia. Testes usam valores não deriváveis para impedir reconstrução por
+   subtração no navegador. Os 89 testes unitários, o build, o lint e os três fluxos
+   e2e passaram. A tela foi inspecionada em 1280×800, 1440×900 e 200%; uma quebra
+   de valores longos encontrada no zoom foi corrigida.
+
+4. **O que isso invalida.** Capturas e expectativas do front-end que tratem o
+   volume compensado como uma parcela indivisível. Nenhum valor é recalculado no
+   navegador e os avisos de dados sintéticos e custos não calibrados permanecem.
 
 ## 2026-09-16 — Contrato público do autonetting (MOT-41)
 
