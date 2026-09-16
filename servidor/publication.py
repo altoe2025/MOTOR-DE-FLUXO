@@ -241,15 +241,18 @@ def _validar_conservacao_documento(cenario: Cenario, documento: dict[str, object
                 ordem_id = alocacao.get("ordem_id")
                 tipo = alocacao.get("tipo")
                 origem = alocacao.get("origem_casamento")
+                origem_validada: str | None = None
                 if not isinstance(ordem_id, str) or ordem_id not in ordens:
                     _falhar("alocação pública referencia ordem desconhecida")
                 if tipo not in {"CASADO", "REMETIDO"}:
                     _falhar("tipo de alocação público inválido")
-                if tipo == "CASADO" and origem not in {
-                    "INTRA_CLIENTE", "INTER_CLIENTE",
-                }:
-                    _falhar("origem pública de casamento inválida")
-                if tipo == "REMETIDO" and origem is not None:
+                if tipo == "CASADO":
+                    if not isinstance(origem, str) or origem not in {
+                        "INTRA_CLIENTE", "INTER_CLIENTE",
+                    }:
+                        _falhar("origem pública de casamento inválida")
+                    origem_validada = origem
+                elif origem is not None:
                     _falhar("remessa pública não aceita origem de casamento")
                 valor = _decimal_do_json(
                     alocacao.get("valor_brl"),
@@ -260,7 +263,9 @@ def _validar_conservacao_documento(cenario: Cenario, documento: dict[str, object
                 por_ordem[ordem_id] += valor
                 por_tipo[tipo] += valor
                 if tipo == "CASADO":
-                    por_origem[origem] += valor
+                    if origem_validada is None:
+                        _falhar("origem pública de casamento ausente após validação")
+                    por_origem[origem_validada] += valor
 
         if por_ordem != ordens:
             _falhar("JSON público viola conservação por ordem")

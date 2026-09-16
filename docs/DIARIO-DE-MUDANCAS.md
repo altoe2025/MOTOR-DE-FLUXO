@@ -59,7 +59,7 @@ Atualizada em 2026-09-16, após o gate final da política de autonetting prefere
 | `codex/mot20-auth` | PR #32, mergeada na `main`; MOT-20 concluída com convite, rascunho e POST autenticado reais | Codex |
 | `codex/mot21-client-integracao` | PR #33 mergeado na `main`; implementação, CI e gate Supabase real verdes | Codex |
 | `codex/mot22-aceitacao-ci` | PR #34 mergeada na `main`; aceitação, CI e handoff da etapa 1 entregues | Codex |
-| `codex/autonetting-preferencial` | MOT-35–MOT-46 concluídas; pronta para decisão de integração, sem regenerar a grade | Codex |
+| `codex/autonetting-preferencial` | PR #36 aberto; gate protegido em correção, sem regenerar a grade | Codex |
 
 Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
@@ -87,11 +87,14 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
    OUT 100/A IN 70/B IN 50 (`140 / 60 / 20`) e no caso que força preferência sobre
    deadline externo (`200 / 0 / 100`). A UI real percorreu Amanda; regressões de
    apresentação garantem consumo direto dos campos canônicos nos demais valores.
+   Ao abrir o PR #36, a CI aprovou 672 testes nos dois modos e Ruff, mas revelou
+   que o Mypy não estreitava o tipo da origem validada por pertinência a conjunto;
+   a validação passou a explicitar `str`, sem mudar o comportamento publicado.
 
 4. **O que isso invalida.** Nada além da anotação de que a verificação estava
-   pendente. A branch está pronta para decisão de integração. Não houve push, PR,
-   merge nem regeneração das 27.000 rodadas; a MOT-47 continua bloqueada até nova
-   aprovação explícita.
+   pendente. A branch foi publicada no PR #36 após o push direto à `main` ser
+   corretamente recusado pela proteção. Não houve regeneração das 27.000 rodadas;
+   a MOT-47 continua bloqueada até nova aprovação explícita.
 
 ## 2026-09-16 — Amostra pareada do autonetting (MOT-45)
 
