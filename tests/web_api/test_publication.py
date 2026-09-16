@@ -1,4 +1,5 @@
 import json
+from copy import copy
 from dataclasses import replace
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -43,13 +44,13 @@ def test_publicacao_aceita_resultado_e_json_canonicos(execution):
 
 def test_publicacao_rejeita_volume_agregado_corrompido(execution):
     cenario, resultado = execution
-    corrompido = replace(
-        resultado,
-        agregado=replace(
-            resultado.agregado,
-            volume_remetido_periodo_brl=Decimal(1),
-        ),
+    agregado_corrompido = copy(resultado.agregado)
+    object.__setattr__(
+        agregado_corrompido,
+        "volume_remetido_periodo_brl",
+        Decimal(1),
     )
+    corrompido = replace(resultado, agregado=agregado_corrompido)
 
     with pytest.raises(ResultadoInvalido, match="RESULTADO_INVALIDO"):
         validar_publicacao(cenario, corrompido, resultado_para_json(corrompido))
@@ -110,9 +111,28 @@ def test_publicacao_rejeita_alocacoes_publicas_inconsistentes(execution, mutatio
 
 def test_publicacao_preserva_economia_negativa_sem_recalcular(execution):
     cenario, resultado = execution
+    delta = resultado.agregado.economia_periodo_brl + Decimal("1.25")
+    netado = resultado.agregado.netado_periodo
+    netado_negativo = replace(
+        netado,
+        iof=netado.iof + delta,
+        total=netado.total + delta,
+    )
+    mecanismos = list(resultado.agregado.mecanismos)
+    remetido = mecanismos[-1]
+    mecanismos[-1] = replace(
+        remetido,
+        custo_netado_brl=remetido.custo_netado_brl + delta,
+        economia_brl=remetido.economia_brl - delta,
+    )
     negativo = replace(
         resultado,
-        agregado=replace(resultado.agregado, economia_periodo_brl=Decimal("-1.25")),
+        agregado=replace(
+            resultado.agregado,
+            netado_periodo=netado_negativo,
+            economia_periodo_brl=Decimal("-1.25"),
+            mecanismos=tuple(mecanismos),
+        ),
     )
 
     validar_publicacao(cenario, negativo, resultado_para_json(negativo))

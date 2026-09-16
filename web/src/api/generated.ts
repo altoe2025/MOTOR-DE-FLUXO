@@ -79,13 +79,23 @@ export interface components {
             execucao_completa: components["schemas"]["ResultadoLegadoDTO"];
             /** Ids Ordens Medidas */
             ids_ordens_medidas: string[];
+            /** Mecanismos */
+            mecanismos: components["schemas"]["ResultadoMecanismoDTO"][];
             netado_periodo: components["schemas"]["CustosDTO"];
+            /** Taxa Autonetting Periodo */
+            taxa_autonetting_periodo: string;
             /** Taxa Netabilidade Periodo */
             taxa_netabilidade_periodo: string;
+            /** Taxa Netting Multilateral Periodo */
+            taxa_netting_multilateral_periodo: string;
+            /** Volume Autonetting Periodo Brl */
+            volume_autonetting_periodo_brl: string;
             /** Volume Bruto Periodo Brl */
             volume_bruto_periodo_brl: string;
             /** Volume Casado Periodo Brl */
             volume_casado_periodo_brl: string;
+            /** Volume Netting Multilateral Periodo Brl */
+            volume_netting_multilateral_periodo_brl: string;
             /** Volume Remetido Periodo Brl */
             volume_remetido_periodo_brl: string;
         };
@@ -95,6 +105,8 @@ export interface components {
             dia: number;
             /** Ordem Id */
             ordem_id: string;
+            /** Origem Casamento */
+            origem_casamento: ("INTRA_CLIENTE" | "INTER_CLIENTE") | null;
             /**
              * Tipo
              * @enum {string}
@@ -168,14 +180,7 @@ export interface components {
             total: string;
         };
         /** DiagnosticosExperimentaisDTO */
-        DiagnosticosExperimentaisDTO: {
-            /** Limite Intra Cliente Brl */
-            limite_intra_cliente_brl: null;
-            /** Taxa Netabilidade Incremental */
-            taxa_netabilidade_incremental: null;
-            /** Volume Casado Incremental Brl */
-            volume_casado_incremental_brl: null;
-        };
+        DiagnosticosExperimentaisDTO: Record<string, never>;
         /** EstatisticaPrevia */
         EstatisticaPrevia: {
             /**
@@ -255,8 +260,11 @@ export interface components {
             run_id: string;
             /** Run Ids Origem */
             run_ids_origem: string[];
-            /** Schema Version */
-            schema_version: string;
+            /**
+             * Schema Version
+             * @constant
+             */
+            schema_version: "2.0.0";
             /** Seeds */
             seeds: number[];
             /** Versao Motor */
@@ -473,8 +481,34 @@ export interface components {
             /** Economia */
             economia: string;
             netado: components["schemas"]["CustosDTO"];
+            /** Taxa Autonetting */
+            taxa_autonetting: string;
             /** Taxa Netabilidade */
             taxa_netabilidade: string;
+            /** Taxa Netting Multilateral */
+            taxa_netting_multilateral: string;
+            /** Volume Autonetting Brl */
+            volume_autonetting_brl: string;
+            /** Volume Casado Brl */
+            volume_casado_brl: string;
+            /** Volume Netting Multilateral Brl */
+            volume_netting_multilateral_brl: string;
+        };
+        /** ResultadoMecanismoDTO */
+        ResultadoMecanismoDTO: {
+            /** Baseline Atribuido Brl */
+            baseline_atribuido_brl: string;
+            /** Custo Netado Brl */
+            custo_netado_brl: string;
+            /**
+             * Destino
+             * @enum {string}
+             */
+            destino: "INTRA_CLIENTE" | "INTER_CLIENTE" | "REMETIDO";
+            /** Economia Brl */
+            economia_brl: string;
+            /** Volume Brl */
+            volume_brl: string;
         };
         /** SessionResponse */
         SessionResponse: {

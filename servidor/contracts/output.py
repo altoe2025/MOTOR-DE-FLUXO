@@ -5,7 +5,13 @@ from __future__ import annotations
 from decimal import Decimal
 from typing import Annotated, Literal
 
-from pydantic import BeforeValidator, Field, PlainSerializer, WithJsonSchema
+from pydantic import (
+    BeforeValidator,
+    Field,
+    PlainSerializer,
+    WithJsonSchema,
+    model_validator,
+)
 
 from servidor.contracts.input import CustoEntrada
 from servidor.contracts.primitives import DECIMAL_PATTERN, StrictModel, decimal_value
@@ -43,6 +49,15 @@ class AlocacaoDTO(StrictModel):
     dia: int
     valor_brl: DecimalSaida
     tipo: Literal["CASADO", "REMETIDO"]
+    origem_casamento: Literal["INTRA_CLIENTE", "INTER_CLIENTE"] | None
+
+    @model_validator(mode="after")
+    def validar_origem(self):
+        if self.tipo == "CASADO" and self.origem_casamento is None:
+            raise ValueError("CASADO exige origem_casamento")
+        if self.tipo == "REMETIDO" and self.origem_casamento is not None:
+            raise ValueError("REMETIDO não aceita origem_casamento")
+        return self
 
 
 class CicloDTO(StrictModel):
@@ -60,7 +75,26 @@ class ResultadoLegadoDTO(StrictModel):
     baseline: CustosDTO
     netado: CustosDTO
     economia: DecimalSaida
+    volume_casado_brl: DecimalSaida
+    volume_autonetting_brl: DecimalSaida
+    volume_netting_multilateral_brl: DecimalSaida
     taxa_netabilidade: DecimalSaida
+    taxa_autonetting: DecimalSaida
+    taxa_netting_multilateral: DecimalSaida
+
+
+class ResultadoMecanismoDTO(StrictModel):
+    destino: Literal["INTRA_CLIENTE", "INTER_CLIENTE", "REMETIDO"]
+    volume_brl: DecimalSaida
+    baseline_atribuido_brl: DecimalSaida
+    custo_netado_brl: DecimalSaida
+    economia_brl: DecimalSaida
+
+    @model_validator(mode="after")
+    def validar_economia(self):
+        if self.economia_brl != self.baseline_atribuido_brl - self.custo_netado_brl:
+            raise ValueError("economia do mecanismo não reconcilia")
+        return self
 
 
 class AgregadoDTO(StrictModel):
@@ -68,16 +102,65 @@ class AgregadoDTO(StrictModel):
     ids_ordens_medidas: list[str]
     volume_bruto_periodo_brl: DecimalSaida
     volume_casado_periodo_brl: DecimalSaida
+    volume_autonetting_periodo_brl: DecimalSaida
+    volume_netting_multilateral_periodo_brl: DecimalSaida
     volume_remetido_periodo_brl: DecimalSaida
     baseline_periodo: CustosDTO
     netado_periodo: CustosDTO
     economia_periodo_brl: DecimalSaida
     taxa_netabilidade_periodo: DecimalSaida
+    taxa_autonetting_periodo: DecimalSaida
+    taxa_netting_multilateral_periodo: DecimalSaida
+    mecanismos: Annotated[
+        list[ResultadoMecanismoDTO], Field(min_length=3, max_length=3)
+    ]
+
+    @model_validator(mode="after")
+    def validar_decomposicao(self):
+        if (
+            self.volume_autonetting_periodo_brl
+            + self.volume_netting_multilateral_periodo_brl
+            != self.volume_casado_periodo_brl
+        ):
+            raise ValueError("volumes por mecanismo não reconciliam")
+        if (
+            self.taxa_autonetting_periodo
+            + self.taxa_netting_multilateral_periodo
+            != self.taxa_netabilidade_periodo
+        ):
+            raise ValueError("taxas por mecanismo não reconciliam")
+        if [m.destino for m in self.mecanismos] != [
+            "INTRA_CLIENTE", "INTER_CLIENTE", "REMETIDO",
+        ]:
+            raise ValueError("mecanismos fora da ordem canônica")
+        por_destino = {m.destino: m for m in self.mecanismos}
+        if (
+            por_destino["INTRA_CLIENTE"].volume_brl
+            != self.volume_autonetting_periodo_brl
+            or por_destino["INTER_CLIENTE"].volume_brl
+            != self.volume_netting_multilateral_periodo_brl
+            or por_destino["REMETIDO"].volume_brl
+            != self.volume_remetido_periodo_brl
+        ):
+            raise ValueError("volumes dos mecanismos não reconciliam")
+        if sum((m.baseline_atribuido_brl for m in self.mecanismos), Decimal(0)) != (
+            self.baseline_periodo.total
+        ):
+            raise ValueError("baseline dos mecanismos não reconcilia")
+        if sum((m.custo_netado_brl for m in self.mecanismos), Decimal(0)) != (
+            self.netado_periodo.total
+        ):
+            raise ValueError("custo dos mecanismos não reconcilia")
+        if sum((m.economia_brl for m in self.mecanismos), Decimal(0)) != (
+            self.economia_periodo_brl
+        ):
+            raise ValueError("economia dos mecanismos não reconcilia")
+        return self
 
 
 class ManifestoDTO(StrictModel):
     run_id: str
-    schema_version: str
+    schema_version: Literal["2.0.0"]
     versao_motor: str
     criado_em_utc: str
     hash_configuracao: str
@@ -97,9 +180,7 @@ class ManifestoDTO(StrictModel):
 
 
 class DiagnosticosExperimentaisDTO(StrictModel):
-    limite_intra_cliente_brl: None
-    volume_casado_incremental_brl: None
-    taxa_netabilidade_incremental: None
+    pass
 
 
 class ResultadoCanonicoDTO(StrictModel):

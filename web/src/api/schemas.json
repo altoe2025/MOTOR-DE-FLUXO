@@ -24,13 +24,40 @@
           "title": "Ids Ordens Medidas",
           "type": "array"
         },
+        "mecanismos": {
+          "items": {
+            "$ref": "#/$defs/ResultadoMecanismoDTO"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "title": "Mecanismos",
+          "type": "array"
+        },
         "netado_periodo": {
           "$ref": "#/$defs/CustosDTO"
+        },
+        "taxa_autonetting_periodo": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Taxa Autonetting Periodo",
+          "type": "string"
         },
         "taxa_netabilidade_periodo": {
           "maxLength": 80,
           "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
           "title": "Taxa Netabilidade Periodo",
+          "type": "string"
+        },
+        "taxa_netting_multilateral_periodo": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Taxa Netting Multilateral Periodo",
+          "type": "string"
+        },
+        "volume_autonetting_periodo_brl": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Volume Autonetting Periodo Brl",
           "type": "string"
         },
         "volume_bruto_periodo_brl": {
@@ -45,6 +72,12 @@
           "title": "Volume Casado Periodo Brl",
           "type": "string"
         },
+        "volume_netting_multilateral_periodo_brl": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Volume Netting Multilateral Periodo Brl",
+          "type": "string"
+        },
         "volume_remetido_periodo_brl": {
           "maxLength": 80,
           "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
@@ -57,11 +90,16 @@
         "ids_ordens_medidas",
         "volume_bruto_periodo_brl",
         "volume_casado_periodo_brl",
+        "volume_autonetting_periodo_brl",
+        "volume_netting_multilateral_periodo_brl",
         "volume_remetido_periodo_brl",
         "baseline_periodo",
         "netado_periodo",
         "economia_periodo_brl",
-        "taxa_netabilidade_periodo"
+        "taxa_netabilidade_periodo",
+        "taxa_autonetting_periodo",
+        "taxa_netting_multilateral_periodo",
+        "mecanismos"
       ],
       "title": "AgregadoDTO",
       "type": "object"
@@ -76,6 +114,21 @@
         "ordem_id": {
           "title": "Ordem Id",
           "type": "string"
+        },
+        "origem_casamento": {
+          "anyOf": [
+            {
+              "enum": [
+                "INTRA_CLIENTE",
+                "INTER_CLIENTE"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Origem Casamento"
         },
         "tipo": {
           "enum": [
@@ -96,7 +149,8 @@
         "ordem_id",
         "dia",
         "valor_brl",
-        "tipo"
+        "tipo",
+        "origem_casamento"
       ],
       "title": "AlocacaoDTO",
       "type": "object"
@@ -323,25 +377,7 @@
     },
     "DiagnosticosExperimentaisDTO": {
       "additionalProperties": false,
-      "properties": {
-        "limite_intra_cliente_brl": {
-          "title": "Limite Intra Cliente Brl",
-          "type": "null"
-        },
-        "taxa_netabilidade_incremental": {
-          "title": "Taxa Netabilidade Incremental",
-          "type": "null"
-        },
-        "volume_casado_incremental_brl": {
-          "title": "Volume Casado Incremental Brl",
-          "type": "null"
-        }
-      },
-      "required": [
-        "limite_intra_cliente_brl",
-        "volume_casado_incremental_brl",
-        "taxa_netabilidade_incremental"
-      ],
+      "properties": {},
       "title": "DiagnosticosExperimentaisDTO",
       "type": "object"
     },
@@ -519,6 +555,7 @@
           "type": "array"
         },
         "schema_version": {
+          "const": "2.0.0",
           "title": "Schema Version",
           "type": "string"
         },
@@ -1028,10 +1065,40 @@
         "netado": {
           "$ref": "#/$defs/CustosDTO"
         },
+        "taxa_autonetting": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Taxa Autonetting",
+          "type": "string"
+        },
         "taxa_netabilidade": {
           "maxLength": 80,
           "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
           "title": "Taxa Netabilidade",
+          "type": "string"
+        },
+        "taxa_netting_multilateral": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Taxa Netting Multilateral",
+          "type": "string"
+        },
+        "volume_autonetting_brl": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Volume Autonetting Brl",
+          "type": "string"
+        },
+        "volume_casado_brl": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Volume Casado Brl",
+          "type": "string"
+        },
+        "volume_netting_multilateral_brl": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Volume Netting Multilateral Brl",
           "type": "string"
         }
       },
@@ -1040,9 +1107,61 @@
         "baseline",
         "netado",
         "economia",
-        "taxa_netabilidade"
+        "volume_casado_brl",
+        "volume_autonetting_brl",
+        "volume_netting_multilateral_brl",
+        "taxa_netabilidade",
+        "taxa_autonetting",
+        "taxa_netting_multilateral"
       ],
       "title": "ResultadoLegadoDTO",
+      "type": "object"
+    },
+    "ResultadoMecanismoDTO": {
+      "additionalProperties": false,
+      "properties": {
+        "baseline_atribuido_brl": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Baseline Atribuido Brl",
+          "type": "string"
+        },
+        "custo_netado_brl": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Custo Netado Brl",
+          "type": "string"
+        },
+        "destino": {
+          "enum": [
+            "INTRA_CLIENTE",
+            "INTER_CLIENTE",
+            "REMETIDO"
+          ],
+          "title": "Destino",
+          "type": "string"
+        },
+        "economia_brl": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Economia Brl",
+          "type": "string"
+        },
+        "volume_brl": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Volume Brl",
+          "type": "string"
+        }
+      },
+      "required": [
+        "destino",
+        "volume_brl",
+        "baseline_atribuido_brl",
+        "custo_netado_brl",
+        "economia_brl"
+      ],
+      "title": "ResultadoMecanismoDTO",
       "type": "object"
     },
     "SessionResponse": {

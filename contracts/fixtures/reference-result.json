@@ -1,6 +1,6 @@
 {
   "api_version": "1.0.0",
-  "execution_fingerprint": "f992bf704e7059896b08cf5b1111d2189c946d5404c9a1fc5d379148bb5373a2",
+  "execution_fingerprint": "cc0f8ba33ea9ed0fb9be5e8a796296a8ded247a6c24ced43221a618cc234907d",
   "execution_id": "00000000-0000-4000-8000-000000000010",
   "input_snapshot": {
     "cenario": {
@@ -213,24 +213,28 @@
               {
                 "dia": 0,
                 "ordem_id": "astropay-1",
+                "origem_casamento": "INTER_CLIENTE",
                 "tipo": "CASADO",
                 "valor_brl": "10800000.00"
               },
               {
                 "dia": 0,
                 "ordem_id": "wise-1",
+                "origem_casamento": "INTER_CLIENTE",
                 "tipo": "CASADO",
                 "valor_brl": "16200000.00"
               },
               {
                 "dia": 0,
                 "ordem_id": "nomad-1",
+                "origem_casamento": "INTER_CLIENTE",
                 "tipo": "CASADO",
                 "valor_brl": "27000000.00"
               },
               {
                 "dia": 0,
                 "ordem_id": "wise-1",
+                "origem_casamento": null,
                 "tipo": "REMETIDO",
                 "valor_brl": "37800000.00"
               }
@@ -252,12 +256,40 @@
           "spread": "0.00",
           "total": "1344600.000000"
         },
-        "taxa_netabilidade": "0.5882352941176470588235294118"
+        "taxa_autonetting": "0",
+        "taxa_netabilidade": "0.5882352941176470588235294118",
+        "taxa_netting_multilateral": "0.5882352941176470588235294118",
+        "volume_autonetting_brl": "0",
+        "volume_casado_brl": "54000000.00",
+        "volume_netting_multilateral_brl": "54000000.00"
       },
       "ids_ordens_medidas": [
         "astropay-1",
         "nomad-1",
         "wise-1"
+      ],
+      "mecanismos": [
+        {
+          "baseline_atribuido_brl": "0",
+          "custo_netado_brl": "0",
+          "destino": "INTRA_CLIENTE",
+          "economia_brl": "0",
+          "volume_brl": "0"
+        },
+        {
+          "baseline_atribuido_brl": "1047600.000000",
+          "custo_netado_brl": "21600.000000",
+          "destino": "INTER_CLIENTE",
+          "economia_brl": "1026000.000000",
+          "volume_brl": "54000000.00"
+        },
+        {
+          "baseline_atribuido_brl": "1323000.000000",
+          "custo_netado_brl": "1323000.000000",
+          "destino": "REMETIDO",
+          "economia_brl": "0.000000",
+          "volume_brl": "37800000.00"
+        }
       ],
       "netado_periodo": {
         "carry": "21600.000000",
@@ -267,19 +299,19 @@
         "spread": "0.00",
         "total": "1344600.000000"
       },
+      "taxa_autonetting_periodo": "0",
       "taxa_netabilidade_periodo": "0.5882352941176470588235294118",
+      "taxa_netting_multilateral_periodo": "0.5882352941176470588235294118",
+      "volume_autonetting_periodo_brl": "0",
       "volume_bruto_periodo_brl": "91800000.00",
       "volume_casado_periodo_brl": "54000000.00",
+      "volume_netting_multilateral_periodo_brl": "54000000.00",
       "volume_remetido_periodo_brl": "37800000.00"
     },
     "avisos": [],
     "clientes": [],
     "contribuicoes_marginais": [],
-    "diagnosticos_experimentais": {
-      "limite_intra_cliente_brl": null,
-      "taxa_netabilidade_incremental": null,
-      "volume_casado_incremental_brl": null
-    },
+    "diagnosticos_experimentais": {},
     "ledger_eventos": [],
     "manifesto": {
       "arquetipos": [],
@@ -287,7 +319,7 @@
       "criado_em_utc": "2026-09-12T20:00:00.000000Z",
       "custo_calibrado": false,
       "drenagem": "LEGADO",
-      "hash_configuracao": "5a296eabccedd609ef5f1e5fc6e1341c5199a82dcdff0a4fefcdb229fc2671da",
+      "hash_configuracao": "de676071029e899ec35817c979c2bce6509054bf2044b53dd00d7844c1108032",
       "horizonte_dias": 1,
       "janela_dias": 1,
       "metodo_percentil": "NAO_APLICAVEL",
@@ -304,9 +336,9 @@
         "spread_rail_bps": "0"
       },
       "periodo_medicao_dias": 2,
-      "run_id": "20260912T200000.000000Z-5a296eabcced",
+      "run_id": "20260912T200000.000000Z-de676071029e",
       "run_ids_origem": [],
-      "schema_version": "1.0.0",
+      "schema_version": "2.0.0",
       "seeds": [],
       "versao_motor": "0.1.0+0000000000000000000000000000000000000000"
     }

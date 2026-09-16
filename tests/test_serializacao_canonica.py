@@ -259,7 +259,7 @@ def test_manifestos_com_parametros_diferentes_nao_podem_ser_combinados(manifesto
 
 
 def test_manifestos_com_schema_diferente_nao_podem_ser_combinados(manifesto):
-    incompativel = replace(manifesto, run_id="run-outro", schema_version="2.0.0")
+    incompativel = replace(manifesto, run_id="run-outro", schema_version="1.0.0")
 
     with pytest.raises(
         ValueError,

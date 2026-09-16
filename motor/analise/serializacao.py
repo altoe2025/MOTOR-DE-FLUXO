@@ -21,7 +21,7 @@ from motor.analise.modelo import ManifestoExecucao, ModoAnalise, ResultadoCanoni
 from motor.dominio import ParametrosCusto
 
 
-SCHEMA_VERSION = "1.0.0"
+SCHEMA_VERSION = "2.0.0"
 _NOME_CSV_SEGURO = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*\.csv", re.ASCII)
 _DISPOSITIVO_DOS = re.compile(r"(?:CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])", re.ASCII)
 _COLUNAS_PROVENIENCIA = ("run_id", "schema_version", "hash_configuracao")

@@ -59,7 +59,7 @@ Atualizada em 2026-09-13, durante a implementação da MOT-22 sobre a base integ
 | `codex/mot20-auth` | PR #32, mergeada na `main`; MOT-20 concluída com convite, rascunho e POST autenticado reais | Codex |
 | `codex/mot21-client-integracao` | PR #33 mergeado na `main`; implementação, CI e gate Supabase real verdes | Codex |
 | `codex/mot22-aceitacao-ci` | PR #34 mergeada na `main`; aceitação, CI e handoff da etapa 1 entregues | Codex |
-| `codex/autonetting-preferencial` | CSV e CLI migrados até a MOT-40; API e UI em propagação | Codex |
+| `codex/autonetting-preferencial` | Contrato público 2.0.0 migrado até a MOT-41; UI em propagação | Codex |
 
 Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
@@ -67,6 +67,28 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
 ---
+
+## 2026-09-16 — Contrato público do autonetting (MOT-41)
+
+1. **Sintoma.** O motor e o CSV já distinguiam autonetting de netting
+   multilateral, mas a API continuava expondo o schema 1.0.0 sem origem nas
+   alocações nem métricas e custos por mecanismo.
+
+2. **Causa.** DTOs, portão de publicação, identidade, OpenAPI, fixture de
+   referência e tipos TypeScript ainda refletiam o resultado anterior à nova
+   política.
+
+3. **O que foi feito.** O resultado público passou ao schema 2.0.0. Alocações
+   casadas carregam origem obrigatória; execução e agregado expõem volumes e taxas
+   intracliente/multilaterais; e o agregado publica os três destinos contábeis com
+   custos reconciliados. O portão valida essas identidades no objeto e no JSON.
+   OpenAPI, fixture e clientes gerados foram atualizados por seus geradores
+   oficiais, com hashes idênticos numa segunda geração. Os 48 testes da fronteira
+   HTTP passaram.
+
+4. **O que isso invalida.** Consumidores do resultado 1.0.0 precisam migrar para o
+   schema 2.0.0; a versão do envelope HTTP permanece 1.0.0. A fixture pública foi
+   recalculada, mas a grade histórica completa não foi regenerada.
 
 ## 2026-09-16 — CSV e CLI com mecanismos observados (MOT-40)
 

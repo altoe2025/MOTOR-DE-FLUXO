@@ -52,7 +52,7 @@ def normalizar_execucao(request: PreviaRequest, build_sha: str) -> dict[str, obj
     return {
         "api_version": request.api_version,
         "motor_build_sha": build_sha,
-        "schema_version_motor": "1.0.0",
+        "schema_version_motor": "2.0.0",
         "cenario": _scenario_for_identity(request),
         "periodo": request.periodo.model_dump(mode="json"),
         "analise": {
