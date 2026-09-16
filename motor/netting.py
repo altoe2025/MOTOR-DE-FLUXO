@@ -19,7 +19,8 @@ corrente, ocorre o que vier primeiro entre: (1) já passaram `janela_dias` desde
 último fechamento; (2) alguma ordem aberta vence hoje (`dia_limite == dia`); (3) o
 horizonte da simulação terminou.
 
-Ao fechar, casa `min(pendente_out, pendente_in)` e emite `Alocacao(CASADO)` nos
+Ao fechar, casa primeiro OUT e IN abertos do mesmo cliente. Só os saldos restantes
+entram no casamento multilateral. Em ambas as fases, emite `Alocacao(CASADO)` nos
 dois lados. O que sobra **permanece aberto**: só vira `Alocacao(REMETIDO)` no dia
 em que a ordem atinge o próprio `dia_limite`. O vencimento de uma ordem força a
 saída apenas DAQUELA ordem, nunca do lote inteiro — remeter o lote todo era um
@@ -56,6 +57,37 @@ from motor.dominio import (
 def _prioridade(ordem: Ordem) -> tuple[int, str]:
     """EDF com desempate determinístico."""
     return (ordem.dia_limite, ordem.id)
+
+
+def _consumir_casamento(
+    fila_out: list[Ordem],
+    fila_in: list[Ordem],
+    valor: Decimal,
+    dia: int,
+    pendente: dict[str, Decimal],
+    origem: OrigemCasamento,
+    alocacoes: list[Alocacao],
+) -> Decimal:
+    """Consome o mesmo volume nos dois lados, preservando a ordem EDF/id."""
+    for fila in (fila_out, fila_in):
+        restante = valor
+        for ordem in fila:
+            if restante <= 0:
+                break
+            usa = min(pendente[ordem.id], restante)
+            if usa <= 0:
+                continue
+            pendente[ordem.id] -= usa
+            restante -= usa
+            alocacoes.append(
+                Alocacao(ordem.id, dia, usa, TipoAlocacao.CASADO, origem)
+            )
+        if restante != 0:
+            raise ValueError(
+                f"casamento {origem.value} não coube no próprio lado no dia {dia}: "
+                f"sobraram {restante}"
+            )
+    return valor
 
 
 def _validar_conservacao(ordens: tuple[Ordem, ...], ciclos: tuple[Ciclo, ...]) -> None:
@@ -114,33 +146,60 @@ def executar_p0(cenario: Cenario) -> tuple[Ciclo, ...]:
 
         bruto_out = sum((pendente[o.id] for o in out), Decimal(0))
         bruto_in = sum((pendente[o.id] for o in entrada), Decimal(0))
-        casado = min(bruto_out, bruto_in)
-
         alocacoes: list[Alocacao] = []
-        for fila in (out, entrada):
-            restante = casado
-            for ordem in fila:
-                if restante <= 0:
-                    break
-                usa = min(pendente[ordem.id], restante)
-                if usa <= 0:
-                    continue
-                pendente[ordem.id] -= usa
-                restante -= usa
-                alocacoes.append(
-                    Alocacao(
-                        ordem.id,
-                        dia,
-                        usa,
-                        TipoAlocacao.CASADO,
-                        OrigemCasamento.INTER_CLIENTE,
-                    )
-                )
-            if restante != 0:
-                raise ValueError(
-                    f"casado não coube na fila do próprio lado no dia {dia}: "
-                    f"sobraram {restante}"
-                )
+        casado_intra = Decimal(0)
+        out_por_cliente: dict[str, list[Ordem]] = {}
+        in_por_cliente: dict[str, list[Ordem]] = {}
+        for ordem in abertas:
+            if pendente[ordem.id] <= 0:
+                continue
+            destino = (
+                out_por_cliente if ordem.direcao is Direcao.OUT else in_por_cliente
+            )
+            destino.setdefault(ordem.cliente_id, []).append(ordem)
+
+        clientes_duas_pontas = sorted(out_por_cliente.keys() & in_por_cliente.keys())
+        for cliente_id in clientes_duas_pontas:
+            out_cliente = out_por_cliente[cliente_id]
+            in_cliente = in_por_cliente[cliente_id]
+            valor_intra = min(
+                sum((pendente[ordem.id] for ordem in out_cliente), Decimal(0)),
+                sum((pendente[ordem.id] for ordem in in_cliente), Decimal(0)),
+            )
+            casado_intra += _consumir_casamento(
+                out_cliente,
+                in_cliente,
+                valor_intra,
+                dia,
+                pendente,
+                OrigemCasamento.INTRA_CLIENTE,
+                alocacoes,
+            )
+
+        out_residual = [
+            ordem
+            for ordem in abertas
+            if ordem.direcao is Direcao.OUT and pendente[ordem.id] > 0
+        ]
+        in_residual = [
+            ordem
+            for ordem in abertas
+            if ordem.direcao is Direcao.IN and pendente[ordem.id] > 0
+        ]
+        casado_inter = min(
+            sum((pendente[ordem.id] for ordem in out_residual), Decimal(0)),
+            sum((pendente[ordem.id] for ordem in in_residual), Decimal(0)),
+        )
+        _consumir_casamento(
+            out_residual,
+            in_residual,
+            casado_inter,
+            dia,
+            pendente,
+            OrigemCasamento.INTER_CLIENTE,
+            alocacoes,
+        )
+        casado = casado_intra + casado_inter
 
         residuo = Decimal(0)
         # `abertas` já está na prioridade do casamento — e tem que ser percorrida

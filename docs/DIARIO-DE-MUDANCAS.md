@@ -59,7 +59,7 @@ Atualizada em 2026-09-13, durante a implementação da MOT-22 sobre a base integ
 | `codex/mot20-auth` | PR #32, mergeada na `main`; MOT-20 concluída com convite, rascunho e POST autenticado reais | Codex |
 | `codex/mot21-client-integracao` | PR #33 mergeado na `main`; implementação, CI e gate Supabase real verdes | Codex |
 | `codex/mot22-aceitacao-ci` | PR #34 mergeada na `main`; aceitação, CI e handoff da etapa 1 entregues | Codex |
-| `codex/autonetting-preferencial` | implementação iniciada; contrato de origem das alocações concluído na MOT-35 | Codex |
+| `codex/autonetting-preferencial` | política P0 em duas fases concluída até a MOT-36; propagação em andamento | Codex |
 
 Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
@@ -67,6 +67,27 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
 ---
+
+## 2026-09-16 — Autonetting preferencial na P0 (MOT-36)
+
+1. **Sintoma.** O EDF global podia usar a entrada de um cliente para cobrir outro
+   participante mesmo quando o primeiro cliente possuía OUT e IN simultaneamente
+   abertos no mesmo fechamento.
+
+2. **Causa.** `cliente_id` não participava do algoritmo: toda ordem aberta entrava
+   diretamente numa única fila por direção.
+
+3. **O que foi feito.** Cada fechamento P0 agora executa duas fases determinísticas:
+   primeiro autonetting por cliente e depois netting multilateral apenas dos saldos.
+   EDF com desempate por ID continua valendo dentro de cada cliente e na fase
+   residual. Gatilhos, ausência de look-ahead, vencimentos e conservação foram
+   preservados. A regressão cobre preferência sobre EDF global, parcialidade,
+   sobreposição temporal e ordem de entrada; 33 testes relacionados passaram.
+
+4. **O que isso invalida.** Resultados de simulações, digests e CSVs produzidos pela
+   política anterior deixam de representar o comportamento vigente quando um mesmo
+   cliente tem as duas pontas abertas. A grade histórica permanece como legado e
+   não será regenerada sem aprovação explícita após a amostra planejada.
 
 ## 2026-09-16 — Origem auditável dos casamentos (MOT-35)
 
