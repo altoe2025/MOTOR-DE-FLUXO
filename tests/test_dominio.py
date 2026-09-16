@@ -8,6 +8,7 @@ from motor.dominio import (
     Arquetipo,
     Cenario,
     Direcao,
+    OrigemCasamento,
     Ordem,
     ParametrosCusto,
     TipoAlocacao,
@@ -115,13 +116,44 @@ def test_ordem_rejeita_dia_limite_anterior_a_dia_conhecida():
 
 def test_alocacao_guarda_a_parcela_resolvida_num_dia():
     alocacao = Alocacao(
-        ordem_id="o1", dia=3, valor_brl=Decimal("40"), tipo=TipoAlocacao.CASADO
+        ordem_id="o1",
+        dia=3,
+        valor_brl=Decimal("40"),
+        tipo=TipoAlocacao.CASADO,
+        origem_casamento=OrigemCasamento.INTER_CLIENTE,
     )
 
     assert alocacao.ordem_id == "o1"
     assert alocacao.dia == 3
     assert alocacao.valor_brl == Decimal("40")
     assert alocacao.tipo is TipoAlocacao.CASADO
+    assert alocacao.origem_casamento is OrigemCasamento.INTER_CLIENTE
+
+
+def test_alocacao_casada_exige_origem():
+    with pytest.raises(ValueError, match="CASADO exige origem_casamento"):
+        Alocacao("o1", 0, Decimal("10"), TipoAlocacao.CASADO, None)
+
+
+@pytest.mark.parametrize(
+    "origem",
+    [OrigemCasamento.INTRA_CLIENTE, OrigemCasamento.INTER_CLIENTE],
+)
+def test_alocacao_casada_aceita_origem(origem):
+    alocacao = Alocacao("o1", 0, Decimal("10"), TipoAlocacao.CASADO, origem)
+
+    assert alocacao.origem_casamento is origem
+
+
+def test_alocacao_remetida_rejeita_origem():
+    with pytest.raises(ValueError, match="REMETIDO não aceita origem_casamento"):
+        Alocacao(
+            "o1",
+            0,
+            Decimal("10"),
+            TipoAlocacao.REMETIDO,
+            OrigemCasamento.INTER_CLIENTE,
+        )
 
 
 def test_alocacao_rejeita_valor_nao_positivo():

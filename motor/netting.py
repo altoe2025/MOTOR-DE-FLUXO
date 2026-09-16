@@ -42,7 +42,15 @@ from __future__ import annotations
 from bisect import insort
 from decimal import Decimal
 
-from motor.dominio import Alocacao, Cenario, Ciclo, Direcao, Ordem, TipoAlocacao
+from motor.dominio import (
+    Alocacao,
+    Cenario,
+    Ciclo,
+    Direcao,
+    Ordem,
+    OrigemCasamento,
+    TipoAlocacao,
+)
 
 
 def _prioridade(ordem: Ordem) -> tuple[int, str]:
@@ -119,7 +127,15 @@ def executar_p0(cenario: Cenario) -> tuple[Ciclo, ...]:
                     continue
                 pendente[ordem.id] -= usa
                 restante -= usa
-                alocacoes.append(Alocacao(ordem.id, dia, usa, TipoAlocacao.CASADO))
+                alocacoes.append(
+                    Alocacao(
+                        ordem.id,
+                        dia,
+                        usa,
+                        TipoAlocacao.CASADO,
+                        OrigemCasamento.INTER_CLIENTE,
+                    )
+                )
             if restante != 0:
                 raise ValueError(
                     f"casado não coube na fila do próprio lado no dia {dia}: "

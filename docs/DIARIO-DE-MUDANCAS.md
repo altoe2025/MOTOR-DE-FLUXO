@@ -59,6 +59,7 @@ Atualizada em 2026-09-13, durante a implementação da MOT-22 sobre a base integ
 | `codex/mot20-auth` | PR #32, mergeada na `main`; MOT-20 concluída com convite, rascunho e POST autenticado reais | Codex |
 | `codex/mot21-client-integracao` | PR #33 mergeado na `main`; implementação, CI e gate Supabase real verdes | Codex |
 | `codex/mot22-aceitacao-ci` | PR #34 mergeada na `main`; aceitação, CI e handoff da etapa 1 entregues | Codex |
+| `codex/autonetting-preferencial` | implementação iniciada; contrato de origem das alocações concluído na MOT-35 | Codex |
 
 Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
@@ -66,6 +67,24 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
 ---
+
+## 2026-09-16 — Origem auditável dos casamentos (MOT-35)
+
+1. **Sintoma.** Uma alocação `CASADO` informava que o volume não atravessou a
+   fronteira, mas não distinguia autonetting do mesmo cliente e netting multilateral.
+
+2. **Causa.** O domínio só registrava `CASADO` ou `REMETIDO`, porque `cliente_id`
+   ainda não participava da política de casamento.
+
+3. **O que foi feito.** A branch `codex/autonetting-preferencial`, baseada em
+   `origin/main` no commit `a655d9d`, adicionou `OrigemCasamento` e tornou a origem
+   obrigatória para alocações casadas e proibida para remessas. Enquanto a política
+   em duas fases não entra na MOT-36, o algoritmo vigente rotula seus casamentos
+   como `INTER_CLIENTE`. A regressão direta passou junto com 151 testes consumidores.
+
+4. **O que isso invalida.** Ainda não altera números nem prioridade de execução.
+   Consumidores que construíam manualmente uma alocação `CASADO` precisam informar
+   sua origem; a serialização pública só será versionada na etapa própria.
 
 ## 2026-09-13 — Aceitação e CI da etapa 1 (MOT-22)
 
