@@ -59,7 +59,7 @@ Atualizada em 2026-09-13, durante a implementação da MOT-22 sobre a base integ
 | `codex/mot20-auth` | PR #32, mergeada na `main`; MOT-20 concluída com convite, rascunho e POST autenticado reais | Codex |
 | `codex/mot21-client-integracao` | PR #33 mergeado na `main`; implementação, CI e gate Supabase real verdes | Codex |
 | `codex/mot22-aceitacao-ci` | PR #34 mergeada na `main`; aceitação, CI e handoff da etapa 1 entregues | Codex |
-| `codex/autonetting-preferencial` | Motor, contrato 2.0.0 e UI migrados até a MOT-42 | Codex |
+| `codex/autonetting-preferencial` | Motor, API, UI e fronteira de entrada migrados até a MOT-43 | Codex |
 
 Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
@@ -67,6 +67,25 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
 ---
+
+## 2026-09-16 — Entrada sem pré-netting silencioso (MOT-43)
+
+1. **Sintoma.** O adaptador já preservava operações, mas o contrato público e a
+   arquitetura não proibiam explicitamente que um importador futuro eliminasse as
+   pontas opostas do mesmo cliente antes da P0.
+
+2. **Causa.** A semântica da lista `ordens` não estava descrita no schema, e não
+   havia regressão que atravessasse DTO e adaptador com OUT e IN do mesmo cliente.
+
+3. **O que foi feito.** O schema agora define `ordens` como operações explícitas
+   que não devem ser pré-netadas. Um teste comprova que as duas pontas permanecem
+   duas `Ordem` distintas. Os documentos de arquitetura fixam a fronteira do
+   importador e a chave mínima de agregação compatível. OpenAPI e tipos gerados
+   foram atualizados; os 42 testes de contratos/adaptador e o typecheck passaram.
+
+4. **O que isso invalida.** Importadores que entreguem apenas o saldo OUT–IN de um
+   cliente ou consolidem linhas com prazo, finalidade ou classificação diferentes.
+   O importador documental completo continua fora desta entrega.
 
 ## 2026-09-16 — Composição do netting na prévia (MOT-42)
 

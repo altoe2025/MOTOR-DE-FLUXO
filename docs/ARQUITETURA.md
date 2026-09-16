@@ -72,6 +72,21 @@ por ciclo e infla o denominador.
 - `custo.py` — implementado (`custo_baseline`, `custo_netado`).
 - `simulacao.py` — implementado (`simular`, junta netting + custo).
 
+## Contrato da camada anterior ao motor
+
+O contrato HTTP recebe uma lista de operações explícitas, não uma posição que o
+adaptador possa pré-compensar. `construir_cenario` preserva quantidade, identidade,
+cliente e direção: inclusive quando o mesmo cliente possui simultaneamente uma ordem
+`OUT` e outra `IN`. É a política P0, no fechamento, que classifica eventual casamento
+como intracliente.
+
+Um importador futuro de planilhas ou PDFs pode normalizar e validar os documentos,
+mas não pode eliminar pontas opostas nem consolidar linhas com atributos distintos.
+Agregação documental só é compatível quando coincidem `cliente_id`, direção,
+`dia_conhecida`, `dia_limite`, finalidade e `eh_efx`; corredor e moeda também farão
+parte dessa chave quando existirem no domínio. O importador em si não faz parte desta
+etapa.
+
 ## Costuras de extensão
 
 Esta etapa entrega P0 + mono-corredor USD. As linhas abaixo não são trabalho

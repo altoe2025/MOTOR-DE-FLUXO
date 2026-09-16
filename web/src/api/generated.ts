@@ -122,7 +122,10 @@ export interface components {
             horizonte_dias: number;
             /** Janela Dias */
             janela_dias: number;
-            /** Ordens */
+            /**
+             * Ordens
+             * @description Operações explícitas que não devem ser pré-netadas; OUT e IN do mesmo cliente permanecem entradas distintas para a política P0.
+             */
             ordens: components["schemas"]["OrdemEntrada"][];
         };
         /** CicloDTO */
@@ -270,7 +273,10 @@ export interface components {
             /** Versao Motor */
             versao_motor: string;
         };
-        /** OrdemEntrada */
+        /**
+         * OrdemEntrada
+         * @description Operação explícita; direção oposta do mesmo cliente continua outra ordem.
+         */
         OrdemEntrada: {
             /** Cliente Id */
             cliente_id: string;

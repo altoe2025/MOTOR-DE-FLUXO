@@ -24,6 +24,8 @@ class CampoDecimal(StrictModel):
 
 
 class OrdemEntrada(StrictModel):
+    """Operação explícita; direção oposta do mesmo cliente continua outra ordem."""
+
     id: Identificador
     cliente_id: Identificador
     direcao: Literal["OUT", "IN"]
@@ -127,7 +129,16 @@ class CustoEntrada(StrictModel):
 
 
 class CenarioEntrada(StrictModel):
-    ordens: Annotated[list[OrdemEntrada], Field(max_length=1000)]
+    ordens: Annotated[
+        list[OrdemEntrada],
+        Field(
+            max_length=1000,
+            description=(
+                "Operações explícitas que não devem ser pré-netadas; OUT e IN do "
+                "mesmo cliente permanecem entradas distintas para a política P0."
+            ),
+        ),
+    ]
     janela_dias: Annotated[StrictInt, Field(ge=1, le=730)]
     horizonte_dias: Annotated[StrictInt, Field(ge=0, le=730)]
     custo: CustoEntrada

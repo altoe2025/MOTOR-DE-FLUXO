@@ -173,6 +173,7 @@
             "type": "integer"
           },
           "ordens": {
+            "description": "Operações explícitas que não devem ser pré-netadas; OUT e IN do mesmo cliente permanecem entradas distintas para a política P0.",
             "items": {
               "$ref": "#/components/schemas/OrdemEntrada"
             },
@@ -602,6 +603,7 @@
       },
       "OrdemEntrada": {
         "additionalProperties": false,
+        "description": "Operação explícita; direção oposta do mesmo cliente continua outra ordem.",
         "properties": {
           "cliente_id": {
             "maxLength": 128,
