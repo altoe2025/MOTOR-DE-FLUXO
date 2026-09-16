@@ -59,7 +59,7 @@ Atualizada em 2026-09-13, durante a implementação da MOT-22 sobre a base integ
 | `codex/mot20-auth` | PR #32, mergeada na `main`; MOT-20 concluída com convite, rascunho e POST autenticado reais | Codex |
 | `codex/mot21-client-integracao` | PR #33 mergeado na `main`; implementação, CI e gate Supabase real verdes | Codex |
 | `codex/mot22-aceitacao-ci` | PR #34 mergeada na `main`; aceitação, CI e handoff da etapa 1 entregues | Codex |
-| `codex/autonetting-preferencial` | política P0 em duas fases concluída até a MOT-36; propagação em andamento | Codex |
+| `codex/autonetting-preferencial` | política e aceitação comportamental concluídas até a MOT-37; propagação em andamento | Codex |
 
 Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
@@ -67,6 +67,23 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
 ---
+
+## 2026-09-16 — Aceitação comportamental do autonetting (MOT-37)
+
+1. **Sintoma.** A política em duas fases possuía regressões discriminantes, mas os
+   três exemplos centrais ainda não fixavam o resultado completo nem sua passagem
+   pelo orquestrador de simulação.
+
+2. **Causa.** A MOT-36 concentrou-se na implementação mínima da seleção e nos
+   invariantes já existentes.
+
+3. **O que foi feito.** Os cenários de preferência sobre EDF global, autonetting
+   parcial e ausência de sobreposição temporal agora conferem IDs, valores, dias,
+   origens, remessas e conservação por ordem. Um teste de integração confirma que
+   `simular` preserva a decomposição executada. Os 40 testes relacionados passaram.
+
+4. **O que isso invalida.** Nada além de expectativas que tratem a preferência
+   intracliente como opcional; não altera novamente o algoritmo nem os custos.
 
 ## 2026-09-16 — Autonetting preferencial na P0 (MOT-36)
 

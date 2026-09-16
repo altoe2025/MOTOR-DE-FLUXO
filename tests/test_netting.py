@@ -227,6 +227,14 @@ def test_autonetting_precede_edf_global():
     )
     assert remetida_b.tipo is TipoAlocacao.REMETIDO
     assert remetida_b.dia == 0
+    assert _por_ordem(ciclos) == {
+        "a-out": Decimal("100"),
+        "a-in": Decimal("100"),
+        "b-out": Decimal("100"),
+    }
+    assert len(ciclos) == 1
+    assert ciclos[0].casado == Decimal("100")
+    assert ciclos[0].residuo == Decimal("100")
 
 
 def test_autonetting_parcial_libera_apenas_excedente_para_pool():
@@ -263,6 +271,28 @@ def test_autonetting_parcial_libera_apenas_excedente_para_pool():
         and alocacao.tipo is TipoAlocacao.REMETIDO
         for alocacao in alocacoes
     )
+    assert [
+        (
+            alocacao.ordem_id,
+            alocacao.valor_brl,
+            alocacao.tipo,
+            alocacao.origem_casamento,
+        )
+        for alocacao in alocacoes
+    ] == [
+        ("a-out", Decimal("70"), TipoAlocacao.CASADO, OrigemCasamento.INTRA_CLIENTE),
+        ("a-in", Decimal("70"), TipoAlocacao.CASADO, OrigemCasamento.INTRA_CLIENTE),
+        ("a-out", Decimal("30"), TipoAlocacao.CASADO, OrigemCasamento.INTER_CLIENTE),
+        ("b-in", Decimal("30"), TipoAlocacao.CASADO, OrigemCasamento.INTER_CLIENTE),
+        ("b-in", Decimal("20"), TipoAlocacao.REMETIDO, None),
+    ]
+    assert _por_ordem(ciclos) == {
+        "a-out": Decimal("100"),
+        "a-in": Decimal("70"),
+        "b-in": Decimal("50"),
+    }
+    assert ciclos[0].casado == Decimal("100")
+    assert ciclos[0].residuo == Decimal("20")
 
 
 def test_ordens_do_mesmo_cliente_sem_sobreposicao_nao_casam():
@@ -284,6 +314,14 @@ def test_ordens_do_mesmo_cliente_sem_sobreposicao_nao_casam():
         for ciclo in ciclos
         for alocacao in ciclo.alocacoes
     )
+    assert [(ciclo.dia, ciclo.casado, ciclo.residuo) for ciclo in ciclos] == [
+        (0, Decimal("0"), Decimal("100")),
+        (1, Decimal("0"), Decimal("100")),
+    ]
+    assert _por_ordem(ciclos) == {
+        "a-out": Decimal("100"),
+        "a-in": Decimal("100"),
+    }
 
 
 def test_autonetting_usa_edf_e_id_dentro_do_cliente():
