@@ -33,7 +33,7 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-09-13, durante a implementação da MOT-22 sobre a base integrada.
+Atualizada em 2026-09-16, após o gate final da política de autonetting preferencial.
 
 | Branch | Situação | Dono |
 |---|---|---|
@@ -59,7 +59,7 @@ Atualizada em 2026-09-13, durante a implementação da MOT-22 sobre a base integ
 | `codex/mot20-auth` | PR #32, mergeada na `main`; MOT-20 concluída com convite, rascunho e POST autenticado reais | Codex |
 | `codex/mot21-client-integracao` | PR #33 mergeado na `main`; implementação, CI e gate Supabase real verdes | Codex |
 | `codex/mot22-aceitacao-ci` | PR #34 mergeada na `main`; aceitação, CI e handoff da etapa 1 entregues | Codex |
-| `codex/autonetting-preferencial` | Amostra pareada concluída até a MOT-45; verificação final pendente | Codex |
+| `codex/autonetting-preferencial` | MOT-35–MOT-46 concluídas; pronta para decisão de integração, sem regenerar a grade | Codex |
 
 Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
@@ -67,6 +67,31 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
 ---
+
+## 2026-09-16 — Gate final do autonetting preferencial (MOT-46)
+
+1. **Sintoma.** Código, contrato, front-end e amostra já estavam implementados, mas
+   faltava um gate único que comprovasse a árvore completa, os artefatos gerados e
+   a concordância entre motor, JSON e apresentação.
+
+2. **Causa.** As verificações anteriores eram focadas por tarefa. A regeneração da
+   grade também não poderia ser usada como atalho, pois continua condicionada à
+   aprovação explícita do Gabriel.
+
+3. **O que foi feito.** Sobre a base
+   `a655d9d9fc166507e084b71bce98f2b601fb5d79`, as execuções normal e `python -O`
+   aprovaram 670 testes e ignoraram 2; o front aprovou 89 testes unitários, build,
+   lint e 3 testes e2e. Os geradores oficiais foram rodados duas vezes sem diff. No
+   schema 2.0.0, ledger e JSON reconciliaram os mecanismos intracliente /
+   intercliente / remetido em Amanda (`0 / 54.000.000 / 37.800.000`), no caso A
+   OUT 100/A IN 70/B IN 50 (`140 / 60 / 20`) e no caso que força preferência sobre
+   deadline externo (`200 / 0 / 100`). A UI real percorreu Amanda; regressões de
+   apresentação garantem consumo direto dos campos canônicos nos demais valores.
+
+4. **O que isso invalida.** Nada além da anotação de que a verificação estava
+   pendente. A branch está pronta para decisão de integração. Não houve push, PR,
+   merge nem regeneração das 27.000 rodadas; a MOT-47 continua bloqueada até nova
+   aprovação explícita.
 
 ## 2026-09-16 — Amostra pareada do autonetting (MOT-45)
 
