@@ -1,4 +1,10 @@
-# Sensibilidade econômica do custo — posições líquidas
+# Sensibilidade econômica do custo — legado EDF global
+
+> **LEGADO — POLÍTICA ANTERIOR:** as 27.000 rodadas e as análises derivadas deste
+> documento antecedem o autonetting preferencial de 2026-09-16. Permanecem como
+> trilha reprodutível da execução histórica, não como resultado vigente. O contrato
+> de “posição líquida” descrito abaixo foi superado por operações explícitas; não
+> desconte nem reaproveite suas métricas incrementais na política nova.
 
 Uma versão curta para conversa com a Amanda está em
 [`RESUMO-EXECUTIVO-AMANDA.md`](RESUMO-EXECUTIVO-AMANDA.md). Este documento preserva
@@ -9,7 +15,7 @@ o método, os cálculos e as ressalvas técnicas completas.
 > IOF continuam sem confirmação normativa. Até esses dados chegarem, a unidade de
 > decisão é bps e o resultado útil é a inclinação de cada parâmetro.
 
-## A decisão que governa a leitura
+## A decisão que governava esta leitura histórica
 
 O orquestrador recebe somente a **posição líquida que o cliente decidiu colocar na
 pool**. Não há uma segunda dedução de autonetting dentro do motor.

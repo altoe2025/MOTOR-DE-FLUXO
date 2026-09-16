@@ -37,8 +37,11 @@ faz dele um contrato neutro que as duas camadas leem.
 ## Política P0 (etapa atual)
 
 Janela fixa de `janela_dias` dias: o lote fecha a cada `janela_dias`, ou quando alguma
-ordem aberta vence, ou no fim do horizonte. Ao fechar, casa `min(pendente_out,
-pendente_in)` cobrindo cada lado em ordem **EDF** (`(dia_limite, id)`).
+ordem aberta vence, ou no fim do horizonte. Ao fechar, executa duas fases: primeiro
+casa todo volume possível entre OUT e IN do mesmo `cliente_id`; depois casa os saldos
+entre clientes. Cada fase preserva **EDF** (`(dia_limite, id)`), mas a preferência
+intracliente supera o EDF global. Ela não antecipa o fechamento nem usa ordens ainda
+desconhecidas.
 
 O que sobra **permanece aberto** e só é remetido quando a ordem atinge o próprio
 `dia_limite`. O vencimento de uma ordem força a saída apenas daquela ordem, nunca do
@@ -55,8 +58,9 @@ Cobertura parcial existe: uma ordem de 10 pode ser coberta em 6 no dia 5 e 4 no 
 Isso quebra dois pressupostos do desenho original — não há `dia_executada` único (a
 espera fica indefinida), e a mesma ordem aparece em vários `Ciclo`.
 
-`Alocacao(ordem_id, dia, valor_brl, tipo)` é a parcela de uma ordem resolvida num dia,
-com `tipo ∈ {CASADO, REMETIDO}`. O invariante é:
+`Alocacao(ordem_id, dia, valor_brl, tipo, origem_casamento)` é a parcela de uma ordem
+resolvida num dia, com `tipo ∈ {CASADO, REMETIDO}`. Alocação `CASADO` registra origem
+`INTRA_CLIENTE` ou `INTER_CLIENTE`; `REMETIDO` exige origem nula. O invariante é:
 
     Σ alocações de um ordem_id, em todos os ciclos  ==  valor_brl da ordem
 

@@ -59,7 +59,7 @@ Atualizada em 2026-09-13, durante a implementação da MOT-22 sobre a base integ
 | `codex/mot20-auth` | PR #32, mergeada na `main`; MOT-20 concluída com convite, rascunho e POST autenticado reais | Codex |
 | `codex/mot21-client-integracao` | PR #33 mergeado na `main`; implementação, CI e gate Supabase real verdes | Codex |
 | `codex/mot22-aceitacao-ci` | PR #34 mergeada na `main`; aceitação, CI e handoff da etapa 1 entregues | Codex |
-| `codex/autonetting-preferencial` | Motor, API, UI e fronteira de entrada migrados até a MOT-43 | Codex |
+| `codex/autonetting-preferencial` | Regra consolidada em código, contratos, UI e docs até a MOT-44; amostra pendente | Codex |
 
 Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
@@ -67,6 +67,27 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
 ---
+
+## 2026-09-16 — Fonte de verdade do autonetting preferencial (MOT-44)
+
+1. **Sintoma.** Documentos normativos ainda diziam que cada ordem era posição
+   líquida e que EDF global governava a seleção, embora o motor já priorizasse a
+   contraparte do próprio cliente.
+
+2. **Causa.** A decisão nova tinha sido propagada pelo código em etapas, mas AGENTS,
+   MAPA, ADRs, planos de front-end e relatórios históricos ainda misturavam as duas
+   semânticas.
+
+3. **O que foi feito.** O ADR de autonetting registra as duas fases, alternativas
+   rejeitadas e consequências. AGENTS, arquitetura, MAPA, ADR de EDF, Model B e
+   planos dependentes foram alinhados ao schema 2.0.0. A especificação e o plano
+   aprovados entraram na branch. Relatórios e CSVs antigos foram preservados, mas
+   marcados como legado da política EDF global.
+
+4. **O que isso invalida.** O contrato de “posição líquida já enviada à pool”, a
+   prioridade EDF global pura, os diagnósticos incrementais como conclusão vigente e
+   as 27.000 simulações antigas como representação da política nova. A regeneração
+   integral continua proibida até amostra e aprovação explícita do Gabriel.
 
 ## 2026-09-16 — Entrada sem pré-netting silencioso (MOT-43)
 

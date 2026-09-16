@@ -28,13 +28,12 @@ compensação direta exigiria vincular fisicamente a ordem de um cliente à de o
 o que descaracterizaria a operação de cada cliente como própria e discreta perante o
 regulatório (ver art. 22 da Res. BCB 277 em `AGENTS.md`).
 
-**Ressalva confirmada por inspeção do código**: o rateio do custo do resíduo entre
-clientes ainda **não** é uma função implementada. `motor/custo.py` calcula `Custos`
-(`iof`, `carry`, `spread`, `espera`, `fixo`, `total`) no nível agregado do `Cenario`
-inteiro — não há hoje uma função que quebre esse total por `cliente_id`. `Ordem`
-carrega `cliente_id` como campo, mas nenhum módulo consome esse campo para dividir
-custo. Isto é um gap de implementação em relação à decisão de arquitetura descrita
-acima, não uma mudança de decisão.
+**Ressalva confirmada por inspeção do código**: `motor/custo.py` continua calculando
+`Custos` no nível agregado do `Cenario`; não existe uma regra comercial de cobrança
+por cliente. A camada analítica hoje constrói um ledger técnico e atribui os custos
+existentes a eventos/clientes e aos destinos `INTRA_CLIENTE`, `INTER_CLIENTE` e
+`REMETIDO`, sempre reconciliando com o agregado. Isso explica o resultado, mas não é
+uma política comercial de rateio ou faturamento.
 
 ## Consequências
 
@@ -46,9 +45,9 @@ acima, não uma mudança de decisão.
   (não os `bruto_out`/`bruto_in` dos `Ciclo`) para saber exatamente quanto de cada
   ordem foi `CASADO` vs. `REMETIDO` — essa é a granularidade em que a conservação por
   ordem (e, por extensão, por cliente) é verificável (ver `docs/architecture.md`).
-- Enquanto o rateio por cliente não existir como função própria, qualquer decisão de
-  precificação por cliente feita fora do repositório (ex.: numa planilha ou
-  orquestrador externo) não tem como ser validada contra os testes deste projeto.
+- Enquanto a regra comercial de cobrança por cliente não existir, qualquer decisão
+  de precificação feita fora do repositório (ex.: numa planilha ou orquestrador
+  externo) não é validada pelos testes do ledger técnico.
 
 Para a justificativa regulatória completa desta decisão, consultar o vault Obsidian.
 

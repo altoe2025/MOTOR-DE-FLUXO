@@ -6,8 +6,9 @@
 ## Comece por aqui
 
 **Branch integrada: `main` pelo PR #34.** A sensibilidade, o fechamento funcional
-e as MOT-15–MOT-22 já foram integrados; a árvore abaixo registra apenas a ordem
-histórica da pilha de análises.
+e as MOT-15–MOT-22 já foram integrados. A política de autonetting preferencial está
+em implementação na branch `codex/autonetting-preferencial`; resultados históricos
+da `main` ainda refletem EDF global.
 
 ```
 main
@@ -25,7 +26,7 @@ deliberadamente separado. A MOT-22 foi integrada pelo PR #34 a partir da branch
 ```bash
 git checkout main
 pip install pytest pyyaml numpy
-make test          # 262 testes; passa também sob `python -O -m pytest -q`
+make test          # a contagem vigente é registrada em docs/testing.md
 ```
 
 ## Onde está cada resposta
@@ -41,6 +42,7 @@ make test          # 262 testes; passa também sob `python -O -m pytest -q`
 | O que mudou e quando, com o que cada mudança invalidou | `docs/DIARIO-DE-MUDANCAS.md` |
 | Por que o custo é medido em bps e não em % de netabilidade | `docs/adr-cost-bps.md` |
 | Por que a cobertura é EDF com desempate por id | `docs/adr-edf-tiebreak.md` |
+| Por que autonetting precede a fase multilateral | `docs/adr-autonetting-preferencial.md` |
 | Por que cada operação executa individualmente | `docs/adr-model-b.md` |
 | Camadas e regra de importação | `docs/architecture.md`, `docs/ARQUITETURA.md` |
 
@@ -50,8 +52,8 @@ Os dois relatórios são **autocontidos**: não pressupõem a conversa que os ge
 
 | Arquivo | Tamanho | Conteúdo |
 |---|---|---|
-| `resultados/varredura_bruta.csv` | 27.000 linhas, 6,3 MB | uma linha por rodada (mix × N × W × semente) |
-| `resultados/varredura_agregada.csv` | 90 linhas | uma por (mix, N, W), com as 300 sementes colapsadas em p10/p50/p90 |
+| `resultados/varredura_bruta.csv` | 27.000 linhas, 6,3 MB | **legado EDF global**; uma linha por rodada (mix × N × W × semente) |
+| `resultados/varredura_agregada.csv` | 90 linhas | **legado EDF global**; uma por (mix, N, W), com 300 sementes resumidas |
 
 Ambos têm **5 linhas de comentário `#` no topo** — pule-as antes de passar ao leitor de
 CSV. Entraram no git com `add -f` contra a regra `*.csv` do `.gitignore`, de propósito.
@@ -118,11 +120,11 @@ qualquer grade é gerar ordens. Cronometre antes de disparar algo grande.
 
 Cada uma já custou uma conclusão errada neste projeto.
 
-1. **Cada Ordem já é a posição líquida escolhida pelo cliente para a pool.** Não rode
-   uma segunda P0 por cliente nem desconte `taxa_netabilidade_incremental`: isso faria
-   netting interno duas vezes. Os relatórios anteriores chamam parte do resultado de
-   autonetting porque foram escritos antes dessa semântica ser confirmada; leia a
-   correção em `RELATORIO-SENSIBILIDADE-CUSTO.md`.
+1. **Cada Ordem é uma operação explícita; não pré-nete o cliente.** OUT e IN do mesmo
+   `cliente_id` precisam chegar separados ao motor. Em cada fechamento, a P0 faz
+   primeiro o autonetting possível e só então o netting multilateral dos saldos.
+   Métricas incrementais e resultados produzidos pelo EDF global são legado; use as
+   origens observadas das alocações.
 
 2. **O eixo N não mede escala pura.** Cliente é coisa inteira, e na maioria dos N a
    repartição não realiza a proporção pedida — em N=2 o `equilibrado` vira uma carteira
@@ -150,7 +152,11 @@ Cada uma já custou uma conclusão errada neste projeto.
    cria. Já foi levantado como suposto bug e verificado: o "ZERO por decisão de produto"
    em `varredura.py:84` é sobre `custo_oportunidade_aa`, outro parâmetro.
 
-## O que já foi medido — não refaça
+## O que já foi medido — legado da política anterior
+
+As medições abaixo continuam úteis para reproduzir e auditar a execução histórica,
+mas foram produzidas com EDF global. Não são números vigentes da política de
+autonetting preferencial e não devem ser transportadas para ela por inferência.
 
 | Medição | Resultado | Onde |
 |---|---|---|
@@ -168,6 +174,8 @@ Cada uma já custou uma conclusão errada neste projeto.
 
 ## O que NÃO foi medido — trabalho em aberto
 
+- **Impacto integral do autonetting preferencial.** A amostra pareada vem antes; a
+  grade de 27.000 rodadas só será regenerada após aprovação explícita do Gabriel.
 - **Calibração**, não mais estrutura de sensibilidade: faltam o spread e a tarifa
   fixa reais, a confirmação normativa de BENS/SERVIÇOS OUT e ATIVOS_VIRTUAIS OUT
   e o fluxo anual líquido real da carteira candidata. A projeção em BRL publicada
@@ -186,8 +194,8 @@ Cada uma já custou uma conclusão errada neste projeto.
 - Não migrar contexto de negócio do vault Obsidian para o repo.
 - Invariante de correção usa `raise`, nunca `assert` — a suíte roda sob `python -O`, que
   remove asserts.
-- Commits: `tipo: descrição (MOT-N)`. **Os commits desta análise estão com `MOT-?`** —
-  o ID do Linear ainda não foi atribuído.
+- Commits novos: `tipo: descrição (MOT-N)`. Entradas históricas do Diário ainda
+  identificadas como `MOT-?` não autorizam repetir o placeholder.
 - O art. 22 da Res. BCB 277 está gravado no código: pode-se **agregar** ordens numa
   remessa maior, nunca **quebrar** uma ordem em remessas menores.
 - Casar por alíquota (deixar as baratas atravessarem) é planejamento tributário e **não

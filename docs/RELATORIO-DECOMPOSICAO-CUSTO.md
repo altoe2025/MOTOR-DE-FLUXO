@@ -1,11 +1,10 @@
 # Decomposição do custo e sensibilidade aos parâmetros
 
-> **CORREÇÃO DE SEMÂNTICA POSTERIOR:** cada `Ordem` já é a posição líquida que o
-> cliente decidiu enviar ao orquestrador. A ressalva abaixo sobre economia
-> "bruta" e autonetting foi superada; não se roda uma segunda P0 por cliente. A
-> decomposição numérica deste documento continua correta para o cenário medido.
-> A decomposição em toda a grade está em
-> `docs/RELATORIO-SENSIBILIDADE-CUSTO.md`.
+> **LEGADO — POLÍTICA EDF GLOBAL:** esta decomposição usa execuções anteriores ao
+> autonetting preferencial aprovado em 2026-09-16. Ela continua correta para os
+> resultados históricos medidos, mas não deve ser projetada sobre o motor vigente.
+> A antiga correção baseada em “posição líquida” também foi superada. Preserve os
+> números para auditoria; consulte `docs/adr-autonetting-preferencial.md`.
 
 > **Nível absoluto NÃO é cotação.** Duas células da tabela de alíquotas carregam 34,5%
 > do volume e não foram verificadas em norma — ver "Onde a incerteza mora", no fim.

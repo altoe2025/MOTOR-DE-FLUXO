@@ -18,7 +18,7 @@ Módulos, por ordem de dependência:
 | Módulo | Responsabilidade | Importa de dentro do projeto |
 |---|---|---|
 | `motor/dominio.py` | Entidades imutáveis (`Direcao`, `Ordem`, `ParametrosCusto`, `Cenario`, `Alocacao`, `Ciclo`, `Arquetipo`) e `carregar_cenario(path)` | nada |
-| `motor/netting.py` | Casamento OUT/IN dentro da janela P0 (`executar_p0`), produz `Ciclo` | só `dominio` |
+| `motor/netting.py` | P0 em duas fases por fechamento: autonetting intracliente e saldo multilateral (`executar_p0`), produz `Ciclo` | só `dominio` |
 | `motor/custo.py` | Precificação de cada `Ciclo`: IOF, carry de CNR, spread, custo de oportunidade, custo fixo (`custo_baseline`, `custo_netado`) | só `dominio` |
 | `motor/simulacao.py` | Orquestra `netting` + `custo` (`simular`); função pura | `dominio`, `netting`, `custo` |
 | `motor/geracao.py` + `motor/arquetipos.py` | Geração sintética de ordens por arquétipo de cliente | `dominio` |

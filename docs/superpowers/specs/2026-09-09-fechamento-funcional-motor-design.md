@@ -2,7 +2,12 @@
 
 **Data:** 2026-09-09
 
-**Status:** pronta para revisão do Gabriel
+**Status:** entregue; semântica de netting parcialmente superada em 2026-09-16
+
+> **ATUALIZAÇÃO NORMATIVA:** a estrutura de resultado canônico e ledger continua
+> válida, mas a política de seleção e o contrato de entrada foram substituídos pelo
+> autonetting preferencial. Ver `docs/adr-autonetting-preferencial.md` e a spec de
+> 2026-09-16. Menções a diagnósticos incrementais abaixo descrevem o schema legado.
 
 **Escopo:** exclusivamente os problemas confirmados na auditoria dos relatórios finais e a inteligência por cliente já aprovada
 
@@ -28,7 +33,7 @@ Esta entrega não implementa:
 - dados reais ou calibração dos parâmetros;
 - preços, cobrança ou faturamento;
 - calendário civil, meses civis ou anos civis;
-- autonetting temporal anterior à pool;
+- pré-netting anterior à P0 ou look-ahead de ordens futuras;
 - nova política de netting além de P0;
 - mudança de moeda, corredor ou conversão cambial;
 - regras jurídicas ou regulatórias novas;
@@ -48,13 +53,16 @@ Consequências:
 - o baseline atual permanece inalterado;
 - `economia_brl` continua incluindo o benefício de casamentos orquestrados entre ordens do mesmo cliente;
 - não existe autonetting retroativo ou etapa de pré-compensação;
-- `limite_intra_cliente_brl`, `volume_casado_incremental_brl` e `taxa_netabilidade_incremental` permanecem apenas em `diagnosticos_experimentais`;
-- esses diagnósticos não reduzem a economia oficial e não sustentam a frase de que parte da economia “não pertence ao produto”;
+- desde o schema 2.0.0, cada fechamento prioriza casamento intracliente e registra a
+  origem real; os três diagnósticos incrementais desta especificação foram removidos;
 - a CLI principal não os apresenta como conclusão.
 
 ### 3.2 P0 e custos
 
-P0 permanece com janela fixa, fechamento por janela, vencimento ou fim aplicável da execução, prioridade EDF e desempate por ID. O excedente com folga permanece aberto; somente a parcela vencida é remetida.
+P0 permanece com janela fixa, fechamento por janela, vencimento ou fim aplicável da
+execução. Dentro de cada fechamento, autonetting intracliente precede o saldo
+multilateral; EDF/id ordena cada nível. O excedente com folga permanece aberto;
+somente a parcela vencida é remetida.
 
 As fórmulas atuais permanecem:
 

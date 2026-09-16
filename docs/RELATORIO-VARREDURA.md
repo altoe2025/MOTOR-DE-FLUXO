@@ -1,11 +1,11 @@
 # Relatório da varredura completa — 2026-09-07
 
-> **CORREÇÃO DE SEMÂNTICA POSTERIOR:** foi confirmado que cada `Ordem` já é a
-> posição líquida que o cliente decidiu enviar ao orquestrador. Portanto, a
-> dedução de "autonetting" usada neste relatório não é a leitura comercial
-> vigente. Os números da grade continuam corretos para o modelo executado; o que
-> foi superado é a interpretação de que `economia_bps` precisaria ser descontada
-> novamente. Ver `docs/RELATORIO-SENSIBILIDADE-CUSTO.md`.
+> **LEGADO — POLÍTICA EDF GLOBAL:** este relatório e seus CSVs foram produzidos
+> antes do autonetting preferencial aprovado em 2026-09-16. Os números continuam
+> reproduzíveis para a política histórica, mas não descrevem o motor vigente. A
+> correção posterior sobre “posição líquida” registrada na versão original deste
+> texto também foi superada. Não reinterprete nem sobrescreva esta medição; consulte
+> `docs/adr-autonetting-preferencial.md` e a nova amostra quando publicada.
 
 > **Nível absoluto NÃO é cotação.** Duas células da tabela de alíquotas carregam 34,5%
 > do volume e não foram verificadas em norma: `ANEXO_V_BENS_SERVICOS` OUT (0,38% no

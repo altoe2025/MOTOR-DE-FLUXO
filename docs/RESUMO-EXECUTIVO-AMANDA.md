@@ -1,5 +1,10 @@
 # Sensibilidade econômica da pool cambial
 
+> **LEGADO — POLÍTICA EDF GLOBAL:** este resumo usa a grade anterior ao autonetting
+> preferencial aprovado em 2026-09-16. Os números não são projeção do motor vigente;
+> o contrato de “posição líquida” abaixo também foi superado. Uma amostra pareada da
+> política nova será publicada antes de qualquer regeneração integral.
+
 ## Leitura em 30 segundos
 
 A pool apresentou economia positiva em todas as 6.000 carteiras-ano analisadas,
