@@ -80,7 +80,9 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 3. **O que foi feito.** Os cenários de preferência sobre EDF global, autonetting
    parcial e ausência de sobreposição temporal agora conferem IDs, valores, dias,
    origens, remessas e conservação por ordem. Um teste de integração confirma que
-   `simular` preserva a decomposição executada. Os 40 testes relacionados passaram.
+   `simular` preserva a decomposição executada. O oráculo diferencial independente
+   também passou a reproduzir explicitamente as duas fases e concorda nas carteiras
+   densas e esparsas. Os testes relacionados passaram.
 
 4. **O que isso invalida.** Nada além de expectativas que tratem a preferência
    intracliente como opcional; não altera novamente o algoritmo nem os custos.
