@@ -114,3 +114,45 @@ export type ImportStudy = {
   batches: ImportBatch[];
   events: ImportEvent[];
 };
+
+export type CanonicalClient = {
+  id: UUID;
+  displayName: string;
+  createdAt: string;
+};
+
+export type ClientAlias = {
+  normalizedName: string;
+  canonicalClientId: UUID;
+  displayVariant: string;
+  confirmedByUser: boolean;
+  createdAt: string;
+  revokedAt: string | null;
+};
+
+export type ClientAliasEvent =
+  | {
+      kind: 'CLIENT_ALIAS_MERGED';
+      id: UUID;
+      occurredAtUtc: string;
+      normalizedName: string;
+      displayVariant: string;
+      canonicalClientId: UUID;
+    }
+  | {
+      kind: 'CLIENT_ALIAS_UNMERGED';
+      id: UUID;
+      occurredAtUtc: string;
+      normalizedName: string;
+      displayVariant: string;
+      previousCanonicalClientId: UUID;
+      newCanonicalClientId: UUID;
+    };
+
+export type ClientIdentityState = {
+  revision: Revision;
+  clients: CanonicalClient[];
+  aliases: ClientAlias[];
+  events: ClientAliasEvent[];
+  resultsStale: boolean;
+};
