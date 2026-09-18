@@ -33,7 +33,7 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-09-18, após a persistência local da importação XLSX.
+Atualizada em 2026-09-18, após a publicação do catálogo central de importação.
 
 | Branch | Situação | Dono |
 |---|---|---|
@@ -46,6 +46,7 @@ Atualizada em 2026-09-18, após a persistência local da importação XLSX.
 | `feat/importacao-xlsx-portfolio` | MOT-54 concluída sobre a branch da T5; replay determinístico, conflitos e reversão de lotes | Codex |
 | `feat/importacao-xlsx-elegibilidade` | MOT-55 concluída e pilha MOT-49–MOT-55 revisada; metadados, replay, aliases, omissões e preflight endurecidos | Codex |
 | `feat/importacao-xlsx-indexeddb` | MOT-56 concluída sobre a branch da T7; sete stores, isolamento por conta, CAS, idempotência e exclusão local | Codex |
+| `feat/importacao-xlsx-catalogo` | MOT-57 concluída sobre a branch da T8; catálogo versionado, autenticado, empacotado e sem dados reais inventados | Codex |
 | `netting/p1` | spike do P1, **NÃO MERGEAR** — dominado, e agora sabemos que a folga é zero em N ≥ 50. Só local, nunca foi pro GitHub | Felipe |
 | `fix/semantica-remessa-p0` | PR #11, mergeada | Felipe |
 | `fix/previsao-temporal-e-colunas-csv` | PR #12, mergeada | Gabriel |
@@ -75,6 +76,29 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
 ---
+
+## 2026-09-18 — Catálogo central da importação XLSX (MOT-57)
+
+1. **Sintoma.** O frontend ainda não possuía uma fonte central e autenticada para
+   consultar finalidades, alíquotas e custos aceitos pela importação. Replicar esses
+   valores no navegador abriria espaço para divergência e para a invenção acidental
+   de regras financeiras.
+
+2. **Causa.** A API não publicava um contrato versionado para esses dados, nem havia
+   um artefato de catálogo validado durante a inicialização e incluído no pacote
+   instalável.
+
+3. **O que foi feito.** Na branch `feat/importacao-xlsx-catalogo`, criada sobre a
+   T8, foi adicionado um catálogo JSON sintético e explicitamente não configurado,
+   validado por modelos estritos e identificado pelo SHA-256 de sua forma canônica.
+   A rota autenticada `GET /api/v1/catalogos/importacao` publica o catálogo com
+   `Cache-Control: no-store`; configuração ausente, corrompida, duplicada ou
+   incoerente impede a inicialização. O catálogo entrou nos artefatos OpenAPI,
+   TypeScript e no wheel Python.
+
+4. **O que isso invalida.** Nada nas regras financeiras ou sintéticas. Nenhuma
+   finalidade ou alíquota real foi criada, e nenhum arquivo de `motor/`, grade
+   histórica, medição anterior ou conteúdo da `main` foi alterado.
 
 ## 2026-09-18 — Persistência local da importação XLSX (MOT-56)
 

@@ -21,13 +21,15 @@ from servidor.auth import (
     SessionInvalid,
     TokenVerifier,
 )
+from servidor.catalogs.importacao import load_import_catalog
 from servidor.config import Settings
+from servidor.contracts.catalog import CatalogoImportacao
 from servidor.contracts.input import PreviaRequest
 from servidor.contracts.preview import PreviewEnvelope, ReferenceExample
 from servidor.contracts.session import HealthResponse, SessionResponse
 from servidor.errors import ApiFailure, entrada_invalida, failure_response
 from servidor.generate_reference_fixture import build_reference_request
-from servidor.routes import examples, preview, session
+from servidor.routes import catalog, examples, preview, session
 from servidor.static import install_static_routes
 
 _LOGGER = logging.getLogger("servidor.http")
@@ -41,6 +43,7 @@ SchemaBearer = Annotated[
 def create_app(
     settings: Settings | None = None,
     verifier: TokenVerifier | None = None,
+    import_catalog: CatalogoImportacao | None = None,
 ) -> FastAPI:
     configured = settings or Settings()  # type: ignore[call-arg]
     owns_verifier = verifier is None
@@ -48,6 +51,7 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
+        app.state.import_catalog = import_catalog or load_import_catalog()
         fixture = PreviaRequest.model_validate(build_reference_request())
         app.state.reference_example = ReferenceExample(
             cenario=fixture.cenario,
@@ -139,6 +143,7 @@ def create_app(
     app.include_router(session.router)
     app.include_router(examples.router)
     app.include_router(preview.router)
+    app.include_router(catalog.router)
 
     @app.api_route(
         "/api/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"]
@@ -175,5 +180,12 @@ def create_schema_app() -> FastAPI:
     @app.post("/api/v1/previas", response_model=PreviewEnvelope)
     def preview_schema(_: SchemaBearer, request: PreviaRequest) -> PreviewEnvelope:
         raise HTTPException(status_code=501, detail="endpoint disponível na T3")
+
+    @app.get(
+        "/api/v1/catalogos/importacao",
+        response_model=CatalogoImportacao,
+    )
+    def import_catalog_schema(_: SchemaBearer) -> CatalogoImportacao:
+        raise HTTPException(status_code=501, detail="endpoint disponível na T9")
 
     return app

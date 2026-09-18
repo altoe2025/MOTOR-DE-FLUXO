@@ -104,3 +104,19 @@ def test_aplicacao_real_serve_o_mesmo_openapi_canonico_com_bearer():
     assert preview["responses"]["200"]["content"]["application/json"]["schema"] == {
         "$ref": "#/components/schemas/PreviewEnvelope"
     }
+
+
+def test_catalogo_importacao_consta_no_openapi_canonico(tmp_path):
+    destination = tmp_path / "openapi.json"
+    export_openapi(destination)
+    schema = json.loads(destination.read_text(encoding="utf-8"))
+    operation = schema["paths"]["/api/v1/catalogos/importacao"]["get"]
+
+    assert operation["security"] == [{"HTTPBearer": []}]
+    assert operation["responses"]["200"]["content"]["application/json"][
+        "schema"
+    ] == {"$ref": "#/components/schemas/CatalogoImportacao"}
+    catalog = schema["components"]["schemas"]["CatalogoImportacao"]
+    assert catalog["additionalProperties"] is False
+    assert catalog["properties"]["catalog_version"]["pattern"] == "^[0-9a-f]{64}$"
+    assert catalog["properties"]["custos_calibrados"]["const"] is False

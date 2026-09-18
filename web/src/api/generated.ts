@@ -1,4 +1,21 @@
 export interface paths {
+    "/api/v1/catalogos/importacao": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Import Catalog Schema */
+        get: operations["import_catalog_schema_api_v1_catalogos_importacao_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/examples/reference": {
         parameters: {
             query?: never;
@@ -99,6 +116,16 @@ export interface components {
             /** Volume Remetido Periodo Brl */
             volume_remetido_periodo_brl: string;
         };
+        /** AliquotaFinalidade */
+        AliquotaFinalidade: {
+            /** Aliquota */
+            aliquota: string;
+            /**
+             * Direcao
+             * @enum {string}
+             */
+            direcao: "OUT" | "IN";
+        };
         /** AlocacaoDTO */
         AlocacaoDTO: {
             /** Dia */
@@ -114,6 +141,35 @@ export interface components {
             tipo: "CASADO" | "REMETIDO";
             /** Valor Brl */
             valor_brl: string;
+        };
+        /** CatalogoImportacao */
+        CatalogoImportacao: {
+            /** Catalog Version */
+            catalog_version: string;
+            /**
+             * Custos Calibrados
+             * @constant
+             */
+            custos_calibrados: false;
+            custos_origem: components["schemas"]["OrigemValor"];
+            custos_padrao: components["schemas"]["CustoEntrada"];
+            /** Finalidades */
+            finalidades: components["schemas"]["FinalidadeCatalogo"][];
+            /**
+             * Publicado Em Utc
+             * Format: date-time
+             */
+            publicado_em_utc: string;
+            /**
+             * Schema Version
+             * @constant
+             */
+            schema_version: "1.0.0";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "CONFIGURADO" | "NAO_CONFIGURADO";
         };
         /** CenarioEntrada */
         CenarioEntrada: {
@@ -205,6 +261,15 @@ export interface components {
             repetition_id: string;
             /** Seed */
             seed: null;
+        };
+        /** FinalidadeCatalogo */
+        FinalidadeCatalogo: {
+            /** Aliquotas */
+            aliquotas: components["schemas"]["AliquotaFinalidade"][];
+            /** Codigo */
+            codigo: string;
+            /** Descricao */
+            descricao: string;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -546,6 +611,26 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    import_catalog_schema_api_v1_catalogos_importacao_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogoImportacao"];
+                };
+            };
+        };
+    };
     reference_example_schema_api_v1_examples_reference_get: {
         parameters: {
             query?: never;
