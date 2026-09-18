@@ -33,7 +33,7 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-09-18, após a integração do catálogo no cliente de importação.
+Atualizada em 2026-09-18, após a adaptação da importação para a prévia canônica.
 
 | Branch | Situação | Dono |
 |---|---|---|
@@ -48,6 +48,7 @@ Atualizada em 2026-09-18, após a integração do catálogo no cliente de import
 | `feat/importacao-xlsx-indexeddb` | MOT-56 concluída sobre a branch da T7; sete stores, isolamento por conta, CAS, idempotência e exclusão local | Codex |
 | `feat/importacao-xlsx-catalogo` | MOT-57 concluída sobre a branch da T8; catálogo versionado, autenticado, empacotado e sem dados reais inventados | Codex |
 | `feat/importacao-xlsx-catalog-client` | MOT-58 concluída sobre a branch da T9; cliente validado, cache por conta e parâmetros editáveis com origem | Codex |
+| `feat/importacao-xlsx-preview` | MOT-59 concluída sobre a branch da T10; adaptador canônico, execução idempotente e histórico por revisão | Codex |
 | `netting/p1` | spike do P1, **NÃO MERGEAR** — dominado, e agora sabemos que a folga é zero em N ≥ 50. Só local, nunca foi pro GitHub | Felipe |
 | `fix/semantica-remessa-p0` | PR #11, mergeada | Felipe |
 | `fix/previsao-temporal-e-colunas-csv` | PR #12, mergeada | Gabriel |
@@ -77,6 +78,30 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
 ---
+
+## 2026-09-18 — Adaptador e orquestração da prévia importada (MOT-59)
+
+1. **Sintoma.** Operações reais já podiam ser importadas, revisadas e configuradas,
+   mas ainda não havia uma transformação segura para o contrato `PreviaRequest` nem
+   um fluxo que coordenasse CAS, POST e persistência do resultado.
+
+2. **Causa.** O fluxo de referência construía seu próprio request dentro do React.
+   Ele não tratava recorte civil, proveniência por célula, IOF por finalidade,
+   mudança concorrente do estudo ou falha de storage depois de uma resposta válida.
+
+3. **O que foi feito.** Na branch `feat/importacao-xlsx-preview`, criada sobre a
+   T10, foi adicionado um adaptador puro que ordena operações por ID, preserva OUT e
+   IN separadamente, converte datas para deslocamentos civis, filtra e ordena regras
+   de IOF e monta proveniência após a ordenação. O request é validado e limitado a
+   1 MiB antes da rede. O `PreviewProvider` agora executa requests genéricos e
+   restaura envelopes validados. O controlador impede POST duplicado, exige reserva
+   CAS por sua porta, descarta respostas de outra conta, registra respostas atrasadas
+   como históricas e permite repetir somente a gravação que falhou.
+
+4. **O que isso invalida.** O caminho exclusivo de execução do exemplo de referência
+   deixa de ser a única entrada do `PreviewProvider`. Nada nas regras financeiras,
+   no P0 ou nas regras sintéticas foi alterado; nenhuma finalidade ou alíquota real
+   foi criada, e nenhum arquivo de `motor/`, grade, medição ou `main` mudou.
 
 ## 2026-09-18 — Cliente do catálogo e parâmetros do estudo (MOT-58)
 
