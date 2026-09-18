@@ -33,7 +33,7 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-09-18, após a validação por linha da importação XLSX.
+Atualizada em 2026-09-18, após a identidade local de clientes da importação XLSX.
 
 | Branch | Situação | Dono |
 |---|---|---|
@@ -42,6 +42,7 @@ Atualizada em 2026-09-18, após a validação por linha da importação XLSX.
 | `feat/importacao-xlsx-dominio` | MOT-50 concluída sobre a branch da T1; domínio local, datas civis, decimais e normalização canônica | Codex |
 | `feat/importacao-xlsx-parser` | MOT-51 concluída sobre a branch da T2; preflight OOXML, parser e Worker cancelável | Codex |
 | `feat/importacao-xlsx-validacao` | MOT-52 concluída sobre a branch da T3; validação acumulativa, relatório por linha e duplicidade intralote | Codex |
+| `feat/importacao-xlsx-clientes` | MOT-53 concluída sobre a branch da T4; clientes canônicos e aliases explícitos, sem fuzzy matching | Codex |
 | `netting/p1` | spike do P1, **NÃO MERGEAR** — dominado, e agora sabemos que a folga é zero em N ≥ 50. Só local, nunca foi pro GitHub | Felipe |
 | `fix/semantica-remessa-p0` | PR #11, mergeada | Felipe |
 | `fix/previsao-temporal-e-colunas-csv` | PR #12, mergeada | Gabriel |
@@ -71,6 +72,28 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
 ---
+
+## 2026-09-18 — Identidade de clientes e aliases explícitos (MOT-53)
+
+1. **Sintoma.** As linhas importadas preservavam o nome exibido do cliente, mas
+   ainda não havia uma identidade canônica persistível para reconhecer variantes
+   mecânicas sem unir empresas apenas por semelhança.
+
+2. **Causa.** Comparar diretamente a grafia bruta criaria clientes duplicados por
+   caixa, acento ou espaço. Aplicar aproximação automática, por outro lado, poderia
+   juntar clientes distintos sem decisão humana.
+
+3. **O que foi feito.** Na branch `feat/importacao-xlsx-clientes`, criada sobre a
+   branch isolada da T4, foi adicionada uma chave mecânica com NFKC, espaços, caixa
+   e acentos. Chaves ativas iguais reutilizam o UUID; chaves inéditas recebem UUID
+   pela fábrica injetada. Pontuação e sufixos são preservados. Merge e unmerge são
+   ações explícitas, imutáveis e auditáveis; o desfazer revoga o alias, cria novo
+   cliente canônico e marca os resultados como desatualizados. O módulo é puro e
+   não acessa storage, sessão, React ou rede.
+
+4. **O que isso invalida.** Nada nas regras financeiras ou sintéticas. Nenhum
+   arquivo de `motor/`, grade histórica ou conteúdo da `main` foi alterado. Nomes
+   parecidos continuam separados até uma ação explícita de merge.
 
 ## 2026-09-18 — Validação e relatório por linha da importação (MOT-52)
 
