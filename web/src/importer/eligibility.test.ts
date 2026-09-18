@@ -201,6 +201,36 @@ describe('evaluateExecution', () => {
     }));
   });
 
+  it('conta conflito excluído e volta a bloquear após restauração', () => {
+    const source = projection(row('A', '2026-10-17', '2026-10-18'));
+    const conflictingBatch: ImportBatch = {
+      ...source.study.batches[0]!, id: 'batch-2', batchSequence: 2,
+      rows: [{
+        ...row('A', '2026-10-17', '2026-10-18'),
+        versionId: 'version-A-2',
+        normalized: {
+          ...row('A', '2026-10-17', '2026-10-18').normalized!, valueBrl: '200',
+        },
+      }],
+    };
+    const conflictedStudy = {
+      ...source.study,
+      batches: [...source.study.batches, conflictingBatch],
+    };
+    const excluded = excludeOperation(conflictedStudy, {
+      operationId: 'A', eventId: 'exclude-conflict',
+      at: '2026-09-18T11:00:00.000Z',
+    });
+    const assessment = evaluateExecution(projectPortfolio(excluded), {
+      start: iso('2026-10-17'), end: iso('2026-10-17'),
+    }, CATALOG);
+
+    expect(assessment.omitted.excluded).toBe(1);
+    expect(assessment.blockers).not.toContainEqual(expect.objectContaining({
+      code: 'UNRESOLVED_CONFLICT',
+    }));
+  });
+
   it('invalida deadline acima de 730 dias e mantém as demais', () => {
     const { projection: portfolio } = projection(
       row('VALID', '2026-01-01', '2026-01-02'),

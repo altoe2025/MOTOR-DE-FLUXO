@@ -81,6 +81,7 @@ function shouldRetainEntry(name: string): boolean {
     || name === 'xl/sharedStrings.xml'
     || name.startsWith('xl/worksheets/')
     || name.startsWith('xl/externalLinks/')
+    || name.endsWith('.rels')
   );
 }
 
@@ -92,6 +93,7 @@ function extractArchive(buffer: ArrayBuffer): Promise<ArchiveEntries> {
     let pending = 0;
     let inputFinished = false;
     let settled = false;
+    const seenNames = new Set<string>();
 
     const rejectOnce = (error: unknown) => {
       if (!settled) {
@@ -109,6 +111,29 @@ function extractArchive(buffer: ArrayBuffer): Promise<ArchiveEntries> {
     const unzip = new Unzip((file) => {
       if (settled) {
         file.terminate();
+        return;
+      }
+      if (
+        file.name.startsWith('/')
+        || file.name.includes('\\')
+        || file.name.split('/').includes('..')
+        || file.name.includes('\0')
+        || seenNames.has(file.name)
+      ) {
+        file.terminate();
+        rejectOnce(new ImportFileError(
+          'INVALID_XLSX',
+          'nome de entrada ZIP inválido ou repetido',
+        ));
+        return;
+      }
+      seenNames.add(file.name);
+      if (/vbaProject\.bin|^xl\/embeddings\//i.test(file.name)) {
+        file.terminate();
+        rejectOnce(new ImportFileError(
+          'MACRO_NOT_ALLOWED',
+          'macros e objetos OLE não são permitidos',
+        ));
         return;
       }
       entryCount += 1;
@@ -245,6 +270,22 @@ function rejectForbiddenContentTypes(xml: string): void {
         fail('MACRO_NOT_ALLOWED', 'macros e objetos OLE não são permitidos');
       }
       if (/externalLink/i.test(contentType + partName)) {
+        fail('EXTERNAL_LINK_NOT_ALLOWED', 'links externos não são permitidos');
+      }
+    },
+  });
+}
+
+function rejectExternalRelationships(xml: string): void {
+  parseXml(xml, {
+    open(name, attributes) {
+      if (name !== 'Relationship') {
+        return;
+      }
+      if (
+        attributes.TargetMode === 'External'
+        || /externalLink/i.test(attributes.Type ?? '')
+      ) {
         fail('EXTERNAL_LINK_NOT_ALLOWED', 'links externos não são permitidos');
       }
     },
@@ -472,6 +513,11 @@ export async function preflightXlsx(
   rejectForbiddenContentTypes(
     xmlEntry(entries, '[Content_Types].xml'),
   );
+  for (const [name, content] of entries) {
+    if (name.endsWith('.rels')) {
+      rejectExternalRelationships(strFromU8(content));
+    }
+  }
   const sheet = readSingleVisibleSheet(
     xmlEntry(entries, 'xl/workbook.xml'),
   );

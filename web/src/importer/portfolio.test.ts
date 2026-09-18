@@ -411,6 +411,23 @@ describe('histórico de edição e exclusão', () => {
     expect(original.events).toEqual([]);
   });
 
+  it('preserva ordem para IDs numéricos e nomes do protótipo', () => {
+    const projection = projectPortfolio(study([
+      batch('batch-1', 1, [
+        row('version-10', '10', '100', 2),
+        row('version-2', '2', '100', 3),
+        row('version-proto', '__proto__', '100', 4),
+        row('version-constructor', 'constructor', '100', 5),
+      ]),
+    ]));
+
+    expect(projection.operations.map((operation) => operation.operationId)).toEqual([
+      '10', '2', '__proto__', 'constructor',
+    ]);
+    expect(projection.versionsByOperationId.__proto__).toHaveLength(1);
+    expect(projection.versionsByOperationId.constructor).toHaveLength(1);
+  });
+
   it('mantém toda a trilha ao editar novamente e voltar ao original', () => {
     const original = study([
       batch('batch-1', 1, [row('version-1', 'OP-1', '100')]),

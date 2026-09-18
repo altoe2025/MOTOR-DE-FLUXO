@@ -280,19 +280,26 @@ function projectedOperations(
 
 export function projectPortfolio(study: ImportStudy): PortfolioProjection {
   const versions = collectVersions(study);
-  const versionsByOperationId: Record<string, PortfolioVersion[]> = {};
+  const versionsById = new Map<string, PortfolioVersion[]>();
   for (const version of versions) {
     const id = version.operation.operationId;
-    (versionsByOperationId[id] ??= []).push(version);
+    const candidates = versionsById.get(id) ?? [];
+    candidates.push(version);
+    versionsById.set(id, candidates);
+  }
+  const versionsByOperationId = Object.create(null) as Record<
+    string,
+    PortfolioVersion[]
+  >;
+  for (const [operationId, candidates] of versionsById) {
+    versionsByOperationId[operationId] = candidates;
   }
 
   const resolutions = latestResolutions(study);
   const currentOperations: PortfolioOperation[] = [];
   const conflicts: PortfolioProjection['conflicts'] = [];
 
-  for (const [operationId, candidates] of Object.entries(
-    versionsByOperationId,
-  )) {
+  for (const [operationId, candidates] of versionsById) {
     const byContent = new Map<string, PortfolioVersion[]>();
     for (const candidate of candidates) {
       const key = canonicalContent(candidate);

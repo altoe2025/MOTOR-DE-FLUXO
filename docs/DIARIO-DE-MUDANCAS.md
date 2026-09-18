@@ -33,7 +33,7 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-09-18, após recorte e elegibilidade da importação XLSX.
+Atualizada em 2026-09-18, após o pente-fino das tarefas MOT-49–MOT-55.
 
 | Branch | Situação | Dono |
 |---|---|---|
@@ -44,7 +44,7 @@ Atualizada em 2026-09-18, após recorte e elegibilidade da importação XLSX.
 | `feat/importacao-xlsx-validacao` | MOT-52 concluída sobre a branch da T3; validação acumulativa, relatório por linha e duplicidade intralote | Codex |
 | `feat/importacao-xlsx-clientes` | MOT-53 concluída sobre a branch da T4; clientes canônicos e aliases explícitos, sem fuzzy matching | Codex |
 | `feat/importacao-xlsx-portfolio` | MOT-54 concluída sobre a branch da T5; replay determinístico, conflitos e reversão de lotes | Codex |
-| `feat/importacao-xlsx-elegibilidade` | MOT-55 concluída sobre a branch da T6; edições auditáveis, exclusão, recorte e assessment | Codex |
+| `feat/importacao-xlsx-elegibilidade` | MOT-55 concluída e pilha MOT-49–MOT-55 revisada; metadados, replay, aliases, omissões e preflight endurecidos | Codex |
 | `netting/p1` | spike do P1, **NÃO MERGEAR** — dominado, e agora sabemos que a folga é zero em N ≥ 50. Só local, nunca foi pro GitHub | Felipe |
 | `fix/semantica-remessa-p0` | PR #11, mergeada | Felipe |
 | `fix/previsao-temporal-e-colunas-csv` | PR #12, mergeada | Gabriel |
@@ -74,6 +74,33 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
 ---
+
+## 2026-09-18 — Pente-fino da importação XLSX (MOT-55)
+
+1. **Sintoma.** A revisão integrada das tarefas MOT-49–MOT-55 encontrou cinco
+   lacunas: a data de modificação do arquivo se perdia ao atravessar o Worker;
+   IDs numéricos ou iguais a propriedades do protótipo podiam alterar a projeção;
+   aliases ativos duplicados eram aceitos silenciosamente; um conflito excluído
+   não entrava na contagem de exclusões; e links externos em relações de planilha
+   não eram detectados pelo preflight.
+
+2. **Causa.** As tarefas estavam corretas quando testadas isoladamente, mas alguns
+   contratos de fronteira e casos adversariais só aparecem no encadeamento completo.
+   Também havia uso de objeto comum para agrupar operações e inspeção parcial das
+   relações internas do pacote OOXML.
+
+3. **O que foi feito.** Na branch `feat/importacao-xlsx-elegibilidade`, a metadata
+   completa do arquivo passou a atravessar cliente, Worker e parser; a projeção usa
+   `Map` e expõe um registro sem protótipo; estados com mais de um alias ativo são
+   rejeitados; exclusões de conflitos são contabilizadas; e o preflight inspeciona
+   todos os arquivos `.rels`, rejeita nomes ZIP inseguros ou repetidos e bloqueia
+   marcadores de macro e objetos incorporados. Testes de regressão cobrem cada caso
+   e a fixture nova é gerada de forma determinística.
+
+4. **O que isso invalida.** Nada nas regras financeiras ou sintéticas. Nenhum
+   arquivo de `motor/`, grade histórica, medição anterior ou conteúdo da `main` foi
+   alterado. A afirmação anterior de que o preflight cobria qualquer link externo
+   passa a depender destas correções estarem presentes na pilha.
 
 ## 2026-09-18 — Edições, recorte e elegibilidade da importação (MOT-55)
 

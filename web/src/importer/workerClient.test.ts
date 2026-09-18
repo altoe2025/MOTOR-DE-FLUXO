@@ -55,6 +55,7 @@ function parsedWorkbook(): ParsedWorkbook {
     metadata: {
       fileName: 'operacoes.xlsx',
       fileSize: 4,
+      fileLastModified: 1_800_000_000_000,
       sha256: '0'.repeat(64),
     },
     rows: [],
@@ -102,6 +103,7 @@ describe('createImporterWorkerClient', () => {
       kind: 'PARSE',
       fileName: 'operacoes.xlsx',
       fileSize: 4,
+      fileLastModified: 1_800_000_000_000,
       requestId: expect.any(String),
     });
 

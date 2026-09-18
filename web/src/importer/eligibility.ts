@@ -147,7 +147,9 @@ export function evaluateExecution(
 
   let outsideRecut = 0;
   let invalid = 0;
-  let excluded = 0;
+  const excluded = projection.excludedOperationIds.filter(
+    (operationId) => projection.versionsByOperationId[operationId] !== undefined,
+  ).length;
   const selected: ProjectedOperation[] = [];
   const recutValid = !blockers.some(
     (blocker) => blocker.code === 'RECUT_INVERTED'
@@ -156,7 +158,6 @@ export function evaluateExecution(
 
   for (const operation of projection.operations) {
     if (operation.excluded) {
-      excluded += 1;
       continue;
     }
     if (

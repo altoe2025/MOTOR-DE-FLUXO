@@ -35,10 +35,16 @@ function activeAlias(
   aliases: readonly ClientAlias[],
   normalizedName: string,
 ): ClientAlias | undefined {
-  return aliases.find(
+  const active = aliases.filter(
     (alias) => alias.normalizedName === normalizedName
       && alias.revokedAt === null,
   );
+  if (active.length > 1) {
+    throw new Error(
+      `ALIAS_STATE_CONFLICT: múltiplos aliases ativos para ${normalizedName}`,
+    );
+  }
+  return active[0];
 }
 
 function clientById(

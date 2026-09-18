@@ -98,7 +98,7 @@ export type ImportValidationSummary = {
 export type ImportBatchDraft = {
   id: UUID;
   importedAtUtc: string;
-  file: Pick<ImportFileMetadata, 'fileName' | 'fileSize' | 'sha256'>;
+  file: ImportFileMetadata;
   rows: ImportedRow[];
   summary: ImportValidationSummary;
 };

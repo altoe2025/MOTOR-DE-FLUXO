@@ -219,6 +219,14 @@ function workbookEntries(options = {}) {
       '<externalLink xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"/>',
     );
   }
+  if (options.worksheetExternal) {
+    entries['xl/worksheets/_rels/sheet1.xml.rels'] = strToU8(
+      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rIdExternal" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.invalid/" TargetMode="External"/>
+</Relationships>`,
+    );
+  }
   if (options.extraEntries) {
     for (let index = 0; index < options.extraEntries; index += 1) {
       entries[`dummy/entry-${String(index).padStart(3, '0')}.txt`] = strToU8('x');
@@ -262,6 +270,9 @@ const fixtures = {
   }),
   'macro-marker.xlsx': buildWorkbook({ macro: true }),
   'external-link.xlsx': buildWorkbook({ external: true }),
+  'worksheet-external-link.xlsx': buildWorkbook({
+    worksheetExternal: true,
+  }),
   'zip-too-many-entries.xlsx': buildWorkbook({ extraEntries: 129 }),
   'zip-too-large-uncompressed.xlsx': buildWorkbook({
     largeEntry: true,
