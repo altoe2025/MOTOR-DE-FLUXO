@@ -65,6 +65,11 @@ export type ImportedRow = {
   errors: ImportRowError[];
 };
 
+export type ImportedVersionRow = ImportedRow & {
+  versionId: UUID;
+  canonicalClientId: UUID;
+};
+
 export type ImportValidationSummary = {
   total: number;
   valid: number;
@@ -84,25 +89,71 @@ export type ImportBatch = {
   id: UUID;
   studyId: UUID;
   revision: Revision;
+  batchSequence: number;
   importedAtUtc: string;
   file: ImportFileMetadata;
-  rows: ImportedRow[];
+  rows: ImportedVersionRow[];
 };
 
 export type ImportEvent =
   | {
       kind: 'BATCH_IMPORTED';
       id: UUID;
+      eventSequence: number;
+      occurredAtUtc: string;
+      batchId: UUID;
+    }
+  | {
+      kind: 'BATCH_REVERTED';
+      id: UUID;
+      eventSequence: number;
       occurredAtUtc: string;
       batchId: UUID;
     }
   | {
       kind: 'CONFLICT_RESOLVED';
       id: UUID;
+      eventSequence: number;
       occurredAtUtc: string;
       operationId: string;
-      selectedBatchId: UUID;
+      selectedVersionId: UUID;
     };
+
+export type ConflictResolution = {
+  operationId: string;
+  selectedVersionId: UUID;
+};
+
+export type PortfolioVersion = {
+  versionId: UUID;
+  batchId: UUID;
+  batchSequence: number;
+  rowNumber: number;
+  canonicalClientId: UUID;
+  operation: NormalizedOperation;
+};
+
+export type PortfolioOperation = PortfolioVersion & {
+  operationId: string;
+  originVersionIds: UUID[];
+};
+
+export type PortfolioConflict = {
+  operationId: string;
+  versionIds: UUID[];
+};
+
+export type PortfolioProjection = {
+  versions: PortfolioVersion[];
+  versionsByOperationId: Record<string, PortfolioVersion[]>;
+  currentOperations: PortfolioOperation[];
+  conflicts: PortfolioConflict[];
+  counts: {
+    versions: number;
+    currentOperations: number;
+    conflicts: number;
+  };
+};
 
 export type ImportStudy = {
   schemaVersion: ImportSchemaVersion;

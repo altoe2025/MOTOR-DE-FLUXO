@@ -33,7 +33,7 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-09-18, após a identidade local de clientes da importação XLSX.
+Atualizada em 2026-09-18, após o replay local de lotes da importação XLSX.
 
 | Branch | Situação | Dono |
 |---|---|---|
@@ -43,6 +43,7 @@ Atualizada em 2026-09-18, após a identidade local de clientes da importação X
 | `feat/importacao-xlsx-parser` | MOT-51 concluída sobre a branch da T2; preflight OOXML, parser e Worker cancelável | Codex |
 | `feat/importacao-xlsx-validacao` | MOT-52 concluída sobre a branch da T3; validação acumulativa, relatório por linha e duplicidade intralote | Codex |
 | `feat/importacao-xlsx-clientes` | MOT-53 concluída sobre a branch da T4; clientes canônicos e aliases explícitos, sem fuzzy matching | Codex |
+| `feat/importacao-xlsx-portfolio` | MOT-54 concluída sobre a branch da T5; replay determinístico, conflitos e reversão de lotes | Codex |
 | `netting/p1` | spike do P1, **NÃO MERGEAR** — dominado, e agora sabemos que a folga é zero em N ≥ 50. Só local, nunca foi pro GitHub | Felipe |
 | `fix/semantica-remessa-p0` | PR #11, mergeada | Felipe |
 | `fix/previsao-temporal-e-colunas-csv` | PR #12, mergeada | Gabriel |
@@ -72,6 +73,28 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
 ---
+
+## 2026-09-18 — Lotes, conflitos e reversão da importação (MOT-54)
+
+1. **Sintoma.** Operações validadas e clientes canônicos já podiam existir
+   localmente, mas ainda não havia uma projeção determinística para compor versões
+   de vários lotes, representar conflitos ou desfazer uma incorporação.
+
+2. **Causa.** Usar UUID, timestamp ou ordem dos arrays como precedência faria o
+   resultado depender da forma de leitura ou persistência. Conteúdo idêntico também
+   precisava ser separado de versões realmente conflitantes.
+
+3. **O que foi feito.** Na branch `feat/importacao-xlsx-portfolio`, criada sobre a
+   branch isolada da T5, o replay passou a ordenar lotes, linhas e eventos apenas por
+   `batchSequence`, `rowNumber` e `eventSequence`. Versões canonicamente idênticas
+   preservam todas as origens; conteúdo diferente cria conflito sem vencedor.
+   Resoluções podem ser substituídas por eventos posteriores. A reversão mantém o
+   histórico e restaura exatamente a projeção anterior nos casos de adição, conflito
+   e duplicata idêntica.
+
+4. **O que isso invalida.** Nada nas regras financeiras ou sintéticas. Nenhum
+   arquivo de `motor/`, grade histórica ou conteúdo da `main` foi alterado. UUIDs e
+   timestamps não podem ser usados como desempate do portfólio.
 
 ## 2026-09-18 — Identidade de clientes e aliases explícitos (MOT-53)
 
