@@ -13,6 +13,34 @@ type ExecutionRecut = {
   end: ISODate | null;
 };
 
+export type CatalogExecutionAvailability =
+  | { allowed: true; reason: null }
+  | {
+      allowed: false;
+      reason:
+        | 'CATALOG_NOT_LOADED'
+        | 'CATALOG_VERSION_MISSING'
+        | 'CATALOG_NOT_CONFIGURED'
+        | 'CATALOG_VERSION_CHANGED';
+    };
+
+export function catalogExecutionAvailability(
+  catalog: ImportCatalog | null,
+  recordedVersion: string | null,
+): CatalogExecutionAvailability {
+  if (catalog === null) return { allowed: false, reason: 'CATALOG_NOT_LOADED' };
+  if (recordedVersion === null) {
+    return { allowed: false, reason: 'CATALOG_VERSION_MISSING' };
+  }
+  if (catalog.status !== 'CONFIGURADO' || catalog.finalidades.length === 0) {
+    return { allowed: false, reason: 'CATALOG_NOT_CONFIGURED' };
+  }
+  if (recordedVersion !== catalog.catalog_version) {
+    return { allowed: false, reason: 'CATALOG_VERSION_CHANGED' };
+  }
+  return { allowed: true, reason: null };
+}
+
 function issue(
   code: ImportIssue['code'],
   message: string,
@@ -54,7 +82,7 @@ function purposeIssue(
       'purposeCode',
     );
   }
-  const purpose = catalog.purposes.find((candidate) => candidate.code === code);
+  const purpose = catalog.finalidades.find((candidate) => candidate.codigo === code);
   if (purpose === undefined) {
     return issue(
       'PURPOSE_UNKNOWN',
@@ -63,7 +91,9 @@ function purposeIssue(
       'purposeCode',
     );
   }
-  if (!purpose.directions.includes(operation.operation.direction)) {
+  if (!purpose.aliquotas.some(
+    (aliquota) => aliquota.direcao === operation.operation.direction,
+  )) {
     return issue(
       'PURPOSE_DIRECTION_INVALID',
       'finalidade incompatível com a direção',

@@ -36,6 +36,7 @@ function client(initial: AuthSession | null, options: { loginError?: string } = 
 function renderAppAt(path: string, authClient: AuthClient = client(session())) {
   const apiClient: ApiClient = {
     getReferenceExample: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
+    getImportCatalog: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
     runPreview: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
   };
   return render(

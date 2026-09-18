@@ -1,6 +1,7 @@
 import type { components } from './generated';
 import { ApiError, type ApiErrorField } from './errors';
 import {
+  validateCatalogoImportacao,
   validatePreviaRequest,
   validatePreviewEnvelope,
   validateReferenceExample,
@@ -9,11 +10,13 @@ import {
 export type PreviaRequest = components['schemas']['PreviaRequest'];
 export type PreviewEnvelope = components['schemas']['PreviewEnvelope'];
 export type ReferenceExample = components['schemas']['ReferenceExample'];
+export type ImportCatalog = components['schemas']['CatalogoImportacao'];
 
 type FetchLike = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
 export type ApiClient = {
   getReferenceExample(signal?: AbortSignal): Promise<ReferenceExample>;
+  getImportCatalog(signal?: AbortSignal): Promise<ImportCatalog>;
   runPreview(input: PreviaRequest, signal?: AbortSignal): Promise<PreviewEnvelope>;
 };
 
@@ -162,6 +165,19 @@ export function createApiClient({
       const document = await request('/api/v1/examples/reference', { method: 'GET' }, signal);
       if (!validateReferenceExample(document)) throw invalidResponse(200);
       return deepFreeze(document as ReferenceExample);
+    },
+
+    async getImportCatalog(signal) {
+      const document = await request(
+        '/api/v1/catalogos/importacao',
+        { method: 'GET' },
+        signal,
+      );
+      if (isRecord(document) && document.schema_version !== '1.0.0') {
+        throw invalidResponse(200, 'VERSAO_INCOMPATIVEL');
+      }
+      if (!validateCatalogoImportacao(document)) throw invalidResponse(200);
+      return deepFreeze(document as ImportCatalog);
     },
 
     async runPreview(input, signal) {

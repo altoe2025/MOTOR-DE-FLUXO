@@ -1,3 +1,5 @@
+import type { components } from '../api/generated';
+
 export type ISODate = string & { readonly __isoDate: unique symbol };
 
 export type UUID = string;
@@ -212,15 +214,17 @@ export type PortfolioProjection = {
   };
 };
 
-export type ImportCatalog =
-  | { status: 'NAO_CONFIGURADO' }
-  | {
-      status: 'CONFIGURADO';
-      purposes: Array<{
-        code: string;
-        directions: readonly NormalizedOperation['direction'][];
-      }>;
-    };
+export type ImportCatalog = components['schemas']['CatalogoImportacao'];
+export type ImportCosts = components['schemas']['CustoEntrada'];
+export type ParameterOrigin = components['schemas']['OrigemValor'];
+export type ParameterField = 'windowDays' | keyof ImportCosts;
+
+export type ImportStudyParameters = {
+  windowDays: number;
+  costs: ImportCosts;
+  fieldOrigins: Record<ParameterField, ParameterOrigin>;
+  catalogVersion: string | null;
+};
 
 export type ExecutableOperation = ProjectedOperation;
 

@@ -33,7 +33,7 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-09-18, após a publicação do catálogo central de importação.
+Atualizada em 2026-09-18, após a integração do catálogo no cliente de importação.
 
 | Branch | Situação | Dono |
 |---|---|---|
@@ -47,6 +47,7 @@ Atualizada em 2026-09-18, após a publicação do catálogo central de importaç
 | `feat/importacao-xlsx-elegibilidade` | MOT-55 concluída e pilha MOT-49–MOT-55 revisada; metadados, replay, aliases, omissões e preflight endurecidos | Codex |
 | `feat/importacao-xlsx-indexeddb` | MOT-56 concluída sobre a branch da T7; sete stores, isolamento por conta, CAS, idempotência e exclusão local | Codex |
 | `feat/importacao-xlsx-catalogo` | MOT-57 concluída sobre a branch da T8; catálogo versionado, autenticado, empacotado e sem dados reais inventados | Codex |
+| `feat/importacao-xlsx-catalog-client` | MOT-58 concluída sobre a branch da T9; cliente validado, cache por conta e parâmetros editáveis com origem | Codex |
 | `netting/p1` | spike do P1, **NÃO MERGEAR** — dominado, e agora sabemos que a folga é zero em N ≥ 50. Só local, nunca foi pro GitHub | Felipe |
 | `fix/semantica-remessa-p0` | PR #11, mergeada | Felipe |
 | `fix/previsao-temporal-e-colunas-csv` | PR #12, mergeada | Gabriel |
@@ -76,6 +77,29 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
 ---
+
+## 2026-09-18 — Cliente do catálogo e parâmetros do estudo (MOT-58)
+
+1. **Sintoma.** O servidor já publicava o catálogo central, mas o frontend ainda não
+   possuía um método validado para carregá-lo, isolá-lo por conta ou copiar seus
+   defaults para uma configuração editável do estudo.
+
+2. **Causa.** O cliente HTTP não expunha a nova rota nem o validator gerado, e a
+   elegibilidade ainda consumia uma representação local simplificada sem versão ou
+   proveniência dos parâmetros.
+
+3. **O que foi feito.** Na branch `feat/importacao-xlsx-catalog-client`, criada
+   sobre a T9, foi adicionado `getImportCatalog` autenticado com validação OpenAPI,
+   congelamento profundo, timeout e cancelamento. O catálogo fica no TanStack Query
+   por `ownerSub` durante a sessão. Defaults são copiados para parâmetros locais com
+   janela 7 e origem publicada; cada edição é validada e marca somente o campo
+   alterado como `ESTIMATIVA_USUARIO`. Mudança de versão torna resultados stale,
+   exige reavaliação de finalidades e preserva o request histórico.
+
+4. **O que isso invalida.** A representação simplificada de finalidades usada
+   internamente até a T7 deixa de ser o contrato do frontend. Nada nas regras
+   financeiras ou sintéticas foi alterado; nenhuma finalidade ou alíquota real foi
+   criada, e nenhum arquivo de `motor/`, grade histórica, medição ou `main` mudou.
 
 ## 2026-09-18 — Catálogo central da importação XLSX (MOT-57)
 

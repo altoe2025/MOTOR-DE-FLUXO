@@ -60,6 +60,7 @@ function renderFlow(apiClient: ApiClient) {
 function api(runPreview: ApiClient['runPreview'] = async (input) => matchingEnvelope(input)): ApiClient {
   return {
     getReferenceExample: vi.fn(async () => structuredClone(referenceFixture)),
+    getImportCatalog: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
     runPreview: vi.fn(runPreview),
   };
 }

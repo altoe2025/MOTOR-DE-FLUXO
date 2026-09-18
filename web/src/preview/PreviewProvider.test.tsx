@@ -60,6 +60,7 @@ function Harness({ client, initialOwner = 'user-a' }: { client: ApiClient; initi
 function api(overrides: Partial<ApiClient> = {}): ApiClient {
   return {
     getReferenceExample: vi.fn(async () => structuredClone(referenceFixture)),
+    getImportCatalog: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
     runPreview: vi.fn(async (input) => matchingEnvelope(input)),
     ...overrides,
   };
