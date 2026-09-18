@@ -33,6 +33,7 @@ describe('preflightXlsx', () => {
     ['wrong-headers.xlsx', 'HEADER_INVALID'],
     ['macro-marker.xlsx', 'MACRO_NOT_ALLOWED'],
     ['external-link.xlsx', 'EXTERNAL_LINK_NOT_ALLOWED'],
+    ['worksheet-external-link.xlsx', 'EXTERNAL_LINK_NOT_ALLOWED'],
     ['encrypted-marker.xlsx', 'ENCRYPTED_FILE_NOT_ALLOWED'],
     ['zip-too-many-entries.xlsx', 'ZIP_ENTRY_LIMIT_EXCEEDED'],
     [

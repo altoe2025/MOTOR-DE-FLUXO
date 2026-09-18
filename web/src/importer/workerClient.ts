@@ -106,6 +106,7 @@ export function createImporterWorkerClient(
           buffer,
           fileName: file.name,
           fileSize: file.size,
+          fileLastModified: file.lastModified,
         };
         try {
           worker.postMessage(request, [buffer]);

@@ -58,6 +58,37 @@ describe('normalizeClientNameKey', () => {
 });
 
 describe('resolveClient', () => {
+  it('rejeita mais de um alias ativo para a mesma chave', () => {
+    const ambiguous: ClientIdentityState = {
+      revision: 2,
+      clients: [
+        { id: 'client-1', displayName: 'Órbita', createdAt: NOW },
+        { id: 'client-2', displayName: 'Orbita', createdAt: NOW },
+      ],
+      aliases: [
+        {
+          normalizedName: 'orbita', canonicalClientId: 'client-1',
+          displayVariant: 'Órbita', confirmedByUser: false,
+          createdAt: NOW, revokedAt: null,
+        },
+        {
+          normalizedName: 'orbita', canonicalClientId: 'client-2',
+          displayVariant: 'Orbita', confirmedByUser: false,
+          createdAt: NOW, revokedAt: null,
+        },
+      ],
+      events: [],
+      resultsStale: false,
+    };
+
+    expect(() => resolveClient(
+      ambiguous,
+      'Órbita',
+      LATER,
+      idFactory('unused'),
+    )).toThrow('ALIAS_STATE_CONFLICT');
+  });
+
   it('cria cliente e alias persistíveis para uma chave inédita', () => {
     const result = resolveClient(
       emptyState(),

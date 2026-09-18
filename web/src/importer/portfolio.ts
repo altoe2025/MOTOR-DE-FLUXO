@@ -1,12 +1,23 @@
 import type {
   ConflictResolution,
+  EditableField,
   ImportBatch,
   ImportEvent,
+  ImportIssue,
   ImportStudy,
+  NormalizedOperation,
   PortfolioOperation,
   PortfolioProjection,
   PortfolioVersion,
+  ProjectedOperation,
 } from './domain';
+import { parseCivilDate } from './dates';
+import { parseBrlDecimal } from './decimals';
+import { ImportValidationError } from './errors';
+import {
+  normalizeDirection,
+  normalizePurposeCode,
+} from './normalization';
 
 function fail(code: string, message: string): never {
   throw new Error(`${code}: ${message}`);
@@ -144,21 +155,151 @@ function asCurrent(
   };
 }
 
+function fieldValue(
+  operation: NormalizedOperation,
+  field: EditableField,
+): string | null {
+  return operation[field];
+}
+
+function withField(
+  operation: NormalizedOperation,
+  field: EditableField,
+  value: string | null,
+): NormalizedOperation {
+  switch (field) {
+    case 'direction':
+      return { ...operation, direction: value as 'OUT' | 'IN' };
+    case 'knownDate':
+      return { ...operation, knownDate: value as NormalizedOperation['knownDate'] };
+    case 'deadlineDate':
+      return {
+        ...operation,
+        deadlineDate: value as NormalizedOperation['deadlineDate'],
+      };
+    case 'valueBrl':
+      return { ...operation, valueBrl: value as string };
+    case 'purposeCode':
+      return { ...operation, purposeCode: value };
+  }
+}
+
+function projectedOperations(
+  study: ImportStudy,
+  currentOperations: readonly PortfolioOperation[],
+): {
+  operations: ProjectedOperation[];
+  excludedOperationIds: string[];
+} {
+  const originals = new Map(
+    currentOperations.map((operation) => [
+      operation.operationId,
+      operation.operation,
+    ]),
+  );
+  const working = new Map<string, {
+    base: PortfolioOperation;
+    operation: NormalizedOperation;
+    edits: ProjectedOperation['audit']['edits'];
+    invalidFields: Map<EditableField, ImportIssue>;
+  }>();
+  for (const operation of currentOperations) {
+    working.set(operation.operationId, {
+      base: operation,
+      operation: { ...operation.operation },
+      edits: [],
+      invalidFields: new Map(),
+    });
+  }
+
+  const excluded = new Set<string>();
+  for (const event of orderedEvents(study)) {
+    if (event.kind === 'OPERATION_EXCLUDED') {
+      excluded.add(event.operationId);
+      continue;
+    }
+    if (event.kind === 'OPERATION_RESTORED') {
+      excluded.delete(event.operationId);
+      continue;
+    }
+    if (event.kind !== 'OPERATION_EDITED') {
+      continue;
+    }
+    const target = working.get(event.operationId);
+    const original = originals.get(event.operationId);
+    if (target === undefined || original === undefined) {
+      continue;
+    }
+    const previousValue = fieldValue(target.operation, event.field);
+    target.edits.push({
+      eventId: event.id,
+      at: event.occurredAtUtc,
+      field: event.field,
+      originalValue: fieldValue(original, event.field),
+      previousValue,
+      nextValue: event.normalizedValue,
+      rawValue: event.rawValue,
+      error: event.error,
+    });
+    if (event.error === null) {
+      target.operation = withField(
+        target.operation,
+        event.field,
+        event.normalizedValue,
+      );
+      target.invalidFields.delete(event.field);
+    } else {
+      target.invalidFields.set(event.field, event.error);
+    }
+  }
+
+  const operations = [...working.values()].map((target): ProjectedOperation => {
+    const issues = [...target.invalidFields.values()];
+    if (target.operation.deadlineDate < target.operation.knownDate) {
+      issues.push({
+        code: 'DATE_ORDER_INVALID',
+        message: 'data limite anterior à data conhecida',
+        operationId: target.operation.operationId,
+        field: 'deadlineDate',
+      });
+    }
+    return {
+      ...target.base,
+      operation: target.operation,
+      audit: { edits: target.edits },
+      excluded: excluded.has(target.operation.operationId),
+      executable: issues.length === 0,
+      issues,
+    };
+  });
+  return {
+    operations,
+    excludedOperationIds: [...excluded],
+  };
+}
+
 export function projectPortfolio(study: ImportStudy): PortfolioProjection {
   const versions = collectVersions(study);
-  const versionsByOperationId: Record<string, PortfolioVersion[]> = {};
+  const versionsById = new Map<string, PortfolioVersion[]>();
   for (const version of versions) {
     const id = version.operation.operationId;
-    (versionsByOperationId[id] ??= []).push(version);
+    const candidates = versionsById.get(id) ?? [];
+    candidates.push(version);
+    versionsById.set(id, candidates);
+  }
+  const versionsByOperationId = Object.create(null) as Record<
+    string,
+    PortfolioVersion[]
+  >;
+  for (const [operationId, candidates] of versionsById) {
+    versionsByOperationId[operationId] = candidates;
   }
 
   const resolutions = latestResolutions(study);
   const currentOperations: PortfolioOperation[] = [];
   const conflicts: PortfolioProjection['conflicts'] = [];
 
-  for (const [operationId, candidates] of Object.entries(
-    versionsByOperationId,
-  )) {
+  for (const [operationId, candidates] of versionsById) {
     const byContent = new Map<string, PortfolioVersion[]>();
     for (const candidate of candidates) {
       const key = canonicalContent(candidate);
@@ -196,10 +337,14 @@ export function projectPortfolio(study: ImportStudy): PortfolioProjection {
     ));
   }
 
+  const projected = projectedOperations(study, currentOperations);
+
   return {
     versions,
     versionsByOperationId,
     currentOperations,
+    operations: projected.operations,
+    excludedOperationIds: projected.excludedOperationIds,
     conflicts,
     counts: {
       versions: versions.length,
@@ -309,4 +454,128 @@ export function revertBatch(
     occurredAtUtc: study.updatedAtUtc,
     batchId,
   }, study.updatedAtUtc);
+}
+
+function normalizeEdit(
+  operationId: string,
+  field: EditableField,
+  rawValue: string,
+): { normalizedValue: string | null; error: ImportIssue | null } {
+  try {
+    let normalizedValue: string | null;
+    switch (field) {
+      case 'direction':
+        normalizedValue = normalizeDirection(rawValue);
+        break;
+      case 'knownDate':
+      case 'deadlineDate':
+        normalizedValue = parseCivilDate(rawValue);
+        break;
+      case 'valueBrl':
+        normalizedValue = parseBrlDecimal(rawValue);
+        break;
+      case 'purposeCode':
+        normalizedValue = normalizePurposeCode(rawValue);
+        break;
+    }
+    return { normalizedValue, error: null };
+  } catch (caught: unknown) {
+    if (!(caught instanceof ImportValidationError)) {
+      throw caught;
+    }
+    return {
+      normalizedValue: null,
+      error: {
+        code: caught.code,
+        message: caught.message,
+        operationId,
+        field,
+      },
+    };
+  }
+}
+
+function ensureUniqueEventId(study: ImportStudy, eventId: string): void {
+  if (study.events.some((event) => event.id === eventId)) {
+    fail('EVENT_ID_ALREADY_EXISTS', `evento repetido ${eventId}`);
+  }
+}
+
+export function editOperation(
+  study: ImportStudy,
+  command: {
+    operationId: string;
+    field: EditableField;
+    rawValue: string;
+    eventId: string;
+    at: string;
+  },
+): ImportStudy {
+  const projection = projectPortfolio(study);
+  if (!projection.operations.some(
+    (operation) => operation.operationId === command.operationId,
+  )) {
+    return fail(
+      'OPERATION_NOT_EDITABLE',
+      `operação ${command.operationId} não está vigente ou resolvida`,
+    );
+  }
+  ensureUniqueEventId(study, command.eventId);
+  const normalized = normalizeEdit(
+    command.operationId,
+    command.field,
+    command.rawValue,
+  );
+  return appendEvent(study, {
+    kind: 'OPERATION_EDITED',
+    id: command.eventId,
+    eventSequence: nextEventSequence(study),
+    occurredAtUtc: command.at,
+    operationId: command.operationId,
+    field: command.field,
+    rawValue: command.rawValue,
+    ...normalized,
+  }, command.at);
+}
+
+type InclusionCommand = {
+  operationId: string;
+  eventId: string;
+  at: string;
+};
+
+function changeOperationInclusion(
+  study: ImportStudy,
+  command: InclusionCommand,
+  kind: 'OPERATION_EXCLUDED' | 'OPERATION_RESTORED',
+): ImportStudy {
+  const projection = projectPortfolio(study);
+  if (projection.versionsByOperationId[command.operationId] === undefined) {
+    return fail(
+      'OPERATION_NOT_FOUND',
+      `operação ${command.operationId} não existe`,
+    );
+  }
+  ensureUniqueEventId(study, command.eventId);
+  return appendEvent(study, {
+    kind,
+    id: command.eventId,
+    eventSequence: nextEventSequence(study),
+    occurredAtUtc: command.at,
+    operationId: command.operationId,
+  }, command.at);
+}
+
+export function excludeOperation(
+  study: ImportStudy,
+  command: InclusionCommand,
+): ImportStudy {
+  return changeOperationInclusion(study, command, 'OPERATION_EXCLUDED');
+}
+
+export function restoreOperation(
+  study: ImportStudy,
+  command: InclusionCommand,
+): ImportStudy {
+  return changeOperationInclusion(study, command, 'OPERATION_RESTORED');
 }

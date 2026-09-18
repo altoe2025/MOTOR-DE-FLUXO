@@ -43,6 +43,7 @@ workerScope.onmessage = async (
       {
         fileName: request.fileName,
         fileSize: request.fileSize,
+        fileLastModified: request.fileLastModified,
       },
     );
     workerScope.postMessage({

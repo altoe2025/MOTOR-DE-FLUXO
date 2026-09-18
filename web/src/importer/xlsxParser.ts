@@ -22,6 +22,7 @@ const MAX_ROWS = 1000;
 export type ParsedWorkbookMetadata = {
   fileName: string;
   fileSize: number;
+  fileLastModified: number;
   sha256: string;
 };
 
@@ -37,6 +38,7 @@ export type WorkerRequest = {
   buffer: ArrayBuffer;
   fileName: string;
   fileSize: number;
+  fileLastModified: number;
 };
 
 export type WorkerResponse =
@@ -102,6 +104,7 @@ export async function parseWorkbook(
   metadata: {
     fileName: string;
     fileSize: number;
+    fileLastModified: number;
   },
 ): Promise<ParsedWorkbook> {
   await preflightXlsx(buffer);

@@ -19,6 +19,7 @@ async function parseFixture(name: string) {
   return parseWorkbook(buffer, {
     fileName: name,
     fileSize: buffer.byteLength,
+    fileLastModified: 1_800_000_000_000,
   });
 }
 
@@ -61,6 +62,7 @@ describe('parseWorkbook', () => {
 
     expect(workbook.metadata.sha256).toMatch(/^[a-f0-9]{64}$/);
     expect(workbook.metadata.fileName).toBe('valid-minimal.xlsx');
+    expect(workbook.metadata.fileLastModified).toBe(1_800_000_000_000);
   });
 
   it('aceita exatamente mil linhas', async () => {

@@ -23,6 +23,7 @@ function workbook(rows: RawOperationCells[]): ParsedWorkbook {
     metadata: {
       fileName: 'operacoes.xlsx',
       fileSize: 1234,
+      fileLastModified: 1_800_000_000_000,
       sha256: 'a'.repeat(64),
     },
     rows,
