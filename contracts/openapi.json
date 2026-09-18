@@ -686,7 +686,8 @@
             "enum": [
               "PADRAO_SINTETICO",
               "ESTIMATIVA_USUARIO",
-              "DADO_OBSERVADO"
+              "DADO_OBSERVADO",
+              "NAO_COLETADO"
             ],
             "title": "Tipo",
             "type": "string"

@@ -311,7 +311,7 @@ export interface components {
              * Tipo
              * @enum {string}
              */
-            tipo: "PADRAO_SINTETICO" | "ESTIMATIVA_USUARIO" | "DADO_OBSERVADO";
+            tipo: "PADRAO_SINTETICO" | "ESTIMATIVA_USUARIO" | "DADO_OBSERVADO" | "NAO_COLETADO";
         };
         /** PeriodoLegado */
         PeriodoLegado: {
