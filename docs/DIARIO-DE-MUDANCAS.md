@@ -84,10 +84,11 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 
 3. **O que foi feito.** Na branch `feat/importacao-xlsx-validacao`, criada sobre a
    branch isolada da T3, foi adicionado um relatório com linha, campo, código e valor
-   original. Erros são acumulados, linhas válidas continuam executáveis, finalidade
-   ausente é registrada sem bloquear a incorporação e toda ocorrência de ID repetido
-   dentro do lote é impedida de virar versão vigente. O cenário parcial preserva as
-   dez linhas e normaliza somente as seis válidas.
+   original. A validação reutiliza os normalizadores canônicos da T2. Erros são
+   acumulados, linhas válidas continuam executáveis, finalidade ausente é registrada
+   sem bloquear a incorporação e toda ocorrência de ID repetido dentro do lote é
+   impedida de virar versão vigente. O cenário parcial preserva as dez linhas e
+   normaliza somente as seis válidas.
 
 4. **O que isso invalida.** Nada nas regras financeiras ou sintéticas. Nenhum
    arquivo de `motor/`, grade histórica ou conteúdo da `main` foi alterado. O

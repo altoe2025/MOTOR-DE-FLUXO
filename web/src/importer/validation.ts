@@ -4,10 +4,17 @@ import type {
   ImportBatchDraft,
   ImportedRow,
   ImportRowError,
-  NormalizedOperation,
   RawOperationCells,
 } from './domain';
 import { ImportValidationError } from './errors';
+import {
+  normalizeClientName,
+  normalizeDirection,
+  normalizeOperationId,
+  normalizeProfileClassification,
+  normalizePurposeCode,
+  requireOperationCell,
+} from './normalization';
 import type { ParsedWorkbook } from './xlsxParser';
 
 type Field = keyof RawOperationCells;
@@ -28,26 +35,6 @@ function validationError(
     };
   }
   throw error;
-}
-
-function required(
-  value: string | null,
-  field: Field,
-): string {
-  if (value === null || value === '') {
-    throw new ImportValidationError('REQUIRED', `${field} é obrigatório`);
-  }
-  return value;
-}
-
-function exact(value: string, field: Field): string {
-  if (value.trim() !== value) {
-    throw new ImportValidationError(
-      'INVALID_FORMAT',
-      `${field} não aceita espaços externos`,
-    );
-  }
-  return value;
 }
 
 function validateField<T>(
@@ -75,62 +62,48 @@ function normalizeRow(
     'operacao_id',
     rowNumber,
     errors,
-    (value) => exact(required(value, 'operacao_id'), 'operacao_id'),
+    normalizeOperationId,
   );
   const clientName = validateField(
     raw,
     'cliente_nome',
     rowNumber,
     errors,
-    (value) => {
-      const normalized = required(value, 'cliente_nome')
-        .trim()
-        .replace(/\s+/g, ' ');
-      if (normalized === '') {
-        throw new ImportValidationError(
-          'REQUIRED',
-          'cliente_nome é obrigatório',
-        );
-      }
-      return normalized;
-    },
+    normalizeClientName,
   );
   const direction = validateField(
     raw,
     'direcao',
     rowNumber,
     errors,
-    (value): NormalizedOperation['direction'] => {
-      const normalized = value?.trim().toUpperCase();
-      if (normalized !== 'OUT' && normalized !== 'IN') {
-        throw new ImportValidationError(
-          'DIRECTION_INVALID',
-          'direção deve ser OUT ou IN',
-        );
-      }
-      return normalized;
-    },
+    normalizeDirection,
   );
   const knownDate = validateField(
     raw,
     'data_conhecida',
     rowNumber,
     errors,
-    (value) => parseCivilDate(required(value, 'data_conhecida')),
+    (value) => parseCivilDate(
+      requireOperationCell(value, 'data_conhecida'),
+    ),
   );
   const deadlineDate = validateField(
     raw,
     'data_limite',
     rowNumber,
     errors,
-    (value) => parseCivilDate(required(value, 'data_limite')),
+    (value) => parseCivilDate(
+      requireOperationCell(value, 'data_limite'),
+    ),
   );
   const valueBrl = validateField(
     raw,
     'valor_brl',
     rowNumber,
     errors,
-    (value) => parseBrlDecimal(required(value, 'valor_brl')),
+    (value) => parseBrlDecimal(
+      requireOperationCell(value, 'valor_brl'),
+    ),
   );
   const purposeCode = validateField(
     raw,
@@ -148,7 +121,7 @@ function normalizeRow(
         });
         return null;
       }
-      return exact(value, 'finalidade_codigo');
+      return normalizePurposeCode(value);
     },
   );
 
@@ -179,7 +152,9 @@ function normalizeRow(
     ? {
         operationId,
         clientName,
-        profileClassification: raw.classificacao_perfil?.trim() || null,
+        profileClassification: normalizeProfileClassification(
+          raw.classificacao_perfil,
+        ),
         direction,
         knownDate,
         deadlineDate,
