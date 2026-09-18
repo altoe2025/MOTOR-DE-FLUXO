@@ -41,3 +41,4 @@ include = ["motor*", "servidor*"]
 
 [tool.setuptools.package-data]
 motor = ["cenarios/*.yaml"]
+servidor = ["catalogs/*.json"]
