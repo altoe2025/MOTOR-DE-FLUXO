@@ -33,13 +33,14 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-09-18, após a criação do domínio local da importação XLSX.
+Atualizada em 2026-09-18, após a criação do parser XLSX seguro no navegador.
 
 | Branch | Situação | Dono |
 |---|---|---|
 | `main` | Autonetting preferencial MOT-35–MOT-46 integrado pelo PR #36, com o gate protegido `pytest` verde | os dois |
 | `feat/importacao-xlsx-proveniencia` | MOT-49 concluída localmente; contrato aceita dado observado e restringe não coletado a eFX falso | Codex |
 | `feat/importacao-xlsx-dominio` | MOT-50 concluída sobre a branch da T1; domínio local, datas civis, decimais e normalização canônica | Codex |
+| `feat/importacao-xlsx-parser` | MOT-51 concluída sobre a branch da T2; preflight OOXML, parser e Worker cancelável | Codex |
 | `netting/p1` | spike do P1, **NÃO MERGEAR** — dominado, e agora sabemos que a folga é zero em N ≥ 50. Só local, nunca foi pro GitHub | Felipe |
 | `fix/semantica-remessa-p0` | PR #11, mergeada | Felipe |
 | `fix/previsao-temporal-e-colunas-csv` | PR #12, mergeada | Gabriel |
@@ -69,6 +70,31 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
 ---
+
+## 2026-09-18 — Parser XLSX seguro no navegador (MOT-51)
+
+1. **Sintoma.** O domínio local já existia, mas ainda não havia uma fronteira segura
+   para inspecionar e ler arquivos XLSX sem bloquear a interface ou aceitar
+   estruturas ativas e ambíguas.
+
+2. **Causa.** Um leitor de planilha comum começa a interpretar células antes de
+   aplicar todos os limites estruturais. Isso deixaria fórmulas, macros, links,
+   células mescladas, arquivos criptografados e ZIPs expansivos entrarem cedo
+   demais no fluxo.
+
+3. **O que foi feito.** Na branch `feat/importacao-xlsx-parser`, criada sobre a
+   branch isolada da T2, foram fixadas as dependências `read-excel-file`,
+   `fflate` e `saxen`. Um preflight incremental limita arquivo, entradas e
+   tamanho descompactado, valida OOXML por SAX e só então libera a leitura das
+   oito células. O parser preserva decimais como texto, serializa datas civis,
+   calcula SHA-256 no Worker e limita o lote a 1.000 linhas. O cliente transfere
+   o buffer, permite cancelamento e reinicia o Worker após aborto. As 14 fixtures
+   artificiais são reproduzíveis e não contêm dados reais.
+
+4. **O que isso invalida.** Nada nas regras financeiras ou sintéticas. O arquivo
+   original continua local ao navegador; nenhum conteúdo é enviado ao backend.
+   Nenhum arquivo de `motor/`, grade histórica ou conteúdo da `main` foi
+   alterado.
 
 ## 2026-09-18 — Domínio local, datas e decimais da importação (MOT-50)
 
