@@ -2,11 +2,13 @@ import { describe, expect, it } from 'vitest';
 
 import type {
   ImportBatch,
+  ImportCatalog,
   ImportedVersionRow,
   ImportStudy,
   ISODate,
 } from './domain';
 import { evaluateExecution } from './eligibility';
+import { catalogExecutionAvailability } from './eligibility';
 import { excludeOperation, projectPortfolio } from './portfolio';
 
 function iso(value: string): ISODate {
@@ -57,12 +59,73 @@ function projection(...rows: ImportedVersionRow[]) {
   return { study, projection: projectPortfolio(study) };
 }
 
-const CATALOG = {
-  status: 'CONFIGURADO' as const,
-  purposes: [{ code: 'SERVICO', directions: ['OUT', 'IN'] as const }],
-};
+function configuredCatalog(
+  directions: Array<'OUT' | 'IN'> = ['OUT', 'IN'],
+): ImportCatalog {
+  return {
+    schema_version: '1.0.0', catalog_version: 'a'.repeat(64),
+    status: 'CONFIGURADO', publicado_em_utc: '2026-09-17T00:00:00Z',
+    finalidades: [{
+      codigo: 'SERVICO', descricao: 'Finalidade fictícia',
+      aliquotas: directions.map((direcao) => ({ direcao, aliquota: '0.01' })),
+    }],
+    custos_padrao: {
+      iof_out: '0.035', iof_in: '0.0038', carry_cnr: '0.0004',
+      spread_rail_bps: '25', custo_fixo_remessa: '40',
+      custo_oportunidade_aa: '0', ptax: '5.4', iof_por_finalidade: [],
+    },
+    custos_origem: {
+      tipo: 'PADRAO_SINTETICO', fonte: 'Teste',
+      registrado_em_utc: '2026-09-17T00:00:00Z',
+    },
+    custos_calibrados: false,
+  };
+}
+
+const CATALOG = configuredCatalog();
 
 describe('evaluateExecution', () => {
+  it('exige catálogo carregado e versão registrada antes da execução', () => {
+    expect(catalogExecutionAvailability(null, null)).toEqual({
+      allowed: false, reason: 'CATALOG_NOT_LOADED',
+    });
+    expect(catalogExecutionAvailability({
+      schema_version: '1.0.0', catalog_version: 'a'.repeat(64),
+      status: 'NAO_CONFIGURADO', publicado_em_utc: '2026-09-17T00:00:00Z',
+      finalidades: [], custos_padrao: {
+        iof_out: '0.035', iof_in: '0.0038', carry_cnr: '0.0004',
+        spread_rail_bps: '25', custo_fixo_remessa: '40',
+        custo_oportunidade_aa: '0', ptax: '5.4', iof_por_finalidade: [],
+      },
+      custos_origem: {
+        tipo: 'PADRAO_SINTETICO', fonte: 'Teste',
+        registrado_em_utc: '2026-09-17T00:00:00Z',
+      }, custos_calibrados: false,
+    }, null)).toEqual({ allowed: false, reason: 'CATALOG_VERSION_MISSING' });
+  });
+
+  it('bloqueia catálogo sem regras suficientes ou com versão alterada', () => {
+    const configured = configuredCatalog();
+    const unavailable: ImportCatalog = {
+      ...configured,
+      status: 'NAO_CONFIGURADO',
+      finalidades: [],
+    };
+
+    expect(catalogExecutionAvailability(
+      unavailable,
+      unavailable.catalog_version,
+    )).toEqual({ allowed: false, reason: 'CATALOG_NOT_CONFIGURED' });
+    expect(catalogExecutionAvailability(
+      configured,
+      'f'.repeat(64),
+    )).toEqual({ allowed: false, reason: 'CATALOG_VERSION_CHANGED' });
+    expect(catalogExecutionAvailability(
+      configured,
+      configured.catalog_version,
+    )).toEqual({ allowed: true, reason: null });
+  });
+
   it('usa recorte inclusivo e somente knownDate para inclusão', () => {
     const { projection: portfolio } = projection(
       row('START', '2028-02-28', '2028-03-10'),
@@ -122,7 +185,7 @@ describe('evaluateExecution', () => {
 
     const assessment = evaluateExecution(portfolio, {
       start: iso('2026-10-17'), end: iso('2026-10-18'),
-    }, { status: 'NAO_CONFIGURADO' });
+    }, { ...configuredCatalog(), status: 'NAO_CONFIGURADO', finalidades: [] });
 
     expect(assessment.selected).toEqual([]);
     expect(assessment.omitted.invalid).toBe(2);
@@ -136,10 +199,7 @@ describe('evaluateExecution', () => {
     ['DESCONHECIDA', 'OUT', 'PURPOSE_UNKNOWN'],
     ['SERVICO', 'IN', 'PURPOSE_DIRECTION_INVALID'],
   ] as const)('invalida finalidade %s para direção %s', (purpose, direction, code) => {
-    const restrictedCatalog = {
-      status: 'CONFIGURADO' as const,
-      purposes: [{ code: 'SERVICO', directions: ['OUT'] as const }],
-    };
+    const restrictedCatalog = configuredCatalog(['OUT']);
     const { projection: portfolio } = projection(
       row('VALID', '2026-10-17', '2026-10-18'),
       row('INVALID', '2026-10-17', '2026-10-18', purpose, direction),
