@@ -6,7 +6,7 @@ import type {
 } from './domain';
 import { ImportValidationError } from './errors';
 
-function requireCell(
+export function requireOperationCell(
   value: string | null,
   field: keyof RawOperationCells,
 ): string {
@@ -32,7 +32,7 @@ function exactValue(
   return value;
 }
 
-function normalizeDirection(
+export function normalizeDirection(
   value: string | null,
 ): NormalizedOperation['direction'] {
   const direction = value?.trim().toUpperCase();
@@ -45,22 +45,22 @@ function normalizeDirection(
   return direction;
 }
 
-function normalizeOptionalTrimmed(
+export function normalizeProfileClassification(
   value: string | null,
 ): string | null {
   const normalized = value?.trim() ?? '';
   return normalized === '' ? null : normalized;
 }
 
-function normalizePurpose(value: string | null): string | null {
+export function normalizePurposeCode(value: string | null): string | null {
   if (value === null || value === '') {
     return null;
   }
   return exactValue(value, 'finalidade_codigo');
 }
 
-function normalizeClientName(value: string | null): string {
-  const name = requireCell(value, 'cliente_nome')
+export function normalizeClientName(value: string | null): string {
+  const name = requireOperationCell(value, 'cliente_nome')
     .trim()
     .replace(/\s+/g, ' ');
   if (name === '') {
@@ -72,32 +72,36 @@ function normalizeClientName(value: string | null): string {
   return name;
 }
 
+export function normalizeOperationId(value: string | null): string {
+  return exactValue(
+    requireOperationCell(value, 'operacao_id'),
+    'operacao_id',
+  );
+}
+
 export function normalizeOperation(
   raw: RawOperationCells,
 ): NormalizedOperation {
-  const operationId = exactValue(
-    requireCell(raw.operacao_id, 'operacao_id'),
-    'operacao_id',
-  );
+  const operationId = normalizeOperationId(raw.operacao_id);
   const knownDate = parseCivilDate(
-    requireCell(raw.data_conhecida, 'data_conhecida'),
+    requireOperationCell(raw.data_conhecida, 'data_conhecida'),
   );
   const deadlineDate = parseCivilDate(
-    requireCell(raw.data_limite, 'data_limite'),
+    requireOperationCell(raw.data_limite, 'data_limite'),
   );
 
   return {
     operationId,
     clientName: normalizeClientName(raw.cliente_nome),
-    profileClassification: normalizeOptionalTrimmed(
+    profileClassification: normalizeProfileClassification(
       raw.classificacao_perfil,
     ),
     direction: normalizeDirection(raw.direcao),
     knownDate,
     deadlineDate,
     valueBrl: parseBrlDecimal(
-      requireCell(raw.valor_brl, 'valor_brl'),
+      requireOperationCell(raw.valor_brl, 'valor_brl'),
     ),
-    purposeCode: normalizePurpose(raw.finalidade_codigo),
+    purposeCode: normalizePurposeCode(raw.finalidade_codigo),
   };
 }
