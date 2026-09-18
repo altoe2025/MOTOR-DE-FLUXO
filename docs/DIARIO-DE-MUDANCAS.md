@@ -33,7 +33,7 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-09-18, após o replay local de lotes da importação XLSX.
+Atualizada em 2026-09-18, após recorte e elegibilidade da importação XLSX.
 
 | Branch | Situação | Dono |
 |---|---|---|
@@ -44,6 +44,7 @@ Atualizada em 2026-09-18, após o replay local de lotes da importação XLSX.
 | `feat/importacao-xlsx-validacao` | MOT-52 concluída sobre a branch da T3; validação acumulativa, relatório por linha e duplicidade intralote | Codex |
 | `feat/importacao-xlsx-clientes` | MOT-53 concluída sobre a branch da T4; clientes canônicos e aliases explícitos, sem fuzzy matching | Codex |
 | `feat/importacao-xlsx-portfolio` | MOT-54 concluída sobre a branch da T5; replay determinístico, conflitos e reversão de lotes | Codex |
+| `feat/importacao-xlsx-elegibilidade` | MOT-55 concluída sobre a branch da T6; edições auditáveis, exclusão, recorte e assessment | Codex |
 | `netting/p1` | spike do P1, **NÃO MERGEAR** — dominado, e agora sabemos que a folga é zero em N ≥ 50. Só local, nunca foi pro GitHub | Felipe |
 | `fix/semantica-remessa-p0` | PR #11, mergeada | Felipe |
 | `fix/previsao-temporal-e-colunas-csv` | PR #12, mergeada | Gabriel |
@@ -73,6 +74,28 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
 ---
+
+## 2026-09-18 — Edições, recorte e elegibilidade da importação (MOT-55)
+
+1. **Sintoma.** O portfólio já reprocessava lotes e conflitos, mas ainda não havia
+   trilha de edição, exclusão reversível ou uma avaliação explícita das operações
+   que poderiam seguir para execução.
+
+2. **Causa.** Alterar diretamente a versão importada apagaria a origem do dado e
+   permitiria que um valor inválido vazasse parcialmente para o request. Recorte,
+   finalidade e conflitos também precisavam ser avaliados sem efeitos colaterais.
+
+3. **O que foi feito.** Na branch `feat/importacao-xlsx-elegibilidade`, criada sobre
+   a branch isolada da T6, edições, exclusões e restaurações passaram a ser eventos
+   append-only. Cada edição conserva valor original, anterior, novo, texto bruto,
+   instante e ID. Rascunhos inválidos ficam auditáveis sem substituir o valor
+   canônico. O assessment aplica recorte inclusivo somente pela data conhecida,
+   valida deadline e catálogo de finalidade, contabiliza omissões e bloqueia
+   conflito, recorte inválido, zero operações e mais de mil selecionadas.
+
+4. **O que isso invalida.** Nada nas regras financeiras ou sintéticas. Nenhum
+   arquivo de `motor/`, grade histórica ou conteúdo da `main` foi alterado. Não foi
+   criado fallback de IOF para finalidade ausente ou desconhecida.
 
 ## 2026-09-18 — Lotes, conflitos e reversão da importação (MOT-54)
 

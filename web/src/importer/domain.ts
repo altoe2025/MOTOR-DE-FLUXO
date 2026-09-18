@@ -20,6 +20,25 @@ export type ImportErrorCode =
   | 'EXECUTION_LIMIT_EXCEEDED'
   | 'UNRESOLVED_CONFLICT';
 
+export type EditableField =
+  | 'direction'
+  | 'knownDate'
+  | 'deadlineDate'
+  | 'valueBrl'
+  | 'purposeCode';
+
+export type ImportIssueCode = ImportErrorCode
+  | 'RECUT_INVERTED'
+  | 'CATALOG_NOT_CONFIGURED'
+  | 'ZERO_EXECUTABLE_OPERATIONS';
+
+export type ImportIssue = {
+  code: ImportIssueCode;
+  message: string;
+  operationId: string | null;
+  field: EditableField | null;
+};
+
 export type NormalizedOperation = {
   operationId: string;
   clientName: string;
@@ -117,6 +136,24 @@ export type ImportEvent =
       occurredAtUtc: string;
       operationId: string;
       selectedVersionId: UUID;
+    }
+  | {
+      kind: 'OPERATION_EDITED';
+      id: UUID;
+      eventSequence: number;
+      occurredAtUtc: string;
+      operationId: string;
+      field: EditableField;
+      rawValue: string;
+      normalizedValue: string | null;
+      error: ImportIssue | null;
+    }
+  | {
+      kind: 'OPERATION_EXCLUDED' | 'OPERATION_RESTORED';
+      id: UUID;
+      eventSequence: number;
+      occurredAtUtc: string;
+      operationId: string;
     };
 
 export type ConflictResolution = {
@@ -138,6 +175,24 @@ export type PortfolioOperation = PortfolioVersion & {
   originVersionIds: UUID[];
 };
 
+export type OperationEditAudit = {
+  eventId: UUID;
+  at: string;
+  field: EditableField;
+  originalValue: string | null;
+  previousValue: string | null;
+  nextValue: string | null;
+  rawValue: string;
+  error: ImportIssue | null;
+};
+
+export type ProjectedOperation = PortfolioOperation & {
+  audit: { edits: OperationEditAudit[] };
+  excluded: boolean;
+  executable: boolean;
+  issues: ImportIssue[];
+};
+
 export type PortfolioConflict = {
   operationId: string;
   versionIds: UUID[];
@@ -147,12 +202,40 @@ export type PortfolioProjection = {
   versions: PortfolioVersion[];
   versionsByOperationId: Record<string, PortfolioVersion[]>;
   currentOperations: PortfolioOperation[];
+  operations: ProjectedOperation[];
+  excludedOperationIds: string[];
   conflicts: PortfolioConflict[];
   counts: {
     versions: number;
     currentOperations: number;
     conflicts: number;
   };
+};
+
+export type ImportCatalog =
+  | { status: 'NAO_CONFIGURADO' }
+  | {
+      status: 'CONFIGURADO';
+      purposes: Array<{
+        code: string;
+        directions: readonly NormalizedOperation['direction'][];
+      }>;
+    };
+
+export type ExecutableOperation = ProjectedOperation;
+
+export type ExecutionAssessment = {
+  selected: ExecutableOperation[];
+  blockers: ImportIssue[];
+  issues: ImportIssue[];
+  omitted: {
+    outsideRecut: number;
+    invalid: number;
+    excluded: number;
+    superseded: number;
+  };
+  requiresPartialConfirmation: boolean;
+  periodDays: number;
 };
 
 export type ImportStudy = {
