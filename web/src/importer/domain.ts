@@ -53,6 +53,8 @@ export type ImportFileMetadata = {
 export type ImportRowError = {
   code: ImportErrorCode;
   field: keyof RawOperationCells | null;
+  rowNumber: number;
+  value: string | null;
   message: string;
 };
 
@@ -61,6 +63,20 @@ export type ImportedRow = {
   raw: RawOperationCells;
   normalized: NormalizedOperation | null;
   errors: ImportRowError[];
+};
+
+export type ImportValidationSummary = {
+  total: number;
+  valid: number;
+  invalid: number;
+};
+
+export type ImportBatchDraft = {
+  id: UUID;
+  importedAtUtc: string;
+  file: Pick<ImportFileMetadata, 'fileName' | 'fileSize' | 'sha256'>;
+  rows: ImportedRow[];
+  summary: ImportValidationSummary;
 };
 
 export type ImportBatch = {

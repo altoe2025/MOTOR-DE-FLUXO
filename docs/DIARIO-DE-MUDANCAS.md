@@ -33,7 +33,7 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-09-18, após a criação do parser XLSX seguro no navegador.
+Atualizada em 2026-09-18, após a validação por linha da importação XLSX.
 
 | Branch | Situação | Dono |
 |---|---|---|
@@ -41,6 +41,7 @@ Atualizada em 2026-09-18, após a criação do parser XLSX seguro no navegador.
 | `feat/importacao-xlsx-proveniencia` | MOT-49 concluída localmente; contrato aceita dado observado e restringe não coletado a eFX falso | Codex |
 | `feat/importacao-xlsx-dominio` | MOT-50 concluída sobre a branch da T1; domínio local, datas civis, decimais e normalização canônica | Codex |
 | `feat/importacao-xlsx-parser` | MOT-51 concluída sobre a branch da T2; preflight OOXML, parser e Worker cancelável | Codex |
+| `feat/importacao-xlsx-validacao` | MOT-52 concluída sobre a branch da T3; validação acumulativa, relatório por linha e duplicidade intralote | Codex |
 | `netting/p1` | spike do P1, **NÃO MERGEAR** — dominado, e agora sabemos que a folga é zero em N ≥ 50. Só local, nunca foi pro GitHub | Felipe |
 | `fix/semantica-remessa-p0` | PR #11, mergeada | Felipe |
 | `fix/previsao-temporal-e-colunas-csv` | PR #12, mergeada | Gabriel |
@@ -70,6 +71,27 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
 ---
+
+## 2026-09-18 — Validação e relatório por linha da importação (MOT-52)
+
+1. **Sintoma.** O parser seguro já entregava as células brutas, mas uma célula
+   inválida ainda não podia ser apresentada junto das demais inconsistências da
+   mesma linha, e não havia resumo para carregamento parcial.
+
+2. **Causa.** A normalização canônica da T2 falha de forma imediata, adequada para
+   uma operação isolada. A importação em lote precisa validar cada campo sem perder
+   os valores originais nem interromper as outras linhas.
+
+3. **O que foi feito.** Na branch `feat/importacao-xlsx-validacao`, criada sobre a
+   branch isolada da T3, foi adicionado um relatório com linha, campo, código e valor
+   original. Erros são acumulados, linhas válidas continuam executáveis, finalidade
+   ausente é registrada sem bloquear a incorporação e toda ocorrência de ID repetido
+   dentro do lote é impedida de virar versão vigente. O cenário parcial preserva as
+   dez linhas e normaliza somente as seis válidas.
+
+4. **O que isso invalida.** Nada nas regras financeiras ou sintéticas. Nenhum
+   arquivo de `motor/`, grade histórica ou conteúdo da `main` foi alterado. O
+   arquivo original continua restrito ao navegador.
 
 ## 2026-09-18 — Parser XLSX seguro no navegador (MOT-51)
 
