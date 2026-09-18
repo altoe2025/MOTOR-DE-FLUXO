@@ -33,11 +33,12 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-09-16, após o gate final da política de autonetting preferencial.
+Atualizada em 2026-09-18, após a ampliação do contrato de proveniência da importação XLSX.
 
 | Branch | Situação | Dono |
 |---|---|---|
 | `main` | Autonetting preferencial MOT-35–MOT-46 integrado pelo PR #36, com o gate protegido `pytest` verde | os dois |
+| `feat/importacao-xlsx-proveniencia` | MOT-49 concluída localmente; contrato aceita dado observado e restringe não coletado a eFX falso | Codex |
 | `netting/p1` | spike do P1, **NÃO MERGEAR** — dominado, e agora sabemos que a folga é zero em N ≥ 50. Só local, nunca foi pro GitHub | Felipe |
 | `fix/semantica-remessa-p0` | PR #11, mergeada | Felipe |
 | `fix/previsao-temporal-e-colunas-csv` | PR #12, mergeada | Gabriel |
@@ -67,6 +68,26 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
 ---
+
+## 2026-09-18 — Proveniência observada e eFX não coletado (MOT-49)
+
+1. **Sintoma.** O contrato recusava `DADO_OBSERVADO` e não conseguia representar
+   que a informação de eFX não foi coletada durante a importação de operações
+   reais.
+
+2. **Causa.** `DADO_OBSERVADO` ainda estava reservado por uma validação temporária
+   e o conjunto de origens não incluía `NAO_COLETADO` nem sua regra de contexto.
+
+3. **O que foi feito.** Na branch `feat/importacao-xlsx-proveniencia`, o contrato
+   passou a aceitar as quatro origens previstas. `NAO_COLETADO` só é válido no
+   caminho `/ordens/{i}/eh_efx` quando o valor resolvido é exatamente `false`.
+   Foram adicionados testes de aceitação e rejeição, os artefatos OpenAPI e
+   TypeScript foram regenerados de forma determinística e os gates Python e
+   frontend passaram.
+
+4. **O que isso invalida.** Fica inválida a restrição temporária que reservava
+   `DADO_OBSERVADO`. Nada muda nas regras financeiras, nas aprovações sintéticas,
+   no conteúdo de `motor/` ou nas grades históricas.
 
 ## 2026-09-16 — Gate final do autonetting preferencial (MOT-46)
 

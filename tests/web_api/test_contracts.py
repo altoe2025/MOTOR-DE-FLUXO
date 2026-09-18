@@ -54,6 +54,39 @@ def test_decimal_field_keeps_one_value_and_its_origin(reference_payload):
         )
 
 
+def test_observed_origin_is_accepted_for_imported_amount(reference_payload):
+    reference_payload["proveniencia"]["/ordens/0/valor_brl"][
+        "tipo"
+    ] = "DADO_OBSERVADO"
+
+    assert PreviaRequest.model_validate(reference_payload)
+
+
+def test_not_collected_is_accepted_only_for_false_efx(reference_payload):
+    path = "/ordens/0/eh_efx"
+    reference_payload["cenario"]["ordens"][0]["eh_efx"] = False
+    reference_payload["proveniencia"][path]["tipo"] = "NAO_COLETADO"
+
+    assert PreviaRequest.model_validate(reference_payload)
+
+
+@pytest.mark.parametrize("path", ["/janela_dias", "/ordens/0/valor_brl"])
+def test_not_collected_is_rejected_outside_efx(reference_payload, path):
+    reference_payload["proveniencia"][path]["tipo"] = "NAO_COLETADO"
+
+    with pytest.raises(ValidationError):
+        PreviaRequest.model_validate(reference_payload)
+
+
+def test_not_collected_rejects_true_efx(reference_payload):
+    path = "/ordens/0/eh_efx"
+    reference_payload["cenario"]["ordens"][0]["eh_efx"] = True
+    reference_payload["proveniencia"][path]["tipo"] = "NAO_COLETADO"
+
+    with pytest.raises(ValidationError):
+        PreviaRequest.model_validate(reference_payload)
+
+
 def test_server_primitives_accept_already_typed_values():
     uuid_value = UUID("00000000-0000-4000-8000-000000000001")
     instant = datetime(2026, 9, 11, tzinfo=UTC)
@@ -102,7 +135,6 @@ def test_integer_fields_do_not_coerce(reference_payload, value):
         "duplicate_iof",
         "unknown_pointer",
         "missing_origin",
-        "observed_origin",
         "naive_timestamp",
     ],
 )
@@ -130,8 +162,6 @@ def test_rejects_ambiguous_or_unsupported_input(reference_payload, mutation):
         origins["/inexistente"] = deepcopy(origins[path])
     elif mutation == "missing_origin":
         del origins[path]
-    elif mutation == "observed_origin":
-        origins[path]["tipo"] = "DADO_OBSERVADO"
     elif mutation == "naive_timestamp":
         origins[path]["registrado_em_utc"] = "2026-09-11T00:00:00"
     with pytest.raises(ValidationError):

@@ -60,7 +60,12 @@ def validate_identifier(value: str) -> str:
 
 
 class OrigemValor(StrictModel):
-    tipo: Literal["PADRAO_SINTETICO", "ESTIMATIVA_USUARIO", "DADO_OBSERVADO"]
+    tipo: Literal[
+        "PADRAO_SINTETICO",
+        "ESTIMATIVA_USUARIO",
+        "DADO_OBSERVADO",
+        "NAO_COLETADO",
+    ]
     fonte: Annotated[str, Field(strict=True, min_length=1, max_length=200)]
     registrado_em_utc: DateTimeValue
 
@@ -69,11 +74,4 @@ class OrigemValor(StrictModel):
     def require_timezone(cls, value: datetime) -> datetime:
         if value.tzinfo is None or value.utcoffset() is None:
             raise ValueError("registrado_em_utc deve conter fuso")
-        return value
-
-    @field_validator("tipo")
-    @classmethod
-    def reject_reserved_observed_origin(cls, value: str) -> str:
-        if value == "DADO_OBSERVADO":
-            raise ValueError("DADO_OBSERVADO não é aceito nesta etapa")
         return value
