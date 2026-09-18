@@ -83,8 +83,11 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 3. **O que foi feito.** Na branch `feat/importacao-xlsx-dominio`, criada sobre a
    branch isolada da T1, foram adicionados tipos locais com schema `1.0.0`,
    erros por código, datas calculadas em UTC, decimais exatos com `decimal.js` e
-   normalização das células. O gate aprovou 62 testes focados, 151 testes
-   unitários completos, typecheck, lint e build.
+   normalização das células. Após o pente-fino, o gate aprovou 65 testes focados,
+   154 testes unitários completos, typecheck, lint e build. A revisão passou a
+   aceitar também ISO civil estrito vindo do parser, cobriu corretamente os anos
+   `0001`–`0099` e bloqueou somas que sairiam do calendário ISO de quatro dígitos.
+   O PR da T1 foi redirecionado da `main` para `feat/importacao-xlsx-base`.
 
 4. **O que isso invalida.** Nada nas regras financeiras ou sintéticas. Nenhum
    arquivo de `motor/`, contrato HTTP, grade histórica ou conteúdo da `main`

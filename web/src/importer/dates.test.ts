@@ -22,7 +22,6 @@ describe('parseCivilDate', () => {
     '31/04/2026',
     '00/01/2026',
     '01/13/2026',
-    '2026-10-17',
     '17/10/26',
     '17/10/2026T00:00:00',
   ])('rejeita a data civil inválida %s', (value) => {
@@ -31,6 +30,15 @@ describe('parseCivilDate', () => {
 
   it('aceita texto civil sem timezone', () => {
     expect(parseCivilDate('17/10/2026')).toBe('2026-10-17');
+  });
+
+  it('aceita uma data ISO civil produzida pelo parser XLSX', () => {
+    expect(parseCivilDate('2026-10-17')).toBe('2026-10-17');
+  });
+
+  it('preserva anos ISO entre 0001 e 0099', () => {
+    expect(parseCivilDate('0001-01-01')).toBe('0001-01-01');
+    expect(parseCivilDate('0099-12-31')).toBe('0099-12-31');
   });
 
   it('lê os componentes UTC de uma célula Excel convertida em Date', () => {
@@ -93,4 +101,16 @@ describe('addCivilDays', () => {
       addCivilDays('2027-01-01' as ISODate, -1),
     ).toBe('2026-12-31');
   });
+
+  it.each([
+    ['9999-12-31', 1],
+    ['0001-01-01', -1],
+  ] as const)(
+    'rejeita resultado fora do calendário ISO para %s e %i dia',
+    (start, days) => {
+      expect(() =>
+        addCivilDays(start as ISODate, days),
+      ).toThrow('VALUE_OUT_OF_RANGE');
+    },
+  );
 });

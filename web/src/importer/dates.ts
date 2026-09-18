@@ -12,6 +12,13 @@ function invalidDate(): never {
   );
 }
 
+function dateOutOfRange(): never {
+  throw new ImportValidationError(
+    'VALUE_OUT_OF_RANGE',
+    'data fora do calendário ISO suportado',
+  );
+}
+
 function toUtcTimestamp(
   year: number,
   month: number,
@@ -20,8 +27,10 @@ function toUtcTimestamp(
   if (year < 1 || year > 9999) {
     return invalidDate();
   }
-  const timestamp = Date.UTC(year, month - 1, day);
-  const date = new Date(timestamp);
+  const date = new Date(0);
+  date.setUTCHours(0, 0, 0, 0);
+  date.setUTCFullYear(year, month - 1, day);
+  const timestamp = date.getTime();
   if (
     date.getUTCFullYear() !== year
     || date.getUTCMonth() !== month - 1
@@ -62,6 +71,17 @@ export function parseCivilDate(value: string | Date): ISODate {
     );
   }
 
+  const isoMatch = ISO_DATE_PATTERN.exec(value);
+  if (isoMatch !== null) {
+    return formatIsoDate(
+      toUtcTimestamp(
+        Number(isoMatch[1]),
+        Number(isoMatch[2]),
+        Number(isoMatch[3]),
+      ),
+    );
+  }
+
   const match = CIVIL_DATE_PATTERN.exec(value);
   if (match === null) {
     return invalidDate();
@@ -91,7 +111,15 @@ export function addCivilDays(
       'quantidade de dias deve ser inteira',
     );
   }
-  return formatIsoDate(
-    parseIsoTimestamp(start) + days * MILLISECONDS_PER_DAY,
+  const timestamp = (
+    parseIsoTimestamp(start) + days * MILLISECONDS_PER_DAY
   );
+  const result = new Date(timestamp);
+  if (
+    result.getUTCFullYear() < 1
+    || result.getUTCFullYear() > 9999
+  ) {
+    return dateOutOfRange();
+  }
+  return formatIsoDate(timestamp);
 }
