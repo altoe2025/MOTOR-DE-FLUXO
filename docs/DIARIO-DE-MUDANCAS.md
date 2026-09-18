@@ -33,7 +33,7 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-09-18, após o pente-fino das tarefas MOT-49–MOT-55.
+Atualizada em 2026-09-18, após a persistência local da importação XLSX.
 
 | Branch | Situação | Dono |
 |---|---|---|
@@ -45,6 +45,7 @@ Atualizada em 2026-09-18, após o pente-fino das tarefas MOT-49–MOT-55.
 | `feat/importacao-xlsx-clientes` | MOT-53 concluída sobre a branch da T4; clientes canônicos e aliases explícitos, sem fuzzy matching | Codex |
 | `feat/importacao-xlsx-portfolio` | MOT-54 concluída sobre a branch da T5; replay determinístico, conflitos e reversão de lotes | Codex |
 | `feat/importacao-xlsx-elegibilidade` | MOT-55 concluída e pilha MOT-49–MOT-55 revisada; metadados, replay, aliases, omissões e preflight endurecidos | Codex |
+| `feat/importacao-xlsx-indexeddb` | MOT-56 concluída sobre a branch da T7; sete stores, isolamento por conta, CAS, idempotência e exclusão local | Codex |
 | `netting/p1` | spike do P1, **NÃO MERGEAR** — dominado, e agora sabemos que a folga é zero em N ≥ 50. Só local, nunca foi pro GitHub | Felipe |
 | `fix/semantica-remessa-p0` | PR #11, mergeada | Felipe |
 | `fix/previsao-temporal-e-colunas-csv` | PR #12, mergeada | Gabriel |
@@ -74,6 +75,28 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
 ---
+
+## 2026-09-18 — Persistência local da importação XLSX (MOT-56)
+
+1. **Sintoma.** Estudos, lotes, versões, eventos, clientes, aliases e execuções da
+   importação existiam apenas em memória. Duas abas poderiam partir da mesma revisão
+   sem uma barreira atômica, e ainda não havia exclusão completa por estudo ou conta.
+
+2. **Causa.** A pilha das tarefas anteriores era deliberadamente pura e não possuía
+   uma porta transacional. Expor IndexedDB às telas ou aceitar callbacks dentro da
+   transação impediria serialização, repetição idempotente e testes determinísticos.
+
+3. **O que foi feito.** Na branch `feat/importacao-xlsx-indexeddb`, criada sobre a
+   T7, foi adicionada a porta `ImportRepository` e uma implementação com sete stores,
+   banco nomeado por projeto e conta, projeções por `study_id`, CAS por revisão e
+   `operationId`, transações com confirmação apenas em `oncomplete`, fechamento em
+   `versionchange`, avisos mínimos entre abas e exclusão por estudo ou banco exato.
+   O arquivo XLSX original e qualquer valor binário são recusados antes da transação.
+   `fake-indexeddb` 6.2.5 ficou fixado somente como dependência de desenvolvimento.
+
+4. **O que isso invalida.** Nada nas regras financeiras ou sintéticas. Nenhum
+   arquivo de `motor/`, grade histórica, medição anterior ou conteúdo da `main` foi
+   alterado. Logout fecha a conexão, mas deliberadamente preserva os dados locais.
 
 ## 2026-09-18 — Pente-fino da importação XLSX (MOT-55)
 
