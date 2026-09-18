@@ -33,12 +33,13 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-09-18, após a ampliação do contrato de proveniência da importação XLSX.
+Atualizada em 2026-09-18, após a criação do domínio local da importação XLSX.
 
 | Branch | Situação | Dono |
 |---|---|---|
 | `main` | Autonetting preferencial MOT-35–MOT-46 integrado pelo PR #36, com o gate protegido `pytest` verde | os dois |
 | `feat/importacao-xlsx-proveniencia` | MOT-49 concluída localmente; contrato aceita dado observado e restringe não coletado a eFX falso | Codex |
+| `feat/importacao-xlsx-dominio` | MOT-50 concluída sobre a branch da T1; domínio local, datas civis, decimais e normalização canônica | Codex |
 | `netting/p1` | spike do P1, **NÃO MERGEAR** — dominado, e agora sabemos que a folga é zero em N ≥ 50. Só local, nunca foi pro GitHub | Felipe |
 | `fix/semantica-remessa-p0` | PR #11, mergeada | Felipe |
 | `fix/previsao-temporal-e-colunas-csv` | PR #12, mergeada | Gabriel |
@@ -68,6 +69,29 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
 ---
+
+## 2026-09-18 — Domínio local, datas e decimais da importação (MOT-50)
+
+1. **Sintoma.** A importação XLSX ainda não tinha tipos persistidos próprios nem
+   funções canônicas para interpretar datas civis, valores em BRL e as oito
+   células de uma operação.
+
+2. **Causa.** A etapa anterior ampliou apenas a proveniência do contrato. Criar o
+   parser antes do domínio local deixaria regras de normalização misturadas ao
+   Worker, à UI ou ao transporte.
+
+3. **O que foi feito.** Na branch `feat/importacao-xlsx-dominio`, criada sobre a
+   branch isolada da T1, foram adicionados tipos locais com schema `1.0.0`,
+   erros por código, datas calculadas em UTC, decimais exatos com `decimal.js` e
+   normalização das células. Após o pente-fino, o gate aprovou 65 testes focados,
+   154 testes unitários completos, typecheck, lint e build. A revisão passou a
+   aceitar também ISO civil estrito vindo do parser, cobriu corretamente os anos
+   `0001`–`0099` e bloqueou somas que sairiam do calendário ISO de quatro dígitos.
+   O PR da T1 foi redirecionado da `main` para `feat/importacao-xlsx-base`.
+
+4. **O que isso invalida.** Nada nas regras financeiras ou sintéticas. Nenhum
+   arquivo de `motor/`, contrato HTTP, grade histórica ou conteúdo da `main`
+   foi alterado.
 
 ## 2026-09-18 — Proveniência observada e eFX não coletado (MOT-49)
 
