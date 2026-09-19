@@ -1,0 +1,195 @@
+{
+  "$id": "https://motor-de-fluxo.local/study/study.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "Identifier": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "Digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "UtcInstant": { "type": "string", "format": "date-time", "pattern": "Z$" },
+    "ObservedSource": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "OBSERVED_CASE" },
+        "caseId": { "$ref": "#/$defs/Identifier" },
+        "caseRevision": { "type": "integer", "minimum": 1 }
+      },
+      "required": ["kind", "caseId", "caseRevision"]
+    },
+    "AuthoredSource": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "AUTHORED" },
+        "authoredPortfolioId": { "$ref": "#/$defs/Identifier" }
+      },
+      "required": ["kind", "authoredPortfolioId"]
+    },
+    "SyntheticRecipe": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "exampleId": { "$ref": "#/$defs/Identifier" },
+        "seeds": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 }
+        },
+        "preparationVersion": { "$ref": "#/$defs/Identifier" },
+        "generatorVersion": { "$ref": "#/$defs/Identifier" },
+        "motorBuildSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "generationFingerprint": { "$ref": "#/$defs/Digest" }
+      },
+      "required": [
+        "exampleId", "seeds", "preparationVersion", "generatorVersion",
+        "motorBuildSha", "generationFingerprint"
+      ]
+    },
+    "SyntheticSource": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "SYNTHETIC" },
+        "recipe": { "$ref": "#/$defs/SyntheticRecipe" }
+      },
+      "required": ["kind", "recipe"]
+    },
+    "PortfolioSource": {
+      "oneOf": [
+        { "$ref": "#/$defs/ObservedSource" },
+        { "$ref": "#/$defs/AuthoredSource" },
+        { "$ref": "#/$defs/SyntheticSource" }
+      ]
+    },
+    "PortfolioSourceSnapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "source": { "$ref": "#/$defs/PortfolioSource" },
+        "capturedAt": { "$ref": "#/$defs/UtcInstant" },
+        "orders": {
+          "type": "array",
+          "items": { "$ref": "https://motor-de-fluxo.local/contracts/schemas.json#/$defs/OrdemEntrada" }
+        },
+        "provenance": {
+          "type": "array",
+          "items": { "$ref": "https://motor-de-fluxo.local/cases/observedCase.schema.json#/$defs/FieldProvenance" }
+        },
+        "observedOutcome": {
+          "oneOf": [
+            { "$ref": "https://motor-de-fluxo.local/cases/observedCase.schema.json#/$defs/ObservedOutcome" },
+            { "type": "null" }
+          ]
+        },
+        "sourceFingerprint": { "$ref": "#/$defs/Digest" }
+      },
+      "required": [
+        "source", "capturedAt", "orders", "provenance", "observedOutcome", "sourceFingerprint"
+      ]
+    },
+    "PremisesDocument": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "costs": { "$ref": "https://motor-de-fluxo.local/contracts/schemas.json#/$defs/CustoEntrada" },
+        "windowDays": { "type": "integer", "minimum": 1, "maximum": 730 }
+      },
+      "required": ["costs", "windowDays"]
+    },
+    "PeriodDocument": {
+      "oneOf": [
+        { "$ref": "https://motor-de-fluxo.local/contracts/schemas.json#/$defs/PeriodoLegado" },
+        { "$ref": "https://motor-de-fluxo.local/contracts/schemas.json#/$defs/PeriodoNatural" }
+      ]
+    },
+    "ScenarioDocument": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/Identifier" },
+        "revision": { "type": "integer", "minimum": 1 },
+        "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "sourceSnapshot": { "$ref": "#/$defs/PortfolioSourceSnapshot" },
+        "premises": { "$ref": "#/$defs/PremisesDocument" },
+        "period": { "$ref": "#/$defs/PeriodDocument" },
+        "inputFingerprint": { "$ref": "#/$defs/Digest" }
+      },
+      "required": [
+        "id", "revision", "name", "sourceSnapshot", "premises", "period", "inputFingerprint"
+      ]
+    },
+    "ExecutionRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/Identifier" },
+        "scenarioId": { "$ref": "#/$defs/Identifier" },
+        "scenarioRevision": { "type": "integer", "minimum": 1 },
+        "inputFingerprint": { "$ref": "#/$defs/Digest" },
+        "requestSnapshot": { "$ref": "https://motor-de-fluxo.local/contracts/schemas.json#/$defs/PreviaRequest" },
+        "engineVersion": { "$ref": "#/$defs/Identifier" },
+        "contractVersion": { "$ref": "#/$defs/Identifier" },
+        "status": { "enum": ["PREPARING", "RUNNING", "SUCCEEDED", "FAILED", "INTERRUPTED"] },
+        "envelope": {
+          "oneOf": [
+            { "$ref": "https://motor-de-fluxo.local/contracts/schemas.json#/$defs/PreviewEnvelope" },
+            { "type": "null" }
+          ]
+        },
+        "observedComparison": { "type": ["object", "null"] },
+        "createdAt": { "$ref": "#/$defs/UtcInstant" },
+        "finishedAt": {
+          "oneOf": [{ "$ref": "#/$defs/UtcInstant" }, { "type": "null" }]
+        }
+      },
+      "required": [
+        "id", "scenarioId", "scenarioRevision", "inputFingerprint", "requestSnapshot",
+        "engineVersion", "contractVersion", "status", "envelope", "observedComparison",
+        "createdAt", "finishedAt"
+      ],
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "SUCCEEDED" } }, "required": ["status"] },
+          "then": {
+            "properties": {
+              "envelope": { "$ref": "https://motor-de-fluxo.local/contracts/schemas.json#/$defs/PreviewEnvelope" },
+              "finishedAt": { "$ref": "#/$defs/UtcInstant" }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "status": { "enum": ["PREPARING", "RUNNING"] } }, "required": ["status"] },
+          "then": {
+            "properties": { "envelope": { "type": "null" }, "finishedAt": { "type": "null" } }
+          }
+        },
+        {
+          "if": { "properties": { "status": { "enum": ["FAILED", "INTERRUPTED"] } }, "required": ["status"] },
+          "then": {
+            "properties": {
+              "envelope": { "type": "null" },
+              "finishedAt": { "$ref": "#/$defs/UtcInstant" }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "const": "2.0.0" },
+    "id": { "$ref": "#/$defs/Identifier" },
+    "ownerSub": { "$ref": "#/$defs/Identifier" },
+    "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+    "revision": { "type": "integer", "minimum": 1 },
+    "baseScenarioId": { "$ref": "#/$defs/Identifier" },
+    "scenarios": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/ScenarioDocument" } },
+    "executions": { "type": "array", "items": { "$ref": "#/$defs/ExecutionRecord" } },
+    "createdAt": { "$ref": "#/$defs/UtcInstant" },
+    "updatedAt": { "$ref": "#/$defs/UtcInstant" },
+    "deletedAt": { "oneOf": [{ "$ref": "#/$defs/UtcInstant" }, { "type": "null" }] }
+  },
+  "required": [
+    "schemaVersion", "id", "ownerSub", "name", "revision", "baseScenarioId",
+    "scenarios", "executions", "createdAt", "updatedAt", "deletedAt"
+  ]
+}

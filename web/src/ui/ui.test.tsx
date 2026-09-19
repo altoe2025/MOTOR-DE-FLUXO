@@ -5,7 +5,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 
-import type { PreviewEnvelope } from '../study/types';
+import type { PreviewEnvelope } from '../study/model';
 import { Button } from './Button';
 import { ComparisonSummary } from './ComparisonSummary';
 import { CostTable } from './CostTable';

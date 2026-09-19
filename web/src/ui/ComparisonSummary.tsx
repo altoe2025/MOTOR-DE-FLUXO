@@ -1,4 +1,4 @@
-import type { PreviewEnvelope } from '../study/types';
+import type { PreviewEnvelope } from '../study/model';
 import { formatFraction, formatMoney } from '../presentation/format';
 
 export function ComparisonSummary({ envelope }: { envelope: PreviewEnvelope }) {

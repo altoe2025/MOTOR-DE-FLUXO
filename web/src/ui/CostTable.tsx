@@ -1,4 +1,4 @@
-import type { PreviewEnvelope } from '../study/types';
+import type { PreviewEnvelope } from '../study/model';
 import { formatMoney } from '../presentation/format';
 
 const rows = [
