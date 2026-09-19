@@ -19,6 +19,13 @@ export function formatMoney(value: DecimalText | null): string {
   return value === null ? unavailable : `R$\u00a0${localized(fixed(value, 2))}`;
 }
 
+export function formatSignedMoney(value: DecimalText | null): string {
+  if (value === null) return unavailable;
+  const decimal = new Decimal(value);
+  const sign = decimal.isPositive() && !decimal.isZero() ? '+' : '';
+  return `${sign}${formatMoney(value)}`;
+}
+
 export function formatFraction(value: DecimalText | null): string {
   return value === null ? unavailable : `${localized(fixed(new Decimal(value).times(100).toFixed(), 2))}%`;
 }

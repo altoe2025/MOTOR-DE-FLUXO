@@ -1,5 +1,6 @@
 import type { components } from '../api/generated';
 import type { FieldProvenance, ObservedOutcome } from '../cases/domain';
+import type { ObservedComparison } from '../cases/observedComparison';
 
 export type DeepReadonly<T> = T extends (...args: never[]) => unknown
   ? T
@@ -76,8 +77,6 @@ export type ScenarioDraft = Omit<ScenarioDocument, 'inputFingerprint'> &
   Readonly<{ inputFingerprint?: string }>;
 
 export type ExecutionStatus = 'PREPARING' | 'RUNNING' | 'SUCCEEDED' | 'FAILED' | 'INTERRUPTED';
-export type ObservedComparison = Readonly<Record<string, unknown>>;
-
 export type ExecutionRecord = Readonly<{
   id: string;
   scenarioId: string;
