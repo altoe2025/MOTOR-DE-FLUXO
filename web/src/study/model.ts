@@ -180,6 +180,7 @@ export type StudyValidationIssue = Readonly<{
     | 'DUPLICATE_ID'
     | 'MISSING_SCENARIO_REVISION'
     | 'INCOMPATIBLE_ENVELOPE'
+    | 'INCOMPATIBLE_EXECUTION_SNAPSHOT'
     | 'SOURCE_FINGERPRINT_MISMATCH'
     | 'INPUT_FINGERPRINT_MISMATCH';
   message: string;

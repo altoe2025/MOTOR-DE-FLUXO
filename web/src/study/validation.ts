@@ -4,6 +4,7 @@ import addFormats from 'ajv-formats';
 import httpSchemas from '../api/schemas.json';
 import observedCaseSchema from '../cases/observedCase.schema.json';
 import {
+  canonical,
   canonicalInputSnapshot,
   fingerprintPortfolioSource,
   fingerprintScenarioInput,
@@ -63,6 +64,27 @@ function envelopeIsCompatible(execution: ExecutionRecord, study: StudyDocument):
     });
 }
 
+function executionSnapshotIsCompatible(execution: ExecutionRecord): boolean {
+  const { sourceSnapshot, premisesSnapshot, periodSnapshot } = execution;
+  if (sourceSnapshot === undefined && premisesSnapshot === undefined && periodSnapshot === undefined) {
+    return true;
+  }
+  if (sourceSnapshot === undefined || premisesSnapshot === undefined || periodSnapshot === undefined) {
+    return false;
+  }
+  const ordered = (orders: typeof sourceSnapshot.orders) => [...orders]
+    .map((order) => structuredClone(order))
+    .sort((left, right) => left.id.localeCompare(right.id));
+  const horizon = 'executableHorizonDays' in periodSnapshot
+    ? periodSnapshot.executableHorizonDays
+    : periodSnapshot.httpPeriod.dias_aquecimento + periodSnapshot.httpPeriod.periodo_medicao_dias;
+  return canonical(ordered(sourceSnapshot.orders)) === canonical(ordered(execution.requestSnapshot.cenario.ordens))
+    && canonical(premisesSnapshot.costs) === canonical(execution.requestSnapshot.cenario.custo)
+    && premisesSnapshot.windowDays === execution.requestSnapshot.cenario.janela_dias
+    && canonical(periodSnapshot.httpPeriod) === canonical(execution.requestSnapshot.periodo)
+    && horizon === execution.requestSnapshot.cenario.horizonte_dias;
+}
+
 export function validateExecutionRecord(
   value: unknown,
   study: StudyDocument,
@@ -74,6 +96,16 @@ export function validateExecutionRecord(
     return {
       ok: false,
       issues: [issue('/envelope', 'INCOMPATIBLE_ENVELOPE', 'Envelope incompatível com a execução.')],
+    };
+  }
+  if (!executionSnapshotIsCompatible(value)) {
+    return {
+      ok: false,
+      issues: [issue(
+        '/sourceSnapshot',
+        'INCOMPATIBLE_EXECUTION_SNAPSHOT',
+        'Snapshot analítico incompatível com o request histórico.',
+      )],
     };
   }
   return { ok: true, value };

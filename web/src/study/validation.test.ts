@@ -4,6 +4,7 @@ import referenceRequest from '../../../contracts/fixtures/reference-request.json
 import referenceResult from '../../../contracts/fixtures/reference-result.json';
 import { createStudy } from './domain';
 import { FIXTURE_NOW, FIXTURE_OWNER, makeScenarioDraft } from './fixtures';
+import { fingerprintPortfolioSource } from './fingerprints';
 import type {
   DeepMutable,
   ExecutionRecord,
@@ -109,6 +110,33 @@ describe('validateStudyDocument', () => {
     expect(result).toEqual({
       ok: false,
       issues: [expect.objectContaining({ code: 'INCOMPATIBLE_ENVELOPE' })],
+    });
+  });
+
+  it('valida o snapshot analítico preservado contra o request histórico', async () => {
+    const study = await makeStudy();
+    const execution = succeededExecution(study);
+    const sourceSnapshot = structuredClone(study.scenarios[0]!.sourceSnapshot) as DeepMutable<typeof study.scenarios[0]['sourceSnapshot']>;
+    sourceSnapshot.orders = structuredClone(execution.requestSnapshot.cenario.ordens);
+    sourceSnapshot.sourceFingerprint = await fingerprintPortfolioSource(sourceSnapshot);
+    execution.sourceSnapshot = sourceSnapshot;
+    execution.premisesSnapshot = {
+      costs: structuredClone(execution.requestSnapshot.cenario.custo),
+      windowDays: execution.requestSnapshot.cenario.janela_dias,
+    };
+    execution.periodSnapshot = execution.requestSnapshot.periodo.modo === 'LEGADO'
+      ? {
+          httpPeriod: structuredClone(execution.requestSnapshot.periodo),
+          executableHorizonDays: execution.requestSnapshot.cenario.horizonte_dias,
+        }
+      : { httpPeriod: structuredClone(execution.requestSnapshot.periodo) };
+    expect(validateExecutionRecord(execution, study)).toEqual({ ok: true, value: execution });
+
+    execution.sourceSnapshot.orders[0]!.valor_brl = '999';
+    const result = validateExecutionRecord(execution, study);
+    expect(result).toEqual({
+      ok: false,
+      issues: [expect.objectContaining({ code: 'INCOMPATIBLE_EXECUTION_SNAPSHOT' })],
     });
   });
 
