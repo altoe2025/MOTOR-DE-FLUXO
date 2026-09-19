@@ -2,11 +2,91 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
-import { validatePreviaRequest } from './validators';
+import {
+  validatePreparationRequest,
+  validatePreparationResponse,
+  validatePreviaRequest,
+} from './validators';
 
 const fixturePath = fileURLToPath(
   new URL('../../../contracts/fixtures/reference-request.json', import.meta.url),
 );
+
+const source = {
+  kind: 'PADRAO_SINTETICO',
+  source: 'Fixture validators MOT-25',
+  recorded_at: '2026-09-19T00:00:00Z',
+};
+
+function preparationRequest() {
+  const paths = [
+    '/warmup_days',
+    '/measurement_days',
+    '/window_days',
+    '/costs/iof_out',
+    '/costs/iof_in',
+    '/costs/carry_cnr',
+    '/costs/spread_rail_bps',
+    '/costs/custo_fixo_remessa',
+    '/costs/custo_oportunidade_aa',
+    '/costs/ptax',
+  ];
+  return {
+    preparation_version: '1.0.0',
+    request_id: '00000000-0000-4000-8000-000000000010',
+    study_id: '00000000-0000-4000-8000-000000000011',
+    scenario_id: '00000000-0000-4000-8000-000000000012',
+    scenario_revision: 1,
+    expected_build_sha: 'a'.repeat(40),
+    input: {
+      participants: [],
+      warmup_days: 0,
+      measurement_days: 30,
+      window_days: 7,
+      costs: {
+        iof_out: '0.035',
+        iof_in: '0.0038',
+        carry_cnr: '0.0004',
+        spread_rail_bps: '0',
+        custo_fixo_remessa: '0',
+        custo_oportunidade_aa: '0',
+        ptax: '5.40',
+        iof_por_finalidade: [],
+      },
+      sources: Object.fromEntries(paths.map((path) => [path, source])),
+    },
+  };
+}
+
+function preparationResponse() {
+  const request = preparationRequest();
+  return {
+    preparation_version: '1.0.0',
+    preparation_id: '00000000-0000-4000-8000-000000000014',
+    request_id: request.request_id,
+    study_id: request.study_id,
+    scenario_id: request.scenario_id,
+    scenario_revision: request.scenario_revision,
+    created_at: '2026-09-19T00:00:00Z',
+    motor_build_sha: 'a'.repeat(40),
+    generator_version: 'dimensionamento-v1',
+    generation_fingerprint: 'b'.repeat(64),
+    input_snapshot: request.input,
+    orders: [],
+    parameters: [],
+    composition: [
+      {
+        participant_id: null,
+        order_count: 0,
+        out_brl: '0',
+        in_brl: '0',
+        total_brl: '0',
+        out_fraction: null,
+      },
+    ],
+    derived_provenance: {},
+  };
+}
 
 describe('generated runtime validation', () => {
   it('accepts the versioned reference request', () => {
@@ -18,5 +98,19 @@ describe('generated runtime validation', () => {
     const payload = JSON.parse(readFileSync(fixturePath, 'utf8'));
     payload.cenario.ordens[0].valor_brl = 10800000;
     expect(validatePreviaRequest(payload)).toBe(false);
+  });
+
+  it('accepts a strict preparation request and its canonical response', () => {
+    expect(validatePreparationRequest(preparationRequest())).toBe(true);
+    expect(validatePreparationResponse(preparationResponse())).toBe(true);
+  });
+
+  it('rejects extra preparation request fields and malformed response composition', () => {
+    const request = { ...preparationRequest(), injected: true };
+    const response: { composition: unknown } = preparationResponse();
+    response.composition = [{ participant_id: null }];
+
+    expect(validatePreparationRequest(request)).toBe(false);
+    expect(validatePreparationResponse(response)).toBe(false);
   });
 });
