@@ -1,5 +1,6 @@
 import type { ApplicationRepository } from '../storage/applicationRepository';
 import { RevisionConflictError } from '../storage/errors';
+import type { ObservedCase } from '../cases/domain';
 import type { StudyDocument } from './model';
 
 export type StudyControllerStatus =
@@ -229,6 +230,47 @@ export class StudyController {
       error: null,
     });
     return document;
+  }
+
+  startNewStudy(): void {
+    this.#assertOpen();
+    this.#session();
+    this.#pending.splice(0);
+    this.#cancelAutosave();
+    this.#drainPromise = null;
+    this.#selectionEpoch += 1;
+    this.#persistedRevision = 0;
+    this.#publish({ ...this.#snapshot, status: 'IDLE', document: null, error: null });
+  }
+
+  /** Read-only queries deliberately stay behind the session-bound controller. */
+  async listStudies(includeDeleted = false): Promise<StudyDocument[]> {
+    this.#assertOpen();
+    const { repository, epoch } = this.#session();
+    const studies = await repository.listStudies({ includeDeleted });
+    return this.#isCurrent(repository, epoch) ? studies : [];
+  }
+
+  async listObservedCases(): Promise<ObservedCase[]> {
+    this.#assertOpen();
+    const { repository, epoch } = this.#session();
+    const cases = await repository.listObservedCases();
+    return this.#isCurrent(repository, epoch) ? cases : [];
+  }
+
+  async restoreStudy(id: string, expectedRevision: number): Promise<StudyDocument> {
+    this.#assertOpen();
+    const { repository, epoch } = this.#session();
+    const restored = await repository.restoreStudy(id, expectedRevision, this.#operationId());
+    if (!this.#isCurrent(repository, epoch)) throw new StudyControllerSessionError();
+    return restored;
+  }
+
+  async purgeStudy(id: string): Promise<void> {
+    this.#assertOpen();
+    const { repository, epoch } = this.#session();
+    await repository.purgeStudy(id);
+    if (!this.#isCurrent(repository, epoch)) throw new StudyControllerSessionError();
   }
 
   edit(document: StudyDocument): void {

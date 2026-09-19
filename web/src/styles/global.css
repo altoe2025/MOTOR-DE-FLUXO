@@ -1,7 +1,7 @@
 * { box-sizing: border-box; }
 html { background: var(--canvas); color: var(--ink); font-family: var(--font-body); }
 body { margin: 0; min-width: 320px; min-height: 100vh; }
-button, input { font: inherit; }
+button, input, select { font: inherit; }
 button, input, a { min-height: 32px; }
 a { color: inherit; }
 :focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
@@ -70,4 +70,18 @@ a { color: inherit; }
 .draft-card h2 { font-family: var(--font-heading); font-size: 1.5rem; margin: 0 0 var(--space-4); }
 .save-status { color: var(--muted); font-size: 0.875rem; margin: 0; }
 .session-loading { padding: var(--space-8); }
+.study-list { display: grid; gap: var(--space-3); list-style: none; margin: var(--space-6) 0; padding: 0; }
+.study-list__item { align-items: center; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); display: flex; gap: var(--space-3); padding: var(--space-3); }
+.study-list__open { background: transparent; border: 0; color: var(--ink); cursor: pointer; display: grid; flex: 1; gap: var(--space-1); min-width: 0; padding: var(--space-2); text-align: left; }
+.study-list__open span, .study-list__open small { color: var(--muted); }
+.study-list__open[aria-current='true'] { background: #e8f0ed; border-radius: var(--radius); }
+.study-editor { max-width: 760px; }
+.study-editor form, .source-selector, .readonly-source, .authored-fields { margin-top: var(--space-6); }
+.source-selector { border: 1px solid var(--border); border-radius: var(--radius); padding: var(--space-4); }
+.source-selector legend { font-family: var(--font-heading); font-weight: 700; padding: 0 var(--space-1); }
+.source-selector__choices { display: grid; gap: var(--space-3); margin-bottom: var(--space-4); }
+.source-selector__choices label { align-items: center; display: flex; gap: var(--space-2); }
+.source-selector select { background: white; border: 1px solid var(--border); border-radius: var(--radius); min-height: 32px; padding: var(--space-2); }
+.readonly-source, .authored-fields { background: var(--surface); border-left: 4px solid var(--accent); padding: var(--space-4); }
+@media (min-width: 1000px) { .study-editor { max-width: 860px; } }
 @media (max-width: 760px) { .app-shell { grid-template-columns: 1fr; } .sidebar { gap: var(--space-4); } .destination-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } .workspace-header, .workspace-content { padding-left: var(--space-4); padding-right: var(--space-4); } .comparison-summary .headline-metrics, .mechanism-grid { grid-template-columns: 1fr; } }
