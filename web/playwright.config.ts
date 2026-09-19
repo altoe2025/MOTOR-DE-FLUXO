@@ -22,7 +22,7 @@ export default defineConfig({
   projects: [
     {
       name: 'local',
-      testMatch: /foundation\.spec\.ts/,
+      testMatch: /(?:foundation|study-.*)\.spec\.ts/,
       use: { ...devices['Desktop Chrome'] },
     },
     {

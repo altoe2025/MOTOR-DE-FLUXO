@@ -1,7 +1,7 @@
 import type { PreviaRequest, PreviewEnvelope } from '../api/client';
 import { validatePreviewEnvelope } from '../api/validators';
 import { appendExecution } from './domain';
-import { canonical } from './fingerprints';
+import { canonicalInputSnapshot } from './fingerprints';
 import type { ExecutionRecord, ExecutionStatus, ScenarioDocument, StudyDocument } from './model';
 import type { StudyController } from './studyController';
 
@@ -86,7 +86,7 @@ function assertEnvelope(
     || envelope.study_id !== request.study_id
     || envelope.scenario_id !== request.scenario_id
     || envelope.scenario_revision !== request.scenario_revision
-    || canonical(envelope.input_snapshot) !== canonical({
+    || canonicalInputSnapshot(envelope.input_snapshot) !== canonicalInputSnapshot({
       cenario: request.cenario,
       periodo: request.periodo,
       proveniencia: request.proveniencia,

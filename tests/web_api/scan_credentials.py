@@ -17,6 +17,11 @@ PATTERNS = {
     ),
     "jwt": re.compile(r"eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}"),
     "private-key": re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"),
+    "url-secret-query": re.compile(
+        r"[?&](?:access_token|refresh_token|id_token|token|apikey)="
+        r"(?!example(?:[&#]|$)|placeholder(?:[&#]|$))[^&#\s'\"]{8,}",
+        re.IGNORECASE,
+    ),
 }
 
 

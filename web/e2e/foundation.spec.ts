@@ -1,18 +1,5 @@
 import { expect, test } from '@playwright/test';
 
-test.afterAll(async ({ request }) => {
-  const response = await request.post('/__e2e__/shutdown');
-  expect(response.ok()).toBe(true);
-  await expect.poll(async () => {
-    try {
-      await request.get('/api/v1/health');
-      return false;
-    } catch {
-      return true;
-    }
-  }).toBe(true);
-});
-
 test('browser executes the reference example through the real API and engine', async ({ page }) => {
   const calls = { get: 0, post: 0 };
   page.on('request', (request) => {

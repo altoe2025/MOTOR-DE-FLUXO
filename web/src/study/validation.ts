@@ -4,7 +4,7 @@ import addFormats from 'ajv-formats';
 import httpSchemas from '../api/schemas.json';
 import observedCaseSchema from '../cases/observedCase.schema.json';
 import {
-  canonical,
+  canonicalInputSnapshot,
   fingerprintPortfolioSource,
   fingerprintScenarioInput,
 } from './fingerprints';
@@ -56,7 +56,7 @@ function envelopeIsCompatible(execution: ExecutionRecord, study: StudyDocument):
     && envelope.scenario_revision === execution.scenarioRevision
     && envelope.motor_build_sha === execution.engineVersion
     && envelope.api_version === execution.contractVersion
-    && canonical(envelope.input_snapshot) === canonical({
+    && canonicalInputSnapshot(envelope.input_snapshot) === canonicalInputSnapshot({
       cenario: request.cenario,
       periodo: request.periodo,
       proveniencia: request.proveniencia,

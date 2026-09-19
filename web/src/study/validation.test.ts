@@ -112,6 +112,16 @@ describe('validateStudyDocument', () => {
     });
   });
 
+  it('aceita precisão ISO equivalente normalizada pelo servidor', async () => {
+    const study = await makeStudy();
+    const execution = succeededExecution(study);
+    const path = Object.keys(execution.requestSnapshot.proveniencia)[0]!;
+    execution.requestSnapshot.proveniencia[path]!.registrado_em_utc = '2026-09-19T12:00:00.123Z';
+    execution.envelope!.input_snapshot.proveniencia[path]!.registrado_em_utc = '2026-09-19T12:00:00.123000Z';
+
+    expect(validateExecutionRecord(execution, study)).toEqual({ ok: true, value: execution });
+  });
+
   it('rejeita adulteração de sourceFingerprint e inputFingerprint persistidos', async () => {
     const study = await makeStudy();
     const sourceTampered = structuredClone(study) as DeepMutable<StudyDocument>;

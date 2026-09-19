@@ -18,15 +18,31 @@ const DEFAULT_COSTS: CostPremises = {
 async function initialStudy(api: ApiClient, ownerSub: string): Promise<StudyDocument> {
   if (api.preparePortfolio === undefined) throw new Error('A preparação de carteira não está disponível.');
   const studyId = crypto.randomUUID(); const scenarioId = crypto.randomUUID(); const now = new Date().toISOString();
+  const participantId = crypto.randomUUID();
+  const participantPrefix = `/participants/${participantId}`;
+  const sourcePaths = [
+    '/warmup_days', '/measurement_days', '/window_days',
+    '/costs/iof_out', '/costs/iof_in', '/costs/carry_cnr', '/costs/spread_rail_bps',
+    '/costs/custo_fixo_remessa', '/costs/custo_oportunidade_aa', '/costs/ptax',
+    `${participantPrefix}/profile`, `${participantPrefix}/seed`,
+    `${participantPrefix}/monthly_volume_brl`, `${participantPrefix}/ticket_median_brl`,
+    `${participantPrefix}/out_fraction`, `${participantPrefix}/deadline/mode`,
+    `${participantPrefix}/deadline/days`, `${participantPrefix}/eh_efx`,
+    `${participantPrefix}/purpose_out`, `${participantPrefix}/purpose_in`,
+  ];
   const preparation: PreparationRequest = {
     preparation_version: '1.0.0', request_id: crypto.randomUUID(), study_id: studyId,
     scenario_id: scenarioId, scenario_revision: 1,
     expected_build_sha: requiredBuildSha(import.meta.env.VITE_MOTOR_BUILD_SHA, undefined),
     input: {
-      participants: [{ id: crypto.randomUUID(), profile: 'tesouraria_corporativa', monthly_volume_brl: '1000000', ticket_median_brl: '100000', out_fraction: '0.5', purpose_out: 'ANEXO_V_REMESSA_TERCEIRO', purpose_in: 'ANEXO_V_DISPONIBILIDADE', eh_efx: false, deadline: { mode: 'FIXED', days: 7 }, seed: '1' }],
+      participants: [{ id: participantId, profile: 'tesouraria_corporativa', monthly_volume_brl: '1000000', ticket_median_brl: '100000', out_fraction: '0.5', purpose_out: 'ANEXO_V_REMESSA_TERCEIRO', purpose_in: 'ANEXO_V_DISPONIBILIDADE', eh_efx: false, deadline: { mode: 'FIXED', days: 7 }, seed: '1' }],
       warmup_days: 0, measurement_days: 30, window_days: 7,
       costs: { ...DEFAULT_COSTS, iof_por_finalidade: DEFAULT_COSTS.iof_por_finalidade.map((item) => ({ ...item })) },
-      sources: { '/orders': { kind: 'PADRAO_SINTETICO', source: 'catálogo oficial de exemplos', recorded_at: now } },
+      sources: Object.fromEntries(sourcePaths.map((path) => [path, {
+        kind: 'PADRAO_SINTETICO' as const,
+        source: 'catálogo oficial de exemplos',
+        recorded_at: now,
+      }])),
     },
   };
   const sourceSnapshot = await resolvePortfolioSource({ kind: 'SYNTHETIC', exampleId: 'equilibrado', preparation }, { getObservedCase: async () => null, preparePortfolio: (input) => api.preparePortfolio!(input), now: () => now });

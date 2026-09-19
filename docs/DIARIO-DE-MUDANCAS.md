@@ -69,6 +69,25 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 
 ---
 
+## 2026-09-19 — Percurso completo e regressão da Etapa 2 (MOT-32)
+
+1. **Sintoma.** Os serviços de estudos, execução, comparação e persistência
+   existiam isoladamente, mas não havia um percurso real de navegador que os ligasse
+   nem regressão para reload, concorrência, migração e falhas de IndexedDB.
+2. **Causa.** As Tasks 1–10 fecharam contratos e componentes em unidades menores; a
+   integração final, o SHA real do bundle E2E e as fronteiras de rede/segredo foram
+   reservados para a aceitação global.
+3. **O que foi feito.** A MOT-32 ligou o editor ao serviço de execução e ao resultado,
+   normalizou instantes equivalentes devolvidos pelo contrato HTTP e adicionou três
+   percursos Playwright. Chromium agora prova observado, sintético/manual, duas
+   abas/contas, fixtures legadas, interrupção, quota injetada, `blocked`, corrupção
+   e zoom 200%. O scanner passou a detectar token em query string e o servidor
+   estático aceita as rotas profundas de estudos.
+4. **O que isso invalida.** A conclusão de que os componentes isolados bastavam como
+   evidência da Etapa 2. Não muda números do motor, contratos públicos ou premissas
+   de negócio. A falha física de disco e autenticação externa real continuam
+   condicionadas ao ambiente; a quota local é uma injeção explícita.
+
 ## 2026-09-19 — Gate documental e rastreabilidade da Etapa 2 v2 (MOT-62)
 
 1. **Sintoma.** O planejamento v2 já descrevia as novas fronteiras, mas ainda não

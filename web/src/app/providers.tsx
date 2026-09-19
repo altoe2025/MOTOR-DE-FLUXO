@@ -5,6 +5,7 @@ import {
   useEffect,
   useMemo,
   useRef,
+  useState,
   type ReactNode,
 } from 'react';
 
@@ -56,6 +57,7 @@ export function ApplicationProviders({
   const activeQueryClient = useRef(queryClient);
   const sessionQueryClients = useRef(new Set([queryClient]));
   const storageProjectRef = projectRef ?? configuredProjectRef();
+  const [controllerOwner, setControllerOwner] = useState<string | null | undefined>(undefined);
   const controller = useMemo(() => new StudyController({
     repositoryFactory: repositoryFactory ?? ((ownerSub) => new IndexedDbApplicationRepository({
       projectRef: storageProjectRef,
@@ -78,7 +80,12 @@ export function ApplicationProviders({
 
   useEffect(() => {
     if (status === 'loading') return;
-    void controller.switchSession(userId);
+    let current = true;
+    setControllerOwner(undefined);
+    void controller.switchSession(userId).then(() => {
+      if (current) setControllerOwner(userId);
+    });
+    return () => { current = false; };
   }, [controller, status, userId]);
 
   useEffect(() => {
@@ -96,6 +103,10 @@ export function ApplicationProviders({
     () => client ?? createApiClient({ getAccessToken, onUnauthorized: expireSession }),
     [client, expireSession, getAccessToken],
   );
+
+  if (status === 'loading' || controllerOwner !== userId) {
+    return <p className="session-loading" role="status">Preparando dados locais…</p>;
+  }
 
   return (
     <QueryClientProvider client={queryClient}>

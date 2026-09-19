@@ -2,6 +2,7 @@ import type {
   DeepMutable,
   DeepReadonly,
   PortfolioSourceSnapshot,
+  PreviaRequest,
   ScenarioDraft,
   ScenarioDocument,
 } from './model';
@@ -21,6 +22,20 @@ export function canonical(value: unknown): string {
   const encoded = JSON.stringify(value);
   if (encoded === undefined) throw new Error('Valor não serializável para fingerprint.');
   return encoded;
+}
+
+export function canonicalInputSnapshot(value: Readonly<{
+  cenario: PreviaRequest['cenario'];
+  periodo: PreviaRequest['periodo'];
+  proveniencia: PreviaRequest['proveniencia'];
+}>): string {
+  return canonical({
+    ...structuredClone(value),
+    proveniencia: Object.fromEntries(Object.entries(value.proveniencia).map(([path, item]) => [
+      path,
+      { ...item, registrado_em_utc: new Date(item.registrado_em_utc).toISOString() },
+    ])),
+  });
 }
 
 async function sha256(value: unknown): Promise<string> {

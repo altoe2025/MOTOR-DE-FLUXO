@@ -138,3 +138,26 @@ ele confere a política contra uma segunda implementação em vez de contra uma 
 escrita à mão.
 
 Para contexto de negócio e proveniência, consultar o vault Obsidian.
+
+## Aceitação local da Etapa 2 — MOT-32
+
+O comando `npm --prefix web run test:e2e` gera o bundle E2E com o SHA real do
+checkout e executa, no Chromium, a fundação e os percursos `study-*`. A aceitação
+cobre o caso observado confirmado até o resultado e a conciliação, as origens
+sintética e manual, reload, histórico, CAS entre duas abas, isolamento de duas
+contas locais controladas, migrações versionadas e recuperação de execução
+interrompida.
+
+O teste de quota usa `Storage.overrideQuotaForOrigin` no Chromium e comprova que uma
+gravação real em IndexedDB aborta. Isso é injeção determinística do limite, não
+evidência de esgotamento físico do disco. `blocked` usa duas conexões reais ao
+IndexedDB; corrupção insere uma linha inválida e exige o erro tipado do repositório.
+
+O zoom de 200% é aplicado e capturado pelo Chromium no percurso observado. Não é
+um teste jsdom. As requisições dos percursos são inspecionadas para impedir nome de
+arquivo bruto, nome local de grupo e token em URL. O scanner adicional detecta
+segredos em query strings de URLs nos arquivos rastreados e no bundle de produção.
+
+O projeto `real-auth` continua condicionado a `MOT_REAL_AUTH_BASE_URL`,
+`MOT_REAL_AUTH_EMAIL` e `MOT_REAL_AUTH_PASSWORD` fornecidos pelo ambiente. A
+aceitação local não fabrica credenciais reais nem publica artefatos.
