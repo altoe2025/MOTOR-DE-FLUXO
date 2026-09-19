@@ -1,0 +1,315 @@
+{
+  "$id": "https://motor-de-fluxo.local/cases/observedCase.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "NonEmptyString": { "type": "string", "minLength": 1 },
+    "DecimalBrl": { "type": "string", "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$" },
+    "PositiveDecimalBrl": { "type": "string", "pattern": "^(0*[1-9][0-9]*)(\\.[0-9]+)?$|^0*\\.0*[1-9][0-9]*$" },
+    "UtcInstant": { "type": "string", "format": "date-time" },
+    "FieldProvenance": {
+      "oneOf": [
+        { "$ref": "#/$defs/ObservedProvenance" },
+        { "$ref": "#/$defs/InferredProvenance" },
+        { "$ref": "#/$defs/DerivedProvenance" },
+        { "$ref": "#/$defs/UserCorrectedProvenance" },
+        { "$ref": "#/$defs/UserEstimateProvenance" },
+        { "$ref": "#/$defs/SyntheticDefaultProvenance" },
+        { "$ref": "#/$defs/NotCollectedProvenance" }
+      ]
+    },
+    "ObservedProvenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "OBSERVED" },
+        "source": { "$ref": "#/$defs/NonEmptyString" },
+        "version": { "$ref": "#/$defs/NonEmptyString" },
+        "recordedAt": { "$ref": "#/$defs/UtcInstant" }
+      },
+      "required": ["kind", "source", "version", "recordedAt"]
+    },
+    "InferredProvenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "INFERRED" },
+        "source": { "$ref": "#/$defs/NonEmptyString" },
+        "version": { "$ref": "#/$defs/NonEmptyString" },
+        "recordedAt": { "$ref": "#/$defs/UtcInstant" },
+        "rule": { "$ref": "#/$defs/NonEmptyString" }
+      },
+      "required": ["kind", "source", "version", "recordedAt", "rule"]
+    },
+    "DerivedProvenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "DERIVED" },
+        "source": { "$ref": "#/$defs/NonEmptyString" },
+        "version": { "$ref": "#/$defs/NonEmptyString" },
+        "recordedAt": { "$ref": "#/$defs/UtcInstant" },
+        "rule": { "$ref": "#/$defs/NonEmptyString" },
+        "inputs": { "type": "array", "items": { "$ref": "#/$defs/NonEmptyString" } }
+      },
+      "required": ["kind", "source", "version", "recordedAt", "rule", "inputs"]
+    },
+    "UserCorrectedProvenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "USER_CORRECTED" },
+        "source": { "$ref": "#/$defs/NonEmptyString" },
+        "version": { "$ref": "#/$defs/NonEmptyString" },
+        "recordedAt": { "$ref": "#/$defs/UtcInstant" },
+        "actionId": { "$ref": "#/$defs/NonEmptyString" }
+      },
+      "required": ["kind", "source", "version", "recordedAt", "actionId"]
+    },
+    "UserEstimateProvenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "USER_ESTIMATE" },
+        "source": { "$ref": "#/$defs/NonEmptyString" },
+        "version": { "$ref": "#/$defs/NonEmptyString" },
+        "recordedAt": { "$ref": "#/$defs/UtcInstant" }
+      },
+      "required": ["kind", "source", "version", "recordedAt"]
+    },
+    "SyntheticDefaultProvenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "SYNTHETIC_DEFAULT" },
+        "source": { "$ref": "#/$defs/NonEmptyString" },
+        "version": { "$ref": "#/$defs/NonEmptyString" },
+        "recordedAt": { "$ref": "#/$defs/UtcInstant" },
+        "rule": { "$ref": "#/$defs/NonEmptyString" }
+      },
+      "required": ["kind", "source", "version", "recordedAt", "rule"]
+    },
+    "NotCollectedProvenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "NOT_COLLECTED" },
+        "source": { "$ref": "#/$defs/NonEmptyString" },
+        "version": { "$ref": "#/$defs/NonEmptyString" },
+        "recordedAt": { "$ref": "#/$defs/UtcInstant" }
+      },
+      "required": ["kind", "source", "version", "recordedAt"]
+    },
+    "ObservedOrder": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/NonEmptyString" },
+        "clientId": { "$ref": "#/$defs/NonEmptyString" },
+        "direction": { "enum": ["OUT", "IN"] },
+        "knownDate": { "type": "string", "format": "date" },
+        "deadlineDate": { "type": "string", "format": "date" },
+        "valueBrl": { "$ref": "#/$defs/PositiveDecimalBrl" },
+        "purposeCode": { "type": ["string", "null"] },
+        "efxStatus": { "enum": ["YES", "NO", "NOT_COLLECTED"] },
+        "provenance": { "type": "array", "items": { "$ref": "#/$defs/FieldProvenance" }, "minItems": 1 }
+      },
+      "required": ["id", "clientId", "direction", "knownDate", "deadlineDate", "valueBrl", "purposeCode", "efxStatus", "provenance"]
+    },
+    "ControlTotal": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "code": { "enum": ["GROSS_OUT_BRL", "GROSS_IN_BRL"] },
+        "valueBrl": { "$ref": "#/$defs/DecimalBrl" },
+        "provenance": { "$ref": "#/$defs/FieldProvenance" }
+      },
+      "required": ["code", "valueBrl", "provenance"]
+    },
+    "ObservedMetric": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "code": { "enum": ["GROSS_OUT_BRL", "GROSS_IN_BRL", "MATCHED_BRL", "REMITTED_OUT_BRL", "REMITTED_IN_BRL", "TOTAL_COST_BRL"] },
+        "value": { "$ref": "#/$defs/DecimalBrl" },
+        "unit": { "const": "BRL" },
+        "definitionVersion": { "$ref": "#/$defs/NonEmptyString" },
+        "provenance": { "$ref": "#/$defs/FieldProvenance" }
+      },
+      "required": ["code", "value", "unit", "definitionVersion", "provenance"]
+    },
+    "ObservedOutcome": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schemaVersion": { "const": "1.0.0" },
+        "metrics": { "type": "array", "items": { "$ref": "#/$defs/ObservedMetric" } }
+      },
+      "required": ["schemaVersion", "metrics"]
+    },
+    "ObservedCase": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schemaVersion": { "const": "2.0.0" },
+        "id": { "$ref": "#/$defs/NonEmptyString" },
+        "ownerSub": { "$ref": "#/$defs/NonEmptyString" },
+        "companyId": { "$ref": "#/$defs/NonEmptyString" },
+        "status": { "enum": ["CONFIRMED", "ARCHIVED"] },
+        "revision": { "type": "integer", "minimum": 1 },
+        "window": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "startDate": { "type": "string", "format": "date" },
+            "endDate": { "type": "string", "format": "date" },
+            "closingDate": { "type": "string", "format": "date" }
+          },
+          "required": ["startDate", "endDate", "closingDate"]
+        },
+        "orders": { "type": "array", "items": { "$ref": "#/$defs/ObservedOrder" } },
+        "controlTotals": { "type": "array", "items": { "$ref": "#/$defs/ControlTotal" } },
+        "sourceManifest": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "adapterId": { "$ref": "#/$defs/NonEmptyString" },
+            "adapterVersion": { "$ref": "#/$defs/NonEmptyString" },
+            "sourceKind": { "$ref": "#/$defs/NonEmptyString" },
+            "files": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "name": { "$ref": "#/$defs/NonEmptyString" },
+                  "sizeBytes": { "type": "integer", "minimum": 0 },
+                  "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+                },
+                "required": ["name", "sizeBytes", "sha256"]
+              }
+            }
+          },
+          "required": ["adapterId", "adapterVersion", "sourceKind", "files"]
+        },
+        "normalization": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "rulesetId": { "$ref": "#/$defs/NonEmptyString" },
+            "rulesetVersion": { "$ref": "#/$defs/NonEmptyString" },
+            "normalizedAt": { "$ref": "#/$defs/UtcInstant" }
+          },
+          "required": ["rulesetId", "rulesetVersion", "normalizedAt"]
+        },
+        "quality": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "blockers": { "type": "array", "items": { "$ref": "#/$defs/DataQualityIssue" } },
+            "warnings": { "type": "array", "items": { "$ref": "#/$defs/DataQualityIssue" } }
+          },
+          "required": ["blockers", "warnings"]
+        },
+        "corrections": { "type": "array", "items": { "$ref": "#/$defs/CorrectionRecord" } },
+        "observedOutcome": { "oneOf": [{ "$ref": "#/$defs/ObservedOutcome" }, { "type": "null" }] },
+        "confirmedAt": { "$ref": "#/$defs/UtcInstant" }
+      },
+      "required": ["schemaVersion", "id", "ownerSub", "companyId", "status", "revision", "window", "orders", "controlTotals", "sourceManifest", "normalization", "quality", "corrections", "observedOutcome", "confirmedAt"]
+    },
+    "ObservedCaseDraft": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schemaVersion": { "const": "2.0.0" },
+        "id": { "$ref": "#/$defs/NonEmptyString" },
+        "ownerSub": { "$ref": "#/$defs/NonEmptyString" },
+        "companyId": { "$ref": "#/$defs/NonEmptyString" },
+        "status": { "const": "DRAFT" },
+        "revision": { "type": "integer", "minimum": 1 },
+        "window": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "startDate": { "type": "string", "format": "date" },
+            "endDate": { "type": "string", "format": "date" },
+            "closingDate": { "type": "string", "format": "date" }
+          },
+          "required": ["startDate", "endDate", "closingDate"]
+        },
+        "orders": { "type": "array", "items": { "$ref": "#/$defs/ObservedOrder" } },
+        "controlTotals": { "type": "array", "items": { "$ref": "#/$defs/ControlTotal" } },
+        "sourceManifest": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "adapterId": { "$ref": "#/$defs/NonEmptyString" },
+            "adapterVersion": { "$ref": "#/$defs/NonEmptyString" },
+            "sourceKind": { "$ref": "#/$defs/NonEmptyString" },
+            "files": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "name": { "$ref": "#/$defs/NonEmptyString" },
+                  "sizeBytes": { "type": "integer", "minimum": 0 },
+                  "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+                },
+                "required": ["name", "sizeBytes", "sha256"]
+              }
+            }
+          },
+          "required": ["adapterId", "adapterVersion", "sourceKind", "files"]
+        },
+        "normalization": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "rulesetId": { "$ref": "#/$defs/NonEmptyString" },
+            "rulesetVersion": { "$ref": "#/$defs/NonEmptyString" },
+            "normalizedAt": { "$ref": "#/$defs/UtcInstant" }
+          },
+          "required": ["rulesetId", "rulesetVersion", "normalizedAt"]
+        },
+        "quality": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "blockers": { "type": "array", "items": { "$ref": "#/$defs/DataQualityIssue" } },
+            "warnings": { "type": "array", "items": { "$ref": "#/$defs/DataQualityIssue" } }
+          },
+          "required": ["blockers", "warnings"]
+        },
+        "corrections": { "type": "array", "items": { "$ref": "#/$defs/CorrectionRecord" } },
+        "observedOutcome": { "oneOf": [{ "$ref": "#/$defs/ObservedOutcome" }, { "type": "null" }] },
+        "confirmedAt": { "type": "null" }
+      },
+      "required": ["schemaVersion", "id", "ownerSub", "companyId", "status", "revision", "window", "orders", "controlTotals", "sourceManifest", "normalization", "quality", "corrections", "confirmedAt"]
+    },
+    "DataQualityIssue": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "code": { "$ref": "#/$defs/NonEmptyString" },
+        "message": { "$ref": "#/$defs/NonEmptyString" },
+        "path": { "type": "string" }
+      },
+      "required": ["code", "message"]
+    },
+    "CorrectionRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/NonEmptyString" },
+        "fieldPath": { "$ref": "#/$defs/NonEmptyString" },
+        "originalValue": { "type": ["string", "null"] },
+        "previousValue": { "type": ["string", "null"] },
+        "nextValue": { "type": ["string", "null"] },
+        "actionAt": { "$ref": "#/$defs/UtcInstant" },
+        "actorSub": { "$ref": "#/$defs/NonEmptyString" }
+      },
+      "required": ["id", "fieldPath", "originalValue", "previousValue", "nextValue", "actionAt", "actorSub"]
+    }
+  },
+  "$ref": "#/$defs/ObservedCase"
+}
