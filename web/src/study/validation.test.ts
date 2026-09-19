@@ -61,14 +61,17 @@ describe('validateStudyDocument', () => {
   it('aceita o agregado v2 e rejeita campo extra', async () => {
     const study = await makeStudy();
 
-    expect(validateStudyDocument(study)).toEqual({ ok: true, value: study });
-    expect(validateStudyDocument({ ...study, injected: true }).ok).toBe(false);
+    expect(await validateStudyDocument(study)).toEqual({ ok: true, value: study });
+    expect((await validateStudyDocument({ ...study, injected: true })).ok).toBe(false);
   });
 
   it('rejeita owner divergente e cenário base ausente', async () => {
     const study = await makeStudy();
-    const owner = validateStudyDocument(study, '00000000-0000-4000-8000-000000000099');
-    const missing = validateStudyDocument({ ...study, baseScenarioId: 'missing' });
+    const owner = await validateStudyDocument(
+      study,
+      '00000000-0000-4000-8000-000000000099',
+    );
+    const missing = await validateStudyDocument({ ...study, baseScenarioId: 'missing' });
 
     expect(owner).toEqual({
       ok: false,
@@ -87,7 +90,7 @@ describe('validateStudyDocument', () => {
     execution.requestSnapshot.scenario_revision = 2;
     execution.envelope!.scenario_revision = 2;
 
-    const result = validateStudyDocument({ ...study, executions: [execution] });
+    const result = await validateStudyDocument({ ...study, executions: [execution] });
 
     expect(result).toEqual({
       ok: false,
@@ -107,5 +110,26 @@ describe('validateStudyDocument', () => {
       ok: false,
       issues: [expect.objectContaining({ code: 'INCOMPATIBLE_ENVELOPE' })],
     });
+  });
+
+  it('rejeita adulteração de sourceFingerprint e inputFingerprint persistidos', async () => {
+    const study = await makeStudy();
+    const sourceTampered = structuredClone(study) as DeepMutable<StudyDocument>;
+    sourceTampered.scenarios[0]!.sourceSnapshot.sourceFingerprint = '0'.repeat(64);
+    const sourceResult = await validateStudyDocument(sourceTampered);
+    expect(sourceResult.ok).toBe(false);
+    if (sourceResult.ok) throw new Error('adulteração de origem deveria falhar');
+    expect(sourceResult.issues).toContainEqual(expect.objectContaining({
+      code: 'SOURCE_FINGERPRINT_MISMATCH',
+    }));
+
+    const inputTampered = structuredClone(study) as DeepMutable<StudyDocument>;
+    inputTampered.scenarios[0]!.inputFingerprint = '0'.repeat(64);
+    const inputResult = await validateStudyDocument(inputTampered);
+    expect(inputResult.ok).toBe(false);
+    if (inputResult.ok) throw new Error('adulteração de input deveria falhar');
+    expect(inputResult.issues).toContainEqual(expect.objectContaining({
+      code: 'INPUT_FINGERPRINT_MISMATCH',
+    }));
   });
 });

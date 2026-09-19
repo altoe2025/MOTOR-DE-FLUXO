@@ -19,16 +19,24 @@ export type DeepMutable<T> = T extends (...args: never[]) => unknown
 
 export type CanonicalAuthoredOrder = DeepReadonly<components['schemas']['OrdemEntrada']>;
 export type CostPremises = DeepReadonly<components['schemas']['CustoEntrada']>;
-export type PeriodDocument = DeepReadonly<
+export type HttpPeriod = DeepReadonly<
   components['schemas']['PeriodoLegado'] | components['schemas']['PeriodoNatural']
 >;
+export type PeriodDocument =
+  | Readonly<{
+      httpPeriod: DeepReadonly<components['schemas']['PeriodoLegado']>;
+      executableHorizonDays: number;
+    }>
+  | Readonly<{ httpPeriod: DeepReadonly<components['schemas']['PeriodoNatural']> }>;
 export type PreviaRequest = DeepReadonly<components['schemas']['PreviaRequest']>;
 export type PreviewEnvelope = DeepReadonly<components['schemas']['PreviewEnvelope']>;
 export type PreparationResponse = DeepReadonly<components['schemas']['PreparationResponse']>;
+export type SeedText = components['schemas']['EffectiveParticipant']['seed'];
 
 export type SyntheticRecipe = Readonly<{
   exampleId: string;
-  seeds: readonly number[];
+  seeds: readonly SeedText[];
+  composition: PreparationResponse['composition'];
   preparationVersion: string;
   generatorVersion: string;
   motorBuildSha: string;
@@ -107,7 +115,9 @@ export type StudyValidationIssue = Readonly<{
     | 'BASE_SCENARIO_MISSING'
     | 'DUPLICATE_ID'
     | 'MISSING_SCENARIO_REVISION'
-    | 'INCOMPATIBLE_ENVELOPE';
+    | 'INCOMPATIBLE_ENVELOPE'
+    | 'SOURCE_FINGERPRINT_MISMATCH'
+    | 'INPUT_FINGERPRINT_MISMATCH';
   message: string;
 }>;
 

@@ -8,6 +8,7 @@ import {
   renameStudy,
   updateScenario,
 } from './domain';
+import { fingerprintPortfolioSource } from './fingerprints';
 import {
   FIXTURE_NOW,
   FIXTURE_OWNER,
@@ -50,7 +51,7 @@ function executionFor(study: StudyDocument): ExecutionRecord {
         janela_dias: scenario.premises.windowDays,
         custo: structuredClone(scenario.premises.costs),
       },
-      periodo: structuredClone(scenario.period),
+      periodo: structuredClone(scenario.period.httpPeriod),
       proveniencia: {},
     },
     engineVersion: 'a'.repeat(40),
@@ -72,6 +73,11 @@ describe('agregado StudyDocument v2', () => {
     const study = await studyWith(snapshot);
 
     expect(study.scenarios[0]!.sourceSnapshot.source.kind).toBe(kind);
+    expect(study.scenarios[0]!.sourceSnapshot.sourceFingerprint).toBe(
+      await fingerprintPortfolioSource(study.scenarios[0]!.sourceSnapshot),
+    );
+    expect(study.scenarios[0]!.sourceSnapshot.sourceFingerprint)
+      .not.toBe(snapshot.sourceFingerprint);
     expect(Object.isFrozen(study)).toBe(true);
     snapshot.orders[0]!.valor_brl = '999';
     expect(study.scenarios[0]!.sourceSnapshot.orders[0]!.valor_brl).not.toBe('999');
@@ -93,10 +99,60 @@ describe('agregado StudyDocument v2', () => {
     expect(caseRecord).toEqual(before);
   });
 
+  it('preserva seed int64 textual e composição T2 no round-trip sintético', async () => {
+    const snapshot = makeSyntheticSnapshot();
+    if (snapshot.source.kind !== 'SYNTHETIC') throw new Error('fixture');
+    snapshot.source.recipe.seeds = ['9223372036854775807'];
+    snapshot.source.recipe.composition = [{
+      participant_id: null,
+      order_count: 2,
+      total_brl: '170',
+      out_brl: '100',
+      in_brl: '70',
+      out_fraction: '0.588235294118',
+    }];
+
+    const study = await studyWith(snapshot);
+    const roundTrip = JSON.parse(JSON.stringify(study)) as StudyDocument;
+    const source = roundTrip.scenarios[0]!.sourceSnapshot.source;
+    if (source.kind !== 'SYNTHETIC') throw new Error('round-trip perdeu origem');
+
+    expect(source.recipe.seeds).toEqual(['9223372036854775807']);
+    expect(source.recipe.composition).toEqual(snapshot.source.recipe.composition);
+  });
+
+  it('recusa seed textual acima do int64 aceito por T2', async () => {
+    const snapshot = makeSyntheticSnapshot();
+    if (snapshot.source.kind !== 'SYNTHETIC') throw new Error('fixture');
+    snapshot.source.recipe.seeds = ['9223372036854775808'];
+
+    await expect(studyWith(snapshot)).rejects.toThrow('Documento de estudo inválido');
+  });
+
+  it('persiste horizonte executável legado e o inclui no fingerprint global', async () => {
+    const period30 = {
+      httpPeriod: { modo: 'LEGADO' as const },
+      executableHorizonDays: 30,
+    };
+    const period31 = { ...period30, executableHorizonDays: 31 };
+    const first = await createStudy({
+      id: 'study-legacy-30', ownerSub: FIXTURE_OWNER, name: 'Legado 30',
+      baseScenario: makeScenarioDraft({ period: period30 }), now: FIXTURE_NOW,
+    });
+    const second = await createStudy({
+      id: 'study-legacy-31', ownerSub: FIXTURE_OWNER, name: 'Legado 31',
+      baseScenario: makeScenarioDraft({ period: period31 }), now: FIXTURE_NOW,
+    });
+
+    expect(first.scenarios[0]!.period).toEqual(period30);
+    expect(second.scenarios[0]!.inputFingerprint)
+      .not.toBe(first.scenarios[0]!.inputFingerprint);
+  });
+
   it('renomeia e envia para lixeira em novos documentos sem alterar o fingerprint', async () => {
     const original = await studyWith();
-    const renamed = renameStudy(original, 'Nome novo', NEXT);
-    const trashed = moveStudyToTrash(renamed, '2026-09-19T14:00:00Z');
+    const renamed = await renameStudy(original, 'Nome novo', NEXT);
+    const trashed = await moveStudyToTrash(renamed, '2026-09-19T14:00:00Z');
 
     expect(renamed).not.toBe(original);
     expect(renamed.name).toBe('Nome novo');
@@ -129,13 +185,17 @@ describe('agregado StudyDocument v2', () => {
 
   it('duplica cenários com novos IDs e sem copiar execuções', async () => {
     const original = await studyWith();
-    const withExecution = appendExecution(original, executionFor(original), NEXT);
+    const withExecution = await appendExecution(original, executionFor(original), NEXT);
     const ids = [
       '00000000-0000-4000-8000-000000000040',
       '00000000-0000-4000-8000-000000000041',
     ];
 
-    const duplicate = duplicateStudy(withExecution, '2026-09-19T14:00:00Z', () => ids.shift()!);
+    const duplicate = await duplicateStudy(
+      withExecution,
+      '2026-09-19T14:00:00Z',
+      () => ids.shift()!,
+    );
 
     expect(duplicate.id).toBe('00000000-0000-4000-8000-000000000040');
     expect(duplicate.baseScenarioId).toBe('00000000-0000-4000-8000-000000000041');
@@ -147,7 +207,7 @@ describe('agregado StudyDocument v2', () => {
   it('anexa execução por cópia e impede mutação retroativa', async () => {
     const original = await studyWith();
     const existing = executionFor(original);
-    const appended = appendExecution(original, existing, NEXT);
+    const appended = await appendExecution(original, existing, NEXT);
 
     expect(original.executions).toEqual([]);
     expect(appended.executions).toHaveLength(1);
@@ -175,7 +235,7 @@ describe('agregado StudyDocument v2', () => {
 
     const incompatible = executionFor(original) as DeepMutable<ExecutionRecord>;
     incompatible.requestSnapshot.study_id = '00000000-0000-4000-8000-000000000099';
-    expect(() => appendExecution(original, incompatible, NEXT))
-      .toThrow('Documento de estudo inválido');
+    await expect(appendExecution(original, incompatible, NEXT))
+      .rejects.toThrow('Documento de estudo inválido');
   });
 });

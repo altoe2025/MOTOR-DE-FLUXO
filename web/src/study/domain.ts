@@ -1,6 +1,7 @@
-import { fingerprintScenarioInput } from './fingerprints';
+import { fingerprintPortfolioSource, fingerprintScenarioInput } from './fingerprints';
 import type {
   CreateStudyInput,
+  DeepMutable,
   DeepReadonly,
   ExecutionRecord,
   IdFactory,
@@ -36,7 +37,10 @@ function checkedInstant(now: string): string {
 }
 
 async function materializeScenario(draft: ScenarioDraft): Promise<ScenarioDocument> {
-  const candidate = clone(draft);
+  const candidate = clone(draft) as DeepMutable<ScenarioDraft>;
+  candidate.sourceSnapshot.sourceFingerprint = await fingerprintPortfolioSource(
+    candidate.sourceSnapshot,
+  );
   const scenario: ScenarioDocument = {
     id: candidate.id,
     revision: candidate.revision,
@@ -49,9 +53,9 @@ async function materializeScenario(draft: ScenarioDraft): Promise<ScenarioDocume
   return deepFreeze(scenario);
 }
 
-function finalize(study: StudyDocument): StudyDocument {
+async function finalize(study: StudyDocument): Promise<StudyDocument> {
   const detached = clone(study);
-  assertValidStudy(detached);
+  await assertValidStudy(detached);
   return deepFreeze(detached);
 }
 
@@ -73,7 +77,11 @@ export async function createStudy(input: CreateStudyInput): Promise<StudyDocumen
   });
 }
 
-export function renameStudy(study: StudyDocument, name: string, now: string): StudyDocument {
+export async function renameStudy(
+  study: StudyDocument,
+  name: string,
+  now: string,
+): Promise<StudyDocument> {
   return finalize({
     ...clone(study),
     name: checkedName(name),
@@ -82,7 +90,11 @@ export function renameStudy(study: StudyDocument, name: string, now: string): St
   });
 }
 
-export function duplicateStudy(study: StudyDocument, now: string, ids: IdFactory): StudyDocument {
+export async function duplicateStudy(
+  study: StudyDocument,
+  now: string,
+  ids: IdFactory,
+): Promise<StudyDocument> {
   const duplicatedAt = checkedInstant(now);
   const id = ids();
   const scenarioIds = new Map(study.scenarios.map((scenario) => [scenario.id, ids()]));
@@ -132,11 +144,11 @@ export async function updateScenario(
   });
 }
 
-export function appendExecution(
+export async function appendExecution(
   study: StudyDocument,
   execution: ExecutionRecord,
   now: string,
-): StudyDocument {
+): Promise<StudyDocument> {
   if (study.executions.some((existing) => existing.id === execution.id)) {
     throw new Error('Execução já anexada.');
   }
@@ -152,7 +164,10 @@ export function appendExecution(
   });
 }
 
-export function moveStudyToTrash(study: StudyDocument, now: string): StudyDocument {
+export async function moveStudyToTrash(
+  study: StudyDocument,
+  now: string,
+): Promise<StudyDocument> {
   const deletedAt = checkedInstant(now);
   return finalize({
     ...clone(study),

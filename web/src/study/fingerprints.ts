@@ -38,10 +38,22 @@ function normalizeDecimal(value: string): string {
   return normalizedFraction === '' ? whole! : `${whole}.${normalizedFraction}`;
 }
 
-function normalizeSnapshot(snapshot: PortfolioSourceSnapshot): unknown {
+function normalizeSnapshot(
+  snapshot: DeepReadonly<Omit<PortfolioSourceSnapshot, 'sourceFingerprint'>>,
+): Record<string, unknown> {
   const source = structuredClone(snapshot.source) as DeepMutable<typeof snapshot.source>;
   if (source.kind === 'SYNTHETIC') {
-    source.recipe.seeds = [...source.recipe.seeds].sort((left, right) => left - right);
+    source.recipe.seeds = [...source.recipe.seeds].sort((left, right) =>
+      left.length - right.length || ordinal(left, right));
+    source.recipe.composition = [...source.recipe.composition]
+      .map((item) => ({
+        ...item,
+        total_brl: normalizeDecimal(item.total_brl),
+        out_brl: normalizeDecimal(item.out_brl),
+        in_brl: normalizeDecimal(item.in_brl),
+        out_fraction: item.out_fraction === null ? null : normalizeDecimal(item.out_fraction),
+      }))
+      .sort((left, right) => ordinal(left.participant_id ?? '', right.participant_id ?? ''));
   }
   const orders = snapshot.orders.map((order) => ({
     ...structuredClone(order),
@@ -53,7 +65,6 @@ function normalizeSnapshot(snapshot: PortfolioSourceSnapshot): unknown {
     source,
     orders,
     provenance,
-    sourceFingerprint: snapshot.sourceFingerprint,
   };
 }
 
@@ -78,14 +89,17 @@ function normalizePremises(input: ScenarioDraft | ScenarioDocument): unknown {
 export async function fingerprintPortfolioSource(
   snapshot: DeepReadonly<Omit<PortfolioSourceSnapshot, 'sourceFingerprint'>> | PortfolioSourceSnapshot,
 ): Promise<string> {
-  return sha256(normalizeSnapshot({ ...snapshot, sourceFingerprint: '' }));
+  return sha256(normalizeSnapshot(snapshot));
 }
 
 export async function fingerprintScenarioInput(
   input: ScenarioDraft | ScenarioDocument,
 ): Promise<string> {
   return sha256({
-    portfolio: normalizeSnapshot(input.sourceSnapshot),
+    portfolio: {
+      ...normalizeSnapshot(input.sourceSnapshot),
+      sourceFingerprint: input.sourceSnapshot.sourceFingerprint,
+    },
     premises: normalizePremises(input),
     period: structuredClone(input.period),
   });

@@ -31,7 +31,15 @@
         "exampleId": { "$ref": "#/$defs/Identifier" },
         "seeds": {
           "type": "array",
-          "items": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 }
+          "items": {
+            "$ref": "https://motor-de-fluxo.local/contracts/schemas.json#/$defs/EffectiveParticipant/properties/seed"
+          }
+        },
+        "composition": {
+          "type": "array",
+          "items": {
+            "$ref": "https://motor-de-fluxo.local/contracts/schemas.json#/$defs/RealizedComposition"
+          }
         },
         "preparationVersion": { "$ref": "#/$defs/Identifier" },
         "generatorVersion": { "$ref": "#/$defs/Identifier" },
@@ -39,7 +47,7 @@
         "generationFingerprint": { "$ref": "#/$defs/Digest" }
       },
       "required": [
-        "exampleId", "seeds", "preparationVersion", "generatorVersion",
+        "exampleId", "seeds", "composition", "preparationVersion", "generatorVersion",
         "motorBuildSha", "generationFingerprint"
       ]
     },
@@ -96,8 +104,27 @@
     },
     "PeriodDocument": {
       "oneOf": [
-        { "$ref": "https://motor-de-fluxo.local/contracts/schemas.json#/$defs/PeriodoLegado" },
-        { "$ref": "https://motor-de-fluxo.local/contracts/schemas.json#/$defs/PeriodoNatural" }
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "httpPeriod": {
+              "$ref": "https://motor-de-fluxo.local/contracts/schemas.json#/$defs/PeriodoLegado"
+            },
+            "executableHorizonDays": { "type": "integer", "minimum": 0, "maximum": 730 }
+          },
+          "required": ["httpPeriod", "executableHorizonDays"]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "httpPeriod": {
+              "$ref": "https://motor-de-fluxo.local/contracts/schemas.json#/$defs/PeriodoNatural"
+            }
+          },
+          "required": ["httpPeriod"]
+        }
       ]
     },
     "ScenarioDocument": {

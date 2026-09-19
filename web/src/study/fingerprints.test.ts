@@ -33,7 +33,7 @@ describe('fingerprintScenarioInput', () => {
 
     const changedSeed = structuredClone(scenario);
     if (changedSeed.sourceSnapshot.source.kind !== 'SYNTHETIC') throw new Error('fixture');
-    changedSeed.sourceSnapshot.source.recipe.seeds = [2];
+    changedSeed.sourceSnapshot.source.recipe.seeds = ['2'];
     expect(await fingerprintScenarioInput(changedSeed)).not.toBe(reordered);
 
     const changedVersion = structuredClone(scenario);
@@ -51,6 +51,20 @@ describe('fingerprintScenarioInput', () => {
 
     expect(global).toMatch(/^[0-9a-f]{64}$/);
     expect(global).not.toBe(snapshot.source.recipe.generationFingerprint);
+  });
+
+  it('distingue seeds int64 adjacentes e composição realizada', async () => {
+    const scenario = makeScenarioDraft();
+    if (scenario.sourceSnapshot.source.kind !== 'SYNTHETIC') throw new Error('fixture');
+    scenario.sourceSnapshot.source.recipe.seeds = ['9223372036854775806'];
+    const initial = await fingerprintScenarioInput(scenario);
+
+    scenario.sourceSnapshot.source.recipe.seeds = ['9223372036854775807'];
+    const changedSeed = await fingerprintScenarioInput(scenario);
+    expect(changedSeed).not.toBe(initial);
+
+    scenario.sourceSnapshot.source.recipe.composition[0]!.total_brl = '171';
+    expect(await fingerprintScenarioInput(scenario)).not.toBe(changedSeed);
   });
 
   it('fingerprint da origem ignora metadados de captura e inclui conteúdo e revisão observada', async () => {

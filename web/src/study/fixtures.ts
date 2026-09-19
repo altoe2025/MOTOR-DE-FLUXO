@@ -120,7 +120,15 @@ export function makeSyntheticSnapshot(): DeepMutable<PortfolioSourceSnapshot> {
       kind: 'SYNTHETIC',
       recipe: {
         exampleId: 'equilibrado',
-        seeds: [1],
+        seeds: ['1'],
+        composition: [{
+          participant_id: null,
+          order_count: 2,
+          total_brl: '170',
+          out_brl: '100',
+          in_brl: '70',
+          out_fraction: '0.588235294118',
+        }],
         preparationVersion: '1.0.0',
         generatorVersion: 'dimensionamento-v1',
         motorBuildSha: 'd'.repeat(40),
@@ -152,7 +160,9 @@ export function makeScenarioDraft(
       },
       windowDays: 7,
     },
-    period: { modo: 'NATURAL', dias_aquecimento: 0, periodo_medicao_dias: 30 },
+    period: {
+      httpPeriod: { modo: 'NATURAL', dias_aquecimento: 0, periodo_medicao_dias: 30 },
+    },
   };
   return Object.assign(base, structuredClone(overrides));
 }

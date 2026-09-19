@@ -3,7 +3,11 @@ import addFormats from 'ajv-formats';
 
 import httpSchemas from '../api/schemas.json';
 import observedCaseSchema from '../cases/observedCase.schema.json';
-import { canonical } from './fingerprints';
+import {
+  canonical,
+  fingerprintPortfolioSource,
+  fingerprintScenarioInput,
+} from './fingerprints';
 import type {
   ExecutionRecord,
   StudyDocument,
@@ -75,10 +79,10 @@ export function validateExecutionRecord(
   return { ok: true, value };
 }
 
-export function validateStudyDocument(
+export async function validateStudyDocument(
   value: unknown,
   expectedOwnerSub?: string,
-): StudyValidation<StudyDocument> {
+): Promise<StudyValidation<StudyDocument>> {
   if (!validateStudySchema(value)) {
     return { ok: false, issues: (validateStudySchema.errors ?? []).map(structuralIssue) };
   }
@@ -92,6 +96,35 @@ export function validateStudyDocument(
   }
   if (!scenarioIds.includes(value.baseScenarioId)) {
     issues.push(issue('/baseScenarioId', 'BASE_SCENARIO_MISSING', 'Cenário base ausente.'));
+  }
+  for (const [index, scenario] of value.scenarios.entries()) {
+    if (scenario.sourceSnapshot.source.kind === 'SYNTHETIC') {
+      for (const [seedIndex, seed] of scenario.sourceSnapshot.source.recipe.seeds.entries()) {
+        if (BigInt(seed) > 9223372036854775807n) {
+          issues.push(issue(
+            `/scenarios/${index}/sourceSnapshot/source/recipe/seeds/${seedIndex}`,
+            'INVALID_STRUCTURE',
+            'Seed sintética fora do intervalo int64.',
+          ));
+        }
+      }
+    }
+    const expectedSourceFingerprint = await fingerprintPortfolioSource(scenario.sourceSnapshot);
+    if (scenario.sourceSnapshot.sourceFingerprint !== expectedSourceFingerprint) {
+      issues.push(issue(
+        `/scenarios/${index}/sourceSnapshot/sourceFingerprint`,
+        'SOURCE_FINGERPRINT_MISMATCH',
+        'Fingerprint da origem diverge do snapshot.',
+      ));
+    }
+    const expectedInputFingerprint = await fingerprintScenarioInput(scenario);
+    if (scenario.inputFingerprint !== expectedInputFingerprint) {
+      issues.push(issue(
+        `/scenarios/${index}/inputFingerprint`,
+        'INPUT_FINGERPRINT_MISMATCH',
+        'Fingerprint global diverge do cenário.',
+      ));
+    }
   }
   const executionIds = value.executions.map((execution) => execution.id);
   if (new Set(executionIds).size !== executionIds.length) {
@@ -113,8 +146,11 @@ export function validateStudyDocument(
   return issues.length === 0 ? { ok: true, value } : { ok: false, issues };
 }
 
-export function assertValidStudy(study: StudyDocument, expectedOwnerSub = study.ownerSub): void {
-  const validation = validateStudyDocument(study, expectedOwnerSub);
+export async function assertValidStudy(
+  study: StudyDocument,
+  expectedOwnerSub = study.ownerSub,
+): Promise<void> {
+  const validation = await validateStudyDocument(study, expectedOwnerSub);
   if (!validation.ok) {
     throw new Error(`Documento de estudo inválido: ${validation.issues.map((item) => item.code).join(', ')}`);
   }
