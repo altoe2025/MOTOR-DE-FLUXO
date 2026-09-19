@@ -1,5 +1,9 @@
 # Plano de ação do front-end — distribuição de modelos
 
+> **Documento histórico.** Substituído em 2026-09-19 por
+> [`2026-09-19-frontend-plano-geral-execucao-v2.md`](2026-09-19-frontend-plano-geral-execucao-v2.md).
+> A distribuição antiga é preservada como registro, mas não define a sequência atual.
+
 **Eu manteria as seis etapas do documento, com Terra como executor padrão, Sol responsável pelas partes analíticas e pelo acabamento visual, e Astra concentrado nas decisões que podem gerar retrabalho no projeto inteiro.** Luna fica como opção para tarefas mecânicas bem delimitadas.
 
 Li a conversa completa e a [especificação do front-end](../specs/2026-09-11-frontend-motor-de-fluxo-design.md). A organização abaixo preserva a arquitetura proposta; é um plano de distribuição do trabalho, sem iniciar a implementação.

@@ -1,5 +1,9 @@
 # Front-end do Motor de Fluxo — especificação de produto e arquitetura
 
+> **Documento histórico.** Substituído em 2026-09-19 por
+> [`2026-09-19-frontend-motor-de-fluxo-design-v2.md`](2026-09-19-frontend-motor-de-fluxo-design-v2.md).
+> O conteúdo abaixo permanece para rastrear as decisões da versão anterior.
+
 **Data:** 2026-09-11  
 **Status:** desenho aprovado; implementação ainda não iniciada  
 **Escopo:** primeira versão desktop da aplicação web

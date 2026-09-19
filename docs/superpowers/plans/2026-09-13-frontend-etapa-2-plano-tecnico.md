@@ -1,5 +1,10 @@
 # Frontend Etapa 2 — plano técnico consolidado
 
+> **Documento histórico.** Substituído em 2026-09-19 por
+> [`2026-09-19-frontend-etapa-2-plano-tecnico-v2.md`](2026-09-19-frontend-etapa-2-plano-tecnico-v2.md).
+> Não executar estas tarefas diretamente; commits e issues existentes passam pela
+> auditoria prevista no plano v2 antes de qualquer reaproveitamento.
+
 > **ATUALIZAÇÃO DE CONTRATO (2026-09-16):** este plano deve consumir o resultado
 > 2.0.0 e sua composição por mecanismo. Operações explícitas não são pré-netadas;
 > toda apresentação de autonetting vem da API.
