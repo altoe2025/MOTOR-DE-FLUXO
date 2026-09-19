@@ -25,6 +25,31 @@ export type PreviewRequestIdentity = Readonly<{
   scenarioRevision: number;
 }>;
 
+type OrderProvenance = Readonly<{
+  dia_conhecida: FieldProvenance;
+  dia_limite: FieldProvenance;
+  eh_efx: FieldProvenance;
+  finalidade: FieldProvenance;
+  valor_brl: FieldProvenance;
+}>;
+
+export type PreviewRequestProvenance = Readonly<{
+  orders?: Readonly<Record<string, OrderProvenance>>;
+  premises: Readonly<{
+    windowDays: FieldProvenance;
+    costs: Readonly<{
+      iof_out: FieldProvenance;
+      iof_in: FieldProvenance;
+      carry_cnr: FieldProvenance;
+      custo_fixo_remessa: FieldProvenance;
+      custo_oportunidade_aa: FieldProvenance;
+      spread_rail_bps: FieldProvenance;
+      ptax: FieldProvenance;
+    }>;
+  }>;
+  period: Readonly<{ horizonDays: FieldProvenance }>;
+}>;
+
 export type BuildPreviewRequestOptions = Readonly<{ maxBytes?: number }>;
 
 function ordinal(left: string, right: string): number {
@@ -47,36 +72,49 @@ function projectProvenance(item: FieldProvenance): PreviaRequest['proveniencia']
   return { tipo, fonte: item.source, registrado_em_utc: item.recordedAt };
 }
 
-function representativeProvenance(snapshot: PortfolioSourceSnapshot): PreviaRequest['proveniencia'][string] {
+function uniformSnapshotProvenance(snapshot: PortfolioSourceSnapshot): PreviaRequest['proveniencia'][string] {
   if (snapshot.provenance.length === 0) throw new Error('Snapshot sem proveniência.');
-  const ordered = snapshot.provenance.map((item) => structuredClone(item))
-    .sort((left, right) => ordinal(canonical(left), canonical(right)));
-  return projectProvenance(ordered[0]!);
+  const values = snapshot.provenance.map(projectProvenance);
+  if (new Set(values.map(canonical)).size !== 1) {
+    throw new Error('Proveniência agregada ambígua para as ordens do snapshot.');
+  }
+  return values[0]!;
 }
 
-function requestProvenance(snapshot: PortfolioSourceSnapshot, orderCount: number): PreviaRequest['proveniencia'] {
-  const value = representativeProvenance(snapshot);
-  const paths = [
-    '/horizonte_dias',
-    '/janela_dias',
-    '/custo/iof_out',
-    '/custo/iof_in',
-    '/custo/carry_cnr',
-    '/custo/custo_fixo_remessa',
-    '/custo/custo_oportunidade_aa',
-    '/custo/spread_rail_bps',
-    '/custo/ptax',
-  ];
-  for (let index = 0; index < orderCount; index += 1) {
-    paths.push(
-      `/ordens/${index}/dia_conhecida`,
-      `/ordens/${index}/dia_limite`,
-      `/ordens/${index}/eh_efx`,
-      `/ordens/${index}/finalidade`,
-      `/ordens/${index}/valor_brl`,
-    );
+function requestProvenance(
+  snapshot: PortfolioSourceSnapshot,
+  orders: readonly CanonicalAuthoredOrder[],
+  context: PreviewRequestProvenance,
+): PreviaRequest['proveniencia'] {
+  const provenance: PreviaRequest['proveniencia'] = {
+    '/horizonte_dias': projectProvenance(context.period.horizonDays),
+    '/janela_dias': projectProvenance(context.premises.windowDays),
+    '/custo/iof_out': projectProvenance(context.premises.costs.iof_out),
+    '/custo/iof_in': projectProvenance(context.premises.costs.iof_in),
+    '/custo/carry_cnr': projectProvenance(context.premises.costs.carry_cnr),
+    '/custo/custo_fixo_remessa': projectProvenance(context.premises.costs.custo_fixo_remessa),
+    '/custo/custo_oportunidade_aa': projectProvenance(context.premises.costs.custo_oportunidade_aa),
+    '/custo/spread_rail_bps': projectProvenance(context.premises.costs.spread_rail_bps),
+    '/custo/ptax': projectProvenance(context.premises.costs.ptax),
+  };
+  const fallback = context.orders === undefined ? uniformSnapshotProvenance(snapshot) : null;
+  for (const [index, order] of orders.entries()) {
+    const fields = context.orders?.[order.id];
+    if (fields === undefined && fallback === null) {
+      throw new Error(`Proveniência ausente para a ordem ${order.id}.`);
+    }
+    const value = (field: keyof OrderProvenance) => fields === undefined
+      ? fallback!
+      : projectProvenance(fields[field]);
+    Object.assign(provenance, {
+      [`/ordens/${index}/dia_conhecida`]: value('dia_conhecida'),
+      [`/ordens/${index}/dia_limite`]: value('dia_limite'),
+      [`/ordens/${index}/eh_efx`]: value('eh_efx'),
+      [`/ordens/${index}/finalidade`]: value('finalidade'),
+      [`/ordens/${index}/valor_brl`]: value('valor_brl'),
+    });
   }
-  return Object.fromEntries(paths.map((path) => [path, structuredClone(value)]));
+  return provenance;
 }
 
 function horizon(period: PeriodDocument): number {
@@ -90,6 +128,7 @@ export function buildPreviewRequest(
   premises: PremisesDocument,
   period: PeriodDocument,
   identity: PreviewRequestIdentity,
+  provenance: PreviewRequestProvenance,
   options: BuildPreviewRequestOptions = {},
 ): PreviaRequest {
   const orders = orderedOrders(snapshot.orders);
@@ -106,7 +145,7 @@ export function buildPreviewRequest(
       horizonte_dias: horizon(period),
     },
     periodo: structuredClone(period.httpPeriod),
-    proveniencia: requestProvenance(snapshot, orders.length),
+    proveniencia: requestProvenance(snapshot, orders, provenance),
   };
   if (!validatePreviaRequest(request)) {
     throw new Error('Request de prévia inválido.');

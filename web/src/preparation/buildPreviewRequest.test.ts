@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest';
 
 import { validatePreviaRequest } from '../api/validators';
 import { makeSyntheticSnapshot } from '../study/fixtures';
+import type { FieldProvenance } from '../cases/domain';
 import type { PremisesDocument, PeriodDocument } from '../study/model';
 import {
   buildPreviewRequest,
   PreviewRequestTooLargeError,
+  type PreviewRequestProvenance,
 } from './buildPreviewRequest';
 
 const identity = {
@@ -28,11 +30,28 @@ const naturalPeriod: PeriodDocument = {
   httpPeriod: { modo: 'NATURAL', dias_aquecimento: 2, periodo_medicao_dias: 30 },
 };
 
+const syntheticDefault: FieldProvenance = {
+  kind: 'SYNTHETIC_DEFAULT', source: 'catálogo oficial', version: '1.0.0',
+  recordedAt: '2026-09-19T12:00:00Z', rule: 'dimensionamento-v1',
+};
+
+const provenance: PreviewRequestProvenance = {
+  premises: {
+    windowDays: syntheticDefault,
+    costs: {
+      iof_out: syntheticDefault, iof_in: syntheticDefault, carry_cnr: syntheticDefault,
+      custo_fixo_remessa: syntheticDefault, custo_oportunidade_aa: syntheticDefault,
+      spread_rail_bps: syntheticDefault, ptax: syntheticDefault,
+    },
+  },
+  period: { horizonDays: syntheticDefault },
+};
+
 describe('buildPreviewRequest', () => {
   it('constrói e valida o request canônico com ordens, premissas e período', () => {
     const snapshot = makeSyntheticSnapshot();
 
-    const request = buildPreviewRequest(snapshot, premises, naturalPeriod, identity);
+    const request = buildPreviewRequest(snapshot, premises, naturalPeriod, identity, provenance);
 
     expect(validatePreviaRequest(request)).toBe(true);
     expect(request).toMatchObject({
@@ -49,7 +68,9 @@ describe('buildPreviewRequest', () => {
       httpPeriod: { modo: 'LEGADO' }, executableHorizonDays: 31,
     };
 
-    const request = buildPreviewRequest(makeSyntheticSnapshot(), premises, legacyPeriod, identity);
+    const request = buildPreviewRequest(
+      makeSyntheticSnapshot(), premises, legacyPeriod, identity, provenance,
+    );
 
     expect(request.periodo).toEqual({ modo: 'LEGADO' });
     expect(request.cenario.horizonte_dias).toBe(31);
@@ -59,12 +80,43 @@ describe('buildPreviewRequest', () => {
     const snapshot = makeSyntheticSnapshot();
     const serialized = JSON.stringify(snapshot);
 
-    expect(() => buildPreviewRequest(snapshot, premises, naturalPeriod, identity, { maxBytes: 1 }))
+    expect(() => buildPreviewRequest(snapshot, premises, naturalPeriod, identity, provenance, { maxBytes: 1 }))
       .toThrow(PreviewRequestTooLargeError);
 
-    const request = buildPreviewRequest(snapshot, premises, naturalPeriod, identity);
+    const request = buildPreviewRequest(snapshot, premises, naturalPeriod, identity, provenance);
     expect(JSON.stringify(request)).not.toMatch(/filename|corrections|sourceManifest|arquivo|Blob|history/i);
     expect(serialized).toContain('generationFingerprint');
     expect(JSON.stringify(request)).not.toContain('generationFingerprint');
+  });
+
+  it('preserva proveniência explícita por campo e rejeita uma origem agregada ambígua', () => {
+    const snapshot = makeSyntheticSnapshot();
+    const observed: FieldProvenance = {
+      kind: 'OBSERVED', source: 'arquivo confirmado', version: '1',
+      recordedAt: '2026-09-19T12:01:00Z',
+    };
+    snapshot.provenance.push(observed);
+
+    expect(() => buildPreviewRequest(snapshot, premises, naturalPeriod, identity, provenance))
+      .toThrow('ambígua');
+
+    const orders = Object.fromEntries(snapshot.orders.map((order) => [order.id, {
+      dia_conhecida: observed,
+      dia_limite: observed,
+      eh_efx: observed,
+      finalidade: observed,
+      valor_brl: observed,
+    }]));
+    const request = buildPreviewRequest(snapshot, premises, naturalPeriod, identity, {
+      ...provenance,
+      orders,
+    });
+
+    expect(request.proveniencia['/ordens/0/valor_brl']).toEqual({
+      tipo: 'DADO_OBSERVADO', fonte: 'arquivo confirmado', registrado_em_utc: observed.recordedAt,
+    });
+    expect(request.proveniencia['/custo/iof_out']).toEqual({
+      tipo: 'PADRAO_SINTETICO', fonte: 'catálogo oficial', registrado_em_utc: syntheticDefault.recordedAt,
+    });
   });
 });

@@ -131,6 +131,16 @@ describe('resolvePortfolioSource', () => {
     expect(snapshot.sourceFingerprint).toBe(await fingerprintPortfolioSource(snapshot));
   });
 
+  it('rejeita cedo uma preparação válida sem fonte projetável', async () => {
+    const request = preparationRequest();
+    request.input.sources = {};
+
+    await expect(resolvePortfolioSource(
+      { kind: 'AUTHORED', authoredPortfolioId: 'portfolio-1', preparation: preparationResponse(request) },
+      dependencies(),
+    )).rejects.toThrow('proveniência');
+  });
+
   it('cria o fixture dourado sintético pela preparação oficial e registra receita, seed e composição realizada', async () => {
     const request = preparationRequest();
     request.input.participants = [{

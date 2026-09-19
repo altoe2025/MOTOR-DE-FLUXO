@@ -88,6 +88,9 @@ function preparationProvenance(response: PreparationResponse): FieldProvenance[]
           recordedAt: source.recorded_at,
         }
   ));
+  if (provenance.length === 0) {
+    throw new Error('Preparação sem proveniência projetável.');
+  }
   return orderProvenance(provenance);
 }
 
