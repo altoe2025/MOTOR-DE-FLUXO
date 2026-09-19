@@ -133,6 +133,7 @@ def _composition(participant_id: UUID | None, orders: list[Ordem]) -> RealizedCo
 
 
 def _generation_fingerprint(request: PreparationRequest, build_sha: str) -> str:
+    """Hash only order-generation determinants, excluding later analytical evidence."""
     participants = []
     for participant in sorted(request.input.participants, key=lambda value: str(value.id)):
         participants.append(

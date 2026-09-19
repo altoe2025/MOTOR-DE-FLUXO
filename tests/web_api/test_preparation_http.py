@@ -22,7 +22,7 @@ class Verifier:
         return AuthenticatedUser(USER_ID)
 
 
-def _settings() -> Settings:
+def _settings(motor_build_sha: str = "a" * 40) -> Settings:
     return Settings.model_validate(
         {
             "app_env": "test",
@@ -30,7 +30,7 @@ def _settings() -> Settings:
             "supabase_jwt_issuer": "https://projeto.supabase.co/auth/v1",
             "supabase_jwt_audience": "authenticated",
             "supabase_allowed_user_ids": frozenset({USER_ID}),
-            "motor_build_sha": "a" * 40,
+            "motor_build_sha": motor_build_sha,
         }
     )
 
@@ -121,6 +121,13 @@ def _auth() -> dict[str, str]:
     return {"Authorization": "Bearer token-valido"}
 
 
+def _prepared_document(app_client: TestClient, payload: dict[str, object]) -> dict[str, object]:
+    response = app_client.post("/api/v1/preparacoes", json=payload, headers=_auth())
+
+    assert response.status_code == 200
+    return response.json()
+
+
 def test_preparacao_autenticada_usa_gerador_oficial_e_retorna_ordens_canonicas(
     app_client,
 ):
@@ -180,6 +187,85 @@ def test_preparacao_repetida_preserva_resultado_gerativo_e_fingerprint(app_clien
         "derived_provenance",
     ):
         assert first_document[field] == second_document[field]
+
+
+def test_generation_fingerprint_muda_com_determinantes_materiais_de_geracao(
+    app_client,
+):
+    """O hash identifica a geração, inclusive versão/build, não a análise posterior."""
+    baseline = _prepared_document(app_client, _payload())
+    baseline_fingerprint = baseline["generation_fingerprint"]
+
+    seed_payload = deepcopy(_payload())
+    seed_payload["input"]["participants"][0]["seed"] = "2"  # type: ignore[index]
+    seed_document = _prepared_document(app_client, seed_payload)
+
+    participant_payload = deepcopy(_payload())
+    participant_payload["input"]["participants"][0]["ticket_median_brl"] = "1001"  # type: ignore[index]
+    participant_document = _prepared_document(app_client, participant_payload)
+
+    horizon_payload = deepcopy(_payload())
+    horizon_payload["input"]["measurement_days"] = 31  # type: ignore[index]
+    horizon_document = _prepared_document(app_client, horizon_payload)
+
+    from servidor.app import create_app
+
+    build_payload = deepcopy(_payload())
+    build_payload["expected_build_sha"] = "b" * 40
+    with TestClient(
+        create_app(_settings("b" * 40), Verifier()), raise_server_exceptions=False
+    ) as build_client:
+        build_document = _prepared_document(build_client, build_payload)
+
+    for document in (
+        seed_document,
+        participant_document,
+        horizon_document,
+        build_document,
+    ):
+        assert document["generation_fingerprint"] != baseline_fingerprint
+
+
+def test_generation_fingerprint_ignora_entrada_analitica_mas_snapshot_a_preserva(
+    app_client,
+):
+    """Custos, P0 e evidência não determinam as ordens canônicas geradas."""
+    baseline = _prepared_document(app_client, _payload())
+    baseline_fingerprint = baseline["generation_fingerprint"]
+
+    costs_payload = deepcopy(_payload())
+    costs_payload["input"]["costs"]["iof_out"] = "0.034"  # type: ignore[index]
+    costs_document = _prepared_document(app_client, costs_payload)
+    assert costs_document["generation_fingerprint"] == baseline_fingerprint
+    assert costs_document["input_snapshot"]["costs"]["iof_out"] == "0.034"  # type: ignore[index]
+
+    window_payload = deepcopy(_payload())
+    window_payload["input"]["window_days"] = 8  # type: ignore[index]
+    window_document = _prepared_document(app_client, window_payload)
+    assert window_document["generation_fingerprint"] == baseline_fingerprint
+    assert window_document["input_snapshot"]["window_days"] == 8  # type: ignore[index]
+
+    source_payload = deepcopy(_payload())
+    source_payload["input"]["sources"]["/warmup_days"]["source"] = "Metadado alterado"  # type: ignore[index]
+    source_document = _prepared_document(app_client, source_payload)
+    assert source_document["generation_fingerprint"] == baseline_fingerprint
+    assert source_document["input_snapshot"]["sources"]["/warmup_days"]["source"] == "Metadado alterado"  # type: ignore[index]
+
+    scenario_payload = deepcopy(_payload())
+    scenario_payload["scenario_id"] = "00000000-0000-4000-8000-000000000099"
+    scenario_payload["scenario_revision"] = 2
+    scenario_document = _prepared_document(app_client, scenario_payload)
+    assert scenario_document["generation_fingerprint"] == baseline_fingerprint
+    assert scenario_document["scenario_id"] == scenario_payload["scenario_id"]
+    assert scenario_document["scenario_revision"] == scenario_payload["scenario_revision"]
+
+    split_payload = deepcopy(_payload())
+    split_payload["input"]["warmup_days"] = 1  # type: ignore[index]
+    split_payload["input"]["measurement_days"] = 29  # type: ignore[index]
+    split_document = _prepared_document(app_client, split_payload)
+    assert split_document["generation_fingerprint"] == baseline_fingerprint
+    assert split_document["input_snapshot"]["warmup_days"] == 1  # type: ignore[index]
+    assert split_document["input_snapshot"]["measurement_days"] == 29  # type: ignore[index]
 
 
 def test_preparacao_exige_bearer_antes_de_ler_payload(app_client):
