@@ -5,7 +5,13 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { createStudy } from '../domain';
-import { FIXTURE_NOW, FIXTURE_OWNER, makeObservedCase, makeScenarioDraft } from '../fixtures';
+import {
+  FIXTURE_NOW,
+  FIXTURE_OWNER,
+  makeAuthoredSnapshot,
+  makeObservedCase,
+  makeScenarioDraft,
+} from '../fixtures';
 import { requiredBuildSha } from '../sourceConfiguration';
 import { StudyEditor } from './StudyEditor';
 import { StudyList } from './StudyList';
@@ -22,6 +28,7 @@ async function subject(overrides: Partial<React.ComponentProps<typeof StudyEdito
   const onRename = vi.fn();
   const onSourceChange = vi.fn();
   const onConvertObserved = vi.fn();
+  const onScenarioChange = vi.fn();
   const observedCase = makeObservedCase();
   render(<StudyEditor
     study={document}
@@ -29,9 +36,10 @@ async function subject(overrides: Partial<React.ComponentProps<typeof StudyEdito
     companies={[{ id: 'company-1', ownerSub: FIXTURE_OWNER, displayName: 'Empresa Alfa', aliases: [], createdAt: FIXTURE_NOW, updatedAt: FIXTURE_NOW, revision: 1 }]}
     status="SAVED" onRename={onRename} onDuplicate={vi.fn()}
     onSourceChange={onSourceChange} onConvertObserved={onConvertObserved}
+    onScenarioChange={onScenarioChange}
     {...overrides}
   />);
-  return { onRename, onSourceChange, onConvertObserved, observedCase };
+  return { onRename, onSourceChange, onConvertObserved, onScenarioChange, observedCase };
 }
 
 describe('StudyEditor', () => {
@@ -100,6 +108,48 @@ describe('StudyEditor', () => {
     expect(onSourceChange).not.toHaveBeenCalled();
   });
 
+  it('reidrata autoria persistida e salva premissas e período sem perder texto decimal', async () => {
+    const snapshot = makeAuthoredSnapshot();
+    if (snapshot.source.kind !== 'AUTHORED') throw new Error('fixture');
+    snapshot.source.definition = {
+      kind: 'PARAMETRIC',
+      groups: [{
+        id: 'group-saved', name: 'Grupo persistido',
+        parameters: {
+          frequency: '12.00', ticket: '1500.50', direction: 'OUT', deadline: '5',
+          purpose: 'ANEXO_V_REMESSA_TERCEIRO', profile: 'tesouraria_corporativa',
+        },
+        participants: [{
+          id: 'participant-saved', name: 'Participante persistido', override: false,
+          parameters: {
+            frequency: '12.00', ticket: '1500.50', direction: 'OUT', deadline: '5',
+            purpose: 'ANEXO_V_REMESSA_TERCEIRO', profile: 'tesouraria_corporativa',
+          },
+        }],
+      }],
+    };
+    const document = await createStudy({
+      id: 'study-authored', ownerSub: FIXTURE_OWNER, name: 'Autoria salva',
+      baseScenario: makeScenarioDraft({ sourceSnapshot: snapshot }), now: FIXTURE_NOW,
+    });
+    const onScenarioChange = vi.fn();
+    await subject({ study: document, onScenarioChange });
+    const user = userEvent.setup();
+
+    expect(screen.getByLabelText('Nome do grupo')).toHaveValue('Grupo persistido');
+    expect(screen.getByLabelText('Ticket médio do grupo')).toHaveValue('1500.50');
+    await user.clear(screen.getByLabelText('PTAX'));
+    await user.type(screen.getByLabelText('PTAX'), '5.4000');
+    await user.clear(screen.getByLabelText('Período de medição em dias'));
+    await user.type(screen.getByLabelText('Período de medição em dias'), '45');
+    await user.click(screen.getByRole('button', { name: 'Salvar premissas e período' }));
+
+    expect(onScenarioChange).toHaveBeenCalledWith(expect.objectContaining({
+      premises: expect.objectContaining({ costs: expect.objectContaining({ ptax: '5.4000' }) }),
+      period: { httpPeriod: { modo: 'NATURAL', dias_aquecimento: 0, periodo_medicao_dias: 45 } },
+    }));
+  });
+
   it('converte caso observado em autoria preenchida sem modificar o original', async () => {
     const { onSourceChange, onConvertObserved, observedCase } = await subject(); const user = userEvent.setup();
     const originalJson = JSON.stringify(observedCase);
@@ -121,7 +171,14 @@ describe('StudyEditor', () => {
     expect(screen.getByLabelText('Finalidade do participante')).toHaveValue('ANEXO_V_REMESSA_TERCEIRO');
     expect(onSourceChange).toHaveBeenLastCalledWith(expect.objectContaining({
       kind: 'AUTHORED',
-      preparation: expect.objectContaining({ input: expect.objectContaining({ participants: [expect.objectContaining({ ticket_median_brl: '100', out_fraction: '1' })] }) }),
+      definition: expect.objectContaining({
+        kind: 'EXPLICIT_ORDERS',
+        orders: [expect.objectContaining({
+          id: 'observed-order-1', cliente_id: 'client-1', direcao: 'OUT',
+          dia_conhecida: 0, dia_limite: 2, valor_brl: '100',
+          finalidade: 'ANEXO_V_REMESSA_TERCEIRO', eh_efx: true,
+        })],
+      }),
     }));
     expect(JSON.stringify(observedCase)).toBe(originalJson);
   });

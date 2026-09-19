@@ -131,6 +131,39 @@ describe('resolvePortfolioSource', () => {
     expect(snapshot.sourceFingerprint).toBe(await fingerprintPortfolioSource(snapshot));
   });
 
+  it('converte ordens observadas em autoria explícita sem chamar preparação nem reamostrar', async () => {
+    const observed = makeObservedCase();
+    const preparePortfolio = vi.fn();
+    const definition = {
+      kind: 'EXPLICIT_ORDERS' as const,
+      derivedFromObservedCase: { caseId: observed.id, caseRevision: observed.revision },
+      orders: [{
+        id: 'observed-order-1', cliente_id: 'client-1', direcao: 'OUT' as const,
+        dia_conhecida: 0, dia_limite: 2, valor_brl: '100',
+        finalidade: 'ANEXO_V_REMESSA_TERCEIRO', eh_efx: true,
+      }],
+      provenanceByOrder: {
+        'observed-order-1': {
+          dia_conhecida: observed.orders[0]!.provenance[0]!,
+          dia_limite: observed.orders[0]!.provenance[0]!,
+          valor_brl: observed.orders[0]!.provenance[0]!,
+          finalidade: observed.orders[0]!.provenance[0]!,
+          eh_efx: observed.orders[0]!.provenance[0]!,
+        },
+      },
+    };
+
+    const snapshot = await resolvePortfolioSource(
+      { kind: 'AUTHORED', authoredPortfolioId: 'portfolio-explicit', definition },
+      dependencies({ preparePortfolio }),
+    );
+
+    expect(preparePortfolio).not.toHaveBeenCalled();
+    expect(snapshot.orders).toEqual(definition.orders);
+    expect(snapshot.source).toMatchObject({ kind: 'AUTHORED', definition });
+    expect(snapshot.provenanceByOrder).toEqual(definition.provenanceByOrder);
+  });
+
   it('rejeita cedo uma preparação válida sem fonte projetável', async () => {
     const request = preparationRequest();
     request.input.sources = {};

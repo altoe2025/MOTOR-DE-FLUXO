@@ -5,27 +5,32 @@ import type { PreparationRequest } from '../../api/client';
 import type { CompanyRecord, ObservedCase } from '../../cases/domain';
 import { Button } from '../../ui/Button';
 import { TextField } from '../../ui/TextField';
-import type { ScenarioDocument, StudyDocument } from '../model';
+import { authoredDefinitionFromObservedCase } from '../../preparation/resolvePortfolioSource';
+import type {
+  AuthoredGroup,
+  AuthoredParameters,
+  AuthoredPortfolioDefinition,
+  ScenarioDocument,
+  StudyDocument,
+} from '../model';
 import { requiredBuildSha } from '../sourceConfiguration';
 
 export type PortfolioSourceKind = 'SYNTHETIC' | 'AUTHORED' | 'OBSERVED_CASE';
 export type PortfolioSourceDraft =
   | Readonly<{ kind: 'SYNTHETIC'; exampleId: string; preparation: PreparationRequest }>
-  | Readonly<{ kind: 'AUTHORED'; authoredPortfolioId: string; preparation: PreparationRequest }>
+  | Readonly<{
+      kind: 'AUTHORED';
+      authoredPortfolioId: string;
+      definition: AuthoredPortfolioDefinition;
+      preparation?: PreparationRequest;
+    }>
   | Readonly<{ kind: 'OBSERVED_CASE'; caseId: string; caseRevision: number }>;
 
 type Direction = 'OUT' | 'IN' | 'MIXED';
 type Profile = PreparationRequest['input']['participants'][number]['profile'];
-type Parameters = {
-  frequency: string;
-  ticket: string;
-  direction: Direction;
-  deadline: string;
-  purpose: string;
-  profile: Profile;
-};
-type Participant = { id: string; name: string; override: boolean; parameters: Parameters };
-type Group = { id: string; name: string; parameters: Parameters; participants: Participant[] };
+type Parameters = AuthoredParameters;
+type Participant = AuthoredGroup['participants'][number];
+type Group = AuthoredGroup;
 
 const PURPOSE_OUT = 'ANEXO_V_REMESSA_TERCEIRO';
 const PURPOSE_IN = 'ANEXO_V_DISPONIBILIDADE';
@@ -178,7 +183,12 @@ function AuthoredForm({ study, scenario, initialGroups, onApply, onDirty }: { st
     try {
       const preparation = request(study, scenario, groups, 'ESTIMATIVA_USUARIO');
       setError(null); onDirty(false);
-      onApply({ kind: 'AUTHORED', authoredPortfolioId: uuid(), preparation });
+      onApply({
+        kind: 'AUTHORED',
+        authoredPortfolioId: uuid(),
+        definition: { kind: 'PARAMETRIC', groups: structuredClone(groups) },
+        preparation,
+      });
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Autoria manual inválida.'); }
   };
   return <section className="source-panel"><h2>Carteira manual</h2>{error ? <p role="alert" className="field-error">{error}</p> : null}{groups.map((item, groupIndex) => <fieldset key={item.id} className="authoring-group"><legend>Grupo {groupIndex + 1}</legend><TextField id={`group-name-${item.id}`} label="Nome do grupo" value={item.name} onChange={(event) => changeGroup(groupIndex, { ...item, name: event.currentTarget.value })} /><ParameterFields prefix="grupo" values={item.parameters} onChange={(parameters) => changeGroup(groupIndex, { ...item, parameters })} />{item.participants.map((member, participantIndex) => <fieldset key={member.id} className="authoring-participant"><legend>{member.name}</legend><label><input type="checkbox" checked={member.override} onChange={(event) => changeGroup(groupIndex, { ...item, participants: item.participants.map((candidate, position) => position === participantIndex ? { ...candidate, override: event.currentTarget.checked, parameters: { ...item.parameters } } : candidate) })} /> Sobrescrever parâmetros do participante</label>{member.override ? <ParameterFields prefix="participante" values={member.parameters} onChange={(parameters) => changeGroup(groupIndex, { ...item, participants: item.participants.map((candidate, position) => position === participantIndex ? { ...candidate, parameters } : candidate) })} /> : <p className="field-hint">Frequência, ticket, direção, prazo, finalidade e perfil herdados do grupo.</p>}</fieldset>)}<Button variant="secondary" onClick={() => changeGroup(groupIndex, { ...item, participants: [...item.participants, participant(item.parameters)] })}>Adicionar participante</Button></fieldset>)}<div className="source-actions"><Button variant="secondary" onClick={() => { setGroups((current) => [...current, group()]); onDirty(true); }}>Adicionar grupo</Button><Button onClick={submit}>Preparar carteira manual</Button></div></section>;
@@ -216,17 +226,25 @@ export function PortfolioSourceSelector({ value, study, scenario, observedCases,
     if (caseRecord === undefined) return;
     try {
       const converted = groupsFromObserved(caseRecord);
-      const preparation = request(study, scenario, converted, 'ESTIMATIVA_USUARIO');
       setConvertedGroups(converted);
       setConversionError(null);
       notifyConvertObserved(id);
       setAuthoredDirty(false);
       setDraftKind('AUTHORED');
-      onChange({ kind: 'AUTHORED', authoredPortfolioId: uuid(), preparation });
+      onChange({
+        kind: 'AUTHORED',
+        authoredPortfolioId: uuid(),
+        definition: authoredDefinitionFromObservedCase(caseRecord),
+      });
     } catch (reason) {
       setConversionError(reason instanceof Error ? reason.message : 'Não foi possível converter o caso observado.');
     }
   };
   const currentSource = scenario.sourceSnapshot.source;
-  return <fieldset className="source-selector"><legend>Origem da carteira</legend><div className="source-selector__choices" role="radiogroup" aria-label="Origem da carteira"><label><input type="radio" name="portfolio-source" checked={draftKind === 'SYNTHETIC'} onChange={() => selectKind('SYNTHETIC')} /> Exemplo sintético</label><label><input type="radio" name="portfolio-source" checked={draftKind === 'AUTHORED'} onChange={() => selectKind('AUTHORED')} /> Autoria manual</label><label><input type="radio" name="portfolio-source" checked={draftKind === 'OBSERVED_CASE'} onChange={() => selectKind('OBSERVED_CASE')} /> Caso observado</label></div>{draftKind === 'SYNTHETIC' ? <SyntheticForm study={study} scenario={scenario} {...(currentSource.kind === 'SYNTHETIC' ? { initialExampleId: currentSource.recipe.exampleId } : {})} onApply={onChange} /> : draftKind === 'AUTHORED' ? <AuthoredForm study={study} scenario={scenario} {...(convertedGroups === undefined ? {} : { initialGroups: convertedGroups })} onApply={onChange} onDirty={setAuthoredDirty} /> : <section className="source-panel"><h2>Caso observado</h2>{conversionError ? <p role="alert" className="field-error">{conversionError}</p> : null}<label htmlFor="observed-case">Caso confirmado</label><select id="observed-case" value={caseId} onChange={(event) => setCaseId(event.currentTarget.value)}><option value="">Selecione um caso</option>{confirmed.map((item) => <option key={item.id} value={item.id}>{companies.find((company) => company.id === item.companyId)?.displayName ?? item.companyId} · {item.window.startDate}–{item.window.endDate}</option>)}</select>{selected ? <div className="observed-summary"><h3>{companies.find((company) => company.id === selected.companyId)?.displayName ?? selected.companyId}</h3><dl><div><dt>Janela</dt><dd>{selected.window.startDate} a {selected.window.endDate}</dd></div><div><dt>Ordens</dt><dd>{selected.orders.length} {selected.orders.length === 1 ? 'ordem' : 'ordens'}</dd></div><div><dt>Total</dt><dd>{brlTotal(selected)} BRL</dd></div><div><dt>Qualidade</dt><dd>{selected.quality.blockers.length === 0 ? 'Sem bloqueios' : `${selected.quality.blockers.length} bloqueio(s)`}; {selected.quality.warnings.length} aviso(s)</dd></div><div><dt>Proveniência</dt><dd>{[...new Set(selected.orders.flatMap((order) => order.provenance.map((item) => item.source)))].join(', ')}</dd></div></dl><p className="field-hint">A revisão {selected.revision} será copiada para um snapshot imutável. A fonte não será alterada.</p><div className="source-actions"><Button onClick={() => onChange({ kind: 'OBSERVED_CASE', caseId: selected.id, caseRevision: selected.revision })}>Usar caso confirmado</Button><Button variant="secondary" onClick={() => onConvertObserved(selected.id)}>Converter para autoria manual</Button></div></div> : null}</section>}</fieldset>;
+  const persistedGroups = currentSource.kind === 'AUTHORED'
+    && currentSource.definition?.kind === 'PARAMETRIC'
+    ? currentSource.definition.groups
+    : undefined;
+  const initialGroups = convertedGroups ?? persistedGroups;
+  return <fieldset className="source-selector"><legend>Origem da carteira</legend><div className="source-selector__choices" role="radiogroup" aria-label="Origem da carteira"><label><input type="radio" name="portfolio-source" checked={draftKind === 'SYNTHETIC'} onChange={() => selectKind('SYNTHETIC')} /> Exemplo sintético</label><label><input type="radio" name="portfolio-source" checked={draftKind === 'AUTHORED'} onChange={() => selectKind('AUTHORED')} /> Autoria manual</label><label><input type="radio" name="portfolio-source" checked={draftKind === 'OBSERVED_CASE'} onChange={() => selectKind('OBSERVED_CASE')} /> Caso observado</label></div>{draftKind === 'SYNTHETIC' ? <SyntheticForm study={study} scenario={scenario} {...(currentSource.kind === 'SYNTHETIC' ? { initialExampleId: currentSource.recipe.exampleId } : {})} onApply={onChange} /> : draftKind === 'AUTHORED' ? <AuthoredForm study={study} scenario={scenario} {...(initialGroups === undefined ? {} : { initialGroups })} onApply={onChange} onDirty={setAuthoredDirty} /> : <section className="source-panel"><h2>Caso observado</h2>{conversionError ? <p role="alert" className="field-error">{conversionError}</p> : null}<label htmlFor="observed-case">Caso confirmado</label><select id="observed-case" value={caseId} onChange={(event) => setCaseId(event.currentTarget.value)}><option value="">Selecione um caso</option>{confirmed.map((item) => <option key={item.id} value={item.id}>{companies.find((company) => company.id === item.companyId)?.displayName ?? item.companyId} · {item.window.startDate}–{item.window.endDate}</option>)}</select>{selected ? <div className="observed-summary"><h3>{companies.find((company) => company.id === selected.companyId)?.displayName ?? selected.companyId}</h3><dl><div><dt>Janela</dt><dd>{selected.window.startDate} a {selected.window.endDate}</dd></div><div><dt>Ordens</dt><dd>{selected.orders.length} {selected.orders.length === 1 ? 'ordem' : 'ordens'}</dd></div><div><dt>Total</dt><dd>{brlTotal(selected)} BRL</dd></div><div><dt>Qualidade</dt><dd>{selected.quality.blockers.length === 0 ? 'Sem bloqueios' : `${selected.quality.blockers.length} bloqueio(s)`}; {selected.quality.warnings.length} aviso(s)</dd></div><div><dt>Proveniência</dt><dd>{[...new Set(selected.orders.flatMap((order) => order.provenance.map((item) => item.source)))].join(', ')}</dd></div></dl><p className="field-hint">A revisão {selected.revision} será copiada para um snapshot imutável. A fonte não será alterada.</p><div className="source-actions"><Button onClick={() => onChange({ kind: 'OBSERVED_CASE', caseId: selected.id, caseRevision: selected.revision })}>Usar caso confirmado</Button><Button variant="secondary" onClick={() => onConvertObserved(selected.id)}>Converter para autoria manual</Button></div></div> : null}</section>}</fieldset>;
 }

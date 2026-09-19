@@ -34,6 +34,46 @@ export type PreviewEnvelope = DeepReadonly<components['schemas']['PreviewEnvelop
 export type PreparationResponse = DeepReadonly<components['schemas']['PreparationResponse']>;
 export type SeedText = components['schemas']['EffectiveParticipant']['seed'];
 
+export type OrderFieldProvenance = Readonly<{
+  dia_conhecida: FieldProvenance;
+  dia_limite: FieldProvenance;
+  eh_efx: FieldProvenance;
+  finalidade: FieldProvenance;
+  valor_brl: FieldProvenance;
+}>;
+
+export type AuthoredParameters = Readonly<{
+  frequency: string;
+  ticket: string;
+  direction: 'OUT' | 'IN' | 'MIXED';
+  deadline: string;
+  purpose: string;
+  profile: components['schemas']['EffectiveParticipant']['profile'];
+}>;
+
+export type AuthoredParticipant = Readonly<{
+  id: string;
+  name: string;
+  override: boolean;
+  parameters: AuthoredParameters;
+}>;
+
+export type AuthoredGroup = Readonly<{
+  id: string;
+  name: string;
+  parameters: AuthoredParameters;
+  participants: readonly AuthoredParticipant[];
+}>;
+
+export type AuthoredPortfolioDefinition =
+  | Readonly<{ kind: 'PARAMETRIC'; groups: readonly AuthoredGroup[] }>
+  | Readonly<{
+      kind: 'EXPLICIT_ORDERS';
+      derivedFromObservedCase?: Readonly<{ caseId: string; caseRevision: number }>;
+      orders: readonly CanonicalAuthoredOrder[];
+      provenanceByOrder: Readonly<Record<string, OrderFieldProvenance>>;
+    }>;
+
 export type SyntheticRecipe = Readonly<{
   exampleId: string;
   seeds: readonly SeedText[];
@@ -46,7 +86,11 @@ export type SyntheticRecipe = Readonly<{
 
 export type PortfolioSource =
   | Readonly<{ kind: 'OBSERVED_CASE'; caseId: string; caseRevision: number }>
-  | Readonly<{ kind: 'AUTHORED'; authoredPortfolioId: string }>
+  | Readonly<{
+      kind: 'AUTHORED';
+      authoredPortfolioId: string;
+      definition?: AuthoredPortfolioDefinition;
+    }>
   | Readonly<{ kind: 'SYNTHETIC'; recipe: SyntheticRecipe }>;
 
 export type PortfolioSourceSnapshot = Readonly<{
@@ -54,6 +98,7 @@ export type PortfolioSourceSnapshot = Readonly<{
   capturedAt: string;
   orders: readonly CanonicalAuthoredOrder[];
   provenance: readonly FieldProvenance[];
+  provenanceByOrder?: Readonly<Record<string, OrderFieldProvenance>>;
   observedOutcome: ObservedOutcome | null;
   sourceFingerprint: string;
 }>;
@@ -63,6 +108,22 @@ export type PremisesDocument = Readonly<{
   windowDays: number;
 }>;
 
+export type ScenarioInputProvenance = Readonly<{
+  premises: Readonly<{
+    windowDays: FieldProvenance;
+    costs: Readonly<{
+      iof_out: FieldProvenance;
+      iof_in: FieldProvenance;
+      carry_cnr: FieldProvenance;
+      custo_fixo_remessa: FieldProvenance;
+      custo_oportunidade_aa: FieldProvenance;
+      spread_rail_bps: FieldProvenance;
+      ptax: FieldProvenance;
+    }>;
+  }>;
+  period: Readonly<{ horizonDays: FieldProvenance }>;
+}>;
+
 export type ScenarioDocument = Readonly<{
   id: string;
   revision: number;
@@ -70,6 +131,7 @@ export type ScenarioDocument = Readonly<{
   sourceSnapshot: PortfolioSourceSnapshot;
   premises: PremisesDocument;
   period: PeriodDocument;
+  inputProvenance?: ScenarioInputProvenance;
   inputFingerprint: string;
 }>;
 
@@ -142,6 +204,7 @@ export type ScenarioUpdate = Readonly<{
   sourceSnapshot?: PortfolioSourceSnapshot;
   premises?: PremisesDocument;
   period?: PeriodDocument;
+  inputProvenance?: ScenarioInputProvenance;
 }>;
 
 export type ResultState =

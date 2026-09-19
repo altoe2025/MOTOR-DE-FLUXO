@@ -15,12 +15,92 @@
       },
       "required": ["kind", "caseId", "caseRevision"]
     },
+    "AuthoredParameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "frequency": { "type": "string", "pattern": "^[0-9]+(?:\\.[0-9]+)?$" },
+        "ticket": { "type": "string", "pattern": "^[0-9]+(?:\\.[0-9]+)?$" },
+        "direction": { "enum": ["OUT", "IN", "MIXED"] },
+        "deadline": { "type": "string", "pattern": "^[0-9]+$" },
+        "purpose": { "$ref": "#/$defs/Identifier" },
+        "profile": { "enum": ["remessa_outbound_massiva", "psp_inbound", "cripto_native_sem_fiat", "payroll_fornecedor", "exportador", "tesouraria_corporativa"] }
+      },
+      "required": ["frequency", "ticket", "direction", "deadline", "purpose", "profile"]
+    },
+    "AuthoredParticipant": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/Identifier" },
+        "name": { "$ref": "#/$defs/Identifier" },
+        "override": { "type": "boolean" },
+        "parameters": { "$ref": "#/$defs/AuthoredParameters" }
+      },
+      "required": ["id", "name", "override", "parameters"]
+    },
+    "AuthoredGroup": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/Identifier" },
+        "name": { "$ref": "#/$defs/Identifier" },
+        "parameters": { "$ref": "#/$defs/AuthoredParameters" },
+        "participants": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/AuthoredParticipant" } }
+      },
+      "required": ["id", "name", "parameters", "participants"]
+    },
+    "OrderFieldProvenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "dia_conhecida": { "$ref": "https://motor-de-fluxo.local/cases/observedCase.schema.json#/$defs/FieldProvenance" },
+        "dia_limite": { "$ref": "https://motor-de-fluxo.local/cases/observedCase.schema.json#/$defs/FieldProvenance" },
+        "eh_efx": { "$ref": "https://motor-de-fluxo.local/cases/observedCase.schema.json#/$defs/FieldProvenance" },
+        "finalidade": { "$ref": "https://motor-de-fluxo.local/cases/observedCase.schema.json#/$defs/FieldProvenance" },
+        "valor_brl": { "$ref": "https://motor-de-fluxo.local/cases/observedCase.schema.json#/$defs/FieldProvenance" }
+      },
+      "required": ["dia_conhecida", "dia_limite", "eh_efx", "finalidade", "valor_brl"]
+    },
+    "AuthoredDefinition": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "kind": { "const": "PARAMETRIC" },
+            "groups": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/AuthoredGroup" } }
+          },
+          "required": ["kind", "groups"]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "kind": { "const": "EXPLICIT_ORDERS" },
+            "derivedFromObservedCase": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "caseId": { "$ref": "#/$defs/Identifier" },
+                "caseRevision": { "type": "integer", "minimum": 1 }
+              },
+              "required": ["caseId", "caseRevision"]
+            },
+            "orders": { "type": "array", "items": { "$ref": "https://motor-de-fluxo.local/contracts/schemas.json#/$defs/OrdemEntrada" } },
+            "provenanceByOrder": { "type": "object", "additionalProperties": { "$ref": "#/$defs/OrderFieldProvenance" } }
+          },
+          "required": ["kind", "orders", "provenanceByOrder"]
+        }
+      ]
+    },
     "AuthoredSource": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
         "kind": { "const": "AUTHORED" },
-        "authoredPortfolioId": { "$ref": "#/$defs/Identifier" }
+        "authoredPortfolioId": { "$ref": "#/$defs/Identifier" },
+        "definition": { "$ref": "#/$defs/AuthoredDefinition" }
       },
       "required": ["kind", "authoredPortfolioId"]
     },
@@ -81,6 +161,10 @@
           "type": "array",
           "items": { "$ref": "https://motor-de-fluxo.local/cases/observedCase.schema.json#/$defs/FieldProvenance" }
         },
+        "provenanceByOrder": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/OrderFieldProvenance" }
+        },
         "observedOutcome": {
           "oneOf": [
             { "$ref": "https://motor-de-fluxo.local/cases/observedCase.schema.json#/$defs/ObservedOutcome" },
@@ -137,6 +221,7 @@
         "sourceSnapshot": { "$ref": "#/$defs/PortfolioSourceSnapshot" },
         "premises": { "$ref": "#/$defs/PremisesDocument" },
         "period": { "$ref": "#/$defs/PeriodDocument" },
+        "inputProvenance": { "type": "object" },
         "inputFingerprint": { "$ref": "#/$defs/Digest" }
       },
       "required": [

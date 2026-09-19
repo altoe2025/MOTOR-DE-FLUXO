@@ -5,6 +5,8 @@ import { validateObservedCase } from '../cases/validation';
 import { canonical, fingerprintPortfolioSource } from '../study/fingerprints';
 import type {
   CanonicalAuthoredOrder,
+  AuthoredPortfolioDefinition,
+  OrderFieldProvenance,
   PortfolioSourceSnapshot,
   SyntheticRecipe,
 } from '../study/model';
@@ -20,7 +22,8 @@ export type ResolvablePortfolioSource =
   | Readonly<{
       kind: 'AUTHORED';
       authoredPortfolioId: string;
-      preparation: PreparationResponse;
+      definition?: AuthoredPortfolioDefinition;
+      preparation?: PreparationResponse;
     }>
   | Readonly<{
       kind: 'SYNTHETIC';
@@ -69,6 +72,31 @@ function observedOrders(caseRecord: ObservedCase): CanonicalAuthoredOrder[] {
       eh_efx: order.efxStatus === 'YES',
     };
   }).sort((left, right) => ordinal(left.id, right.id));
+}
+
+function provenanceForObservedOrders(caseRecord: ObservedCase): Record<string, OrderFieldProvenance> {
+  return Object.fromEntries(caseRecord.orders.map((order) => {
+    const provenance = order.provenance[0];
+    if (provenance === undefined) throw new Error(`Ordem observada ${order.id} sem proveniência.`);
+    return [order.id, {
+      dia_conhecida: structuredClone(provenance),
+      dia_limite: structuredClone(provenance),
+      eh_efx: structuredClone(provenance),
+      finalidade: structuredClone(provenance),
+      valor_brl: structuredClone(provenance),
+    }];
+  }));
+}
+
+export function authoredDefinitionFromObservedCase(
+  caseRecord: ObservedCase,
+): Extract<AuthoredPortfolioDefinition, { kind: 'EXPLICIT_ORDERS' }> {
+  return {
+    kind: 'EXPLICIT_ORDERS',
+    derivedFromObservedCase: { caseId: caseRecord.id, caseRevision: caseRecord.revision },
+    orders: observedOrders(caseRecord),
+    provenanceByOrder: provenanceForObservedOrders(caseRecord),
+  };
 }
 
 function preparationProvenance(response: PreparationResponse): FieldProvenance[] {
@@ -137,14 +165,39 @@ export async function resolvePortfolioSource(
       capturedAt: dependencies.now(),
       orders: observedOrders(caseRecord),
       provenance: orderProvenance(caseRecord.orders.flatMap((order) => order.provenance)),
+      provenanceByOrder: provenanceForObservedOrders(caseRecord),
       observedOutcome: structuredClone(caseRecord.observedOutcome),
     });
   }
 
   if (source.kind === 'AUTHORED') {
+    if (source.definition?.kind === 'EXPLICIT_ORDERS') {
+      return snapshot({
+        source: {
+          kind: 'AUTHORED',
+          authoredPortfolioId: source.authoredPortfolioId,
+          definition: structuredClone(source.definition),
+        },
+        capturedAt: dependencies.now(),
+        orders: cloneAndOrderOrders(source.definition.orders),
+        provenance: orderProvenance(Object.values(source.definition.provenanceByOrder)
+          .flatMap((fields) => Object.values(fields))),
+        provenanceByOrder: structuredClone(source.definition.provenanceByOrder),
+        observedOutcome: null,
+      });
+    }
+    if (source.preparation === undefined) {
+      throw new Error('Autoria parametrizada exige preparação validada.');
+    }
     assertPreparationResponse(source.preparation);
     return snapshot({
-      source: { kind: 'AUTHORED', authoredPortfolioId: source.authoredPortfolioId },
+      source: {
+        kind: 'AUTHORED',
+        authoredPortfolioId: source.authoredPortfolioId,
+        ...(source.definition === undefined
+          ? {}
+          : { definition: structuredClone(source.definition) }),
+      },
       capturedAt: dependencies.now(),
       orders: cloneAndOrderOrders(source.preparation.orders),
       provenance: preparationProvenance(source.preparation),

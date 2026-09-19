@@ -8,8 +8,14 @@ import {
   createStudy,
   moveStudyToTrash,
   renameStudy,
+  updateScenario,
 } from '../study/domain';
-import { FIXTURE_NOW, makeObservedCase, makeScenarioDraft } from '../study/fixtures';
+import {
+  FIXTURE_NOW,
+  makeAuthoredSnapshot,
+  makeObservedCase,
+  makeScenarioDraft,
+} from '../study/fixtures';
 import type { DeepMutable, ExecutionRecord, StudyDocument } from '../study/model';
 import {
   BinaryDataNotAllowedError,
@@ -394,6 +400,52 @@ describe('studies', () => {
       document: original,
     })).rejects.toBeInstanceOf(OperationConflictError);
     expect(await target.getStudy(restored.id)).toBeNull();
+  });
+
+  it('reidrata autoria, herança e decimais para uma segunda edição após reload', async () => {
+    const target = repository();
+    const sourceSnapshot = makeAuthoredSnapshot();
+    if (sourceSnapshot.source.kind !== 'AUTHORED') throw new Error('fixture');
+    sourceSnapshot.source.definition = {
+      kind: 'PARAMETRIC',
+      groups: [{
+        id: 'group-1', name: 'Grupo 1',
+        parameters: {
+          frequency: '12.00', ticket: '1500.50', direction: 'MIXED', deadline: '7',
+          purpose: 'ANEXO_V_REMESSA_TERCEIRO', profile: 'tesouraria_corporativa',
+        },
+        participants: [{
+          id: 'participant-1', name: 'Participante 1', override: false,
+          parameters: {
+            frequency: '12.00', ticket: '1500.50', direction: 'MIXED', deadline: '7',
+            purpose: 'ANEXO_V_REMESSA_TERCEIRO', profile: 'tesouraria_corporativa',
+          },
+        }],
+      }],
+    };
+    const original = await createStudy({
+      id: 'authored-roundtrip', ownerSub: OWNER_SUB, name: 'Autoria',
+      baseScenario: makeScenarioDraft({ sourceSnapshot }), now: FIXTURE_NOW,
+    });
+    await target.saveStudy({ expectedRevision: 0, operationId: OPERATION_A, document: original });
+    const reopened = (await target.getStudy(original.id))!;
+    const editedSnapshot = structuredClone(reopened.scenarios[0]!.sourceSnapshot) as DeepMutable<typeof sourceSnapshot>;
+    if (editedSnapshot.source.kind !== 'AUTHORED'
+      || editedSnapshot.source.definition?.kind !== 'PARAMETRIC') throw new Error('autoria ausente');
+    editedSnapshot.source.definition.groups[0]!.parameters.ticket = '1750.5000';
+    const edited = await updateScenario(
+      reopened,
+      reopened.baseScenarioId,
+      { sourceSnapshot: editedSnapshot },
+      '2026-09-19T13:00:00Z',
+    );
+    await target.saveStudy({ expectedRevision: 1, operationId: OPERATION_B, document: edited });
+
+    const reloaded = (await target.getStudy(original.id))!;
+    const definition = reloaded.scenarios[0]!.sourceSnapshot.source;
+    expect(definition.kind === 'AUTHORED' && definition.definition?.kind === 'PARAMETRIC'
+      ? definition.definition.groups[0]!.parameters.ticket
+      : null).toBe('1750.5000');
   });
 
   it('purges only operations of the selected study', async () => {

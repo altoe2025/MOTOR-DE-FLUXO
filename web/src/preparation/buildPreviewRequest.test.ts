@@ -119,4 +119,36 @@ describe('buildPreviewRequest', () => {
       tipo: 'PADRAO_SINTETICO', fonte: 'catálogo oficial', registrado_em_utc: syntheticDefault.recordedAt,
     });
   });
+
+  it('projeta proveniência heterogênea persistida por ordem e campo', () => {
+    const snapshot = makeSyntheticSnapshot();
+    const corrected: FieldProvenance = {
+      kind: 'USER_CORRECTED', source: 'correção confirmada', version: '2',
+      recordedAt: '2026-09-19T12:02:00Z', actionId: 'action-1',
+    };
+    const inferred: FieldProvenance = {
+      kind: 'INFERRED', source: 'normalizador', version: '3',
+      recordedAt: '2026-09-19T12:03:00Z', rule: 'deadline-v3',
+    };
+    const observed: FieldProvenance = {
+      kind: 'OBSERVED', source: 'arquivo confirmado', version: '1',
+      recordedAt: '2026-09-19T12:01:00Z',
+    };
+    snapshot.provenanceByOrder = {
+      'order-a': {
+        dia_conhecida: observed, dia_limite: inferred, eh_efx: observed,
+        finalidade: corrected, valor_brl: observed,
+      },
+      'order-b': {
+        dia_conhecida: syntheticDefault, dia_limite: syntheticDefault, eh_efx: syntheticDefault,
+        finalidade: syntheticDefault, valor_brl: syntheticDefault,
+      },
+    };
+
+    const request = buildPreviewRequest(snapshot, premises, naturalPeriod, identity, provenance);
+
+    expect(request.proveniencia['/ordens/0/finalidade']?.tipo).toBe('ESTIMATIVA_USUARIO');
+    expect(request.proveniencia['/ordens/0/dia_limite']?.fonte).toBe('normalizador');
+    expect(request.proveniencia['/ordens/1/valor_brl']?.tipo).toBe('PADRAO_SINTETICO');
+  });
 });

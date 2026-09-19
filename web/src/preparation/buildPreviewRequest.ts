@@ -4,6 +4,7 @@ import type { FieldProvenance } from '../cases/domain';
 import { canonical } from '../study/fingerprints';
 import type {
   CanonicalAuthoredOrder,
+  OrderFieldProvenance,
   PeriodDocument,
   PortfolioSourceSnapshot,
   PremisesDocument,
@@ -25,16 +26,8 @@ export type PreviewRequestIdentity = Readonly<{
   scenarioRevision: number;
 }>;
 
-type OrderProvenance = Readonly<{
-  dia_conhecida: FieldProvenance;
-  dia_limite: FieldProvenance;
-  eh_efx: FieldProvenance;
-  finalidade: FieldProvenance;
-  valor_brl: FieldProvenance;
-}>;
-
 export type PreviewRequestProvenance = Readonly<{
-  orders?: Readonly<Record<string, OrderProvenance>>;
+  orders?: Readonly<Record<string, OrderFieldProvenance>>;
   premises: Readonly<{
     windowDays: FieldProvenance;
     costs: Readonly<{
@@ -97,13 +90,14 @@ function requestProvenance(
     '/custo/spread_rail_bps': projectProvenance(context.premises.costs.spread_rail_bps),
     '/custo/ptax': projectProvenance(context.premises.costs.ptax),
   };
-  const fallback = context.orders === undefined ? uniformSnapshotProvenance(snapshot) : null;
+  const associated = context.orders ?? snapshot.provenanceByOrder;
+  const fallback = associated === undefined ? uniformSnapshotProvenance(snapshot) : null;
   for (const [index, order] of orders.entries()) {
-    const fields = context.orders?.[order.id];
+    const fields = associated?.[order.id];
     if (fields === undefined && fallback === null) {
       throw new Error(`Proveniência ausente para a ordem ${order.id}.`);
     }
-    const value = (field: keyof OrderProvenance) => fields === undefined
+    const value = (field: keyof OrderFieldProvenance) => fields === undefined
       ? fallback!
       : projectProvenance(fields[field]);
     Object.assign(provenance, {

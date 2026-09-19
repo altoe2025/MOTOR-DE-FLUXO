@@ -27,17 +27,8 @@ function executionProvenance(study: StudyDocument, scenario: ScenarioDocument): 
     custo_fixo_remessa: defaults, custo_oportunidade_aa: defaults,
     spread_rail_bps: defaults, ptax: defaults,
   };
-  const source = scenario.sourceSnapshot.source;
-  if (source.kind !== 'OBSERVED_CASE') {
-    return { premises: { windowDays: defaults, costs }, period: { horizonDays: defaults } };
-  }
-  const observed = scenario.sourceSnapshot.provenance[0];
-  if (observed === undefined) throw new Error('Caso observado sem proveniência executável.');
-  const orders = Object.fromEntries(scenario.sourceSnapshot.orders.map((order) => [order.id, {
-    dia_conhecida: observed, dia_limite: observed, eh_efx: observed,
-    finalidade: observed, valor_brl: observed,
-  }]));
-  return { orders, premises: { windowDays: defaults, costs }, period: { horizonDays: defaults } };
+  return scenario.inputProvenance
+    ?? { premises: { windowDays: defaults, costs }, period: { horizonDays: defaults } };
 }
 
 export function StudyPortfolioPage() {
@@ -79,7 +70,16 @@ export function StudyPortfolioPage() {
       if (api.preparePortfolio === undefined) throw new Error('A preparação de carteira não está disponível.');
       const dependencies = { getObservedCase: (caseId: string) => controller.getObservedCase(caseId), preparePortfolio: (input: Parameters<NonNullable<typeof api.preparePortfolio>>[0]) => api.preparePortfolio!(input), now: () => new Date().toISOString() };
       const snapshot = source.kind === 'AUTHORED'
-        ? await resolvePortfolioSource({ kind: 'AUTHORED', authoredPortfolioId: source.authoredPortfolioId, preparation: await api.preparePortfolio(source.preparation) }, dependencies)
+        ? source.definition.kind === 'EXPLICIT_ORDERS'
+          ? await resolvePortfolioSource({
+              kind: 'AUTHORED',
+              authoredPortfolioId: source.authoredPortfolioId,
+              definition: source.definition,
+            }, dependencies)
+          : await resolvePortfolioSource({
+              ...source,
+              preparation: await api.preparePortfolio(source.preparation!),
+            }, dependencies)
         : await resolvePortfolioSource(source, dependencies);
       save(await updateScenario(study, scenario.id, { sourceSnapshot: snapshot }, new Date().toISOString()));
       setError(null);
@@ -123,5 +123,23 @@ export function StudyPortfolioPage() {
       setExecuting(false);
     }
   };
-  return <><StudyEditor study={study} observedCases={cases} companies={companies} status={status} error={error} onRename={async (name) => save(await renameStudy(study, name, new Date().toISOString()))} onDuplicate={async () => { const copy = await duplicateStudy(study, new Date().toISOString(), () => crypto.randomUUID()); controller.startNewStudy(); controller.edit(copy); await controller.flush(); navigate(`/estudos/${copy.id}`); }} onSourceChange={applySource} onConvertObserved={() => setError(null)} /><section className="source-actions" aria-label="Execução do cenário"><Button disabled={executing} onClick={() => void execute()}>{executing ? 'Executando cenário…' : 'Executar cenário atual'}</Button></section>{displayedExecution === null ? null : <StudyResultPage study={study} execution={displayedExecution} onSelectExecution={setSelectedExecution} />}</>;
+  return <><StudyEditor study={study} observedCases={cases} companies={companies} status={status} error={error} onRename={async (name) => save(await renameStudy(study, name, new Date().toISOString()))} onDuplicate={async () => { const copy = await duplicateStudy(study, new Date().toISOString(), () => crypto.randomUUID()); controller.startNewStudy(); controller.edit(copy); await controller.flush(); navigate(`/estudos/${copy.id}`); }} onSourceChange={applySource} onConvertObserved={() => setError(null)} onScenarioChange={async (update) => {
+    const recordedAt = new Date().toISOString();
+    const authored: FieldProvenance = {
+      kind: 'USER_ESTIMATE', source: 'editor de premissas', version: study.schemaVersion,
+      recordedAt,
+    };
+    const inputProvenance = {
+      premises: {
+        windowDays: authored,
+        costs: {
+          iof_out: authored, iof_in: authored, carry_cnr: authored,
+          custo_fixo_remessa: authored, custo_oportunidade_aa: authored,
+          spread_rail_bps: authored, ptax: authored,
+        },
+      },
+      period: { horizonDays: authored },
+    };
+    save(await updateScenario(study, scenario.id, { ...update, inputProvenance }, recordedAt));
+  }} /><section className="source-actions" aria-label="Execução do cenário"><Button disabled={executing} onClick={() => void execute()}>{executing ? 'Executando cenário…' : 'Executar cenário atual'}</Button></section>{displayedExecution === null ? null : <StudyResultPage study={study} execution={displayedExecution} onSelectExecution={setSelectedExecution} />}</>;
 }

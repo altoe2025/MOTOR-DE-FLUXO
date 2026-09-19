@@ -48,6 +48,9 @@ async function materializeScenario(draft: ScenarioDraft): Promise<ScenarioDocume
     sourceSnapshot: candidate.sourceSnapshot,
     premises: candidate.premises,
     period: candidate.period,
+    ...(candidate.inputProvenance === undefined
+      ? {}
+      : { inputProvenance: candidate.inputProvenance }),
     inputFingerprint: await fingerprintScenarioInput(candidate),
   };
   return deepFreeze(scenario);
@@ -132,6 +135,9 @@ export async function updateScenario(
     sourceSnapshot: update.sourceSnapshot ?? current.sourceSnapshot,
     premises: update.premises ?? current.premises,
     period: update.period ?? current.period,
+    ...(update.inputProvenance === undefined && current.inputProvenance === undefined
+      ? {}
+      : { inputProvenance: update.inputProvenance ?? current.inputProvenance }),
   };
   const nextScenario = await materializeScenario(nextDraft);
   const scenarios = study.scenarios.map((scenario, position) =>
