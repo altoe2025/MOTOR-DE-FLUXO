@@ -33,11 +33,11 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-09-16, após o gate final da política de autonetting preferencial.
+Atualizada em 2026-09-19, após o planejamento v2 do front-end com dados observados.
 
 | Branch | Situação | Dono |
 |---|---|---|
-| `main` | Autonetting preferencial MOT-35–MOT-46 integrado pelo PR #36, com o gate protegido `pytest` verde | os dois |
+| `main` | Autonetting preferencial e integração final incorporados até o PR #37 (`c2ad175`); grade histórica não regenerada | os dois |
 | `netting/p1` | spike do P1, **NÃO MERGEAR** — dominado, e agora sabemos que a folga é zero em N ≥ 50. Só local, nunca foi pro GitHub | Felipe |
 | `fix/semantica-remessa-p0` | PR #11, mergeada | Felipe |
 | `fix/previsao-temporal-e-colunas-csv` | PR #12, mergeada | Gabriel |
@@ -60,6 +60,7 @@ Atualizada em 2026-09-16, após o gate final da política de autonetting prefere
 | `codex/mot21-client-integracao` | PR #33 mergeado na `main`; implementação, CI e gate Supabase real verdes | Codex |
 | `codex/mot22-aceitacao-ci` | PR #34 mergeada na `main`; aceitação, CI e handoff da etapa 1 entregues | Codex |
 | `codex/autonetting-preferencial` | PR #36 mergeado na `main`; grade histórica não regenerada | Codex |
+| `codex/mot62-planejamento-etapa2-v2` | documentação da MOT-62; IDs, dependências e auditoria da Etapa 2 v2, sem código de produto | Codex |
 
 Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
@@ -67,6 +68,70 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
 ---
+
+## 2026-09-19 — Gate documental e rastreabilidade da Etapa 2 v2 (MOT-62)
+
+1. **Sintoma.** O planejamento v2 já descrevia as novas fronteiras, mas ainda não
+   tinha IDs executáveis, o escopo legado de MOT-23–MOT-33 divergia das Tasks 0–12 e
+   os commits `50fc384` e `1270458` não possuíam uma decisão explícita de
+   reaproveitamento. Iniciar a implementação nesse estado permitiria misturar código
+   antigo, contratos gerados e responsabilidades diferentes na mesma issue.
+
+2. **Causa.** A Etapa 2 anterior foi planejada antes de Caso Observado,
+   `ApplicationRepository`, três origens e conciliação Observado × Motor entrarem na
+   arquitetura. A documentação v2 preservou a complexidade, mas deixou a atualização
+   do Linear e a auditoria como gate sujeito à aprovação do Gabriel.
+
+3. **O que foi feito.** Após aprovação explícita, foram criadas MOT-62 (gate), MOT-63
+   (Caso Observado/proveniência) e MOT-64 (resolução de origens/request). MOT-23–MOT-33
+   receberam títulos, escopos e critérios v2; MOT-29 ficou restrita à execução e ao
+   histórico, e MOT-64 recebeu a responsabilidade que antes estava misturada nela.
+   As dependências críticas foram registradas no Linear. O plano técnico ganhou o
+   mapa T0–T12 → issues e a matriz dos dois commits: validações, canonicalização,
+   fingerprints, testes e referências de CAS podem ser reutilizados ou adaptados;
+   OpenAPI, TypeScript, schemas, validators e lockfile devem ser regenerados; endpoints
+   501, fronteiras antigas e documentação superada devem ser descartados ou
+   substituídos. A branch `codex/mot62-planejamento-etapa2-v2` contém somente docs.
+
+4. **O que isso invalida.** Os títulos, descrições e relações anteriores de
+   MOT-23–MOT-33 não representam mais a execução da Etapa 2. Os commits `50fc384` e
+   `1270458` não são bases de cherry-pick integral. A evidência histórica de 680
+   testes Python, 135 testes web, typecheck, build e lint verdes não foi reexecutada
+   neste gate e não substitui o baseline obrigatório da futura worktree de
+   implementação. Nada em `motor/`, na API ou no front-end foi alterado; merge e
+   início da implementação continuam dependentes da base integrada ou de aprovação
+   explícita alternativa.
+
+## 2026-09-19 — Planejamento v2 do front-end com dados observados
+
+1. **Sintoma.** A especificação geral tratava dados observados como evolução futura,
+   enquanto o importador em preparação mantinha domínio e armazenamento próprios e
+   seguia diretamente até a execução. Os arquivos reais mostraram a necessidade de
+   casos por janela, perfis de empresa, proveniência e conciliação Observado × Motor,
+   sem retirar diagnóstico, comparação, Replay, chat ou relatório do plano original.
+
+2. **Causa.** A arquitetura do front-end e a Etapa 2 foram definidas antes de os
+   formatos e o fluxo das operações reais serem compreendidos. O plano canônico de
+   XLSX resolveu parsing e segurança, mas não possuía a fronteira posterior entre
+   importação, Caso Observado, Estudo e Execução.
+
+3. **O que foi feito.** Foram criadas especificações e planos v2 para o produto
+   completo, a Etapa 2 e a importação de dados reais em
+   `docs/superpowers/{specs,plans}/2026-09-19-*`. A hierarquia vigente passa a ser
+   Empresa → Caso Observado → Perfil → Estudo → Cenário → Execução. Importador e
+   estudo compartilham `ApplicationRepository`; o importador termina em Caso
+   Observado confirmado; snapshots preservam entradas; Observado × Motor permanece
+   separado da comparação de cenários; Replay continua uma entrega central da Etapa
+   5. Os documentos anteriores receberam avisos históricos, e os documentos de XLSX
+   de 2026-09-17 foram mantidos como anexos técnicos para parsing, auditoria,
+   segurança e desempenho. `docs/MAPA.md` passou a apontar para as fontes vigentes.
+
+4. **O que isso invalida.** As especificações gerais de 2026-09-11, o desenho e o
+   plano da Etapa 2 de 2026-09-13 e a sequência executável do importador de 2026-09-17
+   não devem mais orientar implementação isoladamente. Os dois commits existentes da
+   Etapa 2 precisam da auditoria prevista no plano v2 antes de integração. Nada no
+   motor, nos resultados canônicos, nas medições ou na grade histórica foi alterado;
+   nenhuma funcionalidade foi implementada e a grade não foi regenerada.
 
 ## 2026-09-16 — Gate final do autonetting preferencial (MOT-46)
 

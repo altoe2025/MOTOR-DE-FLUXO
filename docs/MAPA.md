@@ -1,14 +1,14 @@
 # Mapa do repositório
 
-Índice para achar as coisas sem procurar. Estado técnico de branches atualizado em
-2026-09-13.
+Índice para achar as coisas sem procurar. Estado técnico de branches e planejamento
+do front-end atualizados em 2026-09-19.
 
 ## Comece por aqui
 
-**Branch integrada: `main` pelo PR #34.** A sensibilidade, o fechamento funcional
-e as MOT-15–MOT-22 já foram integrados. A política de autonetting preferencial está
-em implementação na branch `codex/autonetting-preferencial`; resultados históricos
-da `main` ainda refletem EDF global.
+**Branch integrada: `main` em `c2ad175` pelo PR #37.** A sensibilidade, o fechamento
+funcional, as MOT-15–MOT-22 e a política de autonetting preferencial já foram
+integrados. A grade histórica não foi regenerada e continua identificada como legado
+EDF global.
 
 ```
 main
@@ -45,8 +45,24 @@ make test          # a contagem vigente é registrada em docs/testing.md
 | Por que autonetting precede a fase multilateral | `docs/adr-autonetting-preferencial.md` |
 | Por que cada operação executa individualmente | `docs/adr-model-b.md` |
 | Camadas e regra de importação | `docs/architecture.md`, `docs/ARQUITETURA.md` |
+| Visão vigente do front-end completo | `docs/superpowers/specs/2026-09-19-frontend-motor-de-fluxo-design-v2.md` |
+| Ordem vigente das seis etapas do front-end | `docs/superpowers/plans/2026-09-19-frontend-plano-geral-execucao-v2.md` |
+| Escopo e contratos vigentes da Etapa 2 | `docs/superpowers/specs/2026-09-19-frontend-etapa-2-design-v2.md` |
+| Plano técnico vigente da Etapa 2 | `docs/superpowers/plans/2026-09-19-frontend-etapa-2-plano-tecnico-v2.md` |
+| IDs T0–T12 e auditoria de `50fc384`/`1270458` | seção "Rastreabilidade aprovada no Linear" e matriz da Task 0 no plano técnico v2 da Etapa 2 |
+| Importação de fontes reais e Caso Observado | `docs/superpowers/specs/2026-09-19-importacao-dados-reais-design-v2.md` |
+| Plano vigente do importador | `docs/superpowers/plans/2026-09-19-importacao-dados-reais-plano-tecnico-v2.md` |
+
+Os documentos de front-end de 2026-09-11 e de Etapa 2 de 2026-09-13 permanecem como
+histórico. Os documentos XLSX de 2026-09-17 preservam os requisitos detalhados do
+parser canônico, mas sua arquitetura e sequência executável foram substituídas pelas
+versões de 2026-09-19.
 
 Os dois relatórios são **autocontidos**: não pressupõem a conversa que os gerou.
+
+O gate documental da Etapa 2 é MOT-62. A execução usa MOT-63, MOT-23–MOT-33 e
+MOT-64 conforme a tabela do plano técnico v2. Esses IDs e relações foram atualizados
+após aprovação explícita em 2026-09-19; não implicam autorização de merge.
 
 ## Dados
 
@@ -190,7 +206,8 @@ autonetting preferencial e não devem ser transportadas para ela por inferência
 ## Regras do repositório
 
 - **Não alterar `motor/` numa tarefa de análise.** Se achar bug, reportar e parar.
-- **Não criar issue no Linear nem reescrever descrição de tarefa** — sinalizar e parar.
+- **Não criar issue no Linear nem reescrever descrição de tarefa sem aprovação
+  explícita** — sinalizar e parar quando essa autorização não existir.
 - Não migrar contexto de negócio do vault Obsidian para o repo.
 - Invariante de correção usa `raise`, nunca `assert` — a suíte roda sob `python -O`, que
   remove asserts.

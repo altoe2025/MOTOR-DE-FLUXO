@@ -1,5 +1,9 @@
 # Frontend — Etapa 2: primeiro fluxo completo
 
+> **Documento histórico.** Substituído em 2026-09-19 por
+> [`2026-09-19-frontend-etapa-2-design-v2.md`](2026-09-19-frontend-etapa-2-design-v2.md),
+> que preserva a robustez desta etapa e acrescenta dados observados.
+
 > **ATUALIZAÇÃO DE CONTRATO (2026-09-16):** o envelope Preview continua 1.0.0,
 > enquanto o resultado do motor passou ao schema 2.0.0. Operações OUT/IN do mesmo
 > cliente permanecem explícitas até a P0; a interface consome da API a composição
