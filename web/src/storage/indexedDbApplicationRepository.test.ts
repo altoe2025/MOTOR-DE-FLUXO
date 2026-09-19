@@ -195,6 +195,19 @@ describe('IndexedDbApplicationRepository schema', () => {
     )).toEqual({ key: 'schema_version', value: 1 });
     database.close();
   });
+
+  it('encodes delimiters so distinct project and owner pairs never share a database', async () => {
+    const first = repository('alpha:beta', 'gamma');
+    await first.listCompanies();
+    first.close();
+    await Promise.resolve();
+    await repository('alpha', 'beta:gamma').listCompanies();
+
+    const databaseNames = (await indexedDB.databases()).map((database) => database.name);
+    expect(databaseNames).toContain('motor-fluxo:app:v2:alpha%3Abeta:gamma');
+    expect(databaseNames).toContain('motor-fluxo:app:v2:alpha:beta%3Agamma');
+    expect(new Set(databaseNames).size).toBe(databaseNames.length);
+  });
 });
 
 describe('observed cases', () => {
@@ -309,6 +322,18 @@ describe('observed cases', () => {
       await expect(target.confirmObservedCase(fileMutation))
         .rejects.toBeInstanceOf(BinaryDataNotAllowedError);
     }
+    for (const container of [
+      new Map<unknown, unknown>([[new Blob(['map-key']), { source: 'map-value' }]]),
+      new Map<unknown, unknown>([[{ source: 'map-key' }, new Blob(['map-value'])]]),
+      new Set<unknown>([{ nested: new Blob(['set-value']) }]),
+    ]) {
+      const containerMutation = {
+        ...binaryMutation,
+        events: [{ ...binaryMutation.events[0]!, nested: container }],
+      };
+      await expect(target.confirmObservedCase(containerMutation))
+        .rejects.toBeInstanceOf(BinaryDataNotAllowedError);
+    }
     expect(await target.listCompanies()).toEqual([]);
   });
 });
@@ -339,6 +364,61 @@ describe('studies', () => {
     expect(await target.restoreStudy(trashed.id, 2, OPERATION_C)).toEqual(restored);
     await target.purgeStudy(restored.id);
     expect(await target.getStudy(restored.id)).toBeNull();
+
+    const database = await openDatabase(DATABASE_NAME);
+    try {
+      const transaction = database.transaction('operations', 'readonly');
+      const operationStore = transaction.objectStore('operations');
+      const [operations, indexedStudyOperations, indexedRestoreOperations] = await Promise.all([
+        requestResult<Array<Record<string, unknown>>>(operationStore.getAll()),
+        requestResult(operationStore.index('by_owner_entity')
+          .getAll([OWNER_SUB, 'study', restored.id])),
+        requestResult(operationStore.index('by_owner_entity')
+          .getAll([OWNER_SUB, 'restore_study', restored.id])),
+      ]);
+      expect(operations).toHaveLength(3);
+      expect(operations).toEqual(expect.arrayContaining([
+        { operation_id: OPERATION_A, owner_sub: OWNER_SUB, entity_kind: 'purged' },
+        { operation_id: OPERATION_B, owner_sub: OWNER_SUB, entity_kind: 'purged' },
+        { operation_id: OPERATION_C, owner_sub: OWNER_SUB, entity_kind: 'purged' },
+      ]));
+      expect(indexedStudyOperations).toEqual([]);
+      expect(indexedRestoreOperations).toEqual([]);
+    } finally {
+      database.close();
+    }
+
+    await expect(target.saveStudy({
+      expectedRevision: 0,
+      operationId: OPERATION_A,
+      document: original,
+    })).rejects.toBeInstanceOf(OperationConflictError);
+    expect(await target.getStudy(restored.id)).toBeNull();
+  });
+
+  it('purges only operations of the selected study', async () => {
+    const target = repository();
+    const selected = await study();
+    const preserved = await study('00000000-0000-4000-8000-000000000099');
+    await target.saveStudy({
+      expectedRevision: 0,
+      operationId: OPERATION_A,
+      document: selected,
+    });
+    await target.saveStudy({
+      expectedRevision: 0,
+      operationId: OPERATION_B,
+      document: preserved,
+    });
+
+    await target.purgeStudy(selected.id);
+
+    expect(await target.saveStudy({
+      expectedRevision: 0,
+      operationId: OPERATION_B,
+      document: preserved,
+    })).toEqual(preserved);
+    expect(await target.getStudy(preserved.id)).toEqual(preserved);
   });
 
   it('stores executions separately and never rewrites an existing execution', async () => {

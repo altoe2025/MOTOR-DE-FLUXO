@@ -82,7 +82,13 @@ type StudyOperationRow = Readonly<{
   result_execution_ids: readonly string[];
 }>;
 
-type OperationRow = ObservedCaseOperationRow | StudyOperationRow;
+type PurgedOperationRow = Readonly<{
+  operation_id: string;
+  owner_sub: string;
+  entity_kind: 'purged';
+}>;
+
+type OperationRow = ObservedCaseOperationRow | StudyOperationRow | PurgedOperationRow;
 
 type StudyRow = Readonly<{
   study_id: string;
@@ -139,7 +145,20 @@ function rejectBinary(value: unknown, seen = new Set<object>()): void {
   }
   if (value === null || typeof value !== 'object' || seen.has(value)) return;
   seen.add(value);
-  for (const child of Object.values(value)) rejectBinary(child, seen);
+  if (value instanceof Map) {
+    for (const [key, child] of value) {
+      rejectBinary(key, seen);
+      rejectBinary(child, seen);
+    }
+  } else if (value instanceof Set) {
+    for (const child of value) rejectBinary(child, seen);
+  }
+  for (const key of Reflect.ownKeys(value)) {
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    if (descriptor !== undefined && 'value' in descriptor) {
+      rejectBinary(descriptor.value, seen);
+    }
+  }
 }
 
 function validateMutation(expectedRevision: number, operationId: string): void {
@@ -238,7 +257,7 @@ export class IndexedDbApplicationRepository implements ApplicationRepository {
   #closed = false;
 
   constructor(scope: Scope) {
-    this.#databaseName = `motor-fluxo:app:v2:${scope.projectRef}:${scope.ownerSub}`;
+    this.#databaseName = `motor-fluxo:app:v2:${encodeURIComponent(scope.projectRef)}:${encodeURIComponent(scope.ownerSub)}`;
     this.#ownerSub = scope.ownerSub;
   }
 
@@ -608,18 +627,34 @@ export class IndexedDbApplicationRepository implements ApplicationRepository {
     const database = await this.#database();
     return transactionResult(
       database,
-      ['studies', 'executions'],
+      ['studies', 'executions', 'operations'],
       'readwrite',
       async (transaction) => {
         const studies = transaction.objectStore('studies');
         const row = await requestResult<StudyRow | undefined>(studies.get(id));
         if (row === undefined || row.owner_sub !== this.#ownerSub) return;
         const executions = transaction.objectStore('executions');
-        const records = await requestResult<ExecutionRow[]>(
-          executions.index('by_owner_study').getAll([this.#ownerSub, id]),
-        );
+        const operations = transaction.objectStore('operations');
+        const [records, studyOperations, restoreOperations] = await Promise.all([
+          requestResult<ExecutionRow[]>(
+            executions.index('by_owner_study').getAll([this.#ownerSub, id]),
+          ),
+          requestResult<StudyOperationRow[]>(
+            operations.index('by_owner_entity').getAll([this.#ownerSub, 'study', id]),
+          ),
+          requestResult<StudyOperationRow[]>(
+            operations.index('by_owner_entity').getAll([this.#ownerSub, 'restore_study', id]),
+          ),
+        ]);
         for (const execution of records) {
           executions.delete([execution.study_id, execution.execution_id]);
+        }
+        for (const operation of [...studyOperations, ...restoreOperations]) {
+          operations.put({
+            operation_id: operation.operation_id,
+            owner_sub: this.#ownerSub,
+            entity_kind: 'purged',
+          } satisfies PurgedOperationRow);
         }
         studies.delete(id);
       },
