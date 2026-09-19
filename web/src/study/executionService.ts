@@ -1,0 +1,215 @@
+import type { PreviaRequest, PreviewEnvelope } from '../api/client';
+import { validatePreviewEnvelope } from '../api/validators';
+import { appendExecution } from './domain';
+import { canonical } from './fingerprints';
+import type { ExecutionRecord, ExecutionStatus, ScenarioDocument, StudyDocument } from './model';
+import type { StudyController } from './studyController';
+
+export type ExecutionAttempt = Readonly<{
+  id: string;
+  status: ExecutionStatus;
+  request: PreviaRequest | null;
+  envelope: PreviewEnvelope | null;
+  error: unknown | null;
+  persistenceError: unknown | null;
+  current: boolean;
+}>;
+
+export type ExecutionRequestContext = Readonly<{
+  requestId: string;
+  executionId: string;
+  study: StudyDocument;
+  scenario: ScenarioDocument;
+}>;
+
+export type ExecuteStudyScenarioOptions = Readonly<{
+  controller: StudyController;
+  scenarioId: string;
+  buildRequest(context: ExecutionRequestContext): PreviaRequest;
+  runPreview(input: PreviaRequest, signal: AbortSignal): Promise<PreviewEnvelope>;
+  nextId?: () => string;
+  now?: () => string;
+  onStatus?: (attempt: ExecutionAttempt) => void;
+}>;
+
+const inFlight = new WeakMap<StudyController, Map<string, Promise<ExecutionAttempt>>>();
+
+function defaultId(): string { return crypto.randomUUID(); }
+function defaultNow(): string { return new Date().toISOString(); }
+
+function attempt(
+  id: string,
+  status: ExecutionStatus,
+  request: PreviaRequest | null,
+  overrides: Partial<ExecutionAttempt> = {},
+): ExecutionAttempt {
+  return Object.freeze({
+    id,
+    status,
+    request,
+    envelope: null,
+    error: null,
+    persistenceError: null,
+    current: false,
+    ...overrides,
+  });
+}
+
+function assertRequestIdentity(
+  request: PreviaRequest,
+  context: ExecutionRequestContext,
+): void {
+  if (request.request_id !== context.requestId
+    || request.study_id !== context.study.id
+    || request.scenario_id !== context.scenario.id
+    || request.scenario_revision !== context.scenario.revision) {
+    throw new Error('Request canônico diverge do snapshot reservado.');
+  }
+}
+
+function assertEnvelope(
+  request: PreviaRequest,
+  envelope: PreviewEnvelope,
+): void {
+  if (!validatePreviewEnvelope(envelope)
+    || envelope.api_version !== request.api_version
+    || envelope.request_id !== request.request_id
+    || envelope.study_id !== request.study_id
+    || envelope.scenario_id !== request.scenario_id
+    || envelope.scenario_revision !== request.scenario_revision
+    || canonical(envelope.input_snapshot) !== canonical({
+      cenario: request.cenario,
+      periodo: request.periodo,
+      proveniencia: request.proveniencia,
+    })) {
+    throw new Error('Envelope incompatível com a tentativa reservada.');
+  }
+}
+
+function reserveDocument(study: StudyDocument, now: string): StudyDocument {
+  return {
+    ...structuredClone(study),
+    revision: study.revision + 1,
+    updatedAt: now,
+  };
+}
+
+async function persistTerminal(
+  options: ExecuteStudyScenarioOptions,
+  capturedOwner: string,
+  capturedEpoch: number,
+  record: ExecutionRecord,
+  finishedAt: string,
+): Promise<{ current: boolean; persistenceError: unknown | null }> {
+  const { controller } = options;
+  if (controller.snapshot.ownerSub !== capturedOwner || controller.snapshot.sessionEpoch !== capturedEpoch) {
+    return { current: false, persistenceError: null };
+  }
+  try {
+    await controller.flush();
+    const currentStudy = controller.snapshot.document;
+    if (currentStudy === null || currentStudy.id !== record.requestSnapshot.study_id) {
+      return { current: false, persistenceError: null };
+    }
+    const currentScenario = currentStudy.scenarios.find((item) => item.id === record.scenarioId);
+    const current = currentScenario?.inputFingerprint === record.inputFingerprint;
+    const withExecution = await appendExecution(currentStudy, record, finishedAt);
+    controller.edit(withExecution);
+    await controller.flush();
+    return { current, persistenceError: null };
+  } catch (error) {
+    const currentStudy = controller.snapshot.document;
+    const currentScenario = currentStudy?.scenarios.find((item) => item.id === record.scenarioId);
+    return {
+      current: currentScenario?.inputFingerprint === record.inputFingerprint,
+      persistenceError: error,
+    };
+  }
+}
+
+async function execute(options: ExecuteStudyScenarioOptions): Promise<ExecutionAttempt> {
+  const nextId = options.nextId ?? defaultId;
+  const now = options.now ?? defaultNow;
+  const executionId = nextId();
+  const requestId = nextId();
+  const preparing = attempt(executionId, 'PREPARING', null);
+  options.onStatus?.(preparing);
+
+  const result = await options.controller.runForCurrentSession(async ({ ownerSub, epoch, signal }) => {
+    await options.controller.flush();
+    const study = options.controller.snapshot.document;
+    if (study === null) throw new Error('Nenhum estudo selecionado para execução.');
+    const scenario = study.scenarios.find((item) => item.id === options.scenarioId);
+    if (scenario === undefined) throw new Error('Cenário não encontrado para execução.');
+    const context = { requestId, executionId, study, scenario };
+    const request = options.buildRequest(context);
+    assertRequestIdentity(request, context);
+
+    options.controller.edit(reserveDocument(study, now()));
+    const reserved = await options.controller.flush();
+    if (reserved === null || signal.aborted) return attempt(executionId, 'INTERRUPTED', request);
+
+    const running = attempt(executionId, 'RUNNING', request);
+    options.onStatus?.(running);
+    const createdAt = now();
+    let envelope: PreviewEnvelope | null = null;
+    let failure: unknown = null;
+    try {
+      const response = await options.runPreview(request, signal);
+      assertEnvelope(request, response);
+      envelope = response;
+    } catch (error) {
+      failure = error;
+    }
+    if (signal.aborted
+      || options.controller.snapshot.ownerSub !== ownerSub
+      || options.controller.snapshot.sessionEpoch !== epoch) {
+      return attempt(executionId, 'INTERRUPTED', request, { error: failure });
+    }
+
+    const finishedAt = now();
+    const status: ExecutionStatus = envelope === null ? 'FAILED' : 'SUCCEEDED';
+    const record: ExecutionRecord = {
+      id: envelope?.execution_id ?? executionId,
+      scenarioId: scenario.id,
+      scenarioRevision: scenario.revision,
+      inputFingerprint: scenario.inputFingerprint,
+      requestSnapshot: structuredClone(request),
+      engineVersion: envelope?.motor_build_sha ?? 'unknown',
+      contractVersion: envelope?.api_version ?? request.api_version,
+      status,
+      envelope: envelope === null ? null : structuredClone(envelope),
+      observedComparison: null,
+      createdAt,
+      finishedAt,
+    };
+    const persisted = await persistTerminal(options, ownerSub, epoch, record, finishedAt);
+    return attempt(record.id, status, request, {
+      envelope,
+      error: failure,
+      persistenceError: persisted.persistenceError,
+      current: persisted.current,
+    });
+  });
+
+  const finalAttempt = result ?? attempt(executionId, 'INTERRUPTED', null);
+  options.onStatus?.(finalAttempt);
+  return finalAttempt;
+}
+
+export function executeStudyScenario(options: ExecuteStudyScenarioOptions): Promise<ExecutionAttempt> {
+  let byScenario = inFlight.get(options.controller);
+  if (byScenario === undefined) {
+    byScenario = new Map();
+    inFlight.set(options.controller, byScenario);
+  }
+  const existing = byScenario.get(options.scenarioId);
+  if (existing !== undefined) return existing;
+  const running = execute(options);
+  byScenario.set(options.scenarioId, running);
+  const cleanup = () => {
+    if (byScenario?.get(options.scenarioId) === running) byScenario.delete(options.scenarioId);
+  };
+  void running.then(cleanup, cleanup);
+  return running;
+}
