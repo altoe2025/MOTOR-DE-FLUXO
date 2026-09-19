@@ -39,6 +39,8 @@ export type ImportExecutionRecord = {
   operationIds: string[];
   request: unknown;
   response: unknown;
+  catalogVersion?: string;
+  current?: boolean;
 };
 
 export type ImportChangeNotice = {
@@ -67,7 +69,10 @@ export interface ImportRepository {
   saveExecution(
     record: ImportExecutionRecord,
     expectedRevision: number,
+    options?: { allowHistorical?: boolean },
   ): Promise<void>;
+  loadExecution(studyId: string, executionId: string): Promise<ImportExecutionRecord | null>;
+  reserveExecutionAttempt(studyId: string, expectedRevision: number, attemptId: string): Promise<void>;
   deleteStudy(studyId: string): Promise<void>;
   deleteAllLocalData(): Promise<void>;
   close(): void;

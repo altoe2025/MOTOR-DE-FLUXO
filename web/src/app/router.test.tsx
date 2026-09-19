@@ -59,6 +59,12 @@ describe('application routes', () => {
     expect(screen.getByRole('button', { name: 'Sair' })).toBeVisible();
   });
 
+  it('protege a rota de importação e mantém Carteira como destino ativo', async () => {
+    renderAppAt('/carteira/importar');
+    expect(await screen.findByRole('heading', { level: 1, name: 'Importar XLSX' })).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Carteira' })).toHaveAttribute('aria-current', 'page');
+  });
+
   it('redireciona visitante para login', async () => {
     renderAppAt('/carteira', client(null));
     expect(await screen.findByRole('heading', { name: 'Entrar' })).toBeVisible();

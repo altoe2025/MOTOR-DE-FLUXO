@@ -33,7 +33,7 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-09-18, após a adaptação da importação para a prévia canônica.
+Atualizada em 2026-09-18, após a entrega do fluxo visual da importação XLSX.
 
 | Branch | Situação | Dono |
 |---|---|---|
@@ -49,6 +49,7 @@ Atualizada em 2026-09-18, após a adaptação da importação para a prévia can
 | `feat/importacao-xlsx-catalogo` | MOT-57 concluída sobre a branch da T8; catálogo versionado, autenticado, empacotado e sem dados reais inventados | Codex |
 | `feat/importacao-xlsx-catalog-client` | MOT-58 concluída sobre a branch da T9; cliente validado, cache por conta e parâmetros editáveis com origem | Codex |
 | `feat/importacao-xlsx-preview` | MOT-59 concluída sobre a branch da T10; adaptador canônico, execução idempotente e histórico por revisão | Codex |
+| `feat/importacao-xlsx-ui` | MOT-60 concluída sobre a branch da T11; fluxo visual local, execução confirmada e restauração do diagnóstico | Codex |
 | `netting/p1` | spike do P1, **NÃO MERGEAR** — dominado, e agora sabemos que a folga é zero em N ≥ 50. Só local, nunca foi pro GitHub | Felipe |
 | `fix/semantica-remessa-p0` | PR #11, mergeada | Felipe |
 | `fix/previsao-temporal-e-colunas-csv` | PR #12, mergeada | Gabriel |
@@ -78,6 +79,30 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
 ---
+
+## 2026-09-18 — Fluxo visual da importação XLSX (MOT-60)
+
+**Sintoma.** As camadas locais de leitura, validação, carteira, catálogo,
+persistência e execução existiam, mas não havia um percurso protegido para o
+usuário criar, revisar, recortar, confirmar e reabrir uma importação real.
+
+**Causa.** A integração de sessão e as telas haviam sido deixadas para a tarefa
+final de produto. O repositório também não expunha leitura de execução nem uma
+reserva atômica antes do POST.
+
+**O que foi feito.** Na branch `feat/importacao-xlsx-ui`, sobre a MOT-59, foram
+adicionados o provedor de importação por conta, as rotas protegidas, upload
+explícito e cancelável, revisão acessível com filtros, paginação, correções,
+conflitos, exclusão/restauração e reversão, parâmetros com origem, confirmação
+parcial exata e restauração do diagnóstico por UUID. A Carteira passou a listar,
+abrir e excluir estudos locais e a exclusão total exige `APAGAR`. O IndexedDB
+ganhou reserva CAS e leitura de execução; logout fecha Worker, repositório e
+requisições pelo ciclo de vida dos provedores. O gate terminou com 313 testes,
+typecheck, lint e build verdes.
+
+**O que isso invalida.** Invalida a conclusão de que a importação só podia ser
+operada pelas camadas internas. Não altera `motor/`, P0, regras sintéticas,
+medições históricas, grade, finalidade ou alíquota real.
 
 ## 2026-09-18 — Adaptador e orquestração da prévia importada (MOT-59)
 
