@@ -66,7 +66,10 @@ def static_client(tmp_path: Path):
 
 @pytest.mark.parametrize(
     "path",
-    ["/", "/login", "/auth/callback", "/carteira", "/diagnostico", "/comparar"],
+    [
+        "/", "/login", "/auth/callback", "/carteira", "/diagnostico", "/comparar",
+        "/carteira/00000000-0000-4000-8000-000000000101/importar",
+    ],
 )
 def test_rotas_spa_conhecidas_recebem_index_sem_cache_duradouro(static_client, path):
     response = static_client.get(path)
@@ -106,6 +109,7 @@ def test_asset_sem_hash_nao_recebe_cache_imutavel(static_client, asset):
         "/assets/ausente.js",
         "/assets/%2e%2e/index.html",
         "/auth/desconhecida",
+        "/carteira/nao-e-uuid/importar",
         "/rota-desconhecida",
         "/api/v1/ausente",
     ],

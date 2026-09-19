@@ -211,6 +211,7 @@ export type PortfolioProjection = {
     versions: number;
     currentOperations: number;
     conflicts: number;
+    invalidRows: number;
   };
 };
 

@@ -1,18 +1,5 @@
 import { expect, test } from '@playwright/test';
 
-test.afterAll(async ({ request }) => {
-  const response = await request.post('/__e2e__/shutdown');
-  expect(response.ok()).toBe(true);
-  await expect.poll(async () => {
-    try {
-      await request.get('/api/v1/health');
-      return false;
-    } catch {
-      return true;
-    }
-  }).toBe(true);
-});
-
 test('browser executes the reference example through the real API and engine', async ({ page }) => {
   const calls = { get: 0, post: 0 };
   page.on('request', (request) => {
@@ -100,7 +87,7 @@ test('login, portfolio, preview and expired session remain usable at acceptance 
 
   await page.evaluate(() => localStorage.setItem('motor-fluxo:e2e-session', 'expired'));
   await page.goto('/carteira');
-  await page.getByRole('button', { name: 'Executar exemplo de referência' }).click();
+  await expect(page).toHaveURL(/\/login$/);
   await expect(page.getByText(/Sua sessão expirou/)).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath('sessao-expirada-1280x800.png'), fullPage: true });
 });

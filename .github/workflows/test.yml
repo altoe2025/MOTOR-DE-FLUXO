@@ -69,7 +69,7 @@ jobs:
       - name: Install Chromium
         run: npx --prefix web playwright install --with-deps chromium
 
-      - name: Run same-origin browser acceptance
+      - name: Run same-origin and XLSX browser acceptance
         run: npm --prefix web run test:e2e
 
       - name: Measure the reference envelope

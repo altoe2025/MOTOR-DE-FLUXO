@@ -23,6 +23,10 @@ _SPA_PATHS = {
     "premissas",
 }
 _LEGACY_HASHED_ASSET = re.compile(r"\.[0-9a-fA-F]{8,}\.")
+_STUDY_IMPORT_PATH = re.compile(
+    r"^carteira/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-"
+    r"[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}/importar$"
+)
 
 
 def _not_found() -> ApiFailure:
@@ -79,7 +83,10 @@ def install_static_routes(app: FastAPI, dist_dir: Path | None) -> None:
 
     @app.get("/{spa_path:path}", include_in_schema=False)
     async def spa_fallback(spa_path: str) -> FileResponse:
-        if spa_path not in _SPA_PATHS or dist is None:
+        if (
+            spa_path not in _SPA_PATHS
+            and _STUDY_IMPORT_PATH.fullmatch(spa_path) is None
+        ) or dist is None:
             raise _not_found()
         index = (dist / "index.html").resolve()
         if not index.is_relative_to(dist) or not index.is_file():

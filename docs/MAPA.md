@@ -45,6 +45,9 @@ make test          # a contagem vigente é registrada em docs/testing.md
 | Por que autonetting precede a fase multilateral | `docs/adr-autonetting-preferencial.md` |
 | Por que cada operação executa individualmente | `docs/adr-model-b.md` |
 | Camadas e regra de importação | `docs/architecture.md`, `docs/ARQUITETURA.md` |
+| Importador XLSX local, CAS e fluxo visual | `web/src/importer/`, `web/src/importer/components/` |
+| Catálogo central e fixture fictícia de aceite | `servidor/catalogs/importacao.v1.json`, `web/e2e/fixtures/import-catalog.json` |
+| Aceitação e privacidade da importação | `web/e2e/import-xlsx.spec.ts`, `tests/web_api/test_import_acceptance.py` |
 
 Os dois relatórios são **autocontidos**: não pressupõem a conversa que os gerou.
 
@@ -60,6 +63,17 @@ CSV. Entraram no git com `add -f` contra a regra `*.csv` do `.gitignore`, de pro
 
 Grade: `N ∈ {2,3,4,6,8,12,16,24,32}` × 5 mixes × `W ∈ {1,7}` × 300 sementes pareadas ×
 horizonte 365 dias.
+
+## Importação XLSX local-first
+
+O percurso é: arquivo local → Worker → validação acumulativa → IndexedDB isolado por
+conta → avaliação do recorte → `PreviaRequest` sem PII exibida → API autenticada →
+adaptador → motor → envelope persistido → Diagnóstico. O XLSX original não atravessa
+a rede e não é persistido. Os limites são 5 MiB, 1.000 linhas e request final menor
+que 1 MiB. O catálogo regulatório de produção continua não configurado.
+
+Fixtures, taxas e códigos `TESTE_FICTICIO` servem exclusivamente ao E2E e não são
+fonte de regra financeira real.
 
 ## Código do motor
 

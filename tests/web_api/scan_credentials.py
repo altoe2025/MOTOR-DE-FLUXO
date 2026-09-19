@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 import subprocess
 from collections.abc import Mapping
@@ -36,6 +37,20 @@ def find_secret_findings(files: Mapping[str, str]) -> list[SecretFinding]:
     return sorted(findings, key=lambda item: (item.path, item.kind))
 
 
+def verify_catalog_boundary() -> None:
+    production_path = ROOT / "servidor" / "catalogs" / "importacao.v1.json"
+    e2e_path = ROOT / "web" / "e2e" / "fixtures" / "import-catalog.json"
+    production = json.loads(production_path.read_text(encoding="utf-8"))
+    fixture = json.loads(e2e_path.read_text(encoding="utf-8"))
+    if production.get("status") != "NAO_CONFIGURADO" or production.get("finalidades") != []:
+        raise SystemExit("catálogo de produção foi configurado pelo aceite")
+    descriptions = [item.get("descricao", "") for item in fixture.get("finalidades", [])]
+    if fixture.get("status") != "CONFIGURADO" or not descriptions:
+        raise SystemExit("fixture E2E precisa de catálogo fictício configurado")
+    if any("TESTE_FICTICIO" not in description for description in descriptions):
+        raise SystemExit("fixture E2E contém finalidade sem marcador TESTE_FICTICIO")
+
+
 def _candidate_paths() -> list[Path]:
     tracked = subprocess.run(
         ["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
@@ -51,6 +66,7 @@ def _candidate_paths() -> list[Path]:
 
 
 def main() -> None:
+    verify_catalog_boundary()
     text_files: dict[str, str] = {}
     for path in _candidate_paths():
         try:

@@ -1,6 +1,7 @@
 import type { AuthClient, AuthSession } from './types';
 
 export const CONTROLLED_E2E_TOKEN = 'mot21-controlled-e2e-token';
+export const CONTROLLED_E2E_TOKEN_B = 'mot61-controlled-e2e-token-b';
 
 const session: AuthSession = Object.freeze({
   access_token: CONTROLLED_E2E_TOKEN,
@@ -16,8 +17,11 @@ export function createE2eAuthClient(state?: StateReader): AuthClient {
     ? { getItem: () => null }
     : window.localStorage);
   const isExpired = () => reader.getItem('motor-fluxo:e2e-session') === 'expired';
+  const selectedSession = (): AuthSession => reader.getItem('motor-fluxo:e2e-user') === 'B'
+    ? { ...session, access_token: CONTROLLED_E2E_TOKEN_B, user: { id: '00000000-0000-4000-8000-000000000061' } }
+    : session;
   const sessionResponse = async () => ({
-    data: { session: isExpired() ? expiredSession : session },
+    data: { session: isExpired() ? expiredSession : selectedSession() },
     error: null,
   });
   const refreshResponse = async () => isExpired()

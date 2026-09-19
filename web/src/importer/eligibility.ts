@@ -176,7 +176,7 @@ export function evaluateExecution(
   }
 
   let outsideRecut = 0;
-  let invalid = 0;
+  let invalid = projection.counts.invalidRows;
   const excluded = projection.excludedOperationIds.filter(
     (operationId) => projection.versionsByOperationId[operationId] !== undefined,
   ).length;
