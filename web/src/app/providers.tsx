@@ -4,6 +4,7 @@ import { useEffect, useMemo, type ReactNode } from 'react';
 import { createApiClient, type ApiClient } from '../api/client';
 import { useAuth, useAuthControl } from '../auth/AuthProvider';
 import { PreviewProvider } from '../preview/PreviewProvider';
+import { ImportFlowProvider } from '../importer/components/ImportFlowContext';
 import { createUserQueryClient } from './queryClient';
 
 export function ApplicationProviders({ children, client }: { children: ReactNode; client?: ApiClient }) {
@@ -18,7 +19,9 @@ export function ApplicationProviders({ children, client }: { children: ReactNode
 
   return (
     <QueryClientProvider client={queryClient}>
-      <PreviewProvider client={apiClient} ownerId={userId}>{children}</PreviewProvider>
+      <PreviewProvider client={apiClient} ownerId={userId}>
+        <ImportFlowProvider client={apiClient}>{children}</ImportFlowProvider>
+      </PreviewProvider>
     </QueryClientProvider>
   );
 }

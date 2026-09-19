@@ -444,6 +444,7 @@ export class IndexedDbImportRepository implements ImportRepository {
   async saveExecution(
     record: ImportExecutionRecord,
     expectedRevision: number,
+    options: { allowHistorical?: boolean } = {},
   ): Promise<void> {
     requireSerializable(record);
     if (record.ownerSub !== this.#ownerSub) {
@@ -466,7 +467,7 @@ export class IndexedDbImportRepository implements ImportRepository {
             throw new Error('STUDY_NOT_FOUND');
           }
           ensureOwner(study, this.#ownerSub);
-          if (study.document.revision !== expectedRevision) {
+          if (!options.allowHistorical && study.document.revision !== expectedRevision) {
             throw new RevisionConflictError();
           }
           transaction.objectStore('executions').put({
@@ -482,6 +483,45 @@ export class IndexedDbImportRepository implements ImportRepository {
       transaction.onabort = () => reject(
         failure ?? transaction.error ?? new Error('TRANSACTION_ABORTED'),
       );
+      transaction.onerror = () => undefined;
+    });
+  }
+
+  async loadExecution(studyId: string, executionId: string): Promise<ImportExecutionRecord | null> {
+    const database = await this.#open();
+    return new Promise((resolve, reject) => {
+      const request = database.transaction('executions', 'readonly')
+        .objectStore('executions').get(`${studyId}:${executionId}`);
+      request.onerror = () => reject(requestError(request));
+      request.onsuccess = () => {
+        const record = request.result as (ImportExecutionRecord & { key: string }) | undefined;
+        if (record === undefined) { resolve(null); return; }
+        try { ensureOwner(record, this.#ownerSub); resolve(record); } catch (error) { reject(error); }
+      };
+    });
+  }
+
+  async reserveExecutionAttempt(studyId: string, expectedRevision: number, attemptId: string): Promise<void> {
+    const database = await this.#open();
+    return new Promise((resolve, reject) => {
+      let failure: Error | null = null;
+      const transaction = database.transaction(['studies', 'executions'], 'readwrite', { durability: 'strict' });
+      const request = transaction.objectStore('studies').get(studyId);
+      request.onerror = () => transaction.abort();
+      request.onsuccess = () => {
+        try {
+          const study = request.result as StudyRecord | undefined;
+          if (study === undefined) throw new Error('STUDY_NOT_FOUND');
+          ensureOwner(study, this.#ownerSub);
+          if (study.document.revision !== expectedRevision) throw new RevisionConflictError();
+          transaction.objectStore('executions').add({
+            key: `${studyId}:reservation:${expectedRevision}`, studyId, ownerSub: this.#ownerSub,
+            id: attemptId, expectedRevision, kind: 'RESERVATION',
+          });
+        } catch (error) { failure = error instanceof Error ? error : new Error(String(error)); transaction.abort(); }
+      };
+      transaction.oncomplete = () => resolve();
+      transaction.onabort = () => reject(failure ?? transaction.error ?? new RevisionConflictError());
       transaction.onerror = () => undefined;
     });
   }

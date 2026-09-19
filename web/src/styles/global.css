@@ -70,4 +70,30 @@ a { color: inherit; }
 .draft-card h2 { font-family: var(--font-heading); font-size: 1.5rem; margin: 0 0 var(--space-4); }
 .save-status { color: var(--muted); font-size: 0.875rem; margin: 0; }
 .session-loading { padding: var(--space-8); }
+.link-button { display: inline-flex; text-decoration: none; }
+.study-list { display: grid; gap: var(--space-2); list-style: none; padding: 0; }
+.study-list li { align-items: center; border-bottom: 1px solid var(--border); display: flex; gap: var(--space-3); justify-content: space-between; padding: var(--space-2) 0; }
+.import-flow { max-width: 1100px; }
+.step-list { display: flex; gap: var(--space-2); list-style: none; margin: var(--space-6) 0; padding: 0; }
+.step-list li { border-bottom: 3px solid var(--border); color: var(--muted); padding: var(--space-2); }
+.step-list li[aria-current='step'] { border-color: var(--accent); color: var(--ink); font-weight: 700; }
+.import-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); margin: var(--space-5) 0; padding: var(--space-6); }
+.import-card h2 { font-family: var(--font-heading); margin-top: 0; }
+.file-field, .parameter-grid label { display: grid; font-weight: 650; gap: var(--space-1); }
+.file-field input, .parameter-grid input, .import-card table input { border: 1px solid var(--border); border-radius: var(--radius); padding: var(--space-2); }
+.button-row, .filter-row { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-4); }
+.filter-row button { background: transparent; border: 1px solid var(--border); border-radius: 999px; cursor: pointer; padding: var(--space-1) var(--space-3); }
+.filter-row button[aria-pressed='true'] { background: var(--nav); color: var(--on-nav); }
+.table-scroll { max-height: 480px; overflow: auto; }
+.import-card table { border-collapse: collapse; margin: var(--space-4) 0; width: 100%; }
+.import-card caption { color: var(--muted); padding: var(--space-2); text-align: left; }
+.import-card th, .import-card td { border-bottom: 1px solid var(--border); padding: var(--space-2); text-align: left; }
+.import-card thead { background: var(--surface); position: sticky; top: 0; z-index: 1; }
+.issue-row td { color: var(--error); font-size: .875rem; }
+.parameter-grid { display: grid; gap: var(--space-4); grid-template-columns: repeat(2, minmax(0,1fr)); }
+.parameter-grid small { color: var(--muted); font-weight: 400; }
+.confirmation-counts { display: grid; gap: var(--space-3); grid-template-columns: repeat(3, minmax(0,1fr)); }
+.confirmation-counts div { border-left: 3px solid var(--accent); padding-left: var(--space-3); }
+.confirmation-counts dd { font-size: 1.5rem; font-weight: 700; margin: 0; }
 @media (max-width: 760px) { .app-shell { grid-template-columns: 1fr; } .sidebar { gap: var(--space-4); } .destination-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } .workspace-header, .workspace-content { padding-left: var(--space-4); padding-right: var(--space-4); } .comparison-summary .headline-metrics, .mechanism-grid { grid-template-columns: 1fr; } }
+@media (max-width: 760px) { .parameter-grid, .confirmation-counts { grid-template-columns: 1fr; } .study-list li { align-items: flex-start; flex-direction: column; } }
