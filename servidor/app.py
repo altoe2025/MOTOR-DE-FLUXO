@@ -23,11 +23,13 @@ from servidor.auth import (
 )
 from servidor.config import Settings
 from servidor.contracts.input import PreviaRequest
+from servidor.contracts.preparation import PreparationRequest, PreparationResponse
 from servidor.contracts.preview import PreviewEnvelope, ReferenceExample
 from servidor.contracts.session import HealthResponse, SessionResponse
 from servidor.errors import ApiFailure, entrada_invalida, failure_response
 from servidor.generate_reference_fixture import build_reference_request
-from servidor.routes import examples, preview, session
+from servidor.preparation import preparar_carteira
+from servidor.routes import examples, preparation, preview, session
 from servidor.static import install_static_routes
 
 _LOGGER = logging.getLogger("servidor.http")
@@ -138,6 +140,7 @@ def create_app(
 
     app.include_router(session.router)
     app.include_router(examples.router)
+    app.include_router(preparation.router)
     app.include_router(preview.router)
 
     @app.api_route(
@@ -175,5 +178,11 @@ def create_schema_app() -> FastAPI:
     @app.post("/api/v1/previas", response_model=PreviewEnvelope)
     def preview_schema(_: SchemaBearer, request: PreviaRequest) -> PreviewEnvelope:
         raise HTTPException(status_code=501, detail="endpoint disponível na T3")
+
+    @app.post("/api/v1/preparacoes", response_model=PreparationResponse)
+    def preparation(
+        _: SchemaBearer, request: PreparationRequest
+    ) -> PreparationResponse:
+        return preparar_carteira(request, build_sha=request.expected_build_sha)
 
     return app
