@@ -10,6 +10,7 @@ import type {
 } from './domain';
 import observedCaseSchema from './observedCase.schema.json';
 
+const ContractDecimal = Decimal.clone({ precision: 40 });
 const ajv = new Ajv2020({ allErrors: true, strict: true });
 addFormats(ajv);
 
@@ -29,6 +30,16 @@ function schemaIssue(error: ErrorObject): CaseValidationIssue {
 export function validateObservedCase(value: unknown): CaseValidation<ObservedCase> {
   if (!validateSchema(value)) {
     return { ok: false, issues: (validateSchema.errors ?? []).map(schemaIssue) };
+  }
+  if (value.quality.blockers.length > 0) {
+    return {
+      ok: false,
+      issues: [{
+        path: '/quality/blockers',
+        code: 'INVALID_STRUCTURE',
+        message: 'Caso confirmado não pode conter blockers ativos.',
+      }],
+    };
   }
   if (value.window.closingDate < value.window.startDate
     || value.window.closingDate > value.window.endDate) {
@@ -59,7 +70,7 @@ export function validateObservedCase(value: unknown): CaseValidation<ObservedCas
     const direction = total.code === 'GROSS_OUT_BRL' ? 'OUT' : 'IN';
     const computed = value.orders
       .filter((order) => order.direction === direction)
-      .reduce((sum, order) => sum.plus(order.valueBrl), new Decimal(0));
+      .reduce((sum, order) => sum.plus(order.valueBrl), new ContractDecimal(0));
     if (!computed.eq(total.valueBrl)) {
       return {
         ok: false,

@@ -150,11 +150,58 @@ describe('validateObservedCase', () => {
     });
   });
 
+  it('rejects a divergent control total at the maximum order cardinality', () => {
+    const orders = Array.from({ length: 1_000 }, (_, index) => ({
+      ...validCase.orders[0],
+      id: `order-${index}`,
+      valueBrl: '999999999999.999999',
+    }));
+    const invalid = {
+      ...validCase,
+      orders,
+      controlTotals: [
+        { ...validCase.controlTotals[0], valueBrl: '999999999999999.9999' },
+      ],
+    };
+
+    expect(validateObservedCase(invalid)).toEqual({
+      ok: false,
+      issues: [
+        {
+          path: '/controlTotals/0/valueBrl',
+          code: 'CONTROL_TOTAL_MISMATCH',
+          message: 'Total de controle diverge das ordens observadas.',
+        },
+      ],
+    });
+  });
+
   it('rejects a confirmed case that omits observedOutcome', () => {
     const invalid: Partial<ObservedCase> = { ...validCase };
     Reflect.deleteProperty(invalid, 'observedOutcome');
 
     expect(validateObservedCase(invalid).ok).toBe(false);
+  });
+
+  it('rejects a confirmed case with active quality blockers', () => {
+    const invalid = {
+      ...validCase,
+      quality: {
+        ...validCase.quality,
+        blockers: [{ code: 'PURPOSE_MISSING', message: 'Finalidade pendente.' }],
+      },
+    };
+
+    expect(validateObservedCase(invalid)).toEqual({
+      ok: false,
+      issues: [
+        {
+          path: '/quality/blockers',
+          code: 'INVALID_STRUCTURE',
+          message: 'Caso confirmado não pode conter blockers ativos.',
+        },
+      ],
+    });
   });
 });
 
