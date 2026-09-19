@@ -34,10 +34,16 @@ export function ExecutionHistory({
   onSelect(execution: ExecutionRecord): void;
 }) {
   const scenariosById = new Map(scenarios.map((scenario) => [scenario.id, scenario]));
-  if (executions.length === 0) return <p>Nenhuma execução registrada.</p>;
+  const terminalRequests = new Set(executions
+    .filter((execution) => execution.status !== 'PREPARING' && execution.status !== 'RUNNING')
+    .map((execution) => execution.requestSnapshot.request_id));
+  const visibleExecutions = executions.filter((execution) =>
+    (execution.status !== 'PREPARING' && execution.status !== 'RUNNING')
+    || !terminalRequests.has(execution.requestSnapshot.request_id));
+  if (visibleExecutions.length === 0) return <p>Nenhuma execução registrada.</p>;
   return (
     <ol aria-label="Histórico de execuções">
-      {[...executions].reverse().map((execution) => {
+      {[...visibleExecutions].reverse().map((execution) => {
         const scenario = scenariosById.get(execution.scenarioId);
         return (
           <li key={execution.id}>

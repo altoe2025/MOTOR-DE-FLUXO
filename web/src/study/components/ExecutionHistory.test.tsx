@@ -15,11 +15,13 @@ const executions = [{
   id: 'execution-old', scenarioId: scenario.id, scenarioRevision: 3,
   inputFingerprint: 'a'.repeat(64), status: 'SUCCEEDED',
   engineVersion: 'build-123', contractVersion: '1.0.0',
+  requestSnapshot: { request_id: 'request-old' },
   createdAt: '2026-09-19T12:00:00Z', finishedAt: '2026-09-19T12:01:00Z',
 }, {
   id: 'execution-new', scenarioId: scenario.id, scenarioRevision: 4,
   inputFingerprint: 'b'.repeat(64), status: 'FAILED',
   engineVersion: 'unknown', contractVersion: '1.0.0',
+  requestSnapshot: { request_id: 'request-new' },
   createdAt: '2026-09-19T13:00:00Z', finishedAt: '2026-09-19T13:01:00Z',
 }] as ExecutionRecord[];
 
@@ -38,5 +40,21 @@ describe('ExecutionHistory', () => {
     await userEvent.setup().click(screen.getByRole('button', { name: /execução execution-old/i }));
     expect(onSelect).toHaveBeenCalledWith(executions[0]);
     expect(scenario).toEqual(before);
+  });
+
+  it('mostra somente o terminal quando a reserva e a conclusão compartilham request_id', () => {
+    const request = { request_id: 'request-1' } as ExecutionRecord['requestSnapshot'];
+    const reservation = {
+      ...executions[0]!, id: 'reservation-1', status: 'RUNNING',
+      requestSnapshot: request, envelope: null, finishedAt: null,
+    } as ExecutionRecord;
+    const terminal = {
+      ...executions[0]!, id: 'terminal-1', status: 'SUCCEEDED', requestSnapshot: request,
+    } as ExecutionRecord;
+
+    render(<ExecutionHistory executions={[reservation, terminal]} scenarios={[scenario]} onSelect={() => undefined} />);
+
+    expect(screen.queryByText('Em execução')).not.toBeInTheDocument();
+    expect(screen.getByText('Concluída')).toBeVisible();
   });
 });

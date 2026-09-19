@@ -15,7 +15,7 @@ import { createStudy, updateScenario } from './domain';
 import { FIXTURE_NOW, FIXTURE_OWNER, makeScenarioDraft } from './fixtures';
 import type { DeepMutable, StudyDocument } from './model';
 import { StudyController } from './studyController';
-import { executeStudyScenario } from './executionService';
+import { executeStudyScenario, ExecutionInProgressError } from './executionService';
 
 const envelopeFixture = JSON.parse(readFileSync(
   resolve(process.cwd(), '../contracts/fixtures/reference-result.json'), 'utf8',
@@ -105,6 +105,18 @@ async function setup() {
   return { study, repository, controller, nextId, now, buildRequest };
 }
 
+function secondController(repository: MemoryRepository): StudyController {
+  let operation = 100;
+  return new StudyController({
+    repositoryFactory: () => repository,
+    channelFactory: () => ({
+      postMessage() {}, addEventListener() {}, removeEventListener() {}, close() {},
+    }),
+    operationId: () => `operation-${++operation}`,
+    autosaveDelayMs: 60_000,
+  });
+}
+
 function matchingEnvelope(input: PreviaRequest, executionId: string): PreviewEnvelope {
   return {
     ...structuredClone(envelopeFixture),
@@ -156,15 +168,102 @@ describe('executeStudyScenario', () => {
     const second = executeStudyScenario(options);
     await vi.waitFor(() => expect(runPreview).toHaveBeenCalledOnce());
     expect(subject.repository.saves[0]).toMatchObject({ expectedRevision: 1 });
-    expect(subject.repository.saves[0]!.document.executions).toEqual([]);
+    expect(subject.repository.saves[0]!.document.executions).toHaveLength(1);
+    expect(subject.repository.saves[0]!.document.executions[0]).toMatchObject({
+      status: 'RUNNING',
+      requestSnapshot: { request_id: sent.request_id },
+    });
 
     response.resolve(matchingEnvelope(sent, executionId));
     const [left, right] = await Promise.all([first, second]);
     expect(left.id).toBe(right.id);
     expect(runPreview).toHaveBeenCalledOnce();
-    expect(subject.repository.document?.executions).toHaveLength(1);
-    expect(subject.repository.document?.executions[0]).toMatchObject({ id: left.id, status: 'SUCCEEDED' });
+    expect(subject.repository.document?.executions).toHaveLength(2);
+    expect(subject.repository.document?.executions.map((item) => item.status)).toEqual(['RUNNING', 'SUCCEEDED']);
+    expect(subject.repository.document?.executions[1]).toMatchObject({ id: left.id, status: 'SUCCEEDED' });
+    expect(subject.repository.document?.executions[1]?.requestSnapshot.request_id)
+      .toBe(subject.repository.document?.executions[0]?.requestSnapshot.request_id);
     expect(statuses).toEqual(['PREPARING', 'RUNNING', 'SUCCEEDED']);
+  });
+
+  it('recusa em outra aba a reserva durável já commitada e mantém um único POST', async () => {
+    const subject = await setup();
+    const response = deferred<PreviewEnvelope>();
+    let sent!: PreviaRequest;
+    const firstPost = vi.fn((input: PreviaRequest) => {
+      sent = input;
+      return response.promise;
+    });
+    const first = executeStudyScenario({
+      ...subject, scenarioId: subject.study.baseScenarioId, runPreview: firstPost,
+    });
+    await vi.waitFor(() => expect(subject.repository.document?.executions[0]?.status).toBe('RUNNING'));
+
+    const other = secondController(subject.repository);
+    await other.switchSession(FIXTURE_OWNER);
+    await other.loadStudy(subject.study.id);
+    const secondPost = vi.fn(async (input: PreviaRequest) => matchingEnvelope(input, envelopeFixture.execution_id));
+    const refused = await executeStudyScenario({
+      controller: other,
+      scenarioId: subject.study.baseScenarioId,
+      buildRequest: subject.buildRequest,
+      runPreview: secondPost,
+      nextId: subject.nextId,
+      now: subject.now,
+    });
+
+    expect(refused).toMatchObject({ status: 'INTERRUPTED', current: false });
+    expect(refused.error).toBeInstanceOf(ExecutionInProgressError);
+    expect(secondPost).not.toHaveBeenCalled();
+    response.resolve(matchingEnvelope(sent, envelopeFixture.execution_id));
+    await expect(first).resolves.toMatchObject({ status: 'SUCCEEDED' });
+    expect(firstPost).toHaveBeenCalledOnce();
+  });
+
+  it('converte falha do flush inicial em FAILED sem POST e preserva STORAGE_FAILURE', async () => {
+    const subject = await setup();
+    const current = subject.controller.snapshot.document!;
+    const edited = await updateScenario(current, current.baseScenarioId, { name: 'Pendente' }, '2026-09-19T12:20:00Z');
+    subject.controller.edit(edited);
+    subject.repository.failOnSave = 1;
+    const runPreview = vi.fn();
+    const statuses: string[] = [];
+
+    const result = await executeStudyScenario({
+      ...subject,
+      scenarioId: current.baseScenarioId,
+      runPreview,
+      onStatus: (value) => statuses.push(value.status),
+    });
+
+    expect(result).toMatchObject({ status: 'FAILED', request: null });
+    expect(result.persistenceError).toBeInstanceOf(Error);
+    expect(subject.controller.snapshot).toMatchObject({ status: 'STORAGE_FAILURE', document: edited });
+    expect(runPreview).not.toHaveBeenCalled();
+    expect(statuses).toEqual(['PREPARING', 'FAILED']);
+  });
+
+  it('converte falha ao persistir reserva em FAILED sem POST e mantém a reserva em memória', async () => {
+    const subject = await setup();
+    subject.repository.failOnSave = 1;
+    const runPreview = vi.fn();
+    const statuses: string[] = [];
+
+    const result = await executeStudyScenario({
+      ...subject,
+      scenarioId: subject.study.baseScenarioId,
+      runPreview,
+      onStatus: (value) => statuses.push(value.status),
+    });
+
+    expect(result).toMatchObject({ status: 'FAILED' });
+    expect(result.request).not.toBeNull();
+    expect(result.persistenceError).toBeInstanceOf(Error);
+    expect(subject.controller.snapshot.status).toBe('STORAGE_FAILURE');
+    expect(subject.controller.snapshot.document?.executions[0]?.status).toBe('RUNNING');
+    expect(subject.repository.document?.executions).toEqual([]);
+    expect(runPreview).not.toHaveBeenCalled();
+    expect(statuses).toEqual(['PREPARING', 'FAILED']);
   });
 
   it('registra FAILED sem retry automático e preserva resultado anterior', async () => {
@@ -183,7 +282,8 @@ describe('executeStudyScenario', () => {
     expect(failingRun).toHaveBeenCalledOnce();
     expect(failed).toMatchObject({ status: 'FAILED', error: failure });
     expect(failed.id).not.toBe(succeeded.id);
-    expect(subject.repository.document?.executions.map((item) => item.status)).toEqual(['SUCCEEDED', 'FAILED']);
+    expect(subject.repository.document?.executions.map((item) => item.status))
+      .toEqual(['RUNNING', 'SUCCEEDED', 'RUNNING', 'FAILED']);
     expect(succeeded.envelope).not.toBeNull();
   });
 
@@ -269,7 +369,7 @@ describe('executeStudyScenario', () => {
     response.resolve(matchingEnvelope(sent, executionId));
 
     await expect(executing).resolves.toMatchObject({ status: 'INTERRUPTED', current: false });
-    expect(subject.repository.document?.executions).toEqual([]);
+    expect(subject.repository.document?.executions.map((item) => item.status)).toEqual(['RUNNING']);
   });
 
   it('mantém sucesso em memória quando falha ao salvar a resposta', async () => {
@@ -285,6 +385,6 @@ describe('executeStudyScenario', () => {
     expect(result.envelope).not.toBeNull();
     expect(result.persistenceError).toBeInstanceOf(Error);
     expect(subject.controller.snapshot.status).toBe('STORAGE_FAILURE');
-    expect(subject.controller.snapshot.document?.executions).toHaveLength(1);
+    expect(subject.controller.snapshot.document?.executions).toHaveLength(2);
   });
 });

@@ -8,7 +8,7 @@ import type { StudyController } from './studyController';
 export type ExecutionAttempt = Readonly<{
   id: string;
   status: ExecutionStatus;
-  request: PreviaRequest | null;
+  request: ExecutionRecord['requestSnapshot'] | null;
   envelope: PreviewEnvelope | null;
   error: unknown | null;
   persistenceError: unknown | null;
@@ -32,6 +32,13 @@ export type ExecuteStudyScenarioOptions = Readonly<{
   onStatus?: (attempt: ExecutionAttempt) => void;
 }>;
 
+export class ExecutionInProgressError extends Error {
+  constructor(readonly executionId: string) {
+    super('Já existe uma execução persistida em andamento para este cenário.');
+    this.name = 'ExecutionInProgressError';
+  }
+}
+
 const inFlight = new WeakMap<StudyController, Map<string, Promise<ExecutionAttempt>>>();
 
 function defaultId(): string { return crypto.randomUUID(); }
@@ -40,7 +47,7 @@ function defaultNow(): string { return new Date().toISOString(); }
 function attempt(
   id: string,
   status: ExecutionStatus,
-  request: PreviaRequest | null,
+  request: ExecutionRecord['requestSnapshot'] | null,
   overrides: Partial<ExecutionAttempt> = {},
 ): ExecutionAttempt {
   return Object.freeze({
@@ -86,12 +93,14 @@ function assertEnvelope(
   }
 }
 
-function reserveDocument(study: StudyDocument, now: string): StudyDocument {
-  return {
-    ...structuredClone(study),
-    revision: study.revision + 1,
-    updatedAt: now,
-  };
+function activeReservation(study: StudyDocument, scenarioId: string): ExecutionRecord | null {
+  const completedRequests = new Set(study.executions
+    .filter((execution) => execution.status !== 'PREPARING' && execution.status !== 'RUNNING')
+    .map((execution) => execution.requestSnapshot.request_id));
+  return study.executions.find((execution) =>
+    execution.scenarioId === scenarioId
+    && (execution.status === 'PREPARING' || execution.status === 'RUNNING')
+    && !completedRequests.has(execution.requestSnapshot.request_id)) ?? null;
 }
 
 async function persistTerminal(
@@ -134,65 +143,95 @@ async function execute(options: ExecuteStudyScenarioOptions): Promise<ExecutionA
   const requestId = nextId();
   const preparing = attempt(executionId, 'PREPARING', null);
   options.onStatus?.(preparing);
+  let request: PreviaRequest | null = null;
+  let finalAttempt: ExecutionAttempt;
+  try {
+    const result = await options.controller.runForCurrentSession(async ({ ownerSub, epoch, signal }) => {
+      await options.controller.flush();
+      const study = options.controller.snapshot.document;
+      if (study === null) throw new Error('Nenhum estudo selecionado para execução.');
+      const existing = activeReservation(study, options.scenarioId);
+      if (existing !== null) {
+        return attempt(existing.id, 'INTERRUPTED', existing.requestSnapshot, {
+          error: new ExecutionInProgressError(existing.id),
+        });
+      }
+      const scenario = study.scenarios.find((item) => item.id === options.scenarioId);
+      if (scenario === undefined) throw new Error('Cenário não encontrado para execução.');
+      const context = { requestId, executionId, study, scenario };
+      request = options.buildRequest(context);
+      assertRequestIdentity(request, context);
 
-  const result = await options.controller.runForCurrentSession(async ({ ownerSub, epoch, signal }) => {
-    await options.controller.flush();
-    const study = options.controller.snapshot.document;
-    if (study === null) throw new Error('Nenhum estudo selecionado para execução.');
-    const scenario = study.scenarios.find((item) => item.id === options.scenarioId);
-    if (scenario === undefined) throw new Error('Cenário não encontrado para execução.');
-    const context = { requestId, executionId, study, scenario };
-    const request = options.buildRequest(context);
-    assertRequestIdentity(request, context);
+      const createdAt = now();
+      const reservation: ExecutionRecord = {
+        id: executionId,
+        scenarioId: scenario.id,
+        scenarioRevision: scenario.revision,
+        inputFingerprint: scenario.inputFingerprint,
+        requestSnapshot: structuredClone(request),
+        engineVersion: 'pending',
+        contractVersion: request.api_version,
+        status: 'RUNNING',
+        envelope: null,
+        observedComparison: null,
+        createdAt,
+        finishedAt: null,
+      };
+      const withReservation = await appendExecution(study, reservation, createdAt);
+      options.controller.edit(withReservation);
+      const reserved = await options.controller.flush();
+      if (reserved === null || signal.aborted) return attempt(executionId, 'INTERRUPTED', request);
 
-    options.controller.edit(reserveDocument(study, now()));
-    const reserved = await options.controller.flush();
-    if (reserved === null || signal.aborted) return attempt(executionId, 'INTERRUPTED', request);
+      const running = attempt(executionId, 'RUNNING', request);
+      options.onStatus?.(running);
+      let envelope: PreviewEnvelope | null = null;
+      let failure: unknown = null;
+      try {
+        const response = await options.runPreview(request, signal);
+        assertEnvelope(request, response);
+        envelope = response;
+      } catch (error) {
+        failure = error;
+      }
+      if (signal.aborted
+        || options.controller.snapshot.ownerSub !== ownerSub
+        || options.controller.snapshot.sessionEpoch !== epoch) {
+        return attempt(executionId, 'INTERRUPTED', request, { error: failure });
+      }
 
-    const running = attempt(executionId, 'RUNNING', request);
-    options.onStatus?.(running);
-    const createdAt = now();
-    let envelope: PreviewEnvelope | null = null;
-    let failure: unknown = null;
-    try {
-      const response = await options.runPreview(request, signal);
-      assertEnvelope(request, response);
-      envelope = response;
-    } catch (error) {
-      failure = error;
-    }
-    if (signal.aborted
-      || options.controller.snapshot.ownerSub !== ownerSub
-      || options.controller.snapshot.sessionEpoch !== epoch) {
-      return attempt(executionId, 'INTERRUPTED', request, { error: failure });
-    }
-
-    const finishedAt = now();
-    const status: ExecutionStatus = envelope === null ? 'FAILED' : 'SUCCEEDED';
-    const record: ExecutionRecord = {
-      id: envelope?.execution_id ?? executionId,
-      scenarioId: scenario.id,
-      scenarioRevision: scenario.revision,
-      inputFingerprint: scenario.inputFingerprint,
-      requestSnapshot: structuredClone(request),
-      engineVersion: envelope?.motor_build_sha ?? 'unknown',
-      contractVersion: envelope?.api_version ?? request.api_version,
-      status,
-      envelope: envelope === null ? null : structuredClone(envelope),
-      observedComparison: null,
-      createdAt,
-      finishedAt,
-    };
-    const persisted = await persistTerminal(options, ownerSub, epoch, record, finishedAt);
-    return attempt(record.id, status, request, {
-      envelope,
-      error: failure,
-      persistenceError: persisted.persistenceError,
-      current: persisted.current,
+      const finishedAt = now();
+      const status: ExecutionStatus = envelope === null ? 'FAILED' : 'SUCCEEDED';
+      const record: ExecutionRecord = {
+        id: envelope?.execution_id ?? nextId(),
+        scenarioId: scenario.id,
+        scenarioRevision: scenario.revision,
+        inputFingerprint: scenario.inputFingerprint,
+        requestSnapshot: structuredClone(request),
+        engineVersion: envelope?.motor_build_sha ?? 'unknown',
+        contractVersion: envelope?.api_version ?? request.api_version,
+        status,
+        envelope: envelope === null ? null : structuredClone(envelope),
+        observedComparison: null,
+        createdAt,
+        finishedAt,
+      };
+      const persisted = await persistTerminal(options, ownerSub, epoch, record, finishedAt);
+      return attempt(record.id, status, request, {
+        envelope,
+        error: failure,
+        persistenceError: persisted.persistenceError,
+        current: persisted.current,
+      });
     });
-  });
-
-  const finalAttempt = result ?? attempt(executionId, 'INTERRUPTED', null);
+    finalAttempt = result ?? attempt(executionId, 'INTERRUPTED', request);
+  } catch (error) {
+    const interrupted = options.controller.snapshot.status === 'CONFLICT'
+      || options.controller.snapshot.status === 'CLOSED';
+    finalAttempt = attempt(executionId, interrupted ? 'INTERRUPTED' : 'FAILED', request, {
+      error,
+      persistenceError: options.controller.snapshot.status === 'STORAGE_FAILURE' ? error : null,
+    });
+  }
   options.onStatus?.(finalAttempt);
   return finalAttempt;
 }
