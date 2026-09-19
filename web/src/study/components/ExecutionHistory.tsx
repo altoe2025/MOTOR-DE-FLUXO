@@ -45,6 +45,7 @@ export function ExecutionHistory({
     <ol aria-label="Histórico de execuções">
       {[...visibleExecutions].reverse().map((execution) => {
         const scenario = scenariosById.get(execution.scenarioId);
+        const source = execution.sourceSnapshot?.source ?? scenario?.sourceSnapshot.source;
         return (
           <li key={execution.id}>
             <button
@@ -56,7 +57,7 @@ export function ExecutionHistory({
               <strong>{STATUS_LABELS[execution.status]}</strong>
               <span>{instant(execution.finishedAt ?? execution.createdAt)}</span>
               <span>cenário r{execution.scenarioRevision}</span>
-              <span>{scenario === undefined ? 'Origem indisponível' : sourceLabel(scenario.sourceSnapshot.source)}</span>
+              <span>{source === undefined ? 'Origem indisponível' : sourceLabel(source)}</span>
               <span>{execution.engineVersion} · contrato {execution.contractVersion}</span>
               <code title={execution.inputFingerprint}>{execution.inputFingerprint.slice(0, 12)}…</code>
             </button>

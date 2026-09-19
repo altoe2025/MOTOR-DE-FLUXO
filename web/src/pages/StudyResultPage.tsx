@@ -27,9 +27,11 @@ export function StudyResultPage({
     ? undefined
     : study.scenarios.find((candidate) => candidate.id === execution.scenarioId);
   const envelope = execution?.envelope ?? null;
-  const observedOutcome = scenario !== undefined && scenario.revision === execution?.scenarioRevision
-    ? scenario.sourceSnapshot.observedOutcome
-    : null;
+  const sourceSnapshot = execution?.sourceSnapshot
+    ?? (scenario !== undefined && scenario.revision === execution?.scenarioRevision
+      ? scenario.sourceSnapshot
+      : undefined);
+  const observedOutcome = sourceSnapshot?.observedOutcome ?? null;
   const comparison = execution?.observedComparison
     ?? (observedOutcome !== null && observedOutcome !== undefined && envelope !== null
       ? compareObservedToMotor(observedOutcome, envelope)
@@ -53,7 +55,7 @@ export function StudyResultPage({
           <section className="technical-identity" aria-labelledby="study-result-identity">
             <h2 id="study-result-identity">Identidade do resultado</h2>
             <dl>
-              <div><dt>Origem</dt><dd>{scenario === undefined ? 'Origem indisponível' : sourceLabel(scenario.sourceSnapshot.source)}</dd></div>
+              <div><dt>Origem</dt><dd>{sourceSnapshot === undefined ? 'Origem indisponível' : sourceLabel(sourceSnapshot.source)}</dd></div>
               <div><dt>Versões</dt><dd>{execution.engineVersion} · contrato {execution.contractVersion}</dd></div>
               <div><dt>Fingerprint de entrada</dt><dd>{execution.inputFingerprint}</dd></div>
               <div><dt>Fingerprint da execução</dt><dd>{envelope.execution_fingerprint}</dd></div>

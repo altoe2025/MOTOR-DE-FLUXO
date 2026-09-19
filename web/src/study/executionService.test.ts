@@ -12,7 +12,13 @@ import type {
   ConfirmObservedCaseMutation,
 } from '../storage/applicationRepository';
 import { createStudy, updateScenario } from './domain';
-import { FIXTURE_NOW, FIXTURE_OWNER, makeScenarioDraft } from './fixtures';
+import {
+  FIXTURE_NOW,
+  FIXTURE_OWNER,
+  makeObservedSnapshot,
+  makeScenarioDraft,
+  makeSyntheticSnapshot,
+} from './fixtures';
 import type { DeepMutable, StudyDocument } from './model';
 import { StudyController } from './studyController';
 import { executeStudyScenario, ExecutionInProgressError } from './executionService';
@@ -421,6 +427,44 @@ describe('executeStudyScenario', () => {
     expect(result).toMatchObject({ status: 'SUCCEEDED', current: false });
     expect(subject.repository.document?.executions.at(-1)?.inputFingerprint)
       .not.toBe(subject.repository.document?.scenarios[0]?.inputFingerprint);
+  });
+
+  it('preserva o snapshot analítico observado e a comparação usados após o cenário mudar', async () => {
+    const subject = await setup();
+    const initial = subject.controller.snapshot.document!;
+    const observed = await updateScenario(
+      initial,
+      initial.baseScenarioId,
+      { sourceSnapshot: makeObservedSnapshot() },
+      '2026-09-19T12:20:00Z',
+    );
+    subject.controller.edit(observed);
+    await subject.controller.flush();
+
+    await executeStudyScenario({
+      ...subject,
+      scenarioId: initial.baseScenarioId,
+      runPreview: async (input) => matchingEnvelope(input, envelopeFixture.execution_id),
+    });
+
+    const afterExecution = subject.controller.snapshot.document!;
+    const succeeded = afterExecution.executions.at(-1)!;
+    const changed = await updateScenario(
+      afterExecution,
+      afterExecution.baseScenarioId,
+      { sourceSnapshot: makeSyntheticSnapshot() },
+      '2026-09-19T12:30:00Z',
+    );
+
+    expect(succeeded.sourceSnapshot).toMatchObject({
+      source: { kind: 'OBSERVED_CASE', caseId: 'case-1', caseRevision: 4 },
+      observedOutcome: { schemaVersion: '1.0.0' },
+    });
+    expect(succeeded.premisesSnapshot).toEqual(observed.scenarios[0]!.premises);
+    expect(succeeded.periodSnapshot).toEqual(observed.scenarios[0]!.period);
+    expect(succeeded.observedComparison?.rows[0]).toMatchObject({ code: 'GROSS_OUT_BRL' });
+    expect(changed.scenarios[0]!.sourceSnapshot.source.kind).toBe('SYNTHETIC');
+    expect(succeeded.sourceSnapshot?.source.kind).toBe('OBSERVED_CASE');
   });
 
   it('trata renomeação do cenário durante POST como atual porque o fingerprint não mudou', async () => {

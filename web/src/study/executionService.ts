@@ -1,5 +1,6 @@
 import type { PreviaRequest, PreviewEnvelope } from '../api/client';
 import { validatePreviewEnvelope } from '../api/validators';
+import { compareObservedToMotor } from '../cases/observedComparison';
 import { appendExecution } from './domain';
 import { canonicalInputSnapshot } from './fingerprints';
 import type { ExecutionRecord, ExecutionStatus, ScenarioDocument, StudyDocument } from './model';
@@ -204,6 +205,9 @@ async function execute(options: ExecuteStudyScenarioOptions): Promise<ExecutionA
         scenarioRevision: scenario.revision,
         inputFingerprint: scenario.inputFingerprint,
         requestSnapshot: structuredClone(request),
+        sourceSnapshot: structuredClone(scenario.sourceSnapshot),
+        premisesSnapshot: structuredClone(scenario.premises),
+        periodSnapshot: structuredClone(scenario.period),
         engineVersion: 'pending',
         contractVersion: request.api_version,
         status: 'RUNNING',
@@ -256,11 +260,16 @@ async function execute(options: ExecuteStudyScenarioOptions): Promise<ExecutionA
         scenarioRevision: scenario.revision,
         inputFingerprint: scenario.inputFingerprint,
         requestSnapshot: structuredClone(request),
+        sourceSnapshot: structuredClone(scenario.sourceSnapshot),
+        premisesSnapshot: structuredClone(scenario.premises),
+        periodSnapshot: structuredClone(scenario.period),
         engineVersion: envelope?.motor_build_sha ?? 'unknown',
         contractVersion: envelope?.api_version ?? request.api_version,
         status,
         envelope: envelope === null ? null : structuredClone(envelope),
-        observedComparison: null,
+        observedComparison: envelope !== null && scenario.sourceSnapshot.observedOutcome !== null
+          ? compareObservedToMotor(scenario.sourceSnapshot.observedOutcome, envelope)
+          : null,
         createdAt,
         finishedAt,
       };

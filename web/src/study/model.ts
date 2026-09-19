@@ -83,6 +83,9 @@ export type ExecutionRecord = Readonly<{
   scenarioRevision: number;
   inputFingerprint: string;
   requestSnapshot: PreviaRequest;
+  sourceSnapshot?: PortfolioSourceSnapshot;
+  premisesSnapshot?: PremisesDocument;
+  periodSnapshot?: PeriodDocument;
   engineVersion: string;
   contractVersion: string;
   status: ExecutionStatus;

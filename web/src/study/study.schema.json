@@ -152,6 +152,9 @@
         "scenarioRevision": { "type": "integer", "minimum": 1 },
         "inputFingerprint": { "$ref": "#/$defs/Digest" },
         "requestSnapshot": { "$ref": "https://motor-de-fluxo.local/contracts/schemas.json#/$defs/PreviaRequest" },
+        "sourceSnapshot": { "$ref": "#/$defs/PortfolioSourceSnapshot" },
+        "premisesSnapshot": { "$ref": "#/$defs/PremisesDocument" },
+        "periodSnapshot": { "$ref": "#/$defs/PeriodDocument" },
         "engineVersion": { "$ref": "#/$defs/Identifier" },
         "contractVersion": { "$ref": "#/$defs/Identifier" },
         "status": { "enum": ["PREPARING", "RUNNING", "SUCCEEDED", "FAILED", "INTERRUPTED"] },
@@ -172,6 +175,11 @@
         "engineVersion", "contractVersion", "status", "envelope", "observedComparison",
         "createdAt", "finishedAt"
       ],
+      "dependentRequired": {
+        "sourceSnapshot": ["premisesSnapshot", "periodSnapshot"],
+        "premisesSnapshot": ["sourceSnapshot", "periodSnapshot"],
+        "periodSnapshot": ["sourceSnapshot", "premisesSnapshot"]
+      },
       "allOf": [
         {
           "if": { "properties": { "status": { "const": "SUCCEEDED" } }, "required": ["status"] },
