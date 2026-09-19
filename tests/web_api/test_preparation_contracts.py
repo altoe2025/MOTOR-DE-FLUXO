@@ -38,6 +38,7 @@ def _participant_source_paths(participant_id: str) -> set[str]:
     prefix = f"/participants/{participant_id}"
     return {
         f"{prefix}/profile",
+        f"{prefix}/seed",
         f"{prefix}/monthly_volume_brl",
         f"{prefix}/ticket_median_brl",
         f"{prefix}/out_fraction",
@@ -254,6 +255,27 @@ def test_request_exige_fontes_exatas(mutation: str):
         del sources[f"/participants/{PARTICIPANT_ID}/profile"]
     else:
         sources["/participants/desconhecido/profile"] = _source()
+
+    with pytest.raises(ValidationError):
+        PreparationRequest.model_validate(payload)
+
+
+def test_request_aceita_origem_explicita_da_seed_determinante():
+    payload = _request_payload()
+    seed_path = f"/participants/{PARTICIPANT_ID}/seed"
+    _request_input(payload)["sources"][seed_path] = _source()
+
+    request = PreparationRequest.model_validate(payload)
+
+    assert request.input.sources[seed_path].kind == "PADRAO_SINTETICO"
+
+
+def test_request_exige_origem_da_seed_determinante():
+    payload = _request_payload()
+    seed_path = f"/participants/{PARTICIPANT_ID}/seed"
+    sources = _request_input(payload)["sources"]
+    sources[seed_path] = _source()
+    del sources[seed_path]
 
     with pytest.raises(ValidationError):
         PreparationRequest.model_validate(payload)

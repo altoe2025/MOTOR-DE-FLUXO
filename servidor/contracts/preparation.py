@@ -175,6 +175,7 @@ def required_source_paths(input_value: EffectiveInput) -> set[str]:
         required.update(
             {
                 f"{prefix}/profile",
+                f"{prefix}/seed",
                 f"{prefix}/monthly_volume_brl",
                 f"{prefix}/ticket_median_brl",
                 f"{prefix}/out_fraction",
