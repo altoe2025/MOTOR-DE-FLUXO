@@ -22,6 +22,38 @@ const referenceFixture = {
   proveniencia: requestFixture.proveniencia,
 };
 
+function preparationFixture() {
+  const request = {
+    preparation_version: '1.0.0' as const,
+    request_id: '00000000-0000-4000-8000-000000000010',
+    study_id: '00000000-0000-4000-8000-000000000011',
+    scenario_id: '00000000-0000-4000-8000-000000000012',
+    scenario_revision: 1,
+    expected_build_sha: 'a'.repeat(40),
+    input: {
+      participants: [], warmup_days: 0, measurement_days: 30, window_days: 7,
+      costs: {
+        iof_out: '0.035', iof_in: '0.0038', carry_cnr: '0.0004', spread_rail_bps: '0',
+        custo_fixo_remessa: '0', custo_oportunidade_aa: '0', ptax: '5.40', iof_por_finalidade: [],
+      },
+      sources: {},
+    },
+  };
+  return {
+    request,
+    response: {
+      preparation_version: '1.0.0', preparation_id: '00000000-0000-4000-8000-000000000014',
+      request_id: request.request_id, study_id: request.study_id, scenario_id: request.scenario_id,
+      scenario_revision: request.scenario_revision, created_at: '2026-09-19T00:00:00Z',
+      motor_build_sha: request.expected_build_sha, generator_version: 'dimensionamento-v1',
+      generation_fingerprint: 'b'.repeat(64), input_snapshot: request.input,
+      orders: [], parameters: [], composition: [{
+        participant_id: null, order_count: 0, out_brl: '0', in_brl: '0', total_brl: '0', out_fraction: null,
+      }], derived_provenance: {},
+    },
+  };
+}
+
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -30,6 +62,20 @@ function jsonResponse(body: unknown, status = 200): Response {
 }
 
 describe('typed API client', () => {
+  it('valida e envia a preparação canônica pela rota oficial', async () => {
+    const { request, response } = preparationFixture();
+    const fetch = vi.fn().mockResolvedValue(jsonResponse(response));
+    const client = createApiClient({ getAccessToken: async () => 'token', fetch });
+
+    await expect(client.preparePortfolio!(request)).resolves.toMatchObject({
+      preparation_id: response.preparation_id,
+      generation_fingerprint: response.generation_fingerprint,
+    });
+    expect(fetch).toHaveBeenCalledWith('/api/v1/preparacoes', expect.objectContaining({
+      method: 'POST', body: JSON.stringify(request),
+    }));
+  });
+
   it('obtém o Bearer no instante de cada chamada', async () => {
     const getAccessToken = vi.fn()
       .mockResolvedValueOnce('token-get')
