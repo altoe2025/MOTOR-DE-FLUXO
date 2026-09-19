@@ -41,6 +41,7 @@ type Scope = Readonly<{
   projectRef: string;
   ownerSub: string;
   migrationSources?: Omit<MigrationOptions, 'ownerSub'>;
+  migrationSourceLoader?: () => Promise<Omit<MigrationOptions, 'ownerSub'>>;
 }>;
 
 type CompanyRow = Readonly<{
@@ -278,6 +279,7 @@ export class IndexedDbApplicationRepository implements ApplicationRepository {
   readonly #databaseName: string;
   readonly #ownerSub: string;
   readonly #migrationSources: Omit<MigrationOptions, 'ownerSub'>;
+  readonly #migrationSourceLoader: Scope['migrationSourceLoader'];
   #databasePromise: Promise<IDBDatabase> | null = null;
   #closed = false;
 
@@ -285,6 +287,7 @@ export class IndexedDbApplicationRepository implements ApplicationRepository {
     this.#databaseName = `motor-fluxo:app:v2:${encodeURIComponent(scope.projectRef)}:${encodeURIComponent(scope.ownerSub)}`;
     this.#ownerSub = scope.ownerSub;
     this.#migrationSources = scope.migrationSources ?? {};
+    this.#migrationSourceLoader = scope.migrationSourceLoader;
   }
 
   async #database(): Promise<IDBDatabase> {
@@ -306,10 +309,11 @@ export class IndexedDbApplicationRepository implements ApplicationRepository {
             database.close();
             this.#closed = true;
           };
-          void migrateDatabase(database, {
-            ownerSub: this.#ownerSub,
-            ...this.#migrationSources,
-          }).then(
+          void Promise.resolve(this.#migrationSourceLoader?.() ?? this.#migrationSources)
+            .then((migrationSources) => migrateDatabase(database, {
+              ownerSub: this.#ownerSub,
+              ...migrationSources,
+            })).then(
             () => resolve(database),
             (error: unknown) => {
               database.close();

@@ -13,7 +13,7 @@ import { createApiClient, type ApiClient } from '../api/client';
 import { useAuth, useAuthControl } from '../auth/AuthProvider';
 import { PreviewProvider } from '../preview/PreviewProvider';
 import type { ApplicationRepository } from '../storage/applicationRepository';
-import { IndexedDbApplicationRepository } from '../storage/indexedDbApplicationRepository';
+import { createBrowserApplicationRepository } from '../storage/productionRepository';
 import {
   StudyController,
   type StudyChannelFactory,
@@ -59,7 +59,7 @@ export function ApplicationProviders({
   const storageProjectRef = projectRef ?? configuredProjectRef();
   const [controllerOwner, setControllerOwner] = useState<string | null | undefined>(undefined);
   const controller = useMemo(() => new StudyController({
-    repositoryFactory: repositoryFactory ?? ((ownerSub) => new IndexedDbApplicationRepository({
+    repositoryFactory: repositoryFactory ?? ((ownerSub) => createBrowserApplicationRepository({
       projectRef: storageProjectRef,
       ownerSub,
     })),
