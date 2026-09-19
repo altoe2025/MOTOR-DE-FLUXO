@@ -350,6 +350,10 @@ export function projectPortfolio(study: ImportStudy): PortfolioProjection {
       versions: versions.length,
       currentOperations: currentOperations.length,
       conflicts: conflicts.length,
+      invalidRows: study.batches.reduce(
+        (total, batch) => total + batch.rows.filter((row) => row.normalized === null).length,
+        0,
+      ),
     },
   };
 }

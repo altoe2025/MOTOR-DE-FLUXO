@@ -50,8 +50,19 @@ Para contexto de negócio e proveniência, consultar o vault Obsidian.
 um `IN` do mesmo `cliente_id` chegam separados à P0, que decide o autonetting no
 fechamento correspondente.
 
-Planilhas e PDFs pertencem a uma camada anterior, ainda não implementada. Essa camada
-pode sanitizar formatos, mas não pode fazer pré-netting silencioso. Uma agregação de
+Planilhas XLSX pertencem ao importador local em `web/src/importer/`. O arquivo é
+aberto em um Web Worker, validado e convertido em entidades serializáveis no próprio
+navegador. O arquivo original, seu `Blob` e seus bytes ZIP nunca entram no IndexedDB,
+no servidor ou em `motor/`; somente o `PreviaRequest` canônico, sem nome exibido de
+cliente, perfil ou nome do arquivo, cruza a API após confirmação explícita.
+
+O IndexedDB é separado por project ref e `ownerSub`. Mutações usam comparação de
+revisão e `operationId`; logout fecha conexões e workers sem apagar os dados. O
+catálogo de produção permanece `NAO_CONFIGURADO`, portanto a execução real fica
+bloqueada até uma publicação regulatória própria. O catálogo `TESTE_FICTICIO` existe
+somente no servidor controlado do Playwright.
+
+Essa camada pode sanitizar formatos, mas não pode fazer pré-netting silencioso. Uma agregação de
 linhas só preserva o comportamento atual quando todos estes campos forem idênticos:
 
 - `cliente_id`;

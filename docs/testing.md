@@ -71,7 +71,37 @@ npm --prefix web run test:unit
 npm --prefix web run build
 npm --prefix web run lint
 npm --prefix web run test:e2e
+python -m pytest -q tests/web_api/test_import_acceptance.py
+npm --prefix web run test:e2e -- --grep "XLSX|mil linhas|CAS"
+python -m tests.web_api.scan_credentials
 ```
+
+### Gate da importação XLSX
+
+`web/e2e/import-xlsx.spec.ts` usa somente planilhas e catálogo marcados como
+`TESTE_FICTICIO`. Ele comprova o percurso até Diagnóstico e reload, confirmação
+parcial, conflito/undo, CAS entre abas, isolamento A/B, ausência do XLSX no tráfego e
+no IndexedDB, limite de 1.000 linhas, até 5 segundos para o relatório local, nenhuma
+long task do parser acima de 100 ms e request abaixo de 1 MiB. A fixture pode ser
+reproduzida com `node web/scripts/generate-import-fixtures.mjs`.
+
+O servidor E2E injeta `web/e2e/fixtures/import-catalog.json`; o arquivo de produção
+`servidor/catalogs/importacao.v1.json` deve continuar `NAO_CONFIGURADO`.
+
+Hashes SHA-256 das fixtures aceitas em 2026-09-19:
+
+| Fixture | SHA-256 |
+|---|---|
+| `conflicting-batch.xlsx` | `eeb8abce626824a41eca527cc89ab00b43005b154f8e365ad06782efd21689cd` |
+| `partial-invalid.xlsx` | `c1ae790be5864561526f58753096e9ca2e4ec2f52e971db3e42a3aaa65fbf045` |
+| `valid-1000-rows.xlsx` | `ff4673c01a187c59a3fe6be36137416d99abf64c0705a34d1ef49f15dbcf3108` |
+| `valid-balanced.xlsx` | `0770d50ba8ef68481aab59bcb33734505e193654e9cb67f487a40bb9855ac5e6` |
+| `import-catalog.json` | `943a560a3a2be232b48e8e7c49084cfa6e0f6cfe0a0a01b83a1568f1309f0e12` |
+
+O gate local fechou com 693 testes Python aprovados e 2 ignorados nos modos normal
+e otimizado, 314 testes unitários web e 7 percursos Playwright. A execução observada
+de 1.000 linhas levou 411 ms e enviou 1.040.393 bytes; nenhuma long task passou de
+100 ms. A medição de referência ficou em p95 de 9,3 ms.
 
 ### Gate do autonetting preferencial — 2026-09-16
 

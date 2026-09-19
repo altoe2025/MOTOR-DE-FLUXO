@@ -22,8 +22,11 @@ export default defineConfig({
   projects: [
     {
       name: 'local',
-      testMatch: /foundation\.spec\.ts/,
-      use: { ...devices['Desktop Chrome'] },
+      testMatch: /(foundation|import-xlsx)\.spec\.ts/,
+      use: {
+        ...devices['Desktop Chrome'],
+        ...(process.env.CI === 'true' ? {} : { channel: 'chrome' }),
+      },
     },
     {
       name: 'real-auth',

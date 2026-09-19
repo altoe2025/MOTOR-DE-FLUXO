@@ -87,8 +87,12 @@ export function ImportFlowPage() {
   };
   const mutate = async (mutation: StudyMutation) => {
     if (study === null) return;
-    const next = await services.repository.mutateStudy({ studyId:study.id, expectedRevision:study.revision, operationId:crypto.randomUUID(), mutation });
-    setStudy(next);
+    try {
+      const next = await services.repository.mutateStudy({ studyId:study.id, expectedRevision:study.revision, operationId:crypto.randomUUID(), mutation });
+      setStudy(next); setError(null);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : String(caught));
+    }
   };
   const assessment = projection !== null && recut !== null ? evaluateExecution(projection, recut, services.catalog) : null;
   const execute = async () => {
@@ -104,9 +108,10 @@ export function ImportFlowPage() {
   };
   const availability = catalogExecutionAvailability(services.catalog, parameters?.catalogVersion ?? null);
   return <article className="destination-page import-flow"><p className="eyebrow">Importação local de operações reais</p><h1 ref={heading} tabIndex={-1}>Importar XLSX</h1>
+    {error === null || step === 'confirm' ? null : <p role="alert" className="field-error">{error}</p>}
     <ol className="step-list" aria-label="Etapas"><li aria-current={step === 'upload' ? 'step' : undefined}>Arquivo</li><li aria-current={step === 'review' ? 'step' : undefined}>Revisão</li><li aria-current={step === 'parameters' ? 'step' : undefined}>Parâmetros</li><li aria-current={step === 'confirm' ? 'step' : undefined}>Confirmação</li></ol>
     {step === 'upload' ? <UploadStep busy={busy} onParse={parse} /> : null}
-    {step === 'review' && study !== null && projection !== null ? <><ReviewStep study={study} projection={projection} onMutate={mutate} /><button className="button" onClick={() => setStep('parameters')}>Definir recorte e parâmetros</button></> : null}
+    {step === 'review' && study !== null && projection !== null ? <><ReviewStep study={study} projection={projection} onMutate={mutate} /><div className="button-row"><button className="button button--secondary" onClick={() => setStep('upload')}>Importar outro lote</button><button className="button" onClick={() => setStep('parameters')}>Definir recorte e parâmetros</button></div></> : null}
     {step === 'parameters' && parameters !== null && recut !== null ? <ParametersStep start={recut.start} end={recut.end} knownMin={knownDates[0] ?? recut.start} knownMax={knownDates.at(-1) ?? recut.end} parameters={parameters} onRecut={(start,end) => setRecut({start,end})} onParameter={(field:ParameterField,value) => { try { setParameters((current) => current === null ? current : updateImportStudyParameter(current, { field, value: field === 'windowDays' ? Number(value) : value, changedAtUtc:new Date().toISOString() } as Parameters<typeof updateImportStudyParameter>[1])); setError(null); } catch (caught) { setError(String(caught)); } }} onContinue={() => setStep('confirm')} /> : null}
     {services.catalogLoading ? <p role="status">Carregando catálogo…</p> : null}{services.catalogError === null ? null : <p role="alert">{services.catalogError}</p>}
     {step === 'confirm' && assessment !== null ? <ExecutionConfirmation assessment={assessment} blockedReason={availability.allowed ? null : 'O catálogo de importação não está configurado ou mudou. Revise antes de executar.'} busy={busy} error={error} onExecute={() => void execute()} {...(services.controller.canRetrySave ? { onRetrySave: () => void services.controller.retrySave() } : {})} /> : null}

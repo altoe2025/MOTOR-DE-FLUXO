@@ -4,9 +4,9 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { ExecutionAssessment } from './domain';
-import { ExecutionConfirmation } from './components/ExecutionConfirmation';
-import { UploadStep } from './components/UploadStep';
+import type { ExecutionAssessment } from '../domain';
+import { ExecutionConfirmation } from './ExecutionConfirmation';
+import { UploadStep } from './UploadStep';
 
 const assessment: ExecutionAssessment = {
   selected: [], blockers: [], issues: [], periodDays: 10,

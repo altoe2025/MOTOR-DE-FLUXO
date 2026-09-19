@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0.0",
+  "status": "CONFIGURADO",
+  "publicado_em_utc": "2026-09-19T00:00:00Z",
+  "finalidades": [
+    {
+      "codigo": "TESTE_OUT",
+      "descricao": "TESTE_FICTICIO — saída usada somente na aceitação automatizada",
+      "aliquotas": [
+        { "direcao": "OUT", "aliquota": "0.012300" }
+      ]
+    },
+    {
+      "codigo": "TESTE_IN",
+      "descricao": "TESTE_FICTICIO — entrada usada somente na aceitação automatizada",
+      "aliquotas": [
+        { "direcao": "IN", "aliquota": "0.004500" }
+      ]
+    }
+  ],
+  "custos_padrao": {
+    "iof_out": "0.035",
+    "iof_in": "0.0038",
+    "carry_cnr": "0.0004",
+    "spread_rail_bps": "25",
+    "custo_fixo_remessa": "40",
+    "custo_oportunidade_aa": "0",
+    "ptax": "5.4",
+    "iof_por_finalidade": []
+  },
+  "custos_origem": {
+    "tipo": "PADRAO_SINTETICO",
+    "fonte": "TESTE_FICTICIO — parâmetros artificiais de aceitação",
+    "registrado_em_utc": "2026-09-19T00:00:00Z"
+  },
+  "custos_calibrados": false
+}

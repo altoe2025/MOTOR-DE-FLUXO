@@ -33,7 +33,7 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-09-18, após a entrega do fluxo visual da importação XLSX.
+Atualizada em 2026-09-19, após o fechamento de aceitação da importação XLSX.
 
 | Branch | Situação | Dono |
 |---|---|---|
@@ -50,6 +50,7 @@ Atualizada em 2026-09-18, após a entrega do fluxo visual da importação XLSX.
 | `feat/importacao-xlsx-catalog-client` | MOT-58 concluída sobre a branch da T9; cliente validado, cache por conta e parâmetros editáveis com origem | Codex |
 | `feat/importacao-xlsx-preview` | MOT-59 concluída sobre a branch da T10; adaptador canônico, execução idempotente e histórico por revisão | Codex |
 | `feat/importacao-xlsx-ui` | MOT-60 concluída sobre a branch da T11; fluxo visual local, execução confirmada e restauração do diagnóstico | Codex |
+| `test/importacao-xlsx-aceitacao` | MOT-61 em aceite final sobre a branch da T12; E2E, privacidade, performance e handoff | Codex |
 | `netting/p1` | spike do P1, **NÃO MERGEAR** — dominado, e agora sabemos que a folga é zero em N ≥ 50. Só local, nunca foi pro GitHub | Felipe |
 | `fix/semantica-remessa-p0` | PR #11, mergeada | Felipe |
 | `fix/previsao-temporal-e-colunas-csv` | PR #12, mergeada | Gabriel |
@@ -79,6 +80,31 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
 ---
+
+## 2026-09-19 — Aceitação e segurança da importação XLSX (MOT-61)
+
+**Sintoma.** O fluxo completo existia, mas ainda não havia evidência em navegador
+real da fronteira local-first, persistência após reload, confirmação parcial,
+concorrência, isolamento por conta e limite de 1.000 linhas.
+
+**Causa.** O E2E anterior cobria apenas o exemplo sintético da etapa 1. O servidor
+estático também não reconhecia o deep link UUID do importador, e linhas inválidas do
+XLSX não entravam na contagem de omissões da confirmação.
+
+**O que foi feito.** Na branch `test/importacao-xlsx-aceitacao`, sobre a MOT-60,
+foram adicionados catálogo e planilhas `TESTE_FICTICIO`, regressão servidor-adaptador,
+percursos Playwright de privacidade, reload, parcial, conflito/undo, 1.000 linhas,
+CAS e contas A/B. O deep link foi restrito ao formato UUID, a confirmação passou a
+contar linhas brutas inválidas e o harness aceita duas identidades sintéticas. Scanner,
+CI e documentação registram a fronteira e mantêm o catálogo produtivo bloqueado. O
+gate fechou com 693 testes Python em cada modo, 314 testes unitários web, 7 E2E,
+Ruff, mypy, typecheck, lint, build e wheel verdes; 1.000 linhas levaram 411 ms, sem
+long task acima de 100 ms, e produziram request de 1.040.393 bytes.
+
+**O que isso invalida.** Invalida a alegação de que a importação completa estava
+aceita apenas pelos testes unitários. Não altera `motor/`, P0, regras sintéticas,
+medições históricas ou a grade; a grade não foi regenerada. Nenhuma finalidade ou
+alíquota real foi publicada e o catálogo regulatório segue `NAO_CONFIGURADO`.
 
 ## 2026-09-18 — Fluxo visual da importação XLSX (MOT-60)
 

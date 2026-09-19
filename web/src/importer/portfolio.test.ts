@@ -257,6 +257,21 @@ describe('projectPortfolio', () => {
     expect(projection.currentOperations).toEqual([]);
   });
 
+  it('conta linhas inválidas preservadas para exigir confirmação parcial', () => {
+    const invalid = row('version-invalid', 'OP-INVALID', '100', 3);
+    invalid.normalized = null;
+    invalid.errors = [{
+      code: 'REQUIRED', field: 'cliente_nome', rowNumber: 3,
+      value: null, message: 'cliente obrigatório',
+    }];
+
+    const projection = projectPortfolio(study([
+      batch('batch-1', 1, [row('version-valid', 'OP-VALID', '100'), invalid]),
+    ]));
+
+    expect(projection.counts.invalidRows).toBe(1);
+  });
+
   it('inclui UUID canônico do cliente na comparação de conteúdo', () => {
     const projection = projectPortfolio(study([
       batch('batch-1', 1, [row('version-1', 'OP-X', '100', 2, 'client-1')]),
