@@ -1,10 +1,12 @@
 export type ApplicationRepositoryErrorCode =
   | 'BINARY_DATA_NOT_ALLOWED'
+  | 'DOCUMENT_CORRUPT'
   | 'INVALID_DOCUMENT'
   | 'NOT_FOUND'
   | 'OPERATION_CONFLICT'
   | 'OWNER_MISMATCH'
   | 'REVISION_CONFLICT'
+  | 'SCHEMA_UNSUPPORTED'
   | 'STORAGE_CLOSED';
 
 export class ApplicationRepositoryError extends Error {
@@ -20,6 +22,12 @@ export class ApplicationRepositoryError extends Error {
 export class BinaryDataNotAllowedError extends ApplicationRepositoryError {
   constructor() {
     super('BINARY_DATA_NOT_ALLOWED', 'File e Blob não podem ser persistidos.');
+  }
+}
+
+export class DocumentCorruptError extends ApplicationRepositoryError {
+  constructor(message = 'Documento persistido está corrompido.') {
+    super('DOCUMENT_CORRUPT', message);
   }
 }
 
@@ -56,6 +64,12 @@ export class RevisionConflictError extends ApplicationRepositoryError {
       'REVISION_CONFLICT',
       `Revisão esperada ${expectedRevision}, revisão atual ${actualRevision}.`,
     );
+  }
+}
+
+export class SchemaUnsupportedError extends ApplicationRepositoryError {
+  constructor(message = 'Versão de schema não suportada.') {
+    super('SCHEMA_UNSUPPORTED', message);
   }
 }
 

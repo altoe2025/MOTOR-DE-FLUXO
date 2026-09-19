@@ -15,8 +15,14 @@ import {
   OperationConflictError,
   OwnerMismatchError,
   RevisionConflictError,
+  SchemaUnsupportedError,
   StorageClosedError,
 } from './errors';
+import {
+  migrateDatabase,
+  type MigrationOptions,
+  validateStoredStudy,
+} from './migrations';
 
 const DATABASE_VERSION = 1;
 
@@ -31,7 +37,11 @@ const STORE_NAMES = [
   'meta',
 ] as const;
 
-type Scope = Readonly<{ projectRef: string; ownerSub: string }>;
+type Scope = Readonly<{
+  projectRef: string;
+  ownerSub: string;
+  migrationSources?: Omit<MigrationOptions, 'ownerSub'>;
+}>;
 
 type CompanyRow = Readonly<{
   company_id: string;
@@ -171,6 +181,20 @@ function sameDocument(left: unknown, right: unknown): boolean {
   return canonical(left) === canonical(right);
 }
 
+function isInterruptionTransition(
+  previous: ExecutionRecord,
+  candidate: ExecutionRecord,
+): boolean {
+  if ((previous.status !== 'PREPARING' && previous.status !== 'RUNNING')
+    || candidate.status !== 'INTERRUPTED'
+    || previous.finishedAt !== null
+    || candidate.finishedAt === null) return false;
+  return sameDocument(
+    { ...candidate, status: previous.status, finishedAt: previous.finishedAt },
+    previous,
+  );
+}
+
 function studyRow(document: StudyDocument): StudyRow {
   const cloned = structuredClone(document);
   const { executions, ...withoutExecutions } = cloned;
@@ -253,12 +277,14 @@ function createSchema(database: IDBDatabase): void {
 export class IndexedDbApplicationRepository implements ApplicationRepository {
   readonly #databaseName: string;
   readonly #ownerSub: string;
+  readonly #migrationSources: Omit<MigrationOptions, 'ownerSub'>;
   #databasePromise: Promise<IDBDatabase> | null = null;
   #closed = false;
 
   constructor(scope: Scope) {
     this.#databaseName = `motor-fluxo:app:v2:${encodeURIComponent(scope.projectRef)}:${encodeURIComponent(scope.ownerSub)}`;
     this.#ownerSub = scope.ownerSub;
+    this.#migrationSources = scope.migrationSources ?? {};
   }
 
   async #database(): Promise<IDBDatabase> {
@@ -266,7 +292,13 @@ export class IndexedDbApplicationRepository implements ApplicationRepository {
     if (this.#databasePromise === null) {
       this.#databasePromise = new Promise((resolve, reject) => {
         const request = indexedDB.open(this.#databaseName, DATABASE_VERSION);
-        request.onerror = () => reject(request.error);
+        request.onerror = () => {
+          const error = request.error;
+          this.#databasePromise = null;
+          reject(error?.name === 'VersionError'
+            ? new SchemaUnsupportedError('Versão física futura do banco local.')
+            : error);
+        };
         request.onupgradeneeded = () => createSchema(request.result);
         request.onsuccess = () => {
           const database = request.result;
@@ -274,7 +306,17 @@ export class IndexedDbApplicationRepository implements ApplicationRepository {
             database.close();
             this.#closed = true;
           };
-          resolve(database);
+          void migrateDatabase(database, {
+            ownerSub: this.#ownerSub,
+            ...this.#migrationSources,
+          }).then(
+            () => resolve(database),
+            (error: unknown) => {
+              database.close();
+              this.#databasePromise = null;
+              reject(error);
+            },
+          );
         };
       });
     }
@@ -345,7 +387,7 @@ export class IndexedDbApplicationRepository implements ApplicationRepository {
 
     const database = await this.#database();
     const intent = canonical(input);
-    return transactionResult(
+    const result = await transactionResult(
       database,
       ['companies', 'observed_cases', 'import_batches', 'import_events', 'operations'],
       'readwrite',
@@ -431,6 +473,7 @@ export class IndexedDbApplicationRepository implements ApplicationRepository {
         return structuredClone(observedCase);
       },
     );
+    return result;
   }
 
   async listStudies(options?: { includeDeleted?: boolean }): Promise<StudyDocument[]> {
@@ -446,12 +489,13 @@ export class IndexedDbApplicationRepository implements ApplicationRepository {
       requestResult<StudyRow[]>(studyRequest),
       requestResult<ExecutionRow[]>(executionRequest),
     ]);
-    return rows
+    const studies = rows
       .map((row) => assembleStudy(
         row,
         executions.filter((execution) => execution.study_id === row.study_id),
       ))
       .sort((left, right) => left.id.localeCompare(right.id));
+    return Promise.all(studies.map((study) => validateStoredStudy(study, this.#ownerSub)));
   }
 
   async getStudy(id: string): Promise<StudyDocument | null> {
@@ -462,7 +506,9 @@ export class IndexedDbApplicationRepository implements ApplicationRepository {
       requestResult<ExecutionRow[]>(transaction.objectStore('executions')
         .index('by_owner_study').getAll([this.#ownerSub, id])),
     ]);
-    return row?.owner_sub === this.#ownerSub ? assembleStudy(row, executions) : null;
+    return row?.owner_sub === this.#ownerSub
+      ? validateStoredStudy(assembleStudy(row, executions), this.#ownerSub)
+      : null;
   }
 
   async saveStudy(input: CASMutation<StudyDocument>): Promise<StudyDocument> {
@@ -481,7 +527,7 @@ export class IndexedDbApplicationRepository implements ApplicationRepository {
 
     const database = await this.#database();
     const intent = canonical(input);
-    return transactionResult(
+    const result = await transactionResult(
       database,
       ['studies', 'executions', 'operations'],
       'readwrite',
@@ -526,17 +572,24 @@ export class IndexedDbApplicationRepository implements ApplicationRepository {
           const candidate = input.document.executions[existing.sequence];
           if (candidate === undefined
             || candidate.id !== existing.execution_id
-            || !sameDocument(candidate, existing.document)) {
+            || (!sameDocument(candidate, existing.document)
+              && !isInterruptionTransition(existing.document, candidate))) {
             throw new OperationConflictError('Execução persistida é imutável.');
           }
         }
         for (const [sequence, execution] of input.document.executions.entries()) {
-          if (!existingById.has(execution.id)) {
+          const existing = existingById.get(execution.id);
+          if (existing === undefined) {
             executions.add({
               study_id: input.document.id,
               execution_id: execution.id,
               owner_sub: this.#ownerSub,
               sequence,
+              document: structuredClone(execution),
+            } satisfies ExecutionRow);
+          } else if (isInterruptionTransition(existing.document, execution)) {
+            executions.put({
+              ...existing,
               document: structuredClone(execution),
             } satisfies ExecutionRow);
           }
@@ -556,6 +609,7 @@ export class IndexedDbApplicationRepository implements ApplicationRepository {
         return structuredClone(input.document);
       },
     );
+    return validateStoredStudy(result, this.#ownerSub);
   }
 
   async restoreStudy(
@@ -566,7 +620,7 @@ export class IndexedDbApplicationRepository implements ApplicationRepository {
     validateMutation(expectedRevision, operationId);
     const database = await this.#database();
     const intent = canonical({ action: 'restoreStudy', id, expectedRevision });
-    return transactionResult(
+    const result = await transactionResult(
       database,
       ['studies', 'executions', 'operations'],
       'readwrite',
@@ -621,6 +675,7 @@ export class IndexedDbApplicationRepository implements ApplicationRepository {
         return structuredClone(restored);
       },
     );
+    return validateStoredStudy(result, this.#ownerSub);
   }
 
   async purgeStudy(id: string): Promise<void> {
