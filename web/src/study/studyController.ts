@@ -1,6 +1,6 @@
 import type { ApplicationRepository } from '../storage/applicationRepository';
 import { RevisionConflictError } from '../storage/errors';
-import type { ObservedCase } from '../cases/domain';
+import type { CompanyRecord, ObservedCase } from '../cases/domain';
 import type { StudyDocument } from './model';
 
 export type StudyControllerStatus =
@@ -256,6 +256,21 @@ export class StudyController {
     const { repository, epoch } = this.#session();
     const cases = await repository.listObservedCases();
     return this.#isCurrent(repository, epoch) ? cases : [];
+  }
+
+  async listCompanies(): Promise<CompanyRecord[]> {
+    this.#assertOpen();
+    const { repository, epoch } = this.#session();
+    const companies = await repository.listCompanies();
+    return this.#isCurrent(repository, epoch) ? companies : [];
+  }
+
+  async getObservedCase(id: string): Promise<ObservedCase | null> {
+    this.#assertOpen();
+    const { repository, epoch } = this.#session();
+    const observedCase = await repository.getObservedCase(id);
+    if (!this.#isCurrent(repository, epoch)) throw new StudyControllerSessionError();
+    return observedCase;
   }
 
   async restoreStudy(id: string, expectedRevision: number): Promise<StudyDocument> {

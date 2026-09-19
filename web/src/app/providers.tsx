@@ -20,6 +20,7 @@ import {
 import { createUserQueryClient, disposeUserQueryClient } from './queryClient';
 
 const StudyControllerContext = createContext<StudyController | null>(null);
+const ApiClientContext = createContext<ApiClient | null>(null);
 
 type ApplicationProvidersProps = Readonly<{
   children: ReactNode;
@@ -98,9 +99,11 @@ export function ApplicationProviders({
 
   return (
     <QueryClientProvider client={queryClient}>
-      <StudyControllerContext.Provider value={controller}>
-        <PreviewProvider client={apiClient} ownerId={userId}>{children}</PreviewProvider>
-      </StudyControllerContext.Provider>
+      <ApiClientContext.Provider value={apiClient}>
+        <StudyControllerContext.Provider value={controller}>
+          <PreviewProvider client={apiClient} ownerId={userId}>{children}</PreviewProvider>
+        </StudyControllerContext.Provider>
+      </ApiClientContext.Provider>
     </QueryClientProvider>
   );
 }
@@ -111,4 +114,10 @@ export function useStudyController(): StudyController {
     throw new Error('useStudyController deve ser usado dentro de ApplicationProviders');
   }
   return controller;
+}
+
+export function useApiClient(): ApiClient {
+  const client = useContext(ApiClientContext);
+  if (client === null) throw new Error('useApiClient deve ser usado dentro de ApplicationProviders');
+  return client;
 }
