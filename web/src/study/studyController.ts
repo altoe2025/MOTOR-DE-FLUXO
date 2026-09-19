@@ -130,6 +130,7 @@ export class StudyController {
   #drainPromise: Promise<StudyDocument | null> | null = null;
   #persistedRevision = 0;
   #selectionEpoch = 0;
+  #conflictVersion = 0;
   #closed = false;
 
   readonly #onChannelMessage: MessageListener = (event) => {
@@ -343,20 +344,26 @@ export class StudyController {
     while (this.#pending.length > 0) {
       const pending = this.#pending[0]!;
       const operationId = this.#operationId();
+      const conflictVersion = this.#conflictVersion;
       this.#publish({ ...this.#snapshot, status: 'SAVING', error: null });
       try {
         const saved = await repository.saveStudy({ ...pending, operationId });
         if (!this.#isCurrent(repository, epoch, selectionEpoch)) return null;
+        const conflictDuringCommit = this.#conflictVersion !== conflictVersion
+          || this.#snapshot.status === 'CONFLICT';
         this.#pending.shift();
         this.#persistedRevision = saved.revision;
         this.#channel?.postMessage({ studyId: saved.id, revision: saved.revision, operationId });
         const current = this.#snapshot.document;
         this.#publish({
           ...this.#snapshot,
-          status: this.#pending.length === 0 ? 'SAVED' : 'DIRTY',
+          status: conflictDuringCommit
+            ? 'CONFLICT'
+            : this.#pending.length === 0 ? 'SAVED' : 'DIRTY',
           document: current?.revision === saved.revision ? saved : current,
           error: null,
         });
+        if (conflictDuringCommit) return this.#snapshot.document;
       } catch (error) {
         if (!this.#isCurrent(repository, epoch, selectionEpoch)) return null;
         this.#publish({
@@ -377,6 +384,7 @@ export class StudyController {
       return;
     }
     if (this.#snapshot.status !== 'SAVED') {
+      this.#conflictVersion += 1;
       this.#publish({ ...this.#snapshot, status: 'CONFLICT', error: null });
       return;
     }
@@ -388,6 +396,7 @@ export class StudyController {
       if (!this.#isCurrent(repository, epoch) || stored === null || stored.revision < message.revision) return;
       if (this.#snapshot.status !== 'SAVED' || this.#snapshot.document !== expectedDocument) {
         if (this.#snapshot.document?.id === message.studyId) {
+          this.#conflictVersion += 1;
           this.#publish({ ...this.#snapshot, status: 'CONFLICT', error: null });
         }
         return;

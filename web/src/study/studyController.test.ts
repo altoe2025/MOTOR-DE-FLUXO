@@ -320,6 +320,34 @@ describe('StudyController', () => {
     expect(repositoryB.saveCalls).toHaveLength(0);
   });
 
+  it('preserva CONFLICT quando revisão remota maior chega durante save local', async () => {
+    const original = await makeStudy();
+    const local = await renameStudy(original, 'Commit local', '2026-09-19T12:01:00Z');
+    const commit = deferred<StudyDocument>();
+    const hub = new ChannelHub();
+    const repository = new RepositoryDouble(FIXTURE_OWNER, original);
+    repository.saveStudyImplementation = () => commit.promise;
+    const subject = controller({ repositories: [repository], hub });
+    await subject.switchSession(FIXTURE_OWNER);
+    await subject.loadStudy(original.id);
+
+    subject.edit(local);
+    const flushed = subject.flush();
+    await vi.waitFor(() => expect(subject.snapshot.status).toBe('SAVING'));
+    const channelName = [...hub.channels.keys()][0]!;
+    const remote = hub.factory(channelName);
+    remote.postMessage({
+      studyId: original.id,
+      revision: 3,
+      operationId: 'remote-operation-3',
+    });
+    expect(subject.snapshot.status).toBe('CONFLICT');
+
+    commit.resolve(local);
+    await expect(flushed).resolves.toEqual(local);
+    expect(subject.snapshot).toMatchObject({ status: 'CONFLICT', document: local });
+  });
+
   it('isola A → B → A, fecha recursos e ignora retorno tardio da sessão antiga', async () => {
     const studyA = await makeStudy(FIXTURE_OWNER, 'study-a');
     const studyB = await makeStudy(OWNER_B, 'study-b');

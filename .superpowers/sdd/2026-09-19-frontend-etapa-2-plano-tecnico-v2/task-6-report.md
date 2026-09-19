@@ -67,3 +67,32 @@ energia permanece no limite já documentado do repositório T4/T5.
 - `git diff --check` — PASS.
 
 Commit único: `feat: controla estudos e concorrência local (MOT-28)`.
+
+## Fix round única — conflito durante autosave
+
+O finding Important foi confirmado. Enquanto `saveStudy` aguardava o commit, uma
+mensagem remota de revisão maior mudava o estado para `CONFLICT`; a continuação de
+`#drain`, porém, publicava `SAVED` incondicionalmente quando a fila ficava vazia.
+
+O controlador agora registra uma versão monotônica dos conflitos aceitos pelo canal.
+Cada commit captura essa versão antes do `await`; se ela mudar durante a escrita, o
+commit local concluído é contabilizado, mas a drenagem para, preserva o documento em
+memória e termina em `CONFLICT`. Assim uma revisão local já ultrapassada não volta a
+ser apresentada como limpa nem libera edições posteriores da fila.
+
+Evidência RED/GREEN:
+
+- RED: mensagem remota de revisão 3 entregue durante o save local da revisão 2;
+  após a conclusão local, o estado observado era incorretamente `SAVED`.
+- GREEN: o mesmo teste termina em `CONFLICT`, com o documento local preservado;
+  o arquivo focado fecha com 12 testes passando.
+
+Gates da fix round:
+
+- `npm --prefix web run test:unit -- src/study/studyController.test.ts` — PASS,
+  12 testes.
+- `npm --prefix web run typecheck` — PASS.
+- `npm --prefix web run lint` — PASS.
+- `git diff --check` — PASS.
+
+Commit adicional: `fix: preserva conflito durante autosave (MOT-28)`.
