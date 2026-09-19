@@ -22,3 +22,8 @@ export function createUserQueryClient(): QueryClient {
     },
   });
 }
+
+export async function disposeUserQueryClient(queryClient: QueryClient): Promise<void> {
+  await queryClient.cancelQueries();
+  queryClient.clear();
+}

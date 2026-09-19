@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { ApiError } from '../api/errors';
-import { createUserQueryClient } from './queryClient';
+import { createUserQueryClient, disposeUserQueryClient } from './queryClient';
 
 describe('QueryClient por identidade', () => {
   it('isola dados de contas diferentes', () => {
@@ -47,5 +47,24 @@ describe('QueryClient por identidade', () => {
   it('não refaz consulta quando a janela ganha foco', () => {
     const queryClient = createUserQueryClient();
     expect(queryClient.getDefaultOptions().queries?.refetchOnWindowFocus).toBe(false);
+  });
+
+  it('cancela fetches ativos antes de limpar o cache da identidade', async () => {
+    const queryClient = createUserQueryClient();
+    let signal: AbortSignal | undefined;
+    const pending = queryClient.fetchQuery({
+      queryKey: ['study', 'user-a'],
+      queryFn: ({ signal: querySignal }) => {
+        signal = querySignal;
+        return new Promise<string>(() => undefined);
+      },
+    });
+    void pending.catch(() => undefined);
+    queryClient.setQueryData(['cached', 'user-a'], 'segredo-a');
+
+    await disposeUserQueryClient(queryClient);
+
+    expect(signal?.aborted).toBe(true);
+    expect(queryClient.getQueryData(['cached', 'user-a'])).toBeUndefined();
   });
 });
