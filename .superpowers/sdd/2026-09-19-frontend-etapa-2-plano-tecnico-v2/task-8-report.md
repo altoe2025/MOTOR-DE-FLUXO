@@ -24,7 +24,24 @@ Correções:
 
 A alegação anterior de “zoom 200%” foi removida: jsdom não executa layout e um `toBeVisible()` não constitui evidência de reflow. Nesta rodada, o contrato verificável é o CSS responsivo e a ausência de dependência em largura fixa nos novos componentes. A prova visual real em navegador a 200%, incluindo ausência de scroll horizontal em viewport de desktop equivalente, continua sendo gate de acessibilidade/browser da T11; não foi falsamente marcada como aprovada aqui.
 
-Limite de integração real: o contrato T7 exige `expected_build_sha`, mas a API atual não oferece esse SHA em endpoint de bootstrap. Estudos sintéticos já persistidos reutilizam o SHA da própria receita. Para estudo novo ou origem sem receita sintética, a implantação deve fornecer `VITE_MOTOR_BUILD_SHA`; o fallback de 40 zeros preserva o ambiente local de referência, mas uma implantação cujo backend use outro SHA rejeitará a preparação até essa variável ser configurada. O contrato T1–T7 não foi alterado para esconder essa lacuna.
+Limite de integração real: o contrato T7 exige `expected_build_sha`, mas a API atual não oferece esse SHA em endpoint de bootstrap. Estudos sintéticos já persistidos reutilizam o SHA real da própria receita. Para estudo novo ou origem sem receita sintética, a implantação deve fornecer `VITE_MOTOR_BUILD_SHA` válido. Sem isso, o editor bloqueia a operação com erro de configuração e não persiste identidade fabricada. O contrato T1–T7 não foi alterado para esconder essa lacuna.
+
+## Segunda fix round — identidade e conversão observada
+
+- Removido integralmente o fallback de 40 zeros. `requiredBuildSha` aceita apenas SHA hexadecimal minúsculo de 40 caracteres vindo da receita persistida ou de `VITE_MOTOR_BUILD_SHA`; ausência ou valor inválido interrompem a preparação antes da rede e da persistência.
+- “Converter para autoria manual” agora cria estado manual com um participante por ordem observada, preservando valor BRL, direção, prazo, finalidade e cliente visível. A ação constrói a `PreparationRequest` AUTHORED, segue o resolver T7 no callback da página e persiste pelo controller. O `ObservedCase` permanece imutável.
+- RED: o teste não compilou enquanto a validação obrigatória de SHA não existia; a conversão anterior não expunha campos preenchidos nem emitia AUTHORED.
+- GREEN: 8 testes focados cobrem SHA ausente, inválido, válido por configuração, válido por receita, conteúdo convertido e imutabilidade do caso original.
+
+Self-review focada: não restou literal/fallback de 40 zeros na produção; a conversão não altera arrays, ordens ou proveniência do caso observado; e o único caminho de persistência continua `resolvePortfolioSource` → `updateScenario` → `StudyController.edit`.
+
+Gates da segunda fix round:
+
+- `npm --prefix web run test:unit -- src/study/components/studyEditor.test.tsx src/app/router.test.tsx` — PASS, 2 arquivos e 21 testes.
+- `npm --prefix web run typecheck` — PASS.
+- `npm --prefix web run lint` — PASS.
+- `npm --prefix web run build` — PASS, 247 módulos; permanece apenas o aviso preexistente de chunk acima de 500 kB.
+- `git diff --check` — PASS; somente avisos informativos de normalização LF/CRLF no Windows.
 
 ## Evidência TDD
 

@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { createStudy } from '../domain';
 import { FIXTURE_NOW, FIXTURE_OWNER, makeObservedCase, makeScenarioDraft } from '../fixtures';
+import { requiredBuildSha } from '../sourceConfiguration';
 import { StudyEditor } from './StudyEditor';
 import { StudyList } from './StudyList';
 
@@ -21,18 +22,26 @@ async function subject(overrides: Partial<React.ComponentProps<typeof StudyEdito
   const onRename = vi.fn();
   const onSourceChange = vi.fn();
   const onConvertObserved = vi.fn();
+  const observedCase = makeObservedCase();
   render(<StudyEditor
     study={document}
-    observedCases={[makeObservedCase(), { ...makeObservedCase(), id: 'archived', status: 'ARCHIVED' }]}
+    observedCases={[observedCase, { ...makeObservedCase(), id: 'archived', status: 'ARCHIVED' }]}
     companies={[{ id: 'company-1', ownerSub: FIXTURE_OWNER, displayName: 'Empresa Alfa', aliases: [], createdAt: FIXTURE_NOW, updatedAt: FIXTURE_NOW, revision: 1 }]}
     status="SAVED" onRename={onRename} onDuplicate={vi.fn()}
     onSourceChange={onSourceChange} onConvertObserved={onConvertObserved}
     {...overrides}
   />);
-  return { onRename, onSourceChange, onConvertObserved };
+  return { onRename, onSourceChange, onConvertObserved, observedCase };
 }
 
 describe('StudyEditor', () => {
+  it('bloqueia preparação sem SHA real e aceita somente configuração hexadecimal válida', () => {
+    expect(() => requiredBuildSha(undefined, undefined)).toThrow('VITE_MOTOR_BUILD_SHA');
+    expect(() => requiredBuildSha('0'.repeat(39), undefined)).toThrow('SHA de build inválido');
+    expect(requiredBuildSha('a'.repeat(40), undefined)).toBe('a'.repeat(40));
+    expect(requiredBuildSha(undefined, 'b'.repeat(40))).toBe('b'.repeat(40));
+  });
+
   it('salva nome com teclado', async () => {
     const { onRename } = await subject(); const user = userEvent.setup();
     await user.clear(screen.getByLabelText('Nome do estudo'));
@@ -91,8 +100,9 @@ describe('StudyEditor', () => {
     expect(onSourceChange).not.toHaveBeenCalled();
   });
 
-  it('lista somente confirmados e mostra o snapshot observado antes de aplicar', async () => {
-    const { onSourceChange, onConvertObserved } = await subject(); const user = userEvent.setup();
+  it('converte caso observado em autoria preenchida sem modificar o original', async () => {
+    const { onSourceChange, onConvertObserved, observedCase } = await subject(); const user = userEvent.setup();
+    const originalJson = JSON.stringify(observedCase);
     await user.click(screen.getByLabelText('Caso observado'));
     const selector = screen.getByLabelText('Caso confirmado');
     expect(within(selector).getAllByRole('option')).toHaveLength(2);
@@ -106,6 +116,14 @@ describe('StudyEditor', () => {
     expect(onSourceChange).toHaveBeenCalledWith({ kind: 'OBSERVED_CASE', caseId: 'case-1', caseRevision: 4 });
     await user.click(screen.getByRole('button', { name: 'Converter para autoria manual' }));
     expect(onConvertObserved).toHaveBeenCalledWith('case-1');
+    expect(screen.getByLabelText('Ticket médio do participante')).toHaveValue('100');
+    expect(screen.getByLabelText('Direção do participante')).toHaveValue('OUT');
+    expect(screen.getByLabelText('Finalidade do participante')).toHaveValue('ANEXO_V_REMESSA_TERCEIRO');
+    expect(onSourceChange).toHaveBeenLastCalledWith(expect.objectContaining({
+      kind: 'AUTHORED',
+      preparation: expect.objectContaining({ input: expect.objectContaining({ participants: [expect.objectContaining({ ticket_median_brl: '100', out_fraction: '1' })] }) }),
+    }));
+    expect(JSON.stringify(observedCase)).toBe(originalJson);
   });
 });
 

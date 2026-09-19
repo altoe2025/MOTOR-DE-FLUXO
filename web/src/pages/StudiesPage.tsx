@@ -8,19 +8,20 @@ import { resolvePortfolioSource } from '../preparation/resolvePortfolioSource';
 import { StudyList } from '../study/components/StudyList';
 import { createStudy, duplicateStudy, moveStudyToTrash, renameStudy } from '../study/domain';
 import type { CostPremises, ScenarioDraft, StudyDocument } from '../study/model';
+import { requiredBuildSha } from '../study/sourceConfiguration';
 
 const DEFAULT_COSTS: CostPremises = {
   iof_out: '0.035', iof_in: '0.0038', carry_cnr: '0.0004', spread_rail_bps: '25',
   custo_fixo_remessa: '40', custo_oportunidade_aa: '0', ptax: '5.40', iof_por_finalidade: [],
 };
-const EXPECTED_BUILD_SHA = import.meta.env.VITE_MOTOR_BUILD_SHA ?? '0'.repeat(40);
 
 async function initialStudy(api: ApiClient, ownerSub: string): Promise<StudyDocument> {
   if (api.preparePortfolio === undefined) throw new Error('A preparação de carteira não está disponível.');
   const studyId = crypto.randomUUID(); const scenarioId = crypto.randomUUID(); const now = new Date().toISOString();
   const preparation: PreparationRequest = {
     preparation_version: '1.0.0', request_id: crypto.randomUUID(), study_id: studyId,
-    scenario_id: scenarioId, scenario_revision: 1, expected_build_sha: EXPECTED_BUILD_SHA,
+    scenario_id: scenarioId, scenario_revision: 1,
+    expected_build_sha: requiredBuildSha(import.meta.env.VITE_MOTOR_BUILD_SHA, undefined),
     input: {
       participants: [{ id: crypto.randomUUID(), profile: 'tesouraria_corporativa', monthly_volume_brl: '1000000', ticket_median_brl: '100000', out_fraction: '0.5', purpose_out: 'ANEXO_V_REMESSA_TERCEIRO', purpose_in: 'ANEXO_V_DISPONIBILIDADE', eh_efx: false, deadline: { mode: 'FIXED', days: 7 }, seed: '1' }],
       warmup_days: 0, measurement_days: 30, window_days: 7,
