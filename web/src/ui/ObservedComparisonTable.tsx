@@ -2,9 +2,9 @@ import type { ObservedComparison, ObservedComparisonRow } from '../cases/observe
 import { formatFraction, formatMoney, formatSignedMoney } from '../presentation/format';
 
 const STATUS_LABEL: Record<ObservedComparisonRow['status'], string> = {
-  EQUAL: 'Igual',
+  MATCHED: 'Coincide',
   DIFFERENT: 'Diferente',
-  NOT_REPORTED: 'Não informado',
+  NOT_OBSERVED: 'Não observado',
   INCOMPATIBLE: 'Incompatível',
 };
 

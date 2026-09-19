@@ -19,8 +19,8 @@ type ComparisonBase = Readonly<{
 }>;
 
 export type ObservedComparisonRow =
-  | (ComparisonBase & Readonly<{ status: 'EQUAL' | 'DIFFERENT' }>)
-  | (ComparisonBase & Readonly<{ status: 'NOT_REPORTED' }>)
+  | (ComparisonBase & Readonly<{ status: 'MATCHED' | 'DIFFERENT' }>)
+  | (ComparisonBase & Readonly<{ status: 'NOT_OBSERVED' }>)
   | (ComparisonBase & Readonly<{
       status: 'INCOMPATIBLE';
       reason: 'UNMAPPED_CODE' | 'UNIT_MISMATCH' | 'DEFINITION_MISMATCH';
@@ -75,7 +75,7 @@ function compareMetric(
   const difference = new FinancialDecimal(motorValue).minus(observed);
   return {
     ...base,
-    status: difference.isZero() ? 'EQUAL' : 'DIFFERENT',
+    status: difference.isZero() ? 'MATCHED' : 'DIFFERENT',
     difference: difference.toString(),
     percentageDifference: observed.isZero() ? null : difference.dividedBy(observed).toString(),
   };
@@ -96,7 +96,7 @@ export function compareObservedToMotor(
       canonicalPath: registration.canonicalPath,
       unit: registration.unit,
       definitionVersion: registration.definitionVersion,
-      status: 'NOT_REPORTED',
+      status: 'NOT_OBSERVED',
       observedValue: null,
       motorValue: registration.readMotorValue(envelope),
       difference: null,

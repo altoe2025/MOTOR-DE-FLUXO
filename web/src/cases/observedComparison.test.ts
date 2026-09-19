@@ -59,7 +59,7 @@ describe('compareObservedToMotor', () => {
     );
 
     expect(comparison.rows[0]).toMatchObject({
-      code: 'GROSS_OUT_BRL', status: 'EQUAL', observedValue: '100.00', motorValue: '100',
+      code: 'GROSS_OUT_BRL', status: 'MATCHED', observedValue: '100.00', motorValue: '100',
       difference: '0', percentageDifference: '0',
     });
   });
@@ -92,12 +92,12 @@ describe('compareObservedToMotor', () => {
     );
 
     expect(comparison.rows.map((row) => [row.code, row.status])).toEqual([
-      ['GROSS_OUT_BRL', 'NOT_REPORTED'],
-      ['GROSS_IN_BRL', 'EQUAL'],
-      ['MATCHED_BRL', 'NOT_REPORTED'],
-      ['REMITTED_OUT_BRL', 'NOT_REPORTED'],
-      ['REMITTED_IN_BRL', 'NOT_REPORTED'],
-      ['TOTAL_COST_BRL', 'EQUAL'],
+      ['GROSS_OUT_BRL', 'NOT_OBSERVED'],
+      ['GROSS_IN_BRL', 'MATCHED'],
+      ['MATCHED_BRL', 'NOT_OBSERVED'],
+      ['REMITTED_OUT_BRL', 'NOT_OBSERVED'],
+      ['REMITTED_IN_BRL', 'NOT_OBSERVED'],
+      ['TOTAL_COST_BRL', 'MATCHED'],
     ]);
     expect(comparison.rows[0]).toMatchObject({ observedValue: null, motorValue: '100' });
   });

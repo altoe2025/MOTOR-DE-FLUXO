@@ -14,7 +14,7 @@ const comparison: ObservedComparison = {
   rows: [
     {
       code: 'GROSS_OUT_BRL', label: 'Volume bruto OUT', canonicalPath: '/out', unit: 'BRL',
-      definitionVersion: '1.0.0', status: 'EQUAL', observedValue: '100', motorValue: '100',
+      definitionVersion: '1.0.0', status: 'MATCHED', observedValue: '100', motorValue: '100',
       difference: '0', percentageDifference: '0',
     },
     {
@@ -24,7 +24,7 @@ const comparison: ObservedComparison = {
     },
     {
       code: 'MATCHED_BRL', label: 'Volume casado', canonicalPath: '/matched', unit: 'BRL',
-      definitionVersion: '1.0.0', status: 'NOT_REPORTED', observedValue: null, motorValue: '60',
+      definitionVersion: '1.0.0', status: 'NOT_OBSERVED', observedValue: null, motorValue: '60',
       difference: null, percentageDifference: null,
     },
     {
@@ -40,10 +40,10 @@ describe('ObservedComparisonTable', () => {
   it('mostra estados textuais, valores tabulares e ausência sem depender somente de cor', () => {
     render(<ObservedComparisonTable comparison={comparison} />);
 
-    expect(screen.getByRole('row', { name: /Volume bruto OUT.*Igual/i })).toHaveTextContent(/R\$\s+100,00/);
+    expect(screen.getByRole('row', { name: /Volume bruto OUT.*Coincide/i })).toHaveTextContent(/R\$\s+100,00/);
     expect(screen.getByRole('row', { name: /Volume bruto IN.*Diferente/i })).toHaveTextContent(/\+R\$\s+10,00/);
     expect(screen.getByRole('row', { name: /Volume bruto IN.*Diferente/i })).toHaveTextContent('33,33%');
-    expect(screen.getByRole('row', { name: /Volume casado.*Não informado/i })).toHaveTextContent('não informado');
+    expect(screen.getByRole('row', { name: /Volume casado.*Não observado/i })).toHaveTextContent('não informado');
     expect(screen.getByRole('row', { name: /Custo total.*Incompatível/i })).toHaveTextContent(
       'Definição observada 2.0.0; o contrato canônico exige 1.0.0.',
     );
