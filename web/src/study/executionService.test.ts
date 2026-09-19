@@ -59,6 +59,7 @@ function deferred<T>() {
 
 class MemoryRepository implements ApplicationRepository {
   document: StudyDocument | null;
+  readonly additionalDocuments = new Map<string, StudyDocument>();
   readonly saves: CASMutation<StudyDocument>[] = [];
   failOnSave = 0;
   saveStudyImplementation: ((input: CASMutation<StudyDocument>) => Promise<StudyDocument>) | null = null;
@@ -67,14 +68,20 @@ class MemoryRepository implements ApplicationRepository {
   async listObservedCases(): Promise<ObservedCase[]> { return []; }
   async getObservedCase(): Promise<ObservedCase | null> { return null; }
   async confirmObservedCase(input: ConfirmObservedCaseMutation): Promise<ObservedCase> { return input.observedCase; }
-  async listStudies(): Promise<StudyDocument[]> { return this.document === null ? [] : [this.document]; }
-  async getStudy(): Promise<StudyDocument | null> { return this.document; }
+  async listStudies(): Promise<StudyDocument[]> {
+    return [...(this.document === null ? [] : [this.document]), ...this.additionalDocuments.values()];
+  }
+  async getStudy(id: string): Promise<StudyDocument | null> {
+    return this.document?.id === id ? this.document : this.additionalDocuments.get(id) ?? null;
+  }
   async saveStudy(input: CASMutation<StudyDocument>): Promise<StudyDocument> {
     this.saves.push(input);
     if (this.failOnSave === this.saves.length) throw new Error('quota');
     if (this.saveStudyImplementation !== null) return this.saveStudyImplementation(input);
-    if (this.document?.revision !== input.expectedRevision) throw new Error('CAS');
-    this.document = input.document;
+    const current = await this.getStudy(input.document.id);
+    if (current?.revision !== input.expectedRevision) throw new Error('CAS');
+    if (this.document?.id === input.document.id) this.document = input.document;
+    else this.additionalDocuments.set(input.document.id, input.document);
     return input.document;
   }
   async restoreStudy(): Promise<StudyDocument> { throw new Error('não usado'); }
@@ -187,7 +194,7 @@ describe('executeStudyScenario', () => {
     expect(left.id).toBe(right.id);
     expect(runPreview).toHaveBeenCalledOnce();
     expect(subject.repository.document?.executions).toHaveLength(2);
-    expect(subject.repository.document?.executions.map((item) => item.status)).toEqual(['RUNNING', 'SUCCEEDED']);
+    expect(subject.repository.document?.executions.map((item) => item.status)).toEqual(['INTERRUPTED', 'SUCCEEDED']);
     expect(subject.repository.document?.executions[1]).toMatchObject({ id: left.id, status: 'SUCCEEDED' });
     expect(subject.repository.document?.executions[1]?.requestSnapshot.request_id)
       .toBe(subject.repository.document?.executions[0]?.requestSnapshot.request_id);
@@ -317,7 +324,7 @@ describe('executeStudyScenario', () => {
     })).resolves.toMatchObject({ status: 'SUCCEEDED' });
     expect(resumedPost).toHaveBeenCalledOnce();
     expect(subject.repository.document?.executions.map((execution) => execution.status))
-      .toEqual(['INTERRUPTED', 'RUNNING', 'SUCCEEDED']);
+      .toEqual(['INTERRUPTED', 'INTERRUPTED', 'SUCCEEDED']);
   });
 
   it('converte falha do flush inicial em FAILED sem POST e preserva STORAGE_FAILURE', async () => {
@@ -383,7 +390,7 @@ describe('executeStudyScenario', () => {
     expect(failed).toMatchObject({ status: 'FAILED', error: failure });
     expect(failed.id).not.toBe(succeeded.id);
     expect(subject.repository.document?.executions.map((item) => item.status))
-      .toEqual(['RUNNING', 'SUCCEEDED', 'RUNNING', 'FAILED']);
+      .toEqual(['INTERRUPTED', 'SUCCEEDED', 'INTERRUPTED', 'FAILED']);
     expect(succeeded.envelope).not.toBeNull();
   });
 
@@ -508,6 +515,32 @@ describe('executeStudyScenario', () => {
 
     await expect(executing).resolves.toMatchObject({ status: 'INTERRUPTED', current: false });
     expect(subject.repository.document?.executions.map((item) => item.status)).toEqual(['RUNNING']);
+  });
+
+  it('persiste o terminal de A por CAS sem trocar a seleção B e reabre A sem reserva RUNNING', async () => {
+    const subject = await setup();
+    const studyB = await createStudy({
+      id: '00000000-0000-4000-8000-000000000099', ownerSub: FIXTURE_OWNER,
+      name: 'Estudo B', baseScenario: makeScenarioDraft({ id: 'scenario-b' }), now: FIXTURE_NOW,
+    });
+    subject.repository.additionalDocuments.set(studyB.id, studyB);
+    const response = deferred<PreviewEnvelope>();
+    let sent!: PreviaRequest;
+    const executing = executeStudyScenario({
+      ...subject,
+      scenarioId: subject.study.baseScenarioId,
+      runPreview: vi.fn((input) => { sent = input; return response.promise; }),
+    });
+    await vi.waitFor(() => expect(subject.repository.document?.executions[0]?.status).toBe('RUNNING'));
+
+    await subject.controller.loadStudy(studyB.id);
+    response.resolve(matchingEnvelope(sent, envelopeFixture.execution_id));
+    await expect(executing).resolves.toMatchObject({ status: 'SUCCEEDED', current: false });
+
+    expect(subject.controller.snapshot.document?.id).toBe(studyB.id);
+    const reopenedA = await subject.controller.loadStudy(subject.study.id);
+    expect(reopenedA?.executions.map((execution) => execution.status))
+      .toEqual(['INTERRUPTED', 'SUCCEEDED']);
   });
 
   it('mantém sucesso em memória quando falha ao salvar a resposta', async () => {

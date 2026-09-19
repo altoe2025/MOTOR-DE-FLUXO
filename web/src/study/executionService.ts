@@ -129,6 +129,8 @@ async function persistTerminal(
   options: ExecuteStudyScenarioOptions,
   capturedOwner: string,
   capturedEpoch: number,
+  reservedStudy: StudyDocument,
+  reservationId: string,
   record: ExecutionRecord,
   finishedAt: string,
 ): Promise<{ current: boolean; persistenceError: unknown | null }> {
@@ -140,11 +142,25 @@ async function persistTerminal(
     await controller.flush();
     const currentStudy = controller.snapshot.document;
     if (currentStudy === null || currentStudy.id !== record.requestSnapshot.study_id) {
+      const interrupted = {
+        ...structuredClone(reservedStudy),
+        executions: reservedStudy.executions.map((execution) => execution.id === reservationId
+          ? { ...structuredClone(execution), status: 'INTERRUPTED' as const, finishedAt }
+          : structuredClone(execution)),
+      };
+      const detached = await appendExecution(interrupted, record, finishedAt);
+      await controller.saveDetachedStudy(detached, reservedStudy.revision);
       return { current: false, persistenceError: null };
     }
     const currentScenario = currentStudy.scenarios.find((item) => item.id === record.scenarioId);
     const current = currentScenario?.inputFingerprint === record.inputFingerprint;
-    const withExecution = await appendExecution(currentStudy, record, finishedAt);
+    const interrupted = {
+      ...structuredClone(currentStudy),
+      executions: currentStudy.executions.map((execution) => execution.id === reservationId
+        ? { ...structuredClone(execution), status: 'INTERRUPTED' as const, finishedAt }
+        : structuredClone(execution)),
+    };
+    const withExecution = await appendExecution(interrupted, record, finishedAt);
     controller.edit(withExecution);
     await controller.flush();
     return { current, persistenceError: null };
@@ -273,7 +289,15 @@ async function execute(options: ExecuteStudyScenarioOptions): Promise<ExecutionA
         createdAt,
         finishedAt,
       };
-      const persisted = await persistTerminal(options, ownerSub, epoch, record, finishedAt);
+      const persisted = await persistTerminal(
+        options,
+        ownerSub,
+        epoch,
+        reserved,
+        reservation.id,
+        record,
+        finishedAt,
+      );
       return attempt(record.id, status, request, {
         envelope,
         error: failure,
