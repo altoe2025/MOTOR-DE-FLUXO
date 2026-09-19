@@ -104,6 +104,46 @@ describe('resolvePortfolioSource', () => {
     expect(snapshot.sourceFingerprint).toBe(await fingerprintPortfolioSource(snapshot));
   });
 
+  it('preserva associação heterogênea OBSERVED, USER_CORRECTED e INFERRED por campo', async () => {
+    const caseRecord = makeObservedCase();
+    const observed = caseRecord.orders[0]!.provenance[0]!;
+    const corrected = {
+      kind: 'USER_CORRECTED' as const, source: 'correção', version: '2',
+      recordedAt: NOW, actionId: 'action-1',
+    };
+    const inferred = {
+      kind: 'INFERRED' as const, source: 'normalizador', version: '3',
+      recordedAt: NOW, rule: 'deadline-v3',
+    };
+    const heterogeneous = {
+      ...caseRecord,
+      orders: [{
+        ...caseRecord.orders[0]!,
+        provenance: [observed, corrected, inferred],
+        fieldProvenance: {
+          knownDate: observed,
+          deadlineDate: inferred,
+          valueBrl: observed,
+          purposeCode: corrected,
+          efxStatus: observed,
+        },
+      }],
+    };
+
+    const snapshot = await resolvePortfolioSource(
+      { kind: 'OBSERVED_CASE', caseId: heterogeneous.id, caseRevision: heterogeneous.revision },
+      dependencies({ getObservedCase: async () => heterogeneous }),
+    );
+
+    expect(snapshot.provenanceByOrder?.['observed-order-1']).toEqual({
+      dia_conhecida: observed,
+      dia_limite: inferred,
+      valor_brl: observed,
+      finalidade: corrected,
+      eh_efx: observed,
+    });
+  });
+
   it('rejeita o fixture dourado observado ainda em draft', async () => {
     const draft = { ...makeObservedCase(), status: 'DRAFT' as const, confirmedAt: null };
 

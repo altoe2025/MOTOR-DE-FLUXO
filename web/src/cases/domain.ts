@@ -49,6 +49,13 @@ export type ObservedOrder = {
   readonly purposeCode: string | null;
   readonly efxStatus: 'YES' | 'NO' | 'NOT_COLLECTED';
   readonly provenance: readonly FieldProvenance[];
+  readonly fieldProvenance?: Readonly<{
+    knownDate: FieldProvenance;
+    deadlineDate: FieldProvenance;
+    valueBrl: FieldProvenance;
+    purposeCode: FieldProvenance;
+    efxStatus: FieldProvenance;
+  }>;
 };
 
 export type ControlTotal = {

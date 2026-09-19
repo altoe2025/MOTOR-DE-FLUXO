@@ -111,7 +111,19 @@
         "valueBrl": { "$ref": "#/$defs/PositiveDecimalBrl" },
         "purposeCode": { "type": ["string", "null"] },
         "efxStatus": { "enum": ["YES", "NO", "NOT_COLLECTED"] },
-        "provenance": { "type": "array", "items": { "$ref": "#/$defs/FieldProvenance" }, "minItems": 1 }
+        "provenance": { "type": "array", "items": { "$ref": "#/$defs/FieldProvenance" }, "minItems": 1 },
+        "fieldProvenance": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "knownDate": { "$ref": "#/$defs/FieldProvenance" },
+            "deadlineDate": { "$ref": "#/$defs/FieldProvenance" },
+            "valueBrl": { "$ref": "#/$defs/FieldProvenance" },
+            "purposeCode": { "$ref": "#/$defs/FieldProvenance" },
+            "efxStatus": { "$ref": "#/$defs/FieldProvenance" }
+          },
+          "required": ["knownDate", "deadlineDate", "valueBrl", "purposeCode", "efxStatus"]
+        }
       },
       "required": ["id", "clientId", "direction", "knownDate", "deadlineDate", "valueBrl", "purposeCode", "efxStatus", "provenance"]
     },

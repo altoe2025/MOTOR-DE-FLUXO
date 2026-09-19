@@ -76,14 +76,17 @@ function observedOrders(caseRecord: ObservedCase): CanonicalAuthoredOrder[] {
 
 function provenanceForObservedOrders(caseRecord: ObservedCase): Record<string, OrderFieldProvenance> {
   return Object.fromEntries(caseRecord.orders.map((order) => {
-    const provenance = order.provenance[0];
-    if (provenance === undefined) throw new Error(`Ordem observada ${order.id} sem proveniência.`);
+    const uniform = order.provenance.length === 1 ? order.provenance[0] : undefined;
+    const associated = order.fieldProvenance;
+    if (associated === undefined && uniform === undefined) {
+      throw new Error(`Ordem observada ${order.id} possui proveniência heterogênea sem associação por campo.`);
+    }
     return [order.id, {
-      dia_conhecida: structuredClone(provenance),
-      dia_limite: structuredClone(provenance),
-      eh_efx: structuredClone(provenance),
-      finalidade: structuredClone(provenance),
-      valor_brl: structuredClone(provenance),
+      dia_conhecida: structuredClone(associated?.knownDate ?? uniform!),
+      dia_limite: structuredClone(associated?.deadlineDate ?? uniform!),
+      eh_efx: structuredClone(associated?.efxStatus ?? uniform!),
+      finalidade: structuredClone(associated?.purposeCode ?? uniform!),
+      valor_brl: structuredClone(associated?.valueBrl ?? uniform!),
     }];
   }));
 }
