@@ -55,6 +55,7 @@ class MemoryRepository implements ApplicationRepository {
   document: StudyDocument | null;
   readonly saves: CASMutation<StudyDocument>[] = [];
   failOnSave = 0;
+  saveStudyImplementation: ((input: CASMutation<StudyDocument>) => Promise<StudyDocument>) | null = null;
   constructor(document: StudyDocument) { this.document = document; }
   async listCompanies(): Promise<CompanyRecord[]> { return []; }
   async listObservedCases(): Promise<ObservedCase[]> { return []; }
@@ -65,6 +66,7 @@ class MemoryRepository implements ApplicationRepository {
   async saveStudy(input: CASMutation<StudyDocument>): Promise<StudyDocument> {
     this.saves.push(input);
     if (this.failOnSave === this.saves.length) throw new Error('quota');
+    if (this.saveStudyImplementation !== null) return this.saveStudyImplementation(input);
     if (this.document?.revision !== input.expectedRevision) throw new Error('CAS');
     this.document = input.document;
     return input.document;
@@ -218,6 +220,98 @@ describe('executeStudyScenario', () => {
     response.resolve(matchingEnvelope(sent, envelopeFixture.execution_id));
     await expect(first).resolves.toMatchObject({ status: 'SUCCEEDED' });
     expect(firstPost).toHaveBeenCalledOnce();
+  });
+
+  it('finaliza reserva cancelada após o commit e permite nova execução sem POST antigo', async () => {
+    const subject = await setup();
+    const reservationCommit = deferred<void>();
+    let firstSave = true;
+    subject.repository.saveStudyImplementation = async (input) => {
+      if (firstSave) {
+        firstSave = false;
+        await reservationCommit.promise;
+      }
+      if (subject.repository.document?.revision !== input.expectedRevision) throw new Error('CAS');
+      subject.repository.document = input.document;
+      return input.document;
+    };
+    const cancelledPost = vi.fn();
+    const cancelled = executeStudyScenario({
+      ...subject, scenarioId: subject.study.baseScenarioId, runPreview: cancelledPost,
+    });
+    await vi.waitFor(() => expect(subject.repository.saves).toHaveLength(1));
+    const reservation = subject.repository.saves[0]!.document.executions[0]!;
+
+    await subject.controller.loadStudy(subject.study.id);
+    reservationCommit.resolve();
+    await expect(cancelled).resolves.toMatchObject({ status: 'INTERRUPTED' });
+
+    expect(cancelledPost).not.toHaveBeenCalled();
+    expect(subject.repository.document?.executions).toHaveLength(1);
+    expect(subject.repository.document?.executions[0]).toMatchObject({
+      id: reservation.id,
+      status: 'INTERRUPTED', finishedAt: expect.any(String),
+      requestSnapshot: { request_id: reservation.requestSnapshot.request_id },
+    });
+    const completedRequest = subject.repository.document?.executions[0]?.requestSnapshot.request_id;
+
+    await subject.controller.loadStudy(subject.study.id);
+    const nextPost = vi.fn(async (input: PreviaRequest) => matchingEnvelope(input, envelopeFixture.execution_id));
+    await expect(executeStudyScenario({
+      ...subject, scenarioId: subject.study.baseScenarioId, runPreview: nextPost,
+    })).resolves.toMatchObject({ status: 'SUCCEEDED' });
+    expect(nextPost).toHaveBeenCalledOnce();
+    expect(subject.repository.document?.executions.at(-1)?.requestSnapshot.request_id)
+      .not.toBe(completedRequest);
+  });
+
+  it('mantém reserva abandonada bloqueante após perda de epoch e não duplica POST', async () => {
+    const subject = await setup();
+    const reservationCommit = deferred<void>();
+    subject.repository.saveStudyImplementation = async (input) => {
+      await reservationCommit.promise;
+      if (subject.repository.document?.revision !== input.expectedRevision) throw new Error('CAS');
+      subject.repository.document = input.document;
+      return input.document;
+    };
+    const abandonedPost = vi.fn();
+    const abandoned = executeStudyScenario({
+      ...subject,
+      scenarioId: subject.study.baseScenarioId,
+      runPreview: abandonedPost,
+      reservationLeaseMs: 600_000,
+    });
+    await vi.waitFor(() => expect(subject.repository.saves).toHaveLength(1));
+    await subject.controller.switchSession(null);
+    reservationCommit.resolve();
+
+    await expect(abandoned).resolves.toMatchObject({ status: 'INTERRUPTED' });
+    expect(abandonedPost).not.toHaveBeenCalled();
+    expect(subject.repository.document?.executions[0]?.status).toBe('RUNNING');
+
+    await subject.controller.switchSession(FIXTURE_OWNER);
+    await subject.controller.loadStudy(subject.study.id);
+    const duplicatePost = vi.fn();
+    const refused = await executeStudyScenario({
+      ...subject,
+      scenarioId: subject.study.baseScenarioId,
+      runPreview: duplicatePost,
+      reservationLeaseMs: 600_000,
+    });
+    expect(refused.error).toBeInstanceOf(ExecutionInProgressError);
+    expect(duplicatePost).not.toHaveBeenCalled();
+
+    const resumedPost = vi.fn(async (input: PreviaRequest) => matchingEnvelope(input, envelopeFixture.execution_id));
+    await expect(executeStudyScenario({
+      ...subject,
+      scenarioId: subject.study.baseScenarioId,
+      runPreview: resumedPost,
+      now: () => '2026-09-19T13:00:00Z',
+      reservationLeaseMs: 1,
+    })).resolves.toMatchObject({ status: 'SUCCEEDED' });
+    expect(resumedPost).toHaveBeenCalledOnce();
+    expect(subject.repository.document?.executions.map((execution) => execution.status))
+      .toEqual(['INTERRUPTED', 'RUNNING', 'SUCCEEDED']);
   });
 
   it('converte falha do flush inicial em FAILED sem POST e preserva STORAGE_FAILURE', async () => {

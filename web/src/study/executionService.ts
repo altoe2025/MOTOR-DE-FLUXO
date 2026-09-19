@@ -29,6 +29,7 @@ export type ExecuteStudyScenarioOptions = Readonly<{
   runPreview(input: PreviaRequest, signal: AbortSignal): Promise<PreviewEnvelope>;
   nextId?: () => string;
   now?: () => string;
+  reservationLeaseMs?: number;
   onStatus?: (attempt: ExecutionAttempt) => void;
 }>;
 
@@ -40,6 +41,7 @@ export class ExecutionInProgressError extends Error {
 }
 
 const inFlight = new WeakMap<StudyController, Map<string, Promise<ExecutionAttempt>>>();
+const DEFAULT_RESERVATION_LEASE_MS = 5 * 60_000;
 
 function defaultId(): string { return crypto.randomUUID(); }
 function defaultNow(): string { return new Date().toISOString(); }
@@ -103,6 +105,25 @@ function activeReservation(study: StudyDocument, scenarioId: string): ExecutionR
     && !completedRequests.has(execution.requestSnapshot.request_id)) ?? null;
 }
 
+function reservationExpired(reservation: ExecutionRecord, now: string, leaseMs: number): boolean {
+  return Date.parse(now) - Date.parse(reservation.createdAt) >= leaseMs;
+}
+
+function interruptReservation(
+  study: StudyDocument,
+  reservationId: string,
+  finishedAt: string,
+): StudyDocument {
+  return {
+    ...structuredClone(study),
+    revision: study.revision + 1,
+    updatedAt: finishedAt,
+    executions: study.executions.map((execution) => execution.id === reservationId
+      ? { ...structuredClone(execution), status: 'INTERRUPTED' as const, finishedAt }
+      : structuredClone(execution)),
+  };
+}
+
 async function persistTerminal(
   options: ExecuteStudyScenarioOptions,
   capturedOwner: string,
@@ -139,6 +160,10 @@ async function persistTerminal(
 async function execute(options: ExecuteStudyScenarioOptions): Promise<ExecutionAttempt> {
   const nextId = options.nextId ?? defaultId;
   const now = options.now ?? defaultNow;
+  const reservationLeaseMs = options.reservationLeaseMs ?? DEFAULT_RESERVATION_LEASE_MS;
+  if (!Number.isFinite(reservationLeaseMs) || reservationLeaseMs <= 0) {
+    throw new Error('Lease de reserva inválido.');
+  }
   const executionId = nextId();
   const requestId = nextId();
   const preparing = attempt(executionId, 'PREPARING', null);
@@ -148,13 +173,23 @@ async function execute(options: ExecuteStudyScenarioOptions): Promise<ExecutionA
   try {
     const result = await options.controller.runForCurrentSession(async ({ ownerSub, epoch, signal }) => {
       await options.controller.flush();
-      const study = options.controller.snapshot.document;
+      let study = options.controller.snapshot.document;
       if (study === null) throw new Error('Nenhum estudo selecionado para execução.');
       const existing = activeReservation(study, options.scenarioId);
       if (existing !== null) {
-        return attempt(existing.id, 'INTERRUPTED', existing.requestSnapshot, {
-          error: new ExecutionInProgressError(existing.id),
-        });
+        const inspectedAt = now();
+        if (!reservationExpired(existing, inspectedAt, reservationLeaseMs)) {
+          return attempt(existing.id, 'INTERRUPTED', existing.requestSnapshot, {
+            error: new ExecutionInProgressError(existing.id),
+          });
+        }
+        const interrupted = interruptReservation(study, existing.id, inspectedAt);
+        options.controller.edit(interrupted);
+        const reconciled = await options.controller.flush();
+        if (reconciled === null) {
+          return attempt(existing.id, 'INTERRUPTED', existing.requestSnapshot);
+        }
+        study = reconciled;
       }
       const scenario = study.scenarios.find((item) => item.id === options.scenarioId);
       if (scenario === undefined) throw new Error('Cenário não encontrado para execução.');
@@ -180,7 +215,21 @@ async function execute(options: ExecuteStudyScenarioOptions): Promise<ExecutionA
       const withReservation = await appendExecution(study, reservation, createdAt);
       options.controller.edit(withReservation);
       const reserved = await options.controller.flush();
-      if (reserved === null || signal.aborted) return attempt(executionId, 'INTERRUPTED', request);
+      if (reserved === null || signal.aborted) {
+        let persistenceError: unknown | null = null;
+        if (options.controller.snapshot.ownerSub === ownerSub
+          && options.controller.snapshot.sessionEpoch === epoch) {
+          try {
+            await options.controller.saveDetachedStudy(
+              interruptReservation(withReservation, reservation.id, now()),
+              withReservation.revision,
+            );
+          } catch (error) {
+            persistenceError = error;
+          }
+        }
+        return attempt(executionId, 'INTERRUPTED', request, { persistenceError });
+      }
 
       const running = attempt(executionId, 'RUNNING', request);
       options.onStatus?.(running);

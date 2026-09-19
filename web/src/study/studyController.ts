@@ -315,6 +315,31 @@ export class StudyController {
     return this.#startDrain();
   }
 
+  async saveDetachedStudy(
+    document: StudyDocument,
+    expectedRevision: number,
+  ): Promise<StudyDocument | null> {
+    this.#assertOpen();
+    const { repository, epoch } = this.#session();
+    const operationId = this.#operationId();
+    try {
+      const saved = await repository.saveStudy({ document, expectedRevision, operationId });
+      if (!this.#isCurrent(repository, epoch)) return null;
+      this.#channel?.postMessage({ studyId: saved.id, revision: saved.revision, operationId });
+      const current = this.#snapshot.document;
+      if (current?.id === saved.id && this.#snapshot.status === 'SAVED') {
+        this.#persistedRevision = saved.revision;
+        this.#publish({ ...this.#snapshot, document: saved, error: null });
+      }
+      return saved;
+    } catch (error) {
+      if (this.#isCurrent(repository, epoch)) {
+        this.#publish({ ...this.#snapshot, status: 'STORAGE_FAILURE', error });
+      }
+      throw error;
+    }
+  }
+
   async runForCurrentSession<T>(work: (session: SessionWork) => Promise<T>): Promise<T | null> {
     this.#assertOpen();
     const { epoch } = this.#session();

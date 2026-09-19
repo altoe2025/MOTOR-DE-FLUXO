@@ -112,3 +112,41 @@ Os dois findings Important foram reproduzidos e corrigidos.
 - `git diff --check` — aprovado.
 - Build não é necessário: a fix round não altera dependências nem o grafo de bundle;
   o componente continua fora do grafo de páginas e o typecheck cobre os módulos.
+
+## Correção final — cancelamento e reconciliação de reserva
+
+A re-review encontrou uma janela após o commit de `RUNNING` e antes do POST: quando
+`flush()` retornava `null` ou o signal era abortado, a tentativa terminava apenas em
+memória e deixava a reserva ativa indefinidamente.
+
+- Com owner e epoch ainda válidos, o serviço agora grava a transição excepcional
+  `RUNNING → INTERRUPTED` já autorizada pelo repositório, preservando exatamente o
+  mesmo `ExecutionRecord.id`, `request_id` e snapshot. A escrita usa CAS destacado
+  pelo controlador, sem trocar a seleção atual do usuário.
+- Com perda de sessão/epoch, nenhum recurso fechado é reutilizado. A reserva continua
+  bloqueante por um lease determinístico de cinco minutos. Uma sessão posterior
+  recusa novo POST antes do prazo; depois do prazo, primeiro reconcilia a reserva para
+  `INTERRUPTED` via CAS e somente então pode reservar uma nova tentativa.
+- A correlação deixa de depender apenas de convenção visual: cancelamento persistido
+  conserva identidade e o histórico continua mostrando um único estado por tentativa.
+
+### Evidência focada
+
+- RED: cancelamento após a reserva retornava `INTERRUPTED` em memória, mas o documento
+  persistido permanecia `RUNNING` com `finishedAt = null`.
+- GREEN: zero POST na tentativa cancelada, terminal `INTERRUPTED` persistido com os
+  mesmos IDs, e uma nova tentativa posterior conclui normalmente.
+- Perda de epoch: zero POST original; reabertura antes do lease recebe
+  `ExecutionInProgressError` e não chama a rede; após expiração, a sequência
+  persistida é `INTERRUPTED, RUNNING, SUCCEEDED`, com um único POST novo.
+- Self-review focada: CAS continua sendo autoridade; `saveDetachedStudy` só opera na
+  mesma sessão/epoch, publica apenas IDs no canal e deixa conflitos para o repositório.
+
+### Gates desta correção
+
+- `npm --prefix web run test:unit -- src/study/executionService.test.ts src/preview/PreviewProvider.test.tsx src/study/components/ExecutionHistory.test.tsx`
+  — 3 arquivos, 25 testes aprovados.
+- `npm --prefix web run typecheck` — aprovado.
+- `npm --prefix web run lint` — aprovado.
+- `git diff --check` — aprovado.
+- Build continua dispensado: sem dependência ou mudança no grafo de produção.
