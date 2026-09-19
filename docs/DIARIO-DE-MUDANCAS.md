@@ -91,7 +91,10 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
    fingerprints, testes e referências de CAS podem ser reutilizados ou adaptados;
    OpenAPI, TypeScript, schemas, validators e lockfile devem ser regenerados; endpoints
    501, fronteiras antigas e documentação superada devem ser descartados ou
-   substituídos. A branch `codex/mot62-planejamento-etapa2-v2` contém somente docs.
+   substituídos. O plano também fixa o executor por task: Sol é o padrão para trabalho
+   complexo, Terra implementa sobre contratos fechados, Astra fica concentrado na
+   aceitação integrada T12 e Luna só pode assumir subtarefas mecânicas delimitadas.
+   A branch `codex/mot62-planejamento-etapa2-v2` contém somente docs.
 
 4. **O que isso invalida.** Os títulos, descrições e relações anteriores de
    MOT-23–MOT-33 não representam mais a execução da Etapa 2. Os commits `50fc384` e

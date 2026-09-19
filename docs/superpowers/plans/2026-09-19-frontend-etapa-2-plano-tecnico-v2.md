@@ -128,9 +128,41 @@ testes e documentação.
 As descrições e relações foram atualizadas no Linear após aprovação explícita do
 Gabriel. Nenhuma issue foi fechada e nenhuma atualização autoriza merge automático.
 
+## Roteamento de modelos
+
+O modelo abaixo é o executor principal de cada task. Quando houver subagentes, cada
+spawn deve declarar explicitamente o mesmo modelo e esforço, salvo subtarefa mecânica
+delimitada conforme a exceção abaixo.
+
+| Task | Modelo principal | Esforço | Motivo dominante |
+|---|---|---|---|
+| T0 | `gpt-5.6-sol` | `medium` | auditoria, planejamento e rastreabilidade |
+| T1 | `gpt-5.6-sol` | `high` | contratos observados e proveniência |
+| T2A | `gpt-5.6-sol` | `high` | contratos estritos de preparação |
+| T2B | `gpt-5.6-terra` | `high` | implementação sobre contratos fechados |
+| T3 | `gpt-5.6-sol` | `high` | domínio, snapshots e fingerprints |
+| T4 | `gpt-5.6-sol` | `high` | atomicidade, CAS e IndexedDB |
+| T5 | `gpt-5.6-sol` | `high` | migrations e risco de perda de dados |
+| T6 | `gpt-5.6-sol` | `high` | concorrência, sessão e múltiplas abas |
+| T7 | `gpt-5.6-terra` | `high` | integração determinística das origens |
+| T8 | `gpt-5.6-terra` | `medium` | editor, formulários e componentes |
+| T9 | `gpt-5.6-sol` | `high` | execução, idempotência e histórico |
+| T10 | `gpt-5.6-sol` | `high` | conciliação analítica |
+| T11 | `gpt-5.6-sol` | `high` | E2E, segurança e desempenho |
+| T12 | `gpt-6-astra` | `high` | auditoria integrada e decisão de aceite |
+
+`gpt-5.6-luna` com esforço `low` pode executar apenas subtarefas mecânicas com entrada,
+saída e teste já definidos; não lidera uma task, não decide contratos e não resolve
+conflitos. Ambiguidade contratual, falha transversal ou evidência de que a arquitetura
+vigente não comporta a task exige pausa e escalonamento para `gpt-6-astra`, sem ampliar
+o escopo automaticamente. O executor de cada task verifica o próprio trabalho; não
+há revisão Astra obrigatória por padrão antes da T12.
+
 ## Task 0: Gate, base, issues e auditoria da branch antiga
 
 **Issue:** MOT-62
+
+**Modelo principal:** `gpt-5.6-sol` com esforço `medium`
 
 **Files:**
 - Read: `AGENTS.md`
@@ -208,6 +240,8 @@ Usar `superpowers:using-git-worktrees`, base `main` atual e convenção `codex/`
 
 **Issue:** MOT-63
 
+**Modelo principal:** `gpt-5.6-sol` com esforço `high`
+
 **Files:**
 - Create: `web/src/cases/domain.ts`
 - Create: `web/src/cases/validation.ts`
@@ -262,6 +296,9 @@ Usar `feat: define casos observados e proveniência (MOT-63)`.
 ## Task 2: Contratos de preparação e geração oficial
 
 **Issues:** MOT-23 (T2A, contratos) e MOT-25 (T2B, geração/HTTP)
+
+**Modelos principais:** T2A usa `gpt-5.6-sol` com esforço `high`; T2B usa
+`gpt-5.6-terra` com esforço `high`.
 
 **Files:**
 - Create or Adapt: `servidor/contracts/preparation.py`
@@ -318,6 +355,8 @@ preparação (MOT-23)` e `feat: publica preparação canônica de carteira (MOT-
 
 **Issue:** MOT-24
 
+**Modelo principal:** `gpt-5.6-sol` com esforço `high`
+
 **Files:**
 - Create or Adapt: `web/src/study/domain.ts`
 - Create or Adapt: `web/src/study/model.ts`
@@ -373,6 +412,8 @@ Usar `feat: modela estudos e snapshots imutáveis (MOT-24)`.
 ## Task 4: Porta única de repositório e schema IndexedDB
 
 **Issue:** MOT-26
+
+**Modelo principal:** `gpt-5.6-sol` com esforço `high`
 
 **Files:**
 - Create: `web/src/storage/applicationRepository.ts`
@@ -442,6 +483,8 @@ Commit `feat: unifica persistência local da aplicação (MOT-26)`.
 
 **Issue:** MOT-27
 
+**Modelo principal:** `gpt-5.6-sol` com esforço `high`
+
 **Files:**
 - Create: `web/src/storage/migrations.ts`
 - Create: `web/src/storage/migrations.test.ts`
@@ -492,6 +535,8 @@ Commit `feat: migra e recupera dados locais (MOT-27)`.
 
 **Issue:** MOT-28
 
+**Modelo principal:** `gpt-5.6-sol` com esforço `high`
+
 **Files:**
 - Create: `web/src/study/studyController.ts`
 - Create: `web/src/study/studyController.test.ts`
@@ -540,6 +585,8 @@ Commit `feat: controla estudos e concorrência local (MOT-28)`.
 ## Task 7: Resolver origens e construir request canônico
 
 **Issue:** MOT-64
+
+**Modelo principal:** `gpt-5.6-terra` com esforço `high`
 
 **Files:**
 - Create: `web/src/preparation/resolvePortfolioSource.ts`
@@ -590,6 +637,8 @@ Commit `feat: resolve origens para execução canônica (MOT-64)`.
 ## Task 8: Editor de estudo e carteira
 
 **Issue:** MOT-30
+
+**Modelo principal:** `gpt-5.6-terra` com esforço `medium`
 
 **Files:**
 - Create: `web/src/pages/StudiesPage.tsx`
@@ -647,6 +696,8 @@ Commit `feat: entrega editor completo de estudos (MOT-30)`.
 
 **Issue:** MOT-29
 
+**Modelo principal:** `gpt-5.6-sol` com esforço `high`
+
 **Files:**
 - Modify: `web/src/preview/PreviewProvider.tsx`
 - Modify: `web/src/preview/PreviewProvider.test.tsx`
@@ -691,6 +742,8 @@ Commit `feat: executa e preserva histórico de estudos (MOT-29)`.
 ## Task 10: Resultado básico e Observado × Motor
 
 **Issue:** MOT-31
+
+**Modelo principal:** `gpt-5.6-sol` com esforço `high`
 
 **Files:**
 - Create: `web/src/cases/fingerprints.ts`
@@ -745,6 +798,8 @@ Commit `feat: concilia observado e motor (MOT-31)`.
 ## Task 11: E2E, migrations reais, segurança e desempenho
 
 **Issue:** MOT-32
+
+**Modelo principal:** `gpt-5.6-sol` com esforço `high`
 
 **Files:**
 - Create: `web/e2e/study-observed.spec.ts`
@@ -809,6 +864,8 @@ Usar `test: fecha percurso completo da etapa 2 (MOT-32)`.
 ## Task 12: Aceitação, documentação e handoff
 
 **Issue:** MOT-33
+
+**Modelo principal:** `gpt-6-astra` com esforço `high`
 
 **Files:**
 - Create: `docs/frontend/etapa-2-v2-operacao.md`
