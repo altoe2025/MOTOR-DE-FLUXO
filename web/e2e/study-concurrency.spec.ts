@@ -127,16 +127,36 @@ test('real Chromium storage covers all legacy fixtures, interruption, blocked up
 });
 
 test('injected Chromium quota failure is surfaced without claiming physical disk exhaustion', async ({ browser }) => {
-  const context = await browser.newContext();
-  const page = await context.newPage();
-  await page.goto('/api/v1/health');
-  const session = await context.newCDPSession(page);
+  const probeBytes = 4 * 1024 * 1024;
+  const controlContext = await browser.newContext();
+  const controlPage = await controlContext.newPage();
+  await controlPage.goto('/estudos');
+  await controlPage.waitForFunction(() => '__MOTOR_E2E__' in window);
+  const successfulProbe = await controlPage.evaluate(() => window.__MOTOR_E2E__!.prepareQuotaProbe());
+  await expect(controlPage.evaluate(({ probe, bytes }) =>
+    window.__MOTOR_E2E__!.probeQuotaWrite(probe, bytes), { probe: successfulProbe, bytes: probeBytes }))
+    .resolves.toEqual({ stage: 'write', event: 'complete', requestEvent: 'success' });
+  await controlContext.close();
+
+  const quotaContext = await browser.newContext();
+  const quotaPage = await quotaContext.newPage();
+  await quotaPage.goto('/api/v1/health');
+  const session = await quotaContext.newCDPSession(quotaPage);
+  const origin = 'http://127.0.0.1:8021';
   await session.send('Storage.overrideQuotaForOrigin', {
-    origin: 'http://127.0.0.1:8021', quotaSize: 1,
+    origin, quotaSize: 1,
   });
-  await page.goto('/estudos');
-  await page.waitForFunction(() => '__MOTOR_E2E__' in window);
-  await expect(page.evaluate(() => window.__MOTOR_E2E__!.probeQuotaWrite(1024 * 1024)))
-    .resolves.toBe('AbortError');
-  await context.close();
+  await expect(session.send('Storage.getUsageAndQuota', { origin })).resolves.toMatchObject({
+    quota: 1,
+    overrideActive: true,
+  });
+  await quotaPage.goto('/estudos');
+  await quotaPage.waitForFunction(() => '__MOTOR_E2E__' in window);
+  const failingProbe = await quotaPage.evaluate(() => window.__MOTOR_E2E__!.prepareQuotaProbe());
+  await expect(quotaPage.evaluate(({ probe, bytes }) =>
+    window.__MOTOR_E2E__!.probeQuotaWrite(probe, bytes), { probe: failingProbe, bytes: probeBytes }))
+    .resolves.toEqual({
+      stage: 'write', event: 'abort', requestEvent: 'success', errorName: 'AbortError',
+    });
+  await quotaContext.close();
 });

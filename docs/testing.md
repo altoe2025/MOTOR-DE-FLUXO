@@ -148,10 +148,14 @@ sintética e manual, reload, histórico, CAS entre duas abas, isolamento de duas
 contas locais controladas, migrações versionadas e recuperação de execução
 interrompida.
 
-O teste de quota usa `Storage.overrideQuotaForOrigin` no Chromium e comprova que uma
-gravação real em IndexedDB aborta. Isso é injeção determinística do limite, não
-evidência de esgotamento físico do disco. `blocked` usa duas conexões reais ao
-IndexedDB; corrupção insere uma linha inválida e exige o erro tipado do repositório.
+O teste de quota usa `Storage.overrideQuotaForOrigin` em um banco-probe isolado no
+Chromium. Uma transação `versionchange` idêntica completa sem override; sob o limite,
+o `put` de chave única emite `success` e a própria transação aborta. No Chromium 153
+observado, o override não atingiu writes em banco já inicializado, então o probe é
+criado depois de ativá-lo. Essa é uma prova controlada de quota/transação, não de
+esgotamento físico do disco nem do schema de produção. `blocked` usa duas conexões
+reais ao IndexedDB; corrupção insere uma linha inválida e exige o erro tipado do
+repositório.
 
 O zoom de 200% é aplicado e capturado pelo Chromium no percurso observado. Não é
 um teste jsdom. As requisições dos percursos são inspecionadas para impedir nome de

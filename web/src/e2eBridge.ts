@@ -14,7 +14,11 @@ export type MotorE2EBridge = Readonly<{
   migrateLegacyFixtures(input: Readonly<{ draft: string; study: string; importer: string }>): Promise<Readonly<{ studies: readonly string[]; recoveredDraft: string | null; archivedImporter: boolean }>>;
   probeBlockedAndCorruptStorage(): Promise<Readonly<{ blocked: boolean; corruptionCode: string | null }>>;
   recoverInterruptedLegacyStudy(raw: string): Promise<readonly string[]>;
-  probeQuotaWrite(bytes: number): Promise<string | null>;
+  prepareQuotaProbe(): Promise<Readonly<{ databaseName: string; nextVersion: number }>>;
+  probeQuotaWrite(probe: Readonly<{ databaseName: string; nextVersion: number }>, bytes: number): Promise<
+    | Readonly<{ stage: 'write'; event: 'complete'; requestEvent: 'success' }>
+    | Readonly<{ stage: 'write'; event: 'abort'; requestEvent: 'success' | 'error'; errorName: string }>
+  >;
 }>;
 
 declare global {
@@ -25,28 +29,79 @@ declare global {
 
 export function installE2EBridge(): void {
   window.__MOTOR_E2E__ = Object.freeze({
-    async probeQuotaWrite(bytes: number) {
-      const projectRef = `e2e-quota-${crypto.randomUUID()}`;
-      const repository = new IndexedDbApplicationRepository({ projectRef, ownerSub: E2E_OWNER_SUB });
-      try {
-        await repository.listStudies();
-      } catch (error) {
-        return error instanceof DOMException ? error.name : 'UNKNOWN';
-      } finally { repository.close(); }
-      const databaseName = `motor-fluxo:app:v2:${encodeURIComponent(projectRef)}:${encodeURIComponent(E2E_OWNER_SUB)}`;
-      const database = await new Promise<IDBDatabase>((resolve, reject) => {
-        const request = indexedDB.open(databaseName);
-        request.onerror = () => reject(request.error);
-        request.onsuccess = () => resolve(request.result);
+    async prepareQuotaProbe() {
+      return {
+        databaseName: `motor-fluxo:quota-probe:${crypto.randomUUID()}`,
+        nextVersion: 1,
+      };
+    },
+    async probeQuotaWrite(probe: Readonly<{ databaseName: string; nextVersion: number }>, bytes: number) {
+      return new Promise<
+        | Readonly<{ stage: 'write'; event: 'complete'; requestEvent: 'success' }>
+        | Readonly<{ stage: 'write'; event: 'abort'; requestEvent: 'success' | 'error'; errorName: string }>
+      >((resolve, reject) => {
+        const request = indexedDB.open(probe.databaseName, probe.nextVersion);
+        let requestEvent: 'pending' | 'success' | 'error' = 'pending';
+        let transactionEvent: 'pending' | 'complete' | 'abort' = 'pending';
+        let settled = false;
+        const finish = (result:
+          | Readonly<{ stage: 'write'; event: 'complete'; requestEvent: 'success' }>
+          | Readonly<{ stage: 'write'; event: 'abort'; requestEvent: 'success' | 'error'; errorName: string }>) => {
+          if (!settled) { settled = true; resolve(result); }
+        };
+        request.onerror = () => {
+          if (requestEvent === 'pending') { reject(request.error); return; }
+          if (transactionEvent !== 'abort') {
+            reject(new Error('A abertura falhou sem o evento abort da transação de escrita.'));
+            return;
+          }
+          finish({
+            stage: 'write', event: transactionEvent, requestEvent,
+            errorName: request.error?.name ?? 'UNKNOWN',
+          });
+        };
+        request.onsuccess = () => {
+          request.result.close();
+          if (requestEvent !== 'success' || transactionEvent !== 'complete') {
+            reject(new Error('A escrita de quota não confirmou antes do complete da transação.'));
+            return;
+          }
+          finish({ stage: 'write', event: transactionEvent, requestEvent });
+        };
+        request.onupgradeneeded = () => {
+          const transaction = request.transaction;
+          if (transaction === null) { reject(new Error('Versionchange sem transação.')); return; }
+          transaction.oncomplete = () => { transactionEvent = 'complete'; };
+          transaction.onabort = () => { transactionEvent = 'abort'; };
+          try {
+            for (let index = 0; index < 8; index += 1) {
+              const padding = request.result.createObjectStore(`padding-${index}`, { keyPath: 'key' });
+              padding.createIndex('by_owner', 'owner');
+              padding.createIndex('by_owner_entity', ['owner', 'entity']);
+            }
+            const value = new Uint8Array(bytes);
+            let state = 0x6d2b79f5;
+            for (let index = 0; index < value.length; index += 1) {
+              state ^= state << 13;
+              state ^= state >>> 17;
+              state ^= state << 5;
+              value[index] = state & 0xff;
+            }
+            const store = request.result.createObjectStore(
+              `quota-probe-v${probe.nextVersion}`,
+              { keyPath: 'key' },
+            );
+            const write = store.put({
+              key: `quota-probe-v${probe.nextVersion}`,
+              value: value.buffer,
+            });
+            write.onsuccess = () => { requestEvent = 'success'; };
+            write.onerror = () => { requestEvent = 'error'; };
+          } catch (error) {
+            reject(error);
+          }
+        };
       });
-      try {
-        return await new Promise<string | null>((resolve) => {
-          const transaction = database.transaction('meta', 'readwrite');
-          transaction.objectStore('meta').put({ key: 'quota-probe', value: 'x'.repeat(bytes) });
-          transaction.oncomplete = () => resolve(null);
-          transaction.onabort = () => resolve(transaction.error?.name ?? 'UNKNOWN');
-        });
-      } finally { database.close(); }
     },
     async recoverInterruptedLegacyStudy(raw: string) {
       const projectRef = `e2e-interrupted-${crypto.randomUUID()}`;

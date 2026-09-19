@@ -36,12 +36,18 @@
   da comparação canônica, inclusive na validação persistida.
 - RED de conta B: o auth E2E tinha uma identidade única; GREEN com duas identidades
   locais controladas e allowlist correspondente no servidor E2E.
-- A quota foi inicialmente chamada com o nome errado do parâmetro CDP; o teste final
-  usa `quotaSize` e exige o `AbortError` de uma transação IndexedDB real.
+- A prova de quota inicialmente podia aceitar um `AbortError` ocorrido ao abrir o
+  schema, antes da escrita-alvo. O teste final usa um banco-probe novo: a mesma
+  transação `versionchange` completa sem override; sob `quotaSize: 1`, o `put` de
+  chave única emite `success` e a própria transação aborta com `AbortError`.
 
 ## Limites honestos
 
-- Quota é uma injeção determinística do Chromium, não esgotamento físico de disco.
+- Quota é um teste controlado de limite/transação em banco-probe isolado, não
+  esgotamento físico de disco nem exercício do schema de produção. No Chromium 153
+  observado, o override não foi aplicado a writes em um banco já inicializado; por
+  isso a prova cria o banco-probe somente depois de ativar o limite. Nenhuma alegação
+  de falha física ou cobertura do schema de produção é feita.
 - O gate `real-auth` exige `MOT_REAL_AUTH_BASE_URL`, `MOT_REAL_AUTH_EMAIL` e
   `MOT_REAL_AUTH_PASSWORD`. Essas credenciais não estavam no ambiente e não foram
   inventadas nem solicitadas.
