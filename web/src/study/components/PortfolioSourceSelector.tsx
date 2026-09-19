@@ -61,33 +61,6 @@ function group(): Group {
   return { id: uuid(), name: 'Grupo 1', parameters: { ...DEFAULTS }, participants: [participant()] };
 }
 
-function daysBetween(start: string, end: string): string {
-  const startAt = Date.parse(`${start}T00:00:00Z`);
-  const endAt = Date.parse(`${end}T00:00:00Z`);
-  return String(Math.max(0, Math.round((endAt - startAt) / 86_400_000)));
-}
-
-function groupsFromObserved(caseRecord: ObservedCase): Group[] {
-  return [{
-    id: uuid(),
-    name: `Caso ${caseRecord.companyId}`,
-    parameters: { ...DEFAULTS },
-    participants: caseRecord.orders.map((order, index) => ({
-      id: uuid(),
-      name: order.clientId || `Participante ${index + 1}`,
-      override: true,
-      parameters: {
-        frequency: '1',
-        ticket: order.valueBrl,
-        direction: order.direction,
-        deadline: daysBetween(order.knownDate, order.deadlineDate),
-        purpose: order.purposeCode ?? (order.direction === 'OUT' ? PURPOSE_OUT : PURPOSE_IN),
-        profile: order.direction === 'OUT' ? 'remessa_outbound_massiva' : 'exportador',
-      },
-    })),
-  }];
-}
-
 function decimal(text: string, label: string, allowZero = false): Decimal {
   if (!/^\d+(?:\.\d+)?$/.test(text)) throw new Error(`${label}: Use ponto como separador decimal.`);
   const value = new Decimal(text);
@@ -199,6 +172,72 @@ function SyntheticForm({ study, scenario, initialExampleId, onApply }: { study: 
   return <section className="source-panel"><h2>Exemplo sintético</h2><label htmlFor="synthetic-example">Escolha do exemplo sintético</label><select id="synthetic-example" value={exampleId} onChange={(event) => setExampleId(event.currentTarget.value)}>{EXAMPLES.map((example) => <option key={example.id} value={example.id}>{example.label}</option>)}</select><p className="field-hint">O exemplo é materializado pela preparação oficial; nenhuma ordem é fabricada no navegador.</p><Button onClick={() => { const example = EXAMPLES.find((item) => item.id === exampleId)!; const syntheticGroup = { ...group(), parameters: example.parameters, participants: [participant(example.parameters)] }; onApply({ kind: 'SYNTHETIC', exampleId, preparation: request(study, scenario, [syntheticGroup], 'PADRAO_SINTETICO') }); }}>Preparar exemplo</Button></section>;
 }
 
+function ExplicitOrdersForm({
+  definition,
+  authoredPortfolioId,
+  onApply,
+}: {
+  definition: Extract<AuthoredPortfolioDefinition, { kind: 'EXPLICIT_ORDERS' }>;
+  authoredPortfolioId: string;
+  onApply(source: PortfolioSourceDraft): void;
+}) {
+  const [orders, setOrders] = useState(() => definition.orders.map((order) => structuredClone(order)));
+  const [error, setError] = useState<string | null>(null);
+  const change = (index: number, patch: Partial<(typeof orders)[number]>) => {
+    setOrders((current) => current.map((order, position) => position === index
+      ? { ...order, ...patch }
+      : order));
+  };
+  const submit = () => {
+    try {
+      const provenanceByOrder = Object.fromEntries(orders.map((order, index) => {
+        const original = definition.orders[index];
+        const provenance = original === undefined
+          ? undefined
+          : definition.provenanceByOrder[original.id];
+        if (provenance === undefined) throw new Error(`Proveniência ausente para ${order.id}.`);
+        return [order.id, structuredClone(provenance)];
+      }));
+      orders.forEach((order) => {
+        decimal(order.valor_brl, `Valor BRL da operação ${order.id}`);
+        if (!Number.isSafeInteger(order.dia_conhecida)
+          || !Number.isSafeInteger(order.dia_limite)
+          || order.dia_limite < order.dia_conhecida) {
+          throw new Error(`Datas relativas inválidas para ${order.id}.`);
+        }
+      });
+      setError(null);
+      onApply({
+        kind: 'AUTHORED',
+        authoredPortfolioId,
+        definition: {
+          ...definition,
+          orders: structuredClone(orders),
+          provenanceByOrder,
+        },
+      });
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Operações explícitas inválidas.');
+    }
+  };
+  return <section className="source-panel">
+    <h2>Operações explícitas</h2>
+    {error ? <p role="alert" className="field-error">{error}</p> : null}
+    {orders.map((order, index) => <fieldset key={`${index}-${order.id}`} className="authoring-participant">
+      <legend>Operação {index + 1}</legend>
+      <TextField id={`explicit-id-${index}`} label={`ID da operação ${definition.orders[index]!.id}`} value={order.id} onChange={(event) => change(index, { id: event.currentTarget.value })} />
+      <TextField id={`explicit-client-${index}`} label={`Cliente da operação ${definition.orders[index]!.id}`} value={order.cliente_id} onChange={(event) => change(index, { cliente_id: event.currentTarget.value })} />
+      <label>Direção da operação {definition.orders[index]!.id}<select value={order.direcao} onChange={(event) => change(index, { direcao: event.currentTarget.value as 'OUT' | 'IN' })}><option value="OUT">OUT</option><option value="IN">IN</option></select></label>
+      <TextField id={`explicit-known-${index}`} label={`Dia conhecido da operação ${definition.orders[index]!.id}`} value={String(order.dia_conhecida)} inputMode="numeric" onChange={(event) => change(index, { dia_conhecida: Number(event.currentTarget.value) })} />
+      <TextField id={`explicit-deadline-${index}`} label={`Dia limite da operação ${definition.orders[index]!.id}`} value={String(order.dia_limite)} inputMode="numeric" onChange={(event) => change(index, { dia_limite: Number(event.currentTarget.value) })} />
+      <TextField id={`explicit-value-${index}`} label={`Valor BRL da operação ${definition.orders[index]!.id}`} value={order.valor_brl} inputMode="decimal" onChange={(event) => change(index, { valor_brl: event.currentTarget.value })} />
+      <TextField id={`explicit-purpose-${index}`} label={`Finalidade da operação ${definition.orders[index]!.id}`} value={order.finalidade} onChange={(event) => change(index, { finalidade: event.currentTarget.value })} />
+      <label><input type="checkbox" checked={order.eh_efx} onChange={(event) => change(index, { eh_efx: event.currentTarget.checked })} /> EFX da operação {definition.orders[index]!.id}</label>
+    </fieldset>)}
+    <Button onClick={submit}>Salvar operações explícitas</Button>
+  </section>;
+}
+
 function brlTotal(item: ObservedCase): string {
   return item.orders.reduce((total, order) => total.plus(order.valueBrl), new Decimal(0)).toString();
 }
@@ -213,7 +252,7 @@ export function PortfolioSourceSelector({ value, study, scenario, observedCases,
   const [draftKind, setDraftKind] = useState(value);
   const [authoredDirty, setAuthoredDirty] = useState(false);
   const [caseId, setCaseId] = useState(selectedCaseId ?? '');
-  const [convertedGroups, setConvertedGroups] = useState<Group[] | undefined>();
+  const [convertedExplicit, setConvertedExplicit] = useState<Extract<AuthoredPortfolioDefinition, { kind: 'EXPLICIT_ORDERS' }> | undefined>();
   const [conversionError, setConversionError] = useState<string | null>(null);
   const confirmed = useMemo(() => observedCases.filter((item) => item.status === 'CONFIRMED'), [observedCases]);
   const selected = confirmed.find((item) => item.id === caseId);
@@ -225,8 +264,8 @@ export function PortfolioSourceSelector({ value, study, scenario, observedCases,
     const caseRecord = confirmed.find((item) => item.id === id);
     if (caseRecord === undefined) return;
     try {
-      const converted = groupsFromObserved(caseRecord);
-      setConvertedGroups(converted);
+      const converted = authoredDefinitionFromObservedCase(caseRecord);
+      setConvertedExplicit(converted);
       setConversionError(null);
       notifyConvertObserved(id);
       setAuthoredDirty(false);
@@ -234,7 +273,7 @@ export function PortfolioSourceSelector({ value, study, scenario, observedCases,
       onChange({
         kind: 'AUTHORED',
         authoredPortfolioId: uuid(),
-        definition: authoredDefinitionFromObservedCase(caseRecord),
+        definition: converted,
       });
     } catch (reason) {
       setConversionError(reason instanceof Error ? reason.message : 'Não foi possível converter o caso observado.');
@@ -245,6 +284,13 @@ export function PortfolioSourceSelector({ value, study, scenario, observedCases,
     && currentSource.definition?.kind === 'PARAMETRIC'
     ? currentSource.definition.groups
     : undefined;
-  const initialGroups = convertedGroups ?? persistedGroups;
-  return <fieldset className="source-selector"><legend>Origem da carteira</legend><div className="source-selector__choices" role="radiogroup" aria-label="Origem da carteira"><label><input type="radio" name="portfolio-source" checked={draftKind === 'SYNTHETIC'} onChange={() => selectKind('SYNTHETIC')} /> Exemplo sintético</label><label><input type="radio" name="portfolio-source" checked={draftKind === 'AUTHORED'} onChange={() => selectKind('AUTHORED')} /> Autoria manual</label><label><input type="radio" name="portfolio-source" checked={draftKind === 'OBSERVED_CASE'} onChange={() => selectKind('OBSERVED_CASE')} /> Caso observado</label></div>{draftKind === 'SYNTHETIC' ? <SyntheticForm study={study} scenario={scenario} {...(currentSource.kind === 'SYNTHETIC' ? { initialExampleId: currentSource.recipe.exampleId } : {})} onApply={onChange} /> : draftKind === 'AUTHORED' ? <AuthoredForm study={study} scenario={scenario} {...(initialGroups === undefined ? {} : { initialGroups })} onApply={onChange} onDirty={setAuthoredDirty} /> : <section className="source-panel"><h2>Caso observado</h2>{conversionError ? <p role="alert" className="field-error">{conversionError}</p> : null}<label htmlFor="observed-case">Caso confirmado</label><select id="observed-case" value={caseId} onChange={(event) => setCaseId(event.currentTarget.value)}><option value="">Selecione um caso</option>{confirmed.map((item) => <option key={item.id} value={item.id}>{companies.find((company) => company.id === item.companyId)?.displayName ?? item.companyId} · {item.window.startDate}–{item.window.endDate}</option>)}</select>{selected ? <div className="observed-summary"><h3>{companies.find((company) => company.id === selected.companyId)?.displayName ?? selected.companyId}</h3><dl><div><dt>Janela</dt><dd>{selected.window.startDate} a {selected.window.endDate}</dd></div><div><dt>Ordens</dt><dd>{selected.orders.length} {selected.orders.length === 1 ? 'ordem' : 'ordens'}</dd></div><div><dt>Total</dt><dd>{brlTotal(selected)} BRL</dd></div><div><dt>Qualidade</dt><dd>{selected.quality.blockers.length === 0 ? 'Sem bloqueios' : `${selected.quality.blockers.length} bloqueio(s)`}; {selected.quality.warnings.length} aviso(s)</dd></div><div><dt>Proveniência</dt><dd>{[...new Set(selected.orders.flatMap((order) => order.provenance.map((item) => item.source)))].join(', ')}</dd></div></dl><p className="field-hint">A revisão {selected.revision} será copiada para um snapshot imutável. A fonte não será alterada.</p><div className="source-actions"><Button onClick={() => onChange({ kind: 'OBSERVED_CASE', caseId: selected.id, caseRevision: selected.revision })}>Usar caso confirmado</Button><Button variant="secondary" onClick={() => onConvertObserved(selected.id)}>Converter para autoria manual</Button></div></div> : null}</section>}</fieldset>;
+  const initialGroups = persistedGroups;
+  const explicit = convertedExplicit ?? (currentSource.kind === 'AUTHORED'
+    && currentSource.definition?.kind === 'EXPLICIT_ORDERS'
+    ? currentSource.definition
+    : undefined);
+  const authoredPortfolioId = currentSource.kind === 'AUTHORED'
+    ? currentSource.authoredPortfolioId
+    : uuid();
+  return <fieldset className="source-selector"><legend>Origem da carteira</legend><div className="source-selector__choices" role="radiogroup" aria-label="Origem da carteira"><label><input type="radio" name="portfolio-source" checked={draftKind === 'SYNTHETIC'} onChange={() => selectKind('SYNTHETIC')} /> Exemplo sintético</label><label><input type="radio" name="portfolio-source" checked={draftKind === 'AUTHORED'} onChange={() => selectKind('AUTHORED')} /> Autoria manual</label><label><input type="radio" name="portfolio-source" checked={draftKind === 'OBSERVED_CASE'} onChange={() => selectKind('OBSERVED_CASE')} /> Caso observado</label></div>{draftKind === 'SYNTHETIC' ? <SyntheticForm study={study} scenario={scenario} {...(currentSource.kind === 'SYNTHETIC' ? { initialExampleId: currentSource.recipe.exampleId } : {})} onApply={onChange} /> : draftKind === 'AUTHORED' ? explicit === undefined ? <AuthoredForm study={study} scenario={scenario} {...(initialGroups === undefined ? {} : { initialGroups })} onApply={onChange} onDirty={setAuthoredDirty} /> : <ExplicitOrdersForm definition={explicit} authoredPortfolioId={authoredPortfolioId} onApply={onChange} /> : <section className="source-panel"><h2>Caso observado</h2>{conversionError ? <p role="alert" className="field-error">{conversionError}</p> : null}<label htmlFor="observed-case">Caso confirmado</label><select id="observed-case" value={caseId} onChange={(event) => setCaseId(event.currentTarget.value)}><option value="">Selecione um caso</option>{confirmed.map((item) => <option key={item.id} value={item.id}>{companies.find((company) => company.id === item.companyId)?.displayName ?? item.companyId} · {item.window.startDate}–{item.window.endDate}</option>)}</select>{selected ? <div className="observed-summary"><h3>{companies.find((company) => company.id === selected.companyId)?.displayName ?? selected.companyId}</h3><dl><div><dt>Janela</dt><dd>{selected.window.startDate} a {selected.window.endDate}</dd></div><div><dt>Ordens</dt><dd>{selected.orders.length} {selected.orders.length === 1 ? 'ordem' : 'ordens'}</dd></div><div><dt>Total</dt><dd>{brlTotal(selected)} BRL</dd></div><div><dt>Qualidade</dt><dd>{selected.quality.blockers.length === 0 ? 'Sem bloqueios' : `${selected.quality.blockers.length} bloqueio(s)`}; {selected.quality.warnings.length} aviso(s)</dd></div><div><dt>Proveniência</dt><dd>{[...new Set(selected.orders.flatMap((order) => order.provenance.map((item) => item.source)))].join(', ')}</dd></div></dl><p className="field-hint">A revisão {selected.revision} será copiada para um snapshot imutável. A fonte não será alterada.</p><div className="source-actions"><Button onClick={() => onChange({ kind: 'OBSERVED_CASE', caseId: selected.id, caseRevision: selected.revision })}>Usar caso confirmado</Button><Button variant="secondary" onClick={() => onConvertObserved(selected.id)}>Converter para autoria manual</Button></div></div> : null}</section>}</fieldset>;
 }

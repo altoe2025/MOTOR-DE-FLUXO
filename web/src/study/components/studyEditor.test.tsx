@@ -150,6 +150,42 @@ describe('StudyEditor', () => {
     }));
   });
 
+  it('reidrata e reedita operações explícitas sem passar pelo gerador', async () => {
+    const snapshot = makeAuthoredSnapshot();
+    if (snapshot.source.kind !== 'AUTHORED') throw new Error('fixture');
+    const provenance = snapshot.provenance[0]!;
+    snapshot.source.definition = {
+      kind: 'EXPLICIT_ORDERS',
+      orders: structuredClone(snapshot.orders),
+      provenanceByOrder: Object.fromEntries(snapshot.orders.map((order) => [order.id, {
+        dia_conhecida: provenance, dia_limite: provenance, valor_brl: provenance,
+        finalidade: provenance, eh_efx: provenance,
+      }])),
+    };
+    const document = await createStudy({
+      id: 'study-explicit', ownerSub: FIXTURE_OWNER, name: 'Operações explícitas',
+      baseScenario: makeScenarioDraft({ sourceSnapshot: snapshot }), now: FIXTURE_NOW,
+    });
+    const onSourceChange = vi.fn();
+    await subject({ study: document, onSourceChange });
+    const user = userEvent.setup();
+
+    expect(screen.getByLabelText('ID da operação order-a')).toHaveValue('order-a');
+    expect(screen.getByLabelText('Cliente da operação order-a')).toHaveValue('client-a');
+    await user.clear(screen.getByLabelText('Valor BRL da operação order-a'));
+    await user.type(screen.getByLabelText('Valor BRL da operação order-a'), '125.5000');
+    await user.click(screen.getByRole('button', { name: 'Salvar operações explícitas' }));
+
+    expect(onSourceChange).toHaveBeenCalledWith(expect.objectContaining({
+      kind: 'AUTHORED',
+      definition: expect.objectContaining({
+        kind: 'EXPLICIT_ORDERS',
+        orders: expect.arrayContaining([expect.objectContaining({ id: 'order-a', valor_brl: '125.5000' })]),
+      }),
+    }));
+    expect(onSourceChange.mock.calls[0]![0]).not.toHaveProperty('preparation');
+  });
+
   it('converte caso observado em autoria preenchida sem modificar o original', async () => {
     const { onSourceChange, onConvertObserved, observedCase } = await subject(); const user = userEvent.setup();
     const originalJson = JSON.stringify(observedCase);
@@ -166,9 +202,9 @@ describe('StudyEditor', () => {
     expect(onSourceChange).toHaveBeenCalledWith({ kind: 'OBSERVED_CASE', caseId: 'case-1', caseRevision: 4 });
     await user.click(screen.getByRole('button', { name: 'Converter para autoria manual' }));
     expect(onConvertObserved).toHaveBeenCalledWith('case-1');
-    expect(screen.getByLabelText('Ticket médio do participante')).toHaveValue('100');
-    expect(screen.getByLabelText('Direção do participante')).toHaveValue('OUT');
-    expect(screen.getByLabelText('Finalidade do participante')).toHaveValue('ANEXO_V_REMESSA_TERCEIRO');
+    expect(screen.getByLabelText('Valor BRL da operação observed-order-1')).toHaveValue('100');
+    expect(screen.getByLabelText('Direção da operação observed-order-1')).toHaveValue('OUT');
+    expect(screen.getByLabelText('Finalidade da operação observed-order-1')).toHaveValue('ANEXO_V_REMESSA_TERCEIRO');
     expect(onSourceChange).toHaveBeenLastCalledWith(expect.objectContaining({
       kind: 'AUTHORED',
       definition: expect.objectContaining({
