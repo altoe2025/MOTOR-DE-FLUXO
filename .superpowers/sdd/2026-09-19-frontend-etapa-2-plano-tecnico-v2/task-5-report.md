@@ -15,7 +15,10 @@
 - Leituras de estudo validam o documento armazenado. Schema futuro retorna
   `SCHEMA_UNSUPPORTED`; conteúdo inválido retorna `DOCUMENT_CORRUPT`.
 - Recuperação terminaliza apenas `PREPARING`/`RUNNING` como `INTERRUPTED`, conserva o
-  request original e persiste a transição por CAS/operação, sem qualquer POST.
+  request original e persiste a transição por CAS/operação, sem qualquer POST. Repetir
+  `expectedRevision` e `operationId` originais delega ao replay idempotente do
+  repositório: não duplica operação nem avança a revisão; outra operação continua em
+  conflito.
 - Restore continua incrementando revisão via CAS. Purge remove estudo e execuções e
   substitui o histórico de operações por tombstones sem conteúdo sensível, na mesma
   transação; Casos Observados permanecem inalterados.

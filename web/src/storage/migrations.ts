@@ -526,6 +526,13 @@ export async function recoverInterruptedExecution(
 ): Promise<StudyDocument> {
   const current = await repository.getStudy(studyId);
   if (current === null) throw new NotFoundError('Estudo não encontrado para recuperação.');
+  if (current.revision === expectedRevision + 1) {
+    return repository.saveStudy({
+      expectedRevision,
+      operationId,
+      document: current,
+    });
+  }
   if (current.revision !== expectedRevision) {
     throw new RevisionConflictError(expectedRevision, current.revision);
   }

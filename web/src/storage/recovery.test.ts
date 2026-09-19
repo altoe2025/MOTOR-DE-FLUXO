@@ -121,13 +121,31 @@ describe('recovery', () => {
       executions: [{ status: 'INTERRUPTED', finishedAt: '2026-09-19T12:05:00Z' }],
     });
     expect(await target.getStudy(running.id)).toEqual(recovered);
-    expect(await recoverInterruptedExecution(
+    const replayed = await recoverInterruptedExecution(
       target,
       running.id,
-      recovered.revision,
+      running.revision,
       'recover-running',
-      '2026-09-19T12:06:00Z',
-    )).toEqual(recovered);
+      '2026-09-19T12:05:00Z',
+    );
+    expect(replayed).toEqual(recovered);
+    expect((await target.getStudy(running.id))?.revision).toBe(2);
+    await expect(recoverInterruptedExecution(
+      target,
+      running.id,
+      running.revision,
+      'different-recovery',
+      '2026-09-19T12:05:00Z',
+    )).rejects.toMatchObject({ code: 'REVISION_CONFLICT' });
+
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open(DATABASE_NAME);
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => resolve(request.result);
+    });
+    expect(await requestResult(database.transaction('operations').objectStore('operations').count()))
+      .toBe(2);
+    database.close();
   });
 
   it('restores through CAS and purges study, executions and sensitive operation history atomically', async () => {
