@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 
 const TOKEN_A = 'mot21-controlled-e2e-token';
 const TOKEN_B = 'mot32-controlled-e2e-token-b';
@@ -19,6 +19,13 @@ async function release(page: Page, fail = false) {
     .toMatchObject({ pending: 1 });
   const response = await page.request.post('/__e2e__/diagnostics/release', { data: { fail } });
   expect(response.ok()).toBe(true);
+}
+
+async function tabTo(page: Page, target: Locator, maximumTabs = 40) {
+  for (let index = 0; index < maximumTabs; index += 1) {
+    if (await target.evaluate((element) => element === document.activeElement)) return;
+    await page.keyboard.press('Tab');
+  }
 }
 
 test('two controlled jobs expose progress, cancel, idempotency, isolation and reload', async ({ browser }) => {
@@ -86,4 +93,49 @@ test('fixed input has no distribution and a failed generated repetition publishe
   await release(page, true);
   await expect(page.getByRole('heading', { name: 'Falha no diagnóstico' })).toBeVisible();
   await expect(page.getByRole('heading', { name: /Distribuição|Execução selecionada/ })).toHaveCount(0);
+});
+
+test('robust diagnostic remains keyboard accessible at 200 percent zoom', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const studyId = await createStudy(page);
+  await page.goto(`/estudos/${studyId}/diagnostico`);
+  await page.evaluate(() => { document.documentElement.style.zoom = '200%'; });
+
+  const repetitions = page.getByLabel('Repetições');
+  await tabTo(page, repetitions);
+  await expect(repetitions).toBeFocused();
+  await page.keyboard.press('Tab');
+  const runButton = page.getByRole('button', { name: 'Executar diagnóstico' });
+  await expect(runButton).toBeFocused();
+  const focusStyle = await runButton.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return { style: style.outlineStyle, width: style.outlineWidth };
+  });
+  expect(focusStyle.style).not.toBe('none');
+  expect(focusStyle.width).not.toBe('0px');
+  await page.keyboard.press('Enter');
+
+  for (let index = 0; index < 10; index += 1) await release(page);
+  await expect(page.getByRole('heading', { name: 'Diagnóstico concluído' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Distribuição de repetições' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Execução selecionada' })).toBeVisible();
+  await expect(page.getByRole('region', { name: /^\d\. / })).toHaveCount(7);
+
+  const diagnosticScrollAreas = page.locator('.diagnostic-page .table-scroll');
+  expect(await diagnosticScrollAreas.count()).toBeGreaterThan(0);
+  expect(await diagnosticScrollAreas.evaluateAll((elements) => elements.every((element) => (
+    element.getAttribute('tabindex') === '0' && (element.getAttribute('aria-label')?.length ?? 0) > 0
+  )))).toBe(true);
+
+  const scrollableTable = page.getByRole('region', {
+    name: 'Tabela rolável — Economia por repetição — dados do gráfico',
+  });
+  await scrollableTable.scrollIntoViewIfNeeded();
+  await tabTo(page, scrollableTable);
+  await expect(scrollableTable).toBeFocused();
+  const before = await scrollableTable.evaluate((element) => element.scrollLeft);
+  await page.keyboard.press('ArrowRight');
+  await expect.poll(() => scrollableTable.evaluate((element) => element.scrollLeft)).toBeGreaterThan(before);
+
+  await page.screenshot({ path: testInfo.outputPath('diagnostico-robusto-zoom-200.png'), fullPage: true });
 });

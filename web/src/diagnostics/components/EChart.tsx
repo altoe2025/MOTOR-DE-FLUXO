@@ -31,7 +31,7 @@ export function ChartWithTable({ series, description }: Readonly<{ series: Chart
   const { rows } = chartPresentation(series);
   return <div className="chart-with-table">
     <EChart series={series} description={description} />
-    <div className="table-scroll">
+    <div className="table-scroll" role="region" tabIndex={0} aria-label={`Tabela rolável — ${series.name} — dados do gráfico`}>
       <table className="diagnostic-table">
         <caption>{series.name} — dados do gráfico</caption>
         <thead><tr><th scope="col">Categoria</th><th scope="col">Valor</th></tr></thead>

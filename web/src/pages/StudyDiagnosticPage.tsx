@@ -206,7 +206,7 @@ export function StudyDiagnosticPage() {
         <DiagnosticAxesView axes={envelope.axes} consequences={envelope.consequences} limitations={envelope.limitations} />
         <section className="diagnostic-card" aria-labelledby="provenance-heading"><h2 id="provenance-heading">Proveniência</h2>
           <dl className="diagnostic-identity"><div><dt>Job</dt><dd>{envelope.job_id}</dd></div><div><dt>Fingerprint do request</dt><dd>{envelope.request_fingerprint}</dd></div><div><dt>Versão do schema</dt><dd>{envelope.schema_version}</dd></div></dl>
-          <div className="table-scroll"><table className="diagnostic-table"><caption>Origem dos campos do request</caption><thead><tr><th scope="col">Caminho</th><th scope="col">Tipo</th><th scope="col">Fonte</th><th scope="col">Registrado em</th></tr></thead><tbody>{Object.entries(envelope.provenance.request_paths).map(([path, origin]) => <tr key={path}><th scope="row">{path}</th><td>{origin.tipo}</td><td>{origin.fonte}</td><td>{origin.registrado_em_utc}</td></tr>)}</tbody></table></div>
+          <div className="table-scroll" role="region" tabIndex={0} aria-label="Tabela rolável — Origem dos campos do request"><table className="diagnostic-table"><caption>Origem dos campos do request</caption><thead><tr><th scope="col">Caminho</th><th scope="col">Tipo</th><th scope="col">Fonte</th><th scope="col">Registrado em</th></tr></thead><tbody>{Object.entries(envelope.provenance.request_paths).map(([path, origin]) => <tr key={path}><th scope="row">{path}</th><td>{origin.tipo}</td><td>{origin.fonte}</td><td>{origin.registrado_em_utc}</td></tr>)}</tbody></table></div>
           <EvidenceList refs={envelope.provenance.evidence_refs} />
         </section>
       </>}

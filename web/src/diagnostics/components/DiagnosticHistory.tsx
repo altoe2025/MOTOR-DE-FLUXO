@@ -12,7 +12,7 @@ export function DiagnosticHistory({ executions }: Readonly<{ executions: readonl
   if (attempts.length === 0) return null;
   return <section className="diagnostic-card" aria-labelledby="diagnostic-history-heading">
     <h2 id="diagnostic-history-heading">Histórico de tentativas</h2>
-    <div className="table-scroll"><table className="diagnostic-table" aria-label="Histórico de tentativas diagnósticas">
+    <div className="table-scroll" role="region" tabIndex={0} aria-label="Tabela rolável — Histórico de tentativas diagnósticas"><table className="diagnostic-table" aria-label="Histórico de tentativas diagnósticas">
       <thead><tr><th scope="col">Tentativa</th><th scope="col">Status terminal</th><th scope="col">Criada em</th><th scope="col">Job</th></tr></thead>
       <tbody>{attempts.map((execution) => <tr key={execution.attemptId}><th scope="row">{execution.attemptId}</th><td>{execution.status}</td><td>{execution.createdAt}</td><td>{execution.jobId ?? 'não atribuído'}</td></tr>)}</tbody>
     </table></div>

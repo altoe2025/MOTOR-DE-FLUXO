@@ -33,7 +33,7 @@ export function DiagnosticDistribution({ statistics, repetitions, economics }: D
     <h2 id="distribution-heading">Distribuição de repetições</h2>
     <p>{statistics.count} repetições · método {statistics.percentile_method}</p>
     <ChartWithTable series={savingsSeries} description="Economia observada em cada repetição; cada ponto é identificado também na tabela." />
-    <div className="table-scroll"><table className="diagnostic-table">
+    <div className="table-scroll" role="region" tabIndex={0} aria-label="Tabela rolável — Percentis recebidos do diagnóstico"><table className="diagnostic-table">
       <caption>Percentis recebidos do diagnóstico</caption>
       <thead><tr><th scope="col">Métrica</th><th scope="col">P10</th><th scope="col">P50</th><th scope="col">P90</th><th scope="col">Amplitude</th></tr></thead>
       <tbody>{summaries.map(([label, metric, unit]) => <tr key={label}><th scope="row">{label}</th>{metric.state === 'AVAILABLE' ? <>
