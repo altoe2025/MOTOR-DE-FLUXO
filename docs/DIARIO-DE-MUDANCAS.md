@@ -33,7 +33,7 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-09-19, após o aceite condicional local da Etapa 2 v2.
+Atualizada em 2026-09-20, durante o fechamento integrado local da Etapa 3.
 
 | Branch | Situação | Dono |
 |---|---|---|
@@ -62,6 +62,7 @@ Atualizada em 2026-09-19, após o aceite condicional local da Etapa 2 v2.
 | `codex/autonetting-preferencial` | PR #36 mergeado na `main`; grade histórica não regenerada | Codex |
 | `codex/mot62-planejamento-etapa2-v2` | documentação da MOT-62; IDs, dependências e auditoria da Etapa 2 v2, sem código de produto | Codex |
 | `codex/mot63-observed-contracts` | implementação e documentação da Etapa 2 v2; aceite **CONDITIONAL**, sem push/PR/merge e sem início da Etapa 3 | Codex |
+| `codex/frontend-etapa-3` | T0–T11 implementados localmente; gate global da MOT-76 ainda deve ser registrado antes de qualquer decisão de integração | Codex |
 
 Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
@@ -69,6 +70,34 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
 ---
+
+## 2026-09-20 — Aceitação integrada e regressão da Etapa 3 (MOT-76)
+
+1. **Sintoma.** Os fluxos Empresa→Perfil→Estudo e diagnóstico robusto tinham testes
+   focados, mas ainda faltava uma aceitação conjunta com fila controlável,
+   isolamento entre contas, regressão das Etapas 1–2, scanner ampliado e medição
+   10/30/100. Reloads nas rotas públicas novas de Empresa, diagnóstico e carteira
+   também retornavam JSON 404 embora a navegação pelo router funcionasse.
+2. **Causa.** O projeto Playwright local ainda selecionava apenas os specs anteriores
+   e o fallback SPA do servidor mantinha a allowlist da etapa anterior. Segurança e
+   performance possuíam evidências parciais, sem varrer binários/logs sensíveis nem
+   registrar as três cardinalidades diagnósticas no mesmo gate de CI.
+3. **O que foi feito.** Na branch `codex/frontend-etapa-3`, foram adicionadas
+   aceitações Python/Playwright para perfil versionado, CAS em duas abas, fila,
+   progresso, cancelamento, idempotência, isolamento 404, reload, entrada fixa,
+   distribuição gerada, falha sem parcial e regressão da Etapa 2. O worker E2E é
+   liberado por condição, prova teto de concorrência e encerra sem pendências. O
+   scanner passou a cobrir binários, URLs completas/query e payloads sensíveis em
+   logs. A CI mede 10/30/100 e preserva `-O`, frontend, E2E e scanner. A allowlist
+   SPA ganhou apenas os paths públicos exatos já declarados no router, inclusive
+   `/carteira/:uuid`, sem wildcard genérico.
+4. **O que isso invalida.** Invalida evidência de aceite da Etapa 3 baseada apenas
+   nos gates focados T0–T10 e a suposição de que um deep link funcional no router
+   necessariamente recarregava pelo servidor. Não altera motor, regras financeiras,
+   contratos diagnósticos, snapshots persistidos ou números de negócio. Os tempos
+   10/30/100 são medição sintética local, não SLA nem projeção comercial. Auth real
+   continua condicionado a credenciais externas e a pendência Ruff legada permanece
+   fora do escopo.
 
 ## 2026-09-20 — Lacunas e evidência por métrica na comparação temporal (MOT-75)
 

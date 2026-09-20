@@ -23,6 +23,18 @@ PATTERNS = {
         re.IGNORECASE,
     ),
 }
+SENSITIVE_LOG_PATTERNS = {
+    "sensitive-log-url": re.compile(
+        r"(?:logger|logging|_LOGGER)\.(?:debug|info|warning|error|exception)"
+        r"\([^\n]*(?:request\.url(?!\.path)|originalUrl|full_url)",
+        re.IGNORECASE,
+    ),
+    "sensitive-log-payload": re.compile(
+        r"(?:logger|logging|_LOGGER)\.(?:debug|info|warning|error|exception)"
+        r"\([^\n]*(?:request\.(?:json|body)|payload|cenario|ordens)",
+        re.IGNORECASE,
+    ),
+}
 
 
 @dataclass(frozen=True)
@@ -36,6 +48,22 @@ def find_secret_findings(files: Mapping[str, str]) -> list[SecretFinding]:
         SecretFinding(path, kind)
         for path, content in files.items()
         for kind, pattern in PATTERNS.items()
+        if pattern.search(content)
+    }
+    return sorted(findings, key=lambda item: (item.path, item.kind))
+
+
+def find_binary_secret_findings(files: Mapping[str, bytes]) -> list[SecretFinding]:
+    """Inspeciona shapes ASCII mesmo quando o arquivo nao e texto UTF-8."""
+    decoded = {path: content.decode("latin-1") for path, content in files.items()}
+    return find_secret_findings(decoded)
+
+
+def find_sensitive_log_findings(files: Mapping[str, str]) -> list[SecretFinding]:
+    findings = {
+        SecretFinding(path, kind)
+        for path, content in files.items()
+        for kind, pattern in SENSITIVE_LOG_PATTERNS.items()
         if pattern.search(content)
     }
     return sorted(findings, key=lambda item: (item.path, item.kind))
@@ -57,17 +85,33 @@ def _candidate_paths() -> list[Path]:
 
 def main() -> None:
     text_files: dict[str, str] = {}
+    binary_files: dict[str, bytes] = {}
     for path in _candidate_paths():
+        relative = path.relative_to(ROOT).as_posix()
         try:
-            text_files[path.relative_to(ROOT).as_posix()] = path.read_text(encoding="utf-8")
-        except (UnicodeDecodeError, OSError):
+            content = path.read_bytes()
+        except OSError:
             continue
-    findings = find_secret_findings(text_files)
+        try:
+            text_files[relative] = content.decode("utf-8")
+        except UnicodeDecodeError:
+            binary_files[relative] = content
+    findings = sorted(
+        [
+            *find_secret_findings(text_files),
+            *find_binary_secret_findings(binary_files),
+            *find_sensitive_log_findings(text_files),
+        ],
+        key=lambda item: (item.path, item.kind),
+    )
     if findings:
         for finding in findings:
             print(f"secret_shape={finding.kind} path={finding.path}")
         raise SystemExit("formatos de segredo encontrados")
-    print(f"credential_scan=ok files={len(text_files)}")
+    print(
+        "credential_scan=ok "
+        f"text_files={len(text_files)} binary_files={len(binary_files)}"
+    )
 
 
 if __name__ == "__main__":

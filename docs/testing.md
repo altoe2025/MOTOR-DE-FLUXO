@@ -165,3 +165,51 @@ segredos em query strings de URLs nos arquivos rastreados e no bundle de produç
 O projeto `real-auth` continua condicionado a `MOT_REAL_AUTH_BASE_URL`,
 `MOT_REAL_AUTH_EMAIL` e `MOT_REAL_AUTH_PASSWORD` fornecidos pelo ambiente. A
 aceitação local não fabrica credenciais reais nem publica artefatos.
+
+## Aceitação integrada da Etapa 3 — MOT-76
+
+Os specs `company-profiles`, `diagnostic-jobs` e `stage2-regression` entram no
+projeto Playwright local sem substituir a regressão existente. Eles percorrem a
+mesma origem do servidor e cobrem Empresa→Perfil→Estudo, imutabilidade do snapshot
+v1 após a criação de v2, CAS de versões em duas abas, fila diagnóstica controlada,
+progresso, cancelamento, idempotência, isolamento 404 entre contas, reload de
+terminal, entrada fixa sem distribuição, 10 repetições geradas, falha sem resultado
+parcial e leitura dos artefatos/migrações da Etapa 2. Em 2026-09-20, os cinco testes
+novos passaram juntos no Chromium local em 1,0 minuto.
+
+O pool controlado usa `Condition`/`Future`, sem sleeps. Com dois workers e três jobs,
+somente dois trabalhos são submetidos até a liberação de um slot; `max_active`
+permanece 2. Cancelamento de enfileirado não cria trabalho e o fechamento espera o
+pool, cancela pendências e termina com zero ativos. O runner E2E usa um worker para
+manter fila e cancelamento determinísticos; o teste Python separado prova o teto 2.
+
+O scanner de credenciais agora lê também arquivos binários e rejeita chamadas de
+log que serializem URL completa/query, corpo, payload, cenário ou ordens. Tokens e
+IDs financeiros usados na aceitação são sintéticos e não são impressos.
+
+### Medição sintética 10/30/100
+
+`python -m tests.web_api.measure_diagnostics --max-100-ms 180000` executa cada
+repetição pelo `execute_repetition` real e agrega com `aggregate_diagnostic`. A
+medição é serial, em processo, uma rodada por cardinalidade, com `perf_counter`; ela
+inclui geração, motor, envelope de prévia, análise e agregação, mas não inclui fila,
+HTTP, spawn nem latência de rede. Por isso é uma regressão técnica reproduzível, não
+um benchmark de capacidade nem promessa comercial.
+
+Ambiente local observado: Windows 11 AMD64, Python 3.12.14, 8 CPUs lógicas, um
+worker da metodologia. Resultados:
+
+| Repetições | Tempo total | Envelope JSON |
+|---:|---:|---:|
+| 10 | 133,3 ms | 28.281 bytes |
+| 30 | 384,6 ms | 39.681 bytes |
+| 100 | 959,1 ms | 64.173 bytes |
+
+A CI registra ambiente e os três resultados e aplica somente um teto técnico amplo
+de 180 s para 100 repetições. Variações entre máquinas são esperadas; os contratos
+continuam limitados exatamente a 10/30/100.
+
+O fallback do servidor estático também possui regressão para reload/deep link das
+rotas públicas declaradas: `/carteira/:uuid`, `/estudos/:uuid`, o diagnóstico do
+estudo e as páginas exatas de Empresa. Segmentos desconhecidos continuam 404; não há
+fallback wildcard.

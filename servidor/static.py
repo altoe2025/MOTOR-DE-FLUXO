@@ -22,11 +22,20 @@ _SPA_PATHS = {
     "replay",
     "premissas",
     "estudos",
+    "empresas",
 }
 _LEGACY_HASHED_ASSET = re.compile(r"\.[0-9a-fA-F]{8,}\.")
 _STUDY_PATH = re.compile(
-    r"estudos/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}",
+    r"estudos/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}"
+    r"(?:/diagnostico)?",
     re.IGNORECASE,
+)
+_PORTFOLIO_PATH = re.compile(
+    r"carteira/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}",
+    re.IGNORECASE,
+)
+_COMPANY_PATH = re.compile(
+    r"empresas/[A-Za-z0-9][A-Za-z0-9._~-]{0,127}(?:/(?:casos|perfis|estudos))?"
 )
 
 
@@ -84,7 +93,12 @@ def install_static_routes(app: FastAPI, dist_dir: Path | None) -> None:
 
     @app.get("/{spa_path:path}", include_in_schema=False)
     async def spa_fallback(spa_path: str) -> FileResponse:
-        if (spa_path not in _SPA_PATHS and _STUDY_PATH.fullmatch(spa_path) is None) or dist is None:
+        known_dynamic_path = (
+            _STUDY_PATH.fullmatch(spa_path) is not None
+            or _PORTFOLIO_PATH.fullmatch(spa_path) is not None
+            or _COMPANY_PATH.fullmatch(spa_path) is not None
+        )
+        if (spa_path not in _SPA_PATHS and not known_dynamic_path) or dist is None:
             raise _not_found()
         index = (dist / "index.html").resolve()
         if not index.is_relative_to(dist) or not index.is_file():
