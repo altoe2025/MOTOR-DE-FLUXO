@@ -114,7 +114,7 @@ mesmo encadeamento de código.
 | 14. Gráfico/tabela, teclado e zoom 200% | **PARTIAL** | `presentation.test.ts`, `EChart.test.tsx`, `DiagnosticResult.test.tsx`; `npm --prefix web run test:e2e` | mesma série, tabela no DOM, foco/controles semânticos. Zoom 200% foi executado apenas no diagnóstico legado; falta percurso browser da página robusta |
 | 15. Comparação não mistura empresas/métricas | PASS | `npm --prefix web run test:unit -- src/companies/temporalComparison.test.ts src/companies/components/TemporalComparison.test.tsx` | empresa, unidade, definição e método incompatíveis bloqueiam; `64c5433`–`d8fd3e1` |
 | 16. Troca de conta não expõe dados | PASS | `studyController.test.ts`, `diagnosticExecutionService.test.ts`, `test_stage3_acceptance.py`, `company-profiles.spec.ts` | A→B→A, resposta tardia, job 404 e perfis/snapshots vazios para B |
-| 17. Etapas 1 e 2 continuam passando | PASS | `python -m pytest -q`; `npm --prefix web run test:unit`; `npm --prefix web run test:e2e` | 772 + 2 skipped, 388/51 e 14 E2E; `stage2-regression.spec.ts` inclui origens, migration, histórico e terminal único |
+| 17. Etapas 1 e 2 continuam passando | PASS | `python -m pytest -q`; `npm --prefix web run test:unit`; `npm --prefix web run test:e2e`; `study-observed.spec.ts`; `stage2-regression.spec.ts` | 772 + 2 skipped, 388/51 e 14 E2E. `study-observed.spec.ts` cobre a origem observada e Observado × Motor; `stage2-regression.spec.ts` cobre autoria, sintético, migration, histórico e terminal único |
 | 18. Contratos sem drift e Python sob `-O` | PASS | geradores + diff; `python -O -m pytest -q` | quatro artefatos sem diff; 772 + 2 skipped em `-O` |
 
 ## Gate global do candidato final
@@ -162,8 +162,10 @@ não devem ser reclassificados como conclusão de negócio:
 Para converter `CONDITIONAL` em `PASS`, execute no SHA candidato um Playwright da
 página `/estudos/:studyId/diagnostico` que, a 200%, percorra controles por teclado e
 confirme acesso à distribuição, execução selecionada, sete eixos e tabelas sem perda
-de ação ou conteúdo. Qualquer alteração de código invalida o gate global atual e
-exige novo gate no novo SHA.
+de ação ou conteúdo. A evidência deve registrar projeto Playwright, browser e
+viewport, mostrar foco visível e provar acionamento dos controles pelo teclado.
+Qualquer alteração de código invalida o gate global atual e exige novo gate no novo
+SHA.
 
 Depois disso, publicação ainda exige ações separadas: push/PR, CI da revisão
 publicada, revisão e aprovação explícita do Gabriel. Este documento não as autoriza.

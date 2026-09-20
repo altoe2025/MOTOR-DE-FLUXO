@@ -227,7 +227,8 @@ fallback wildcard.
 ### Gate global final da Etapa 3
 
 O gate foi executado uma vez no SHA
-`03e87b8222d26ef141ef519c8716b4e281b8a7b8`, sem mudança rastreada posterior:
+`03e87b8222d26ef141ef519c8716b4e281b8a7b8`, sem mudança rastreada de produto
+posterior. `c46147f` e o commit documental que o sucede alteram somente documentação:
 
 | Verificação | Resultado |
 |---|---|
