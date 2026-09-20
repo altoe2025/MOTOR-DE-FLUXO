@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { formatMoney } from '../presentation/format';
 import { deriveCompanyOverview } from './companyOverview';
 import { CompanyPageFrame, CompanyRouteState } from './components/CompanyPageFrame';
+import { TemporalComparison } from './components/TemporalComparison';
 import { useCompanyResources } from './useCompanyResources';
 
 function valueOrNotCollected(value: string | null): string {
@@ -28,6 +29,7 @@ export function CompanyPage() {
         <div><dt>Perfil mais recente</dt><dd>{overview.latestProfile === null ? 'não coletado' : `versão ${overview.latestProfile.version}`}</dd></div>
         <div><dt>Estudos relacionados</dt><dd>{overview.relatedStudies.length === 0 ? 'nenhum estudo' : overview.relatedStudies.length}</dd></div>
       </dl>
+      <TemporalComparison cases={resources.cases} profiles={resources.profiles} />
     </CompanyPageFrame>
   );
 }

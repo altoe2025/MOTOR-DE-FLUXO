@@ -376,6 +376,33 @@ describe('application routes', () => {
     expect(quality).not.toHaveTextContent('0 bloqueios');
   });
 
+  it('integra a comparação temporal na empresa e mantém Casos e Perfis como fontes sem linguagem da Etapa 4', async () => {
+    const company: CompanyRecord = {
+      id: 'company-timeline', ownerSub: 'user-a', displayName: 'Empresa temporal', aliases: [],
+      createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', revision: 1,
+    };
+    const first = { ...makeObservedCase(), id: 'case-january', ownerSub: 'user-a', companyId: company.id };
+    const second = {
+      ...makeObservedCase(), id: 'case-february', ownerSub: 'user-a', companyId: company.id,
+      window: { startDate: '2026-02-01', endDate: '2026-02-28', closingDate: '2026-02-28' },
+    };
+    const repository = new RepositoryDouble([company], [first, second]);
+
+    const companyView = renderAppAt('/empresas/company-timeline', client(session('user-a')), repository);
+    expect(await screen.findByRole('heading', { name: 'Comparação temporal' })).toBeVisible();
+    expect(screen.getAllByRole('checkbox')).toHaveLength(2);
+    const content = document.body.textContent?.toLocaleLowerCase('pt-BR') ?? '';
+    expect(content).not.toMatch(/cenário-base|hipótese|marginal|criar variante/);
+    companyView.unmount();
+
+    const casesView = renderAppAt('/empresas/company-timeline/casos', client(session('user-a')), repository);
+    expect(await screen.findByRole('link', { name: 'Comparar observações no tempo' })).toHaveAttribute('href', '/empresas/company-timeline#comparacao-temporal');
+    casesView.unmount();
+
+    renderAppAt('/empresas/company-timeline/perfis', client(session('user-a')), repository);
+    expect(await screen.findByRole('link', { name: 'Comparar observações no tempo' })).toHaveAttribute('href', '/empresas/company-timeline#comparacao-temporal');
+  });
+
   it('renderiza casos em tabela semântica e aponta estudo pelo snapshot histórico', async () => {
     const company: CompanyRecord = {
       id: 'company-1', ownerSub: 'user-a', displayName: 'Câmbio Exemplo', aliases: [],

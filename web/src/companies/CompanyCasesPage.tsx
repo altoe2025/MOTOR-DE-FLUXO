@@ -39,6 +39,7 @@ export function CompanyCasesPage() {
   const sourceKinds = [...new Set(resources.cases.map((item) => item.sourceManifest.sourceKind))].sort();
   return (
     <CompanyPageFrame company={resources.company} title={`Casos de ${resources.company.displayName}`} introduction="Histórico observado com período, qualidade e vínculos preservados.">
+      <p><Link to={`/empresas/${resources.company.id}#comparacao-temporal`}>Comparar observações no tempo</Link></p>
       <form className="case-filters" aria-label="Filtros dos casos" onSubmit={(event) => event.preventDefault()}>
         <label>Início<input type="date" value={filters.periodStart} onChange={(event) => update({ periodStart: event.currentTarget.value })} /></label>
         <label>Fim<input type="date" value={filters.periodEnd} onChange={(event) => update({ periodEnd: event.currentTarget.value })} /></label>

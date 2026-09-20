@@ -70,6 +70,26 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 
 ---
 
+## 2026-09-20 — Comparação temporal restrita de casos e perfis (MOT-75)
+
+1. **Sintoma.** Casos observados e versões imutáveis de Perfil Operacional estavam
+   disponíveis por empresa, mas não havia uma leitura temporal conjunta que
+   preservasse cobertura, ausência, definição e proveniência antes de calcular
+   diferenças.
+2. **Causa.** As páginas apresentavam cada fonte separadamente e ainda não existia
+   uma projeção comum, pura e semanticamente fechada para evidências versionadas.
+3. **O que foi feito.** Na branch `codex/frontend-etapa-3`, casos e perfis passaram a
+   ser projetados nas mesmas quatro famílias compatíveis — volume, direção, ticket e
+   prazo — com período, dias cobertos, estado de cobertura, definição, unidade,
+   método e proveniência. A comparação bloqueia empresa ou semântica divergente,
+   ordena de forma determinística e só calcula diferenças entre valores disponíveis.
+   A Empresa recebeu seleção acessível de 2–6 observações, linha temporal e tabela;
+   Casos e Perfis apontam para essa leitura.
+4. **O que isso invalida.** Invalida a suposição de que diferenças temporais exigem
+   tratar ausência como zero ou antecipar comparação de cenários. Não altera motor,
+   servidor, diagnóstico, schema de persistência, `PortfolioSource` nem resultados
+   financeiros; não introduz variante, causalidade ou análise individual.
+
 ## 2026-09-20 — Ordem semântica no snapshot diagnóstico fixo (MOT-73)
 
 1. **Sintoma.** Uma reserva diagnóstica fixa válida era rejeitada com

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 
 import { useStudyController } from '../app/providers';
 import { ProfileBuilder } from '../profiles/components/ProfileBuilder';
@@ -20,6 +20,7 @@ export function CompanyProfilesPage() {
   const studies = resources.studies.filter((study) => study.deletedAt === null);
   return (
     <CompanyPageFrame company={resources.company} title={`Perfis de ${resources.company.displayName}`} introduction="Selecione casos, confirme uma versão imutável e preserve o snapshot como evidência de um estudo.">
+      <p><Link to={`/empresas/${resources.company.id}#comparacao-temporal`}>Comparar observações no tempo</Link></p>
       <ProfileBuilder
         company={resources.company}
         cases={resources.cases}
