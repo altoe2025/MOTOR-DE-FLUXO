@@ -9,7 +9,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { AuthProvider } from '../auth/AuthProvider';
 import type { AuthClient, AuthSession } from '../auth/types';
-import type { ApiClient } from '../api/client';
+import type { ApiClient, DiagnosticRequest, JobSnapshot } from '../api/client';
 import type { CompanyRecord, ObservedCase } from '../cases/domain';
 import type { OperationalProfileVersion } from '../profiles/domain';
 import type {
@@ -88,8 +88,9 @@ function renderAppAt(
   authClient: AuthClient = client(session()),
   repository: ApplicationRepository | null = null,
   extra: ReactNode = null,
+  providedApiClient?: ApiClient,
 ) {
-  const apiClient: ApiClient = {
+  const apiClient: ApiClient = providedApiClient ?? {
     getReferenceExample: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
     runPreview: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
     submitDiagnostic: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
@@ -105,6 +106,26 @@ function renderAppAt(
       </ApplicationProviders>
     </AuthProvider>,
   );
+}
+
+function diagnosticSnapshot(request: DiagnosticRequest, status: JobSnapshot['status']): JobSnapshot {
+  const terminal = status === 'SUCCEEDED' || status === 'FAILED' || status === 'CANCELLED';
+  return {
+    api_version: '1.0.0', job_id: request.idempotency_key, request_id: request.request_id, status,
+    progress: {
+      completed: terminal ? request.sampling.count : 0,
+      failed: 0,
+      total: request.sampling.count,
+      current_repetition_id: null,
+      phase: terminal ? 'TERMINAL' : status === 'QUEUED' ? 'QUEUED' : 'EXECUTING',
+      created_at: '2026-09-20T12:00:00Z',
+      started_at: status === 'QUEUED' ? null : '2026-09-20T12:00:00Z',
+      updated_at: '2026-09-20T12:00:00Z',
+      finished_at: terminal ? '2026-09-20T12:01:00Z' : null,
+    },
+    retry_of_job_id: null,
+    error: null,
+  };
 }
 
 describe('application routes', () => {
@@ -253,6 +274,63 @@ describe('application routes', () => {
     expect(screen.getByText('Estudo Estudo vigente')).toBeVisible();
     expect(screen.queryByText('Estudo Estudo anterior')).not.toBeInTheDocument();
   });
+
+  it('cancela pelo serviço enquanto a execução continua em polling e preserva o histórico', async () => {
+    const studyId = '00000000-0000-4000-8000-000000000901';
+    const scenario = makeScenarioDraft();
+    scenario.sourceSnapshot.orders.sort((left, right) => left.id.localeCompare(right.id));
+    const study = await createStudy({
+      id: studyId, ownerSub: 'user-a', name: 'Estudo cancelável',
+      baseScenario: scenario, now: '2026-01-01T00:00:00Z',
+    });
+    let submittedRequest: DiagnosticRequest | null = null;
+    let cancellationRequested = false;
+    const submitDiagnostic = vi.fn(async (request: DiagnosticRequest) => {
+      submittedRequest = request;
+      return diagnosticSnapshot(request, 'RUNNING');
+    });
+    const getDiagnosticJob = vi.fn(async () => {
+      if (submittedRequest === null) throw new Error('submit ausente');
+      return diagnosticSnapshot(submittedRequest, cancellationRequested ? 'CANCELLED' : 'RUNNING');
+    });
+    const cancelDiagnostic = vi.fn(async () => {
+      if (submittedRequest === null) throw new Error('submit ausente');
+      cancellationRequested = true;
+      return diagnosticSnapshot(submittedRequest, 'CANCEL_REQUESTED');
+    });
+    const apiClient: ApiClient = {
+      getReferenceExample: vi.fn(async () => { throw new Error('não chamado'); }),
+      runPreview: vi.fn(async () => { throw new Error('não chamado'); }),
+      submitDiagnostic,
+      getDiagnosticJob,
+      getDiagnosticResult: vi.fn(async () => { throw new Error('não chamado'); }),
+      cancelDiagnostic,
+      retryDiagnostic: vi.fn(async () => { throw new Error('não chamado'); }),
+    };
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const user = userEvent.setup();
+
+    renderAppAt(
+      `/estudos/${studyId}/diagnostico`, client(session('user-a')),
+      new RepositoryDouble([], [], [], [study]), null, apiClient,
+    );
+    await user.click(await screen.findByRole('button', { name: 'Executar diagnóstico' }, { timeout: 5000 }));
+    expect(await screen.findByRole('heading', { name: 'Executando' })).toBeVisible();
+    const cancelButton = screen.getByRole('button', { name: 'Cancelar diagnóstico' });
+    act(() => { cancelButton.click(); cancelButton.click(); });
+
+    const request = submittedRequest as DiagnosticRequest | null;
+    if (request === null) throw new Error('request diagnóstico ausente');
+    expect(confirm).toHaveBeenCalledWith(`Cancelar o diagnóstico do job ${request.idempotency_key}?`);
+    await waitFor(() => {
+      expect(cancelDiagnostic).toHaveBeenCalledWith(request.idempotency_key, expect.any(AbortSignal));
+      expect(cancelDiagnostic).toHaveBeenCalledTimes(1);
+    });
+    expect(await screen.findByRole('heading', { name: 'Diagnóstico cancelado' }, { timeout: 5000 })).toBeVisible();
+    const history = screen.getByRole('table', { name: 'Histórico de tentativas diagnósticas' });
+    expect(history).toHaveTextContent('CANCELLED');
+    expect(history).toHaveTextContent(request.idempotency_key);
+  }, 15_000);
 
   it('navega pelo catálogo e pelas quatro áreas da empresa com foco no título', async () => {
     const company: CompanyRecord = {

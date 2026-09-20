@@ -70,6 +70,26 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 
 ---
 
+## 2026-09-20 — Cancelamento acionável e decimais lossless na UI (MOT-74)
+
+1. **Sintoma.** Durante polling, o botão de cancelamento era exibido, mas a mesma
+   flag que bloqueava nova execução também fazia o handler retornar sem chamar o
+   serviço. Além disso, o adapter do gráfico convertia strings decimais em `Number`,
+   arredondando valores canônicos acima da precisão segura do JavaScript.
+2. **Causa.** Execução em andamento e ação de cancelamento compartilhavam um único
+   estado `busy`; gráfico e tabela partiam da mesma série, mas apenas o gráfico
+   aplicava coerção numérica com perda.
+3. **O que foi feito.** Na branch `codex/frontend-etapa-3`, execução e cancelamento
+   passaram a ter estados separados, com trava síncrona contra cancelamento
+   duplicado. Um teste integrado cobre submit, polling, confirmação pelo job exato,
+   serviço de cancelamento, terminal `CANCELLED` e histórico. O adapter ECharts
+   mantém os decimais canônicos como strings tanto no option quanto na tabela, com
+   regressão para `9007199254740993.01`.
+4. **O que isso invalida.** Invalida a suposição de que botão visível implicava
+   cancelamento acionável durante polling e qualquer leitura do gráfico baseada em
+   coerção IEEE-754. Contratos, storage, servidor, motor e valores recebidos não
+   mudam; a UI continua sem recalcular métricas financeiras.
+
 ## 2026-09-20 — Apresentação acessível do diagnóstico robusto (MOT-74)
 
 1. **Sintoma.** O diagnóstico robusto possuía contratos, executor e histórico

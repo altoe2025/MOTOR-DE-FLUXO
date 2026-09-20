@@ -21,12 +21,24 @@ describe('apresentação do diagnóstico', () => {
 
     expect(result.option.xAxis).toMatchObject({ data: ['R-01', 'R-02'] });
     expect(result.option.series).toEqual([
-      expect.objectContaining({ data: [100.25, 80.75], name: 'Economia por repetição' }),
+      expect.objectContaining({ data: ['100.25', '80.75'], name: 'Economia por repetição' }),
     ]);
     expect(result.rows).toEqual([
       { label: 'R-01', value: '100.25' },
       { label: 'R-02', value: '80.75' },
     ]);
+  });
+
+  it('preserva decimal canônico além da precisão segura no gráfico e na tabela', () => {
+    const canonical = '9007199254740993.01';
+    const result = chartPresentation({
+      name: 'Economia por repetição',
+      unit: 'BRL',
+      points: [{ label: 'R-01', value: canonical }],
+    });
+
+    expect(result.option.series[0]?.data).toEqual([canonical]);
+    expect(result.rows).toEqual([{ label: 'R-01', value: canonical }]);
   });
 
   it('não fabrica zero nem série para evidência indisponível', () => {

@@ -77,7 +77,9 @@ export function StudyDiagnosticPage() {
   const [study, setStudy] = useState<StudyDocument | null>(null);
   const [count, setCount] = useState<1 | 10 | 30 | 100>(10);
   const [viewState, setViewState] = useState<DiagnosticViewState | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [runInProgress, setRunInProgress] = useState(false);
+  const [cancelInFlight, setCancelInFlight] = useState(false);
+  const cancelInFlightRef = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -126,8 +128,8 @@ export function StudyDiagnosticPage() {
   }, [controller]);
 
   const run = useCallback(async () => {
-    if (study === null || scenario === null || busy) return;
-    setBusy(true);
+    if (study === null || scenario === null || runInProgress) return;
+    setRunInProgress(true);
     try {
       const result = await executeStudyDiagnostic({
         authority: controller,
@@ -150,38 +152,42 @@ export function StudyDiagnosticPage() {
       if (mounted.current) setViewState(controller.snapshot.status === 'STORAGE_FAILURE'
         ? { kind: 'STORAGE_FAILURE', message: 'O resultado não pôde ser salvo. Nenhum novo cálculo foi iniciado.' }
         : { kind: 'FAILED', attemptId: 'não persistida', publicMessage: 'Não foi possível concluir o diagnóstico.' });
-    } finally { if (mounted.current) setBusy(false); }
-  }, [busy, complete, controller, effectiveCount, scenario, study, trackedApi]);
+    } finally { if (mounted.current) setRunInProgress(false); }
+  }, [complete, controller, effectiveCount, runInProgress, scenario, study, trackedApi]);
 
   useEffect(() => {
-    if (study === null || scenario === null || busy) return;
+    if (study === null || scenario === null || runInProgress) return;
     const latest = latestDiagnostic(study);
     if (latest?.status !== 'QUEUED' || resumedAttempts.current.has(latest.attemptId)) return;
     resumedAttempts.current.add(latest.attemptId);
     void run();
-  }, [busy, run, scenario, study]);
+  }, [run, runInProgress, scenario, study]);
 
   const cancel = async () => {
-    if (scenario === null || busy) return;
-    setBusy(true);
+    if (scenario === null || cancelInFlightRef.current) return;
+    cancelInFlightRef.current = true;
+    setCancelInFlight(true);
     try {
       const result = await cancelStudyDiagnostic({ authority: controller, scenarioId: scenario.id, api: {
         ...trackedApi(), cancelDiagnostic: client.cancelDiagnostic,
       } });
       complete(result);
-    } finally { if (mounted.current) setBusy(false); }
+    } finally {
+      cancelInFlightRef.current = false;
+      if (mounted.current) setCancelInFlight(false);
+    }
   };
 
   const retry = async (attemptId: string) => {
-    if (study === null || busy) return;
+    if (study === null || runInProgress || cancelInFlightRef.current) return;
     const terminal = [...study.executions].reverse().find((item): item is DiagnosticExecutionRecord => item.kind === 'DIAGNOSTIC' && item.attemptId === attemptId);
     if (terminal === undefined) return;
-    setBusy(true);
+    setRunInProgress(true);
     try {
       const result = await retryStudyDiagnostic({ authority: controller, executionId: terminal.id,
         idempotencyKey: crypto.randomUUID(), api: { ...trackedApi(), retryDiagnostic: client.retryDiagnostic } });
       complete(result);
-    } finally { if (mounted.current) setBusy(false); }
+    } finally { if (mounted.current) setRunInProgress(false); }
   };
 
   const terminal = study === null ? null : [...study.executions].reverse().find((item): item is DiagnosticExecutionRecord => item.kind === 'DIAGNOSTIC' && item.status === 'SUCCEEDED' && item.envelope !== null) ?? null;
@@ -191,8 +197,8 @@ export function StudyDiagnosticPage() {
     <h1 ref={heading} tabIndex={-1}>Diagnóstico robusto</h1>
     <p className="page-introduction">Múltiplas repetições quando a origem é gerável; uma execução individual quando a entrada já está fixa.</p>
     {study === null || scenario === null ? <DiagnosticStatus state={viewState ?? { kind: 'UNAVAILABLE', reason: 'Carregando estudo…' }} /> : <>
-      <DiagnosticControls generated={generated} count={effectiveCount} onCountChange={setCount} onRun={() => void run()} disabled={busy || controller.snapshot.status === 'STORAGE_FAILURE'} />
-      {viewState === null ? null : <DiagnosticStatus state={viewState} onCancel={() => void cancel()} onRetry={(attemptId) => void retry(attemptId)} />}
+      <DiagnosticControls generated={generated} count={effectiveCount} onCountChange={setCount} onRun={() => void run()} disabled={runInProgress || controller.snapshot.status === 'STORAGE_FAILURE'} />
+      {viewState === null ? null : <DiagnosticStatus state={viewState} {...(cancelInFlight ? {} : { onCancel: () => void cancel() })} onRetry={(attemptId) => void retry(attemptId)} />}
       <DiagnosticHistory executions={study.executions.filter((item): item is DiagnosticExecutionRecord => item.kind === 'DIAGNOSTIC')} />
       {envelope === null ? null : <>
         <DiagnosticDistribution statistics={envelope.statistics} repetitions={envelope.repetitions} economics={envelope.axes.economic_robustness} />

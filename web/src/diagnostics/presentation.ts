@@ -35,7 +35,7 @@ export type ChartOption = Readonly<{
   series: readonly Readonly<{
     type: 'bar' | 'line';
     name: string;
-    data: readonly number[];
+    data: readonly string[];
     label: Readonly<{ show: true; position: 'top' }>;
   }>[];
 }>;
@@ -66,7 +66,7 @@ export function chartPresentation(series: ChartSeries, animation = true): Readon
   rows: readonly ChartPoint[];
 }> {
   const labels = series.points.map((point) => point.label);
-  const values = series.points.map((point) => Number(point.value));
+  const values = series.points.map((point) => point.value);
   return {
     option: {
       animation,
