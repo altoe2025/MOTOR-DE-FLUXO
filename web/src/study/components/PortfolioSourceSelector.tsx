@@ -198,11 +198,10 @@ function ExplicitOrdersForm({
       });
       const provenanceByOrder = Object.fromEntries(orders.map((order, index) => {
         const original = definition.orders[index];
-        const provenance = original === undefined
-          ? undefined
-          : definition.provenanceByOrder[original.id];
+        if (original === undefined) throw new Error(`Operação original ausente para ${order.id}.`);
+        const provenance = definition.provenanceByOrder[original.id];
         if (provenance === undefined) throw new Error(`Proveniência ausente para ${order.id}.`);
-        const next = structuredClone(provenance);
+        const next = { ...structuredClone(provenance) };
         if (order.id !== original.id) next.id = corrected();
         if (order.cliente_id !== original.cliente_id) next.cliente_id = corrected();
         if (order.direcao !== original.direcao) next.direcao = corrected();

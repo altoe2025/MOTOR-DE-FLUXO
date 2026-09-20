@@ -55,7 +55,7 @@ describe('ExecutionHistory', () => {
         },
       },
     } as ScenarioDocument;
-    const legacy = { ...executions[1]!, sourceSnapshot: undefined } as ExecutionRecord;
+    const legacy = structuredClone(executions[1]!);
 
     render(<ExecutionHistory executions={[legacy]} scenarios={[changedScenario]} onSelect={() => undefined} />);
 
