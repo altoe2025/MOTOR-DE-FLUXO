@@ -161,7 +161,7 @@ export type ExecutionRecord = Readonly<{
   finishedAt: string | null;
 }>;
 
-export type StudyDocument = Readonly<{
+export type StudyDocumentV2 = Readonly<{
   schemaVersion: '2.0.0';
   id: string;
   ownerSub: string;
@@ -174,6 +174,38 @@ export type StudyDocument = Readonly<{
   updatedAt: string;
   deletedAt: string | null;
 }>;
+
+export type StudyDocument = StudyDocumentV2;
+
+export type PreviewExecutionRecord = Readonly<ExecutionRecord & {
+  kind: 'PREVIEW';
+}>;
+
+// T0 deliberately keeps this union closed until the diagnostic contract is
+// introduced by its owning task.
+export type ExecutionRecordV3 = PreviewExecutionRecord;
+
+// T0 accepts no evidence payload until OperationalProfileVersion exists.
+export type StudyEvidenceSnapshot = never;
+
+export type StudyDocumentV3 = Readonly<
+  Omit<StudyDocumentV2, 'schemaVersion' | 'executions'> & {
+    schemaVersion: '3.0.0';
+    evidenceSnapshots: readonly StudyEvidenceSnapshot[];
+    executions: readonly ExecutionRecordV3[];
+  }
+>;
+
+export function migrateStudyDocumentV2(document: StudyDocumentV2): StudyDocumentV3 {
+  const { schemaVersion: _schemaVersion, executions, ...study } = structuredClone(document);
+  void _schemaVersion;
+  return {
+    ...study,
+    schemaVersion: '3.0.0',
+    evidenceSnapshots: [],
+    executions: executions.map((execution) => ({ ...execution, kind: 'PREVIEW' })),
+  };
+}
 
 export type StudyValidationIssue = Readonly<{
   path: string;

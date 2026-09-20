@@ -9,9 +9,12 @@ import {
   fingerprintPortfolioSource,
   fingerprintScenarioInput,
 } from './fingerprints';
+import { migrateStudyDocumentV2 } from './model';
 import type {
   ExecutionRecord,
+  PreviewExecutionRecord,
   StudyDocument,
+  StudyDocumentV3,
   StudyValidation,
   StudyValidationIssue,
 } from './model';
@@ -24,6 +27,9 @@ ajv.addSchema(observedCaseSchema);
 const validateStudySchema: ValidateFunction<StudyDocument> = ajv.compile(studySchema);
 const validateExecutionSchema: ValidateFunction<ExecutionRecord> = ajv.compile({
   $ref: `${studySchema.$id}#/$defs/ExecutionRecord`,
+});
+const validateStudyV3Schema: ValidateFunction<StudyDocumentV3> = ajv.compile({
+  $ref: `${studySchema.$id}#/$defs/StudyDocumentV3`,
 });
 
 function structuralIssue(error: ErrorObject): StudyValidationIssue {
@@ -42,7 +48,10 @@ function issue(
   return { path, code, message };
 }
 
-function envelopeIsCompatible(execution: ExecutionRecord, study: StudyDocument): boolean {
+function envelopeIsCompatible(
+  execution: ExecutionRecord | PreviewExecutionRecord,
+  study: Pick<StudyDocument, 'id'>,
+): boolean {
   const request = execution.requestSnapshot;
   if (request.study_id !== study.id
     || request.scenario_id !== execution.scenarioId
@@ -62,6 +71,35 @@ function envelopeIsCompatible(execution: ExecutionRecord, study: StudyDocument):
       periodo: request.periodo,
       proveniencia: request.proveniencia,
     });
+}
+
+export function parseStudyV3(value: unknown): StudyDocumentV3 {
+  let candidate: unknown = value;
+  if (value !== null && typeof value === 'object' && 'schemaVersion' in value
+    && value.schemaVersion === '2.0.0') {
+    if (!validateStudySchema(value)) throw new Error('Documento de estudo V3 inválido.');
+    candidate = migrateStudyDocumentV2(value);
+  }
+  if (!validateStudyV3Schema(candidate)) throw new Error('Documento de estudo V3 inválido.');
+
+  const terminalRequests = new Set<string>();
+  const terminalAttempts = new Set<string>();
+  for (const execution of candidate.executions) {
+    if (!envelopeIsCompatible(execution, candidate)) {
+      throw new Error('Envelope PREVIEW incompatível com a execução.');
+    }
+    if (execution.status === 'PREPARING' || execution.status === 'RUNNING') continue;
+    const requestId = execution.requestSnapshot.request_id;
+    const duplicateRequest = terminalRequests.has(requestId);
+    const duplicateAttempt = execution.attemptId !== undefined
+      && terminalAttempts.has(execution.attemptId);
+    if (duplicateRequest || duplicateAttempt) {
+      throw new Error('Tentativa possui mais de um terminal persistido.');
+    }
+    terminalRequests.add(requestId);
+    if (execution.attemptId !== undefined) terminalAttempts.add(execution.attemptId);
+  }
+  return structuredClone(candidate);
 }
 
 function executionSnapshotIsCompatible(execution: ExecutionRecord): boolean {

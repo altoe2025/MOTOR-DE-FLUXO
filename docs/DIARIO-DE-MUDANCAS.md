@@ -70,6 +70,27 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 
 ---
 
+## 2026-09-20 — Freeze compatível dos contratos da Etapa 3 (MOT-65)
+
+1. **Sintoma.** A Etapa 3 ainda não tinha uma fixture byte-estável do IndexedDB
+   físico 1 nem um contrato executável que demonstrasse como estudos 2.0.0 seriam
+   lidos após a introdução da discriminação de execuções e de evidências.
+2. **Causa.** A Etapa 2 persistia execuções de prévia sem `kind` e não possuía
+   `evidenceSnapshots`; ao mesmo tempo, os contratos de Perfil Operacional e de
+   diagnóstico pertencem a tarefas posteriores e não podiam ser antecipados por
+   tipos parciais.
+3. **O que foi feito.** Na branch `codex/mot-65-etapa-3-t0`, foi capturada uma
+   representação anonimizada real das stores `studies`, `executions` e `meta` do
+   schema físico 1, com as três origens e uma tentativa com reserva mais terminal.
+   O modelo e o schema agora expõem a migração pura 2.0.0 → 3.0.0, acrescentando
+   somente `kind: 'PREVIEW'` e `evidenceSnapshots: []`; a validação rejeita kinds
+   ainda não suportados, evidência não vazia, envelope incompatível e terminal
+   duplicado por tentativa.
+4. **O que isso invalida.** Nada nos números, regras do motor, IndexedDB existente
+   ou comportamento da Etapa 2. Fica inválida apenas a suposição de que T0 já
+   aceitaria Perfil Operacional ou `DIAGNOSTIC`: T1/T4 e T5/T8 continuam donas da
+   abertura desses contratos.
+
 ## 2026-09-20 — Instante único na proveniência de preparação (MOT-33)
 
 1. **Sintoma.** O E2E sintético podia bloquear a execução com “Proveniência agregada

@@ -271,10 +271,11 @@
         "id", "revision", "name", "sourceSnapshot", "premises", "period", "inputFingerprint"
       ]
     },
-    "ExecutionRecord": {
+    "ExecutionRecordBase": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
+        "kind": { "const": "PREVIEW" },
         "id": { "$ref": "#/$defs/Identifier" },
         "attemptId": { "$ref": "#/$defs/Identifier" },
         "scenarioId": { "$ref": "#/$defs/Identifier" },
@@ -334,6 +335,51 @@
             }
           }
         }
+      ]
+    },
+    "ExecutionRecord": {
+      "allOf": [
+        { "$ref": "#/$defs/ExecutionRecordBase" },
+        { "type": "object", "properties": { "kind": false } }
+      ]
+    },
+    "PreviewExecutionRecord": {
+      "allOf": [
+        { "$ref": "#/$defs/ExecutionRecordBase" },
+        {
+          "type": "object",
+          "properties": { "kind": { "const": "PREVIEW" } },
+          "required": ["kind"]
+        }
+      ]
+    },
+    "StudyDocumentV3": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schemaVersion": { "const": "3.0.0" },
+        "id": { "$ref": "#/$defs/Identifier" },
+        "ownerSub": { "$ref": "#/$defs/Identifier" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "revision": { "type": "integer", "minimum": 1 },
+        "baseScenarioId": { "$ref": "#/$defs/Identifier" },
+        "scenarios": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/ScenarioDocument" }
+        },
+        "evidenceSnapshots": { "type": "array", "maxItems": 0 },
+        "executions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/PreviewExecutionRecord" }
+        },
+        "createdAt": { "$ref": "#/$defs/UtcInstant" },
+        "updatedAt": { "$ref": "#/$defs/UtcInstant" },
+        "deletedAt": { "oneOf": [{ "$ref": "#/$defs/UtcInstant" }, { "type": "null" }] }
+      },
+      "required": [
+        "schemaVersion", "id", "ownerSub", "name", "revision", "baseScenarioId",
+        "scenarios", "evidenceSnapshots", "executions", "createdAt", "updatedAt", "deletedAt"
       ]
     }
   },
