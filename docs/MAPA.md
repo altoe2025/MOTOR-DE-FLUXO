@@ -10,6 +10,11 @@ funcional, as MOT-15–MOT-22 e a política de autonetting preferencial já fora
 integrados. A grade histórica não foi regenerada e continua identificada como legado
 EDF global.
 
+**Candidata da Etapa 2 v2:** `codex/mot63-observed-contracts` parte de `c30cff0` e
+chega a `b5a2d9a` antes do fechamento documental. O aceite é **CONDITIONAL**: não há
+PR, CI publicado, aprovação de merge nem início da Etapa 3. Consulte a matriz S15 e
+as pendências antes de interpretar qualquer item como integrado.
+
 ```
 main
  └─ gabriel/metrica-tempo        PR #21   colunas de tempo no CSV
@@ -49,6 +54,8 @@ make test          # a contagem vigente é registrada em docs/testing.md
 | Ordem vigente das seis etapas do front-end | `docs/superpowers/plans/2026-09-19-frontend-plano-geral-execucao-v2.md` |
 | Escopo e contratos vigentes da Etapa 2 | `docs/superpowers/specs/2026-09-19-frontend-etapa-2-design-v2.md` |
 | Plano técnico vigente da Etapa 2 | `docs/superpowers/plans/2026-09-19-frontend-etapa-2-plano-tecnico-v2.md` |
+| Operar o fluxo implementado da Etapa 2 v2 | `docs/frontend/etapa-2-v2-operacao.md` |
+| Aceite condicional, matriz S15 e handoff | `docs/frontend/etapa-2-v2-aceitacao.md` |
 | IDs T0–T12 e auditoria de `50fc384`/`1270458` | seção "Rastreabilidade aprovada no Linear" e matriz da Task 0 no plano técnico v2 da Etapa 2 |
 | Importação de fontes reais e Caso Observado | `docs/superpowers/specs/2026-09-19-importacao-dados-reais-design-v2.md` |
 | Plano vigente do importador | `docs/superpowers/plans/2026-09-19-importacao-dados-reais-plano-tecnico-v2.md` |

@@ -33,7 +33,7 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-09-19, após o planejamento v2 do front-end com dados observados.
+Atualizada em 2026-09-19, após o aceite condicional local da Etapa 2 v2.
 
 | Branch | Situação | Dono |
 |---|---|---|
@@ -61,6 +61,7 @@ Atualizada em 2026-09-19, após o planejamento v2 do front-end com dados observa
 | `codex/mot22-aceitacao-ci` | PR #34 mergeada na `main`; aceitação, CI e handoff da etapa 1 entregues | Codex |
 | `codex/autonetting-preferencial` | PR #36 mergeado na `main`; grade histórica não regenerada | Codex |
 | `codex/mot62-planejamento-etapa2-v2` | documentação da MOT-62; IDs, dependências e auditoria da Etapa 2 v2, sem código de produto | Codex |
+| `codex/mot63-observed-contracts` | implementação e documentação da Etapa 2 v2; aceite **CONDITIONAL**, sem push/PR/merge e sem início da Etapa 3 | Codex |
 
 Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
@@ -68,6 +69,40 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
 ---
+
+## 2026-09-19 — Aceite condicional e handoff da Etapa 2 v2 (MOT-33)
+
+1. **Sintoma.** A MOT-32 havia fechado o percurso integrado em `53e74f1` e o fix de
+   quota em `b46017b`, mas a auditoria T12 encontrou seis falhas importantes no
+   snapshot histórico, conversão observada, proveniência, troca de estudo durante o
+   POST, reidratação da autoria e bootstrap de fontes legadas. Depois da primeira
+   remediação, restaram três falhas importantes em correções por campo, fallback de
+   origem histórica e terminal único por tentativa. Também faltavam operação,
+   contratos efetivos, matriz S15 e handoff documentados.
+
+2. **Causa.** Os testes integrados anteriores provavam o percurso nominal, mas alguns
+   consumidores ainda reconstruíam contexto a partir do cenário atual, achatavam
+   proveniência ou não correlacionavam reserva e terminal. As evidências ficaram
+   distribuídas por SHAs: gates globais em `53e74f1`, quota em `b46017b` e gates
+   focados da remediação até `b5a2d9a`.
+
+3. **O que foi feito.** A remediação preservou snapshots exatos de origem, premissas
+   e período; converteu observado em operações explícitas sem reamostragem; manteve
+   proveniência por campo; concluiu respostas tardias por CAS sem trocar a seleção;
+   reidratou autoria tipada; ligou as fontes legadas ao provider; restringiu o
+   fallback histórico; e impôs um terminal semântico por tentativa. O check final em
+   `b5a2d9a` não encontrou novo Critical/Important. Este commit acrescenta os guias
+   `docs/frontend/etapa-2-v2-operacao.md` e `etapa-2-v2-aceitacao.md`, atualiza mapa,
+   arquitetura e plano com a evidência final e registra o handoff sem iniciar a
+   Etapa 3.
+
+4. **O que isso invalida.** Fica invalidada qualquer leitura de que a aprovação dos
+   gates de `53e74f1` equivale a aceite integral do SHA final. O estado é
+   **CONDITIONAL**: o Ruff literal `servidor tests` segue vermelho com 296 violações
+   legadas, auth real ficou skipped sem credenciais e a regressão global não foi
+   repetida em `b5a2d9a`. Antes de merge ainda são obrigatórios CI da revisão
+   publicada e aprovação do Gabriel. Não muda números, regras do motor ou contexto de
+   negócio; não autoriza push, PR, merge, Linear ou Etapa 3.
 
 ## 2026-09-19 — Percurso completo e regressão da Etapa 2 (MOT-32)
 
