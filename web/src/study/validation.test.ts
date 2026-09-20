@@ -150,6 +150,22 @@ describe('validateStudyDocument', () => {
     expect(validateExecutionRecord(execution, study)).toEqual({ ok: true, value: execution });
   });
 
+  it('rejeita segundo terminal para a mesma tentativa e request', async () => {
+    const study = await makeStudy();
+    const terminal = succeededExecution(study);
+    terminal.attemptId = 'attempt-1';
+    const duplicate = structuredClone(terminal);
+    duplicate.id = '00000000-0000-4000-8000-000000000031';
+    duplicate.envelope!.execution_id = duplicate.id;
+
+    const result = await validateStudyDocument({ ...study, executions: [terminal, duplicate] });
+
+    expect(result).toEqual({
+      ok: false,
+      issues: [expect.objectContaining({ code: 'DUPLICATE_EXECUTION_TERMINAL' })],
+    });
+  });
+
   it('rejeita adulteração de sourceFingerprint e inputFingerprint persistidos', async () => {
     const study = await makeStudy();
     const sourceTampered = structuredClone(study) as DeepMutable<StudyDocument>;

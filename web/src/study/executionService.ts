@@ -110,19 +110,33 @@ function reservationExpired(reservation: ExecutionRecord, now: string, leaseMs: 
   return Date.parse(now) - Date.parse(reservation.createdAt) >= leaseMs;
 }
 
-function interruptReservation(
+function terminalExists(
   study: StudyDocument,
-  reservationId: string,
+  attemptId: string,
+  requestId: string,
+): boolean {
+  return study.executions.some((execution) =>
+    execution.status !== 'PREPARING'
+    && execution.status !== 'RUNNING'
+    && (execution.attemptId === attemptId
+      || execution.requestSnapshot.request_id === requestId));
+}
+
+async function appendInterruption(
+  study: StudyDocument,
+  reservation: ExecutionRecord,
+  terminalId: string,
   finishedAt: string,
-): StudyDocument {
-  return {
-    ...structuredClone(study),
-    revision: study.revision + 1,
-    updatedAt: finishedAt,
-    executions: study.executions.map((execution) => execution.id === reservationId
-      ? { ...structuredClone(execution), status: 'INTERRUPTED' as const, finishedAt }
-      : structuredClone(execution)),
-  };
+): Promise<StudyDocument> {
+  const attemptId = reservation.attemptId ?? reservation.id;
+  if (terminalExists(study, attemptId, reservation.requestSnapshot.request_id)) return study;
+  return appendExecution(study, {
+    ...structuredClone(reservation),
+    id: terminalId,
+    attemptId,
+    status: 'INTERRUPTED',
+    finishedAt,
+  }, finishedAt);
 }
 
 async function persistTerminal(
@@ -142,25 +156,19 @@ async function persistTerminal(
     await controller.flush();
     const currentStudy = controller.snapshot.document;
     if (currentStudy === null || currentStudy.id !== record.requestSnapshot.study_id) {
-      const interrupted = {
-        ...structuredClone(reservedStudy),
-        executions: reservedStudy.executions.map((execution) => execution.id === reservationId
-          ? { ...structuredClone(execution), status: 'INTERRUPTED' as const, finishedAt }
-          : structuredClone(execution)),
-      };
-      const detached = await appendExecution(interrupted, record, finishedAt);
+      if (terminalExists(reservedStudy, record.attemptId ?? reservationId, record.requestSnapshot.request_id)) {
+        return { current: false, persistenceError: null };
+      }
+      const detached = await appendExecution(reservedStudy, record, finishedAt);
       await controller.saveDetachedStudy(detached, reservedStudy.revision);
       return { current: false, persistenceError: null };
     }
     const currentScenario = currentStudy.scenarios.find((item) => item.id === record.scenarioId);
     const current = currentScenario?.inputFingerprint === record.inputFingerprint;
-    const interrupted = {
-      ...structuredClone(currentStudy),
-      executions: currentStudy.executions.map((execution) => execution.id === reservationId
-        ? { ...structuredClone(execution), status: 'INTERRUPTED' as const, finishedAt }
-        : structuredClone(execution)),
-    };
-    const withExecution = await appendExecution(interrupted, record, finishedAt);
+    if (terminalExists(currentStudy, record.attemptId ?? reservationId, record.requestSnapshot.request_id)) {
+      return { current, persistenceError: null };
+    }
+    const withExecution = await appendExecution(currentStudy, record, finishedAt);
     controller.edit(withExecution);
     await controller.flush();
     return { current, persistenceError: null };
@@ -200,7 +208,7 @@ async function execute(options: ExecuteStudyScenarioOptions): Promise<ExecutionA
             error: new ExecutionInProgressError(existing.id),
           });
         }
-        const interrupted = interruptReservation(study, existing.id, inspectedAt);
+        const interrupted = await appendInterruption(study, existing, nextId(), inspectedAt);
         options.controller.edit(interrupted);
         const reconciled = await options.controller.flush();
         if (reconciled === null) {
@@ -217,6 +225,7 @@ async function execute(options: ExecuteStudyScenarioOptions): Promise<ExecutionA
       const createdAt = now();
       const reservation: ExecutionRecord = {
         id: executionId,
+        attemptId: executionId,
         scenarioId: scenario.id,
         scenarioRevision: scenario.revision,
         inputFingerprint: scenario.inputFingerprint,
@@ -241,7 +250,7 @@ async function execute(options: ExecuteStudyScenarioOptions): Promise<ExecutionA
           && options.controller.snapshot.sessionEpoch === epoch) {
           try {
             await options.controller.saveDetachedStudy(
-              interruptReservation(withReservation, reservation.id, now()),
+              await appendInterruption(withReservation, reservation, nextId(), now()),
               withReservation.revision,
             );
           } catch (error) {
@@ -272,6 +281,7 @@ async function execute(options: ExecuteStudyScenarioOptions): Promise<ExecutionA
       const status: ExecutionStatus = envelope === null ? 'FAILED' : 'SUCCEEDED';
       const record: ExecutionRecord = {
         id: envelope?.execution_id ?? nextId(),
+        attemptId: executionId,
         scenarioId: scenario.id,
         scenarioRevision: scenario.revision,
         inputFingerprint: scenario.inputFingerprint,
@@ -298,7 +308,7 @@ async function execute(options: ExecuteStudyScenarioOptions): Promise<ExecutionA
         record,
         finishedAt,
       );
-      return attempt(record.id, status, request, {
+      return attempt(executionId, status, request, {
         envelope,
         error: failure,
         persistenceError: persisted.persistenceError,

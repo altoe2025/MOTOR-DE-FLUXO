@@ -162,6 +162,25 @@ export async function validateStudyDocument(
   if (new Set(executionIds).size !== executionIds.length) {
     issues.push(issue('/executions', 'DUPLICATE_ID', 'Identificador de execução repetido.'));
   }
+  const terminalRequests = new Set<string>();
+  const terminalAttempts = new Set<string>();
+  for (const execution of value.executions) {
+    if (execution.status === 'PREPARING' || execution.status === 'RUNNING') continue;
+    const requestId = execution.requestSnapshot.request_id;
+    const duplicateRequest = terminalRequests.has(requestId);
+    const duplicateAttempt = execution.attemptId !== undefined
+      && terminalAttempts.has(execution.attemptId);
+    if (duplicateRequest || duplicateAttempt) {
+      issues.push(issue(
+        '/executions',
+        'DUPLICATE_EXECUTION_TERMINAL',
+        'Tentativa possui mais de um terminal persistido.',
+      ));
+      break;
+    }
+    terminalRequests.add(requestId);
+    if (execution.attemptId !== undefined) terminalAttempts.add(execution.attemptId);
+  }
   for (const [index, execution] of value.executions.entries()) {
     const scenario = value.scenarios.find((candidate) => candidate.id === execution.scenarioId);
     if (scenario === undefined || execution.scenarioRevision > scenario.revision) {

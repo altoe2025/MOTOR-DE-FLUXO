@@ -193,11 +193,9 @@ describe('executeStudyScenario', () => {
     const [left, right] = await Promise.all([first, second]);
     expect(left.id).toBe(right.id);
     expect(runPreview).toHaveBeenCalledOnce();
-    expect(subject.repository.document?.executions).toHaveLength(2);
-    expect(subject.repository.document?.executions.map((item) => item.status)).toEqual(['INTERRUPTED', 'SUCCEEDED']);
-    expect(subject.repository.document?.executions[1]).toMatchObject({ id: left.id, status: 'SUCCEEDED' });
-    expect(subject.repository.document?.executions[1]?.requestSnapshot.request_id)
-      .toBe(subject.repository.document?.executions[0]?.requestSnapshot.request_id);
+    expect(subject.repository.document?.executions.map((item) => item.status)).toEqual(['RUNNING', 'SUCCEEDED']);
+    expect(subject.repository.document?.executions[0]).toMatchObject({ id: left.id, attemptId: left.id });
+    expect(subject.repository.document?.executions[1]).toMatchObject({ attemptId: left.id, status: 'SUCCEEDED' });
     expect(statuses).toEqual(['PREPARING', 'RUNNING', 'SUCCEEDED']);
   });
 
@@ -260,13 +258,12 @@ describe('executeStudyScenario', () => {
     await expect(cancelled).resolves.toMatchObject({ status: 'INTERRUPTED' });
 
     expect(cancelledPost).not.toHaveBeenCalled();
-    expect(subject.repository.document?.executions).toHaveLength(1);
-    expect(subject.repository.document?.executions[0]).toMatchObject({
-      id: reservation.id,
+    expect(subject.repository.document?.executions).toHaveLength(2);
+    expect(subject.repository.document?.executions[1]).toMatchObject({
       status: 'INTERRUPTED', finishedAt: expect.any(String),
       requestSnapshot: { request_id: reservation.requestSnapshot.request_id },
     });
-    const completedRequest = subject.repository.document?.executions[0]?.requestSnapshot.request_id;
+    const completedRequest = subject.repository.document?.executions[1]?.requestSnapshot.request_id;
 
     await subject.controller.loadStudy(subject.study.id);
     const nextPost = vi.fn(async (input: PreviaRequest) => matchingEnvelope(input, envelopeFixture.execution_id));
@@ -323,8 +320,10 @@ describe('executeStudyScenario', () => {
       reservationLeaseMs: 1,
     })).resolves.toMatchObject({ status: 'SUCCEEDED' });
     expect(resumedPost).toHaveBeenCalledOnce();
-    expect(subject.repository.document?.executions.map((execution) => execution.status))
-      .toEqual(['INTERRUPTED', 'INTERRUPTED', 'SUCCEEDED']);
+    expect(subject.repository.document?.executions
+      .filter((execution) => execution.status !== 'RUNNING')
+      .map((execution) => execution.status))
+      .toEqual(['INTERRUPTED', 'SUCCEEDED']);
   });
 
   it('converte falha do flush inicial em FAILED sem POST e preserva STORAGE_FAILURE', async () => {
@@ -389,8 +388,10 @@ describe('executeStudyScenario', () => {
     expect(failingRun).toHaveBeenCalledOnce();
     expect(failed).toMatchObject({ status: 'FAILED', error: failure });
     expect(failed.id).not.toBe(succeeded.id);
-    expect(subject.repository.document?.executions.map((item) => item.status))
-      .toEqual(['INTERRUPTED', 'SUCCEEDED', 'INTERRUPTED', 'FAILED']);
+    expect(subject.repository.document?.executions
+      .filter((item) => item.status !== 'RUNNING')
+      .map((item) => item.status))
+      .toEqual(['SUCCEEDED', 'FAILED']);
     expect(succeeded.envelope).not.toBeNull();
   });
 
@@ -539,8 +540,10 @@ describe('executeStudyScenario', () => {
 
     expect(subject.controller.snapshot.document?.id).toBe(studyB.id);
     const reopenedA = await subject.controller.loadStudy(subject.study.id);
-    expect(reopenedA?.executions.map((execution) => execution.status))
-      .toEqual(['INTERRUPTED', 'SUCCEEDED']);
+    expect(reopenedA?.executions
+      .filter((execution) => execution.status !== 'RUNNING')
+      .map((execution) => execution.status))
+      .toEqual(['SUCCEEDED']);
   });
 
   it('mantém sucesso em memória quando falha ao salvar a resposta', async () => {
@@ -557,5 +560,6 @@ describe('executeStudyScenario', () => {
     expect(result.persistenceError).toBeInstanceOf(Error);
     expect(subject.controller.snapshot.status).toBe('STORAGE_FAILURE');
     expect(subject.controller.snapshot.document?.executions).toHaveLength(2);
+    expect(subject.controller.snapshot.document?.executions[1]?.status).toBe('SUCCEEDED');
   });
 });

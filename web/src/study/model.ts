@@ -144,6 +144,7 @@ export type ScenarioDraft = Omit<ScenarioDocument, 'inputFingerprint'> &
 export type ExecutionStatus = 'PREPARING' | 'RUNNING' | 'SUCCEEDED' | 'FAILED' | 'INTERRUPTED';
 export type ExecutionRecord = Readonly<{
   id: string;
+  attemptId?: string;
   scenarioId: string;
   scenarioRevision: number;
   inputFingerprint: string;

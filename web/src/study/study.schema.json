@@ -276,6 +276,7 @@
       "additionalProperties": false,
       "properties": {
         "id": { "$ref": "#/$defs/Identifier" },
+        "attemptId": { "$ref": "#/$defs/Identifier" },
         "scenarioId": { "$ref": "#/$defs/Identifier" },
         "scenarioRevision": { "type": "integer", "minimum": 1 },
         "inputFingerprint": { "$ref": "#/$defs/Digest" },
