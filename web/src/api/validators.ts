@@ -22,7 +22,9 @@ const SEED_TEXT = /^(0|[1-9][0-9]*)$/;
 const MAX_SEED = 9223372036854775807n;
 
 function normalizeUuidIdentity(value: unknown): string | null {
-  return typeof value === 'string' && UUID_KEY.test(value) ? value.toLowerCase() : null;
+  if (typeof value !== 'string') return null;
+  const bare = value.startsWith('urn:uuid:') ? value.slice('urn:uuid:'.length) : value;
+  return UUID_KEY.test(bare) ? bare.toLowerCase() : null;
 }
 
 function hasValidGeneratedSampling(data: unknown): boolean {

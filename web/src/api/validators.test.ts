@@ -291,6 +291,24 @@ describe('generated runtime validation', () => {
     expect(validateDiagnosticRequest(mixed)).toBe(false);
   });
 
+  it('accepts a URN participant identity only with canonical seed-map keys', () => {
+    const request = generatedDiagnosticRequest();
+    request.sampling.preparation_input.participants[0]!.id =
+      `urn:uuid:${generatedParticipantId.toUpperCase()}`;
+    expect(validateDiagnosticRequest(request)).toBe(true);
+
+    const urnKey = generatedDiagnosticRequest();
+    urnKey.sampling.preparation_input.participants[0]!.id =
+      `urn:uuid:${generatedParticipantId}`;
+    for (const repetition of urnKey.sampling.repetitions) {
+      const seed = repetition.participant_seeds[generatedParticipantId]!;
+      repetition.participant_seeds = {
+        [`urn:uuid:${generatedParticipantId}`]: seed,
+      };
+    }
+    expect(validateDiagnosticRequest(urnKey)).toBe(false);
+  });
+
   it('rejects duplicate repetition ids', () => {
     const request = generatedDiagnosticRequest();
     request.sampling.repetitions[1]!.repetition_id =
@@ -304,6 +322,17 @@ describe('generated runtime validation', () => {
     const repetitionId = 'abcdefab-cdef-4abc-8def-abcdefabcdef';
     request.sampling.repetitions[0]!.repetition_id = repetitionId;
     request.sampling.repetitions[1]!.repetition_id = repetitionId.toUpperCase();
+    request.selected_repetition_id = repetitionId;
+
+    expect(validateDiagnosticRequest(request)).toBe(false);
+  });
+
+  it('treats bare and URN repetition ids as the same identity', () => {
+    const request = generatedDiagnosticRequest();
+    const repetitionId = 'abcdefab-cdef-4abc-8def-abcdefabcdef';
+    request.sampling.repetitions[0]!.repetition_id = repetitionId;
+    request.sampling.repetitions[1]!.repetition_id =
+      `urn:uuid:${repetitionId.toUpperCase()}`;
     request.selected_repetition_id = repetitionId;
 
     expect(validateDiagnosticRequest(request)).toBe(false);
@@ -331,6 +360,28 @@ describe('generated runtime validation', () => {
     request.selected_repetition_id = repetitionId.toUpperCase();
 
     expect(validateDiagnosticRequest(request)).toBe(true);
+  });
+
+  it('matches URN repetition and selection identities to canonical UUIDs', () => {
+    const selectedUrn = generatedDiagnosticRequest();
+    const repetitionId = 'abcdefab-cdef-4abc-8def-abcdefabcdef';
+    selectedUrn.sampling.repetitions[0]!.repetition_id = repetitionId;
+    selectedUrn.selected_repetition_id = `urn:uuid:${repetitionId.toUpperCase()}`;
+    expect(validateDiagnosticRequest(selectedUrn)).toBe(true);
+
+    const repetitionUrn = generatedDiagnosticRequest();
+    repetitionUrn.sampling.repetitions[0]!.repetition_id =
+      `urn:uuid:${repetitionId.toUpperCase()}`;
+    repetitionUrn.selected_repetition_id = repetitionId;
+    expect(validateDiagnosticRequest(repetitionUrn)).toBe(true);
+  });
+
+  it('rejects an uppercase URN prefix accepted only by structural AJV', () => {
+    const request = generatedDiagnosticRequest();
+    request.selected_repetition_id =
+      `URN:UUID:${request.sampling.repetitions[0]!.repetition_id}`;
+
+    expect(validateDiagnosticRequest(request)).toBe(false);
   });
 
   it('returns false without throwing for malformed generated input', () => {

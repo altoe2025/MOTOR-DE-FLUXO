@@ -70,6 +70,21 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 
 ---
 
+## 2026-09-20 — UUID URN na validação diagnóstica do cliente (MOT-70)
+
+1. **Sintoma.** `ajv-formats` e Pydantic aceitavam `urn:uuid:<UUID>`, mas a
+   normalização semântica gerada só reconhecia a forma bare e rejeitava requests que
+   o servidor aceitava.
+2. **Causa.** `normalizeUuidIdentity` aplicava a regex canônica diretamente ao texto
+   inteiro, sem retirar o prefixo URN aceito pelos dois lados.
+3. **O que foi feito.** A interseção foi caracterizada: bare e `urn:uuid:` minúsculo
+   aceitam payload em qualquer caixa; compacto/braces falham no AJV e `URN:UUID:`
+   falha no Pydantic. O gerador agora remove somente o prefixo URN comum antes de
+   canonicalizar identidades, mantendo chaves de seed textuais.
+4. **O que isso invalida.** A cobertura de paridade UUID declarada na correção
+   anterior para a variante URN. Requests bare, regras do motor e resultados não
+   mudam.
+
 ## 2026-09-20 — Identidade UUID canônica no plano diagnóstico (MOT-70)
 
 1. **Sintoma.** O cliente tratava UUIDs textuais com caixas diferentes como IDs
