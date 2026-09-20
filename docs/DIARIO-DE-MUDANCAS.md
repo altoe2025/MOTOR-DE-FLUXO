@@ -70,6 +70,22 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 
 ---
 
+## 2026-09-20 — Identidade UUID canônica no plano diagnóstico (MOT-70)
+
+1. **Sintoma.** O cliente tratava UUIDs textuais com caixas diferentes como IDs
+   distintos e comparava o ID bruto do participante com chaves de seed. Isso
+   divergia do Pydantic, que canonicaliza valores UUID, mas preserva as chaves do
+   mapa como texto.
+2. **Causa.** A checagem semântica gerada usava igualdade direta de strings para
+   participante, repetição e seleção.
+3. **O que foi feito.** O gerador oficial passou a normalizar valores-identidade
+   UUID antes de comparar participantes, detectar repetição duplicada e resolver a
+   seleção. Chaves de `participant_seeds` permanecem textuais e precisam coincidir
+   com o ID canônico, reproduzindo a aceitação/rejeição do servidor.
+4. **O que isso invalida.** A paridade declarada na correção anterior para payloads
+   com UUID em caixa alta ou mista. Requests canônicos e resultados do motor não
+   mudam.
+
 ## 2026-09-20 — Paridade integral do plano gerado no cliente (MOT-70)
 
 1. **Sintoma.** O boundary AJV ainda aceitava mapas de seed que não correspondiam

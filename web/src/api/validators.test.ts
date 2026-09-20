@@ -20,7 +20,7 @@ const source = {
   source: 'Fixture validators MOT-25',
   recorded_at: '2026-09-19T00:00:00Z',
 };
-const generatedParticipantId = '00000000-0000-4000-8000-000000000200';
+const generatedParticipantId = 'abcdefab-cdef-4abc-8def-abcdefabc200';
 
 function preparationRequest() {
   const paths = [
@@ -262,10 +262,49 @@ describe('generated runtime validation', () => {
     expect(validateDiagnosticRequest(missing)).toBe(false);
   });
 
+  it('accepts uppercase participant identity with canonical seed-map keys', () => {
+    const request = generatedDiagnosticRequest();
+    request.sampling.preparation_input.participants[0]!.id =
+      generatedParticipantId.toUpperCase();
+
+    expect(validateDiagnosticRequest(request)).toBe(true);
+  });
+
+  it('rejects uppercase or mixed-case participant seed-map keys', () => {
+    const uppercase = generatedDiagnosticRequest();
+    uppercase.sampling.preparation_input.participants[0]!.id =
+      generatedParticipantId.toUpperCase();
+    for (const repetition of uppercase.sampling.repetitions) {
+      const seed = repetition.participant_seeds[generatedParticipantId]!;
+      repetition.participant_seeds = {
+        [generatedParticipantId.toUpperCase()]: seed,
+      };
+    }
+    expect(validateDiagnosticRequest(uppercase)).toBe(false);
+
+    const mixed = generatedDiagnosticRequest();
+    const mixedKey = 'AbCdEfAb-CdEf-4AbC-8dEf-AbCdEfAbC200';
+    for (const repetition of mixed.sampling.repetitions) {
+      const seed = repetition.participant_seeds[generatedParticipantId]!;
+      repetition.participant_seeds = { [mixedKey]: seed };
+    }
+    expect(validateDiagnosticRequest(mixed)).toBe(false);
+  });
+
   it('rejects duplicate repetition ids', () => {
     const request = generatedDiagnosticRequest();
     request.sampling.repetitions[1]!.repetition_id =
       request.sampling.repetitions[0]!.repetition_id;
+
+    expect(validateDiagnosticRequest(request)).toBe(false);
+  });
+
+  it('rejects repetition ids that differ only by UUID letter case', () => {
+    const request = generatedDiagnosticRequest();
+    const repetitionId = 'abcdefab-cdef-4abc-8def-abcdefabcdef';
+    request.sampling.repetitions[0]!.repetition_id = repetitionId;
+    request.sampling.repetitions[1]!.repetition_id = repetitionId.toUpperCase();
+    request.selected_repetition_id = repetitionId;
 
     expect(validateDiagnosticRequest(request)).toBe(false);
   });
@@ -283,6 +322,15 @@ describe('generated runtime validation', () => {
     request.selected_repetition_id = '00000000-0000-4000-8000-000000000999';
 
     expect(validateDiagnosticRequest(request)).toBe(false);
+  });
+
+  it('matches selected repetition identity independently of UUID letter case', () => {
+    const request = generatedDiagnosticRequest();
+    const repetitionId = 'abcdefab-cdef-4abc-8def-abcdefabcdef';
+    request.sampling.repetitions[0]!.repetition_id = repetitionId;
+    request.selected_repetition_id = repetitionId.toUpperCase();
+
+    expect(validateDiagnosticRequest(request)).toBe(true);
   });
 
   it('returns false without throwing for malformed generated input', () => {

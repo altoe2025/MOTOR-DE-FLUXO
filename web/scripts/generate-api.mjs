@@ -56,6 +56,10 @@ const UUID_KEY = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
 const SEED_TEXT = /^(0|[1-9][0-9]*)$/;
 const MAX_SEED = 9223372036854775807n;
 
+function normalizeUuidIdentity(value: unknown): string | null {
+  return typeof value === 'string' && UUID_KEY.test(value) ? value.toLowerCase() : null;
+}
+
 function hasValidGeneratedSampling(data: unknown): boolean {
   if (!isJsonObject(data) || !isJsonObject(data.sampling)) return false;
   const sampling = data.sampling;
@@ -65,10 +69,11 @@ function hasValidGeneratedSampling(data: unknown): boolean {
   if (!Array.isArray(sampling.repetitions)) return false;
   if (sampling.count !== sampling.repetitions.length) return false;
   const participantIds = sampling.preparation_input.participants.map((participant) =>
-    isJsonObject(participant) && typeof participant.id === 'string' ? participant.id : null,
+    isJsonObject(participant) ? normalizeUuidIdentity(participant.id) : null,
   );
   if (participantIds.some((participantId) => participantId === null)) return false;
   const expectedParticipants = new Set(participantIds as string[]);
+  if (expectedParticipants.size !== participantIds.length) return false;
   const repetitionIds = new Set<string>();
   const seedsByParticipant = new Map(
     [...expectedParticipants].map((participantId) => [participantId, new Set<string>()]),
@@ -77,9 +82,9 @@ function hasValidGeneratedSampling(data: unknown): boolean {
     if (!isJsonObject(repetition) || !isJsonObject(repetition.participant_seeds)) {
       return false;
     }
-    if (typeof repetition.repetition_id !== 'string') return false;
-    if (repetitionIds.has(repetition.repetition_id)) return false;
-    repetitionIds.add(repetition.repetition_id);
+    const repetitionId = normalizeUuidIdentity(repetition.repetition_id);
+    if (repetitionId === null || repetitionIds.has(repetitionId)) return false;
+    repetitionIds.add(repetitionId);
     const suppliedParticipants = Object.keys(repetition.participant_seeds);
     if (
       suppliedParticipants.length !== expectedParticipants.size
@@ -97,8 +102,8 @@ function hasValidGeneratedSampling(data: unknown): boolean {
       usedSeeds.add(seed);
     }
   }
-  return typeof data.selected_repetition_id === 'string'
-    && repetitionIds.has(data.selected_repetition_id);
+  const selectedRepetitionId = normalizeUuidIdentity(data.selected_repetition_id);
+  return selectedRepetitionId !== null && repetitionIds.has(selectedRepetitionId);
 }
 
 ajv.addKeyword({
