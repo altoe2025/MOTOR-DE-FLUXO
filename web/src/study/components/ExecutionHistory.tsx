@@ -16,6 +16,18 @@ function sourceLabel(source: PortfolioSource): string {
   }
 }
 
+function historicalSource(
+  execution: ExecutionRecord,
+  scenario: ScenarioDocument | undefined,
+): PortfolioSource | undefined {
+  if (execution.sourceSnapshot !== undefined) return execution.sourceSnapshot.source;
+  return scenario?.id === execution.scenarioId
+    && scenario.revision === execution.scenarioRevision
+    && scenario.inputFingerprint === execution.inputFingerprint
+    ? scenario.sourceSnapshot.source
+    : undefined;
+}
+
 function instant(value: string): string {
   return new Intl.DateTimeFormat('pt-BR', {
     dateStyle: 'short', timeStyle: 'short', timeZone: 'UTC',
@@ -45,7 +57,7 @@ export function ExecutionHistory({
     <ol aria-label="Histórico de execuções">
       {[...visibleExecutions].reverse().map((execution) => {
         const scenario = scenariosById.get(execution.scenarioId);
-        const source = execution.sourceSnapshot?.source ?? scenario?.sourceSnapshot.source;
+        const source = historicalSource(execution, scenario);
         return (
           <li key={execution.id}>
             <button

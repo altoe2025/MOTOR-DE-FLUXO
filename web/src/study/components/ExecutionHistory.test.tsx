@@ -7,7 +7,7 @@ import type { ExecutionRecord, ScenarioDocument } from '../model';
 import { ExecutionHistory } from './ExecutionHistory';
 
 const scenario = {
-  id: 'scenario-1', name: 'Base',
+  id: 'scenario-1', revision: 4, inputFingerprint: 'b'.repeat(64), name: 'Base',
   sourceSnapshot: { source: { kind: 'OBSERVED_CASE', caseId: 'case-1', caseRevision: 7 } },
 } as ScenarioDocument;
 
@@ -33,13 +33,34 @@ describe('ExecutionHistory', () => {
 
     expect(screen.getByText('Concluída')).toBeVisible();
     expect(screen.getByText('Falhou')).toBeVisible();
-    expect(screen.getAllByText(/Caso observado/)).toHaveLength(2);
+    expect(screen.getAllByText(/Caso observado/)).toHaveLength(1);
+    expect(screen.getByText('Origem indisponível')).toBeVisible();
     expect(screen.getByText(/build-123 · contrato 1.0.0/)).toBeVisible();
     expect(screen.getByText(`${'a'.repeat(12)}…`)).toBeVisible();
 
     await userEvent.setup().click(screen.getByRole('button', { name: /execução execution-old/i }));
     expect(onSelect).toHaveBeenCalledWith(executions[0]);
     expect(scenario).toEqual(before);
+  });
+
+  it('não atribui origem corrente a execução legada após mudança de revisão e origem', () => {
+    const changedScenario = {
+      ...scenario,
+      revision: 5,
+      inputFingerprint: 'c'.repeat(64),
+      sourceSnapshot: {
+        source: {
+          kind: 'SYNTHETIC',
+          recipe: { exampleId: 'corrente' },
+        },
+      },
+    } as ScenarioDocument;
+    const legacy = { ...executions[1]!, sourceSnapshot: undefined } as ExecutionRecord;
+
+    render(<ExecutionHistory executions={[legacy]} scenarios={[changedScenario]} onSelect={() => undefined} />);
+
+    expect(screen.getByText('Origem indisponível')).toBeVisible();
+    expect(screen.queryByText(/Carteira sintética/)).not.toBeInTheDocument();
   });
 
   it('mostra somente o terminal quando a reserva e a conclusão compartilham request_id', () => {
