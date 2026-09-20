@@ -2,10 +2,11 @@
 
 ## Contexto
 
-Reconferido em 2026-09-16 na branch `codex/autonetting-preferencial`: a suíte Python
-tem **670 testes aprovados e 2 ignorados**, tanto na execução normal quanto sob
-`python -O`. O front-end tem **89 testes unitários aprovados**; build, lint e os
-**3 testes Playwright** também passam.
+Reconferido em 2026-09-20 no candidato local `03e87b8` da branch
+`codex/frontend-etapa-3`: a suíte Python tem **772 testes aprovados e 2 ignorados**,
+tanto na execução normal quanto sob `python -O`. O front-end tem **388 testes
+unitários aprovados em 51 arquivos**; typecheck, lint, build e os **14 testes
+Playwright** também passam. Esse estado não foi publicado ou mergeado.
 
 ## Decisão
 
@@ -222,3 +223,31 @@ O fallback do servidor estático também possui regressão para reload/deep link
 rotas públicas declaradas: `/carteira/:uuid`, `/estudos/:uuid`, o diagnóstico do
 estudo e as páginas exatas de Empresa. Segmentos desconhecidos continuam 404; não há
 fallback wildcard.
+
+### Gate global final da Etapa 3
+
+O gate foi executado uma vez no SHA
+`03e87b8222d26ef141ef519c8716b4e281b8a7b8`, sem mudança rastreada posterior:
+
+| Verificação | Resultado |
+|---|---|
+| OpenAPI + geração TypeScript + diff dos quatro artefatos | aprovado, sem drift |
+| `python -m pytest -q` | 772 aprovados, 2 ignorados |
+| `python -O -m pytest -q` | 772 aprovados, 2 ignorados |
+| `python -m ruff check servidor tests/web_api` | aprovado |
+| `python -m mypy servidor` | aprovado, 33 arquivos |
+| `npm --prefix web run test:unit` | 388 aprovados em 51 arquivos |
+| typecheck / lint / build | aprovados; aviso informativo de chunk > 500 kB |
+| `npm --prefix web run test:e2e` | 14 aprovados em 48,7 s |
+| scanner | aprovado, 376 textos e 10 binários |
+| `git diff --check` | aprovado; avisos CRLF informativos |
+
+Os dois skips são testes de symlink não permitido pelo Windows observado. Auth real
+continua condicionado às variáveis `MOT_REAL_AUTH_*`.
+
+O critério S15.14 da Etapa 3 não é integralmente provado por esse gate. O Playwright
+aplica zoom a 200% ao diagnóstico legado e à carteira; a página nova
+`/estudos/:studyId/diagnostico` possui testes de série/tabela, foco e controles
+semânticos, mas não um percurso browser próprio a 200% e por teclado. A matriz em
+[`docs/frontend/etapa-3-aceitacao.md`](frontend/etapa-3-aceitacao.md) registra o
+aceite `CONDITIONAL` sem transformar essa lacuna de cobertura em falha funcional.

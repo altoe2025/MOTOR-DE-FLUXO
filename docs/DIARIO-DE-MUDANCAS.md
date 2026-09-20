@@ -62,7 +62,7 @@ Atualizada em 2026-09-20, durante o fechamento integrado local da Etapa 3.
 | `codex/autonetting-preferencial` | PR #36 mergeado na `main`; grade histórica não regenerada | Codex |
 | `codex/mot62-planejamento-etapa2-v2` | documentação da MOT-62; IDs, dependências e auditoria da Etapa 2 v2, sem código de produto | Codex |
 | `codex/mot63-observed-contracts` | implementação e documentação da Etapa 2 v2; aceite **CONDITIONAL**, sem push/PR/merge e sem início da Etapa 3 | Codex |
-| `codex/frontend-etapa-3` | T0–T11 implementados localmente; gate global da MOT-76 ainda deve ser registrado antes de qualquer decisão de integração | Codex |
+| `codex/frontend-etapa-3` | T0–T12 concluídos localmente; gate global verde em `03e87b8`; aceite técnico **CONDITIONAL** por lacuna de evidência S15.14; sem push/PR/merge | Codex |
 
 Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
@@ -70,6 +70,32 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
 ---
+
+## 2026-09-20 — Auditoria final e aceite condicional da Etapa 3 (MOT-77)
+
+1. **Sintoma.** T0–T11 tinham implementação, revisões e um gate global verde no
+   mesmo SHA, mas faltavam a documentação operacional efetiva, a matriz individual
+   dos 18 critérios S15 e o rastreamento final dos dois fluxos de autoridade. A
+   evidência de acessibilidade também não distinguia o diagnóstico legado da nova
+   página robusta.
+2. **Causa.** Operação, arquitetura e mapa ainda descreviam a Etapa 2/estado de
+   partida, enquanto a prova de zoom a 200% existente no Playwright exercitava
+   `/diagnostico`, não `/estudos/:studyId/diagnostico`. Testes unitários comprovavam
+   série/tabela, foco e controles semânticos, mas não havia percurso browser do novo
+   diagnóstico por teclado e a 200%.
+3. **O que foi feito.** Na branch `codex/frontend-etapa-3`, foram auditados
+   `casos → perfil → profile_versions → estudo` e
+   `cenário → request → job → eixos → terminal → IndexedDB → UI`. Foram registrados
+   DB 2, schemas, endpoints, limites, estados e métodos estatísticos efetivos; criados
+   os guias de operação e aceite; atualizados mapa, arquitetura, testes, plano e a
+   especificação histórica. A matriz S15 marcou 17 critérios PASS e S15.14 PARTIAL,
+   emitindo decisão técnica local **CONDITIONAL**. Nenhum código de produto mudou e
+   o gate T11 não foi repetido.
+4. **O que isso invalida.** Invalida o mapa/arquitetura que tratavam a Etapa 3 como
+   não iniciada e qualquer leitura de que o gate global, sozinho, provava zoom e
+   teclado da página robusta. Não invalida os 772 testes Python, 388 unitários web,
+   14 E2E, contratos sem drift, medições 10/30/100 ou gates do SHA `03e87b8`. Não
+   autoriza push, PR, CI publicado, merge ou início da Etapa 4.
 
 ## 2026-09-20 — Fix Round 1 do fechamento integrado da Etapa 3 (MOT-76)
 
