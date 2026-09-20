@@ -1,18 +1,18 @@
-# Etapa 3 — aceite condicional e handoff
+# Etapa 3 — aceite integral e handoff
 
 ## Decisão
 
-**Aceite técnico local: CONDITIONAL.** O candidato auditado é
-`03e87b8222d26ef141ef519c8716b4e281b8a7b8`. O gate global foi executado uma única
+**Aceite técnico local: PASS.** O candidato auditado é
+`57be68990d4f98f8d6cb4ec7c095f121566811a4`. O gate global foi executado uma única
 vez nesse SHA e ficou integralmente verde. Não há finding Critical ou Important de
-correção de produto aberto.
+correção de produto aberto e os 18 critérios S15 possuem evidência executada.
 
-A condição remanescente é de evidência: S15.14 exige que teclado e zoom a 200%
-permaneçam usáveis no diagnóstico robusto. A implementação usa controles nativos,
-foco programático, tabelas semânticas e container responsivo; gráfico e tabela têm
-reconciliação automatizada. Porém o Playwright aplicou 200% ao diagnóstico legado,
-não à rota nova `/estudos/:studyId/diagnostico`, e não percorreu por teclado essa
-página. Pelo critério “não executado não é PASS”, S15.14 fica **PARTIAL**.
+S15.14 foi fechado no Chromium local, projeto Playwright `local`, viewport
+1280 × 800 e zoom de 200% na rota `/estudos/:studyId/diagnostico`. O percurso usa
+`Tab` e `Enter`, verifica foco visível, acessa distribuição, execução selecionada e
+os sete eixos, e prova que tabelas largas entram na ordem do teclado e respondem à
+seta horizontal. O teste primeiro revelou que os containers roláveis não eram
+focáveis; a correção os tornou regiões nomeadas com `tabIndex=0`.
 
 Push, PR, CI publicado, aprovação de merge e merge não foram executados nem são
 autorizados por este documento. Também não foi iniciada a Etapa 4.
@@ -27,7 +27,8 @@ autorizados por este documento. Também não foi iniciada a Etapa 4.
 | Cliente e apresentação | `b0845d9`–`407bd08` | reserva/terminal append-only, restart, ECharts e UI diagnóstica |
 | Integrações finais | `56f462e`–`d8fd3e1` | ordem canônica fixa e comparação temporal restrita |
 | Aceitação inicial invalidada | `404533e` | gate revelou dois I001 e duas expectativas E2E desatualizadas; não é usado como aceite |
-| Candidato final | `03e87b8222d26ef141ef519c8716b4e281b8a7b8` | gate global verde, 772 Python, 388 web e 14 E2E |
+| Candidato T11 | `03e87b8222d26ef141ef519c8716b4e281b8a7b8` | gate global verde, 772 Python, 388 web e 14 E2E |
+| Aceite integral | `57be68990d4f98f8d6cb4ec7c095f121566811a4` | S15.14 fechado; gate global verde, 772 Python, 388 web e 15 E2E |
 
 ## Auditoria dos fluxos de autoridade
 
@@ -92,7 +93,7 @@ Autoridade confirmada:
 
 ## Matriz S15
 
-Salvo indicação contrária, a execução citada ocorreu no SHA final `03e87b8`. Os
+Salvo indicação contrária, a execução citada ocorreu no SHA final `57be689`. Os
 nomes de teste abaixo são âncoras de reprodução; o gate global é a evidência do
 mesmo encadeamento de código.
 
@@ -101,25 +102,25 @@ mesmo encadeamento de código.
 | 1. Perfil e fingerprints determinísticos | PASS | `npm --prefix web run test:unit -- src/profiles` — `is byte-deterministic under case and operation reordering`, validação de fingerprints | 388 unitários globais; implementação `3ac548e`–`a407dcd` |
 | 2. Incompatibilidade bloqueia; overlap/lacunas aparecem | PASS | `compatibility.test.ts`, `calculateOperationalProfile.test.ts`, `profileComponents.test.tsx` | blockers, warnings, `overlapDays` e `gapDays` verificados; `3ac548e`/`d5b0717` |
 | 3. Ausência não vira zero | PASS | `validation.test.ts`, `companyOverview.test.ts`, `presentation.test.ts` | estado sem `value`, empresa vazia e chart sem série zero; `a407dcd`/`42cecbb`/`407bd08` |
-| 4. Perfil imutável e nova seleção cria próxima versão | PASS | `indexedDbApplicationRepository.test.ts`; `company-profiles.spec.ts` | append sequencial, conflito e v1/v2 no browser; 14 E2E |
+| 4. Perfil imutável e nova seleção cria próxima versão | PASS | `indexedDbApplicationRepository.test.ts`; `company-profiles.spec.ts` | append sequencial, conflito e v1/v2 no browser; 15 E2E |
 | 5. Estudo conserva snapshot integral | PASS | `study/domain.test.ts`; `company-profiles.spec.ts` | cópia destacada e v1 preservada após v2; `6fcca62`/`404533e` |
 | 6. Migration 1→2 sem drift | PASS | `npm --prefix web run test:unit -- src/storage/migrations.test.ts src/storage/stage3Contract.test.ts` | fixture V1, operations, rollback, idempotência e schema futuro; 388 unitários |
 | 7. Fila, limites e owner | PASS | `python -m pytest tests/web_api/test_diagnostics_executor.py tests/web_api/test_stage3_acceptance.py -q` | limites 3/32, teto 2, FIFO, UUID igual em owners distintos e isolamento; 772 Python |
 | 8. Cancelamento e terminal único | PASS | mesmos testes Python; `diagnostic-jobs.spec.ts`; `diagnosticExecutionService.test.ts` | queued imediato, running entre repetições, spawn real sem órfão e terminal único |
 | 9. Idempotência, conflito e retry | PASS | `test_idempotencia_conflito_retry_e_retencao`; `diagnosticExecutionService.test.ts`; E2E jobs | mesmo job, 409 em conflito e tentativa nova no retry; `2567dcf`/`9e68215` |
-| 10. Entrada fixa não vira distribuição | PASS | `test_fixed_input_keeps_summary_but_never_fabricates_distribution`; `diagnostic-jobs.spec.ts` | razão canônica visível no browser; 772 Python e 14 E2E |
+| 10. Entrada fixa não vira distribuição | PASS | `test_fixed_input_keeps_summary_but_never_fabricates_distribution`; `diagnostic-jobs.spec.ts` | razão canônica visível no browser; 772 Python e 15 E2E |
 | 11. Seeds registradas reproduzem geração | PASS | `test_worker_generated_usa_exatamente_as_seeds_do_plano`; `buildDiagnosticRequest.test.ts` | plano completo/único e worker usa os valores exatos; `b2c5f01`/`2567dcf` |
 | 12. Sete eixos reconciliam | PASS | `python -m pytest tests/web_api/test_diagnostics_analysis.py -q`; `DiagnosticResult.test.tsx` | fixtures manuais cobrem eixos 1–7 e UI mantém ordem canônica; `9278265`–`f9ebdc9` |
 | 13. Consequências/limitações determinísticas | PASS | `test_consequences_are_versioned_sorted_and_all_references_resolve`; `test_limitations_report_conditions_without_changing_metrics` | refs inexistentes falham; ordenação e condições estáveis |
-| 14. Gráfico/tabela, teclado e zoom 200% | **PARTIAL** | `presentation.test.ts`, `EChart.test.tsx`, `DiagnosticResult.test.tsx`; `npm --prefix web run test:e2e` | mesma série, tabela no DOM, foco/controles semânticos. Zoom 200% foi executado apenas no diagnóstico legado; falta percurso browser da página robusta |
+| 14. Gráfico/tabela, teclado e zoom 200% | PASS | `presentation.test.ts`, `EChart.test.tsx`, `DiagnosticResult.test.tsx`; `diagnostic-jobs.spec.ts` | Chromium `local`, 1280 × 800, zoom 200%; `Tab`/`Enter`, foco visível, sete eixos e rolagem horizontal das tabelas por teclado |
 | 15. Comparação não mistura empresas/métricas | PASS | `npm --prefix web run test:unit -- src/companies/temporalComparison.test.ts src/companies/components/TemporalComparison.test.tsx` | empresa, unidade, definição e método incompatíveis bloqueiam; `64c5433`–`d8fd3e1` |
 | 16. Troca de conta não expõe dados | PASS | `studyController.test.ts`, `diagnosticExecutionService.test.ts`, `test_stage3_acceptance.py`, `company-profiles.spec.ts` | A→B→A, resposta tardia, job 404 e perfis/snapshots vazios para B |
-| 17. Etapas 1 e 2 continuam passando | PASS | `python -m pytest -q`; `npm --prefix web run test:unit`; `npm --prefix web run test:e2e`; `study-observed.spec.ts`; `stage2-regression.spec.ts` | 772 + 2 skipped, 388/51 e 14 E2E. `study-observed.spec.ts` cobre a origem observada e Observado × Motor; `stage2-regression.spec.ts` cobre autoria, sintético, migration, histórico e terminal único |
+| 17. Etapas 1 e 2 continuam passando | PASS | `python -m pytest -q`; `npm --prefix web run test:unit`; `npm --prefix web run test:e2e`; `study-observed.spec.ts`; `stage2-regression.spec.ts` | 772 + 2 skipped, 388/51 e 15 E2E. `study-observed.spec.ts` cobre a origem observada e Observado × Motor; `stage2-regression.spec.ts` cobre autoria, sintético, migration, histórico e terminal único |
 | 18. Contratos sem drift e Python sob `-O` | PASS | geradores + diff; `python -O -m pytest -q` | quatro artefatos sem diff; 772 + 2 skipped em `-O` |
 
 ## Gate global do candidato final
 
-| Comando | Resultado em `03e87b8` |
+| Comando | Resultado em `57be689` |
 |---|---|
 | `python -m servidor.export_openapi` | aprovado |
 | `npm --prefix web run generate:api` | aprovado |
@@ -132,8 +133,8 @@ mesmo encadeamento de código.
 | `npm --prefix web run typecheck` | aprovado |
 | `npm --prefix web run lint` | aprovado |
 | `npm --prefix web run build` | aprovado; aviso conhecido de chunks |
-| `npm --prefix web run test:e2e` | 14 aprovados em 48,7 s |
-| `python -m tests.web_api.scan_credentials` | aprovado; 376 textos e 10 binários |
+| `npm --prefix web run test:e2e` | 15 aprovados em 50,2 s |
+| `python -m tests.web_api.scan_credentials` | aprovado; 378 textos e 10 binários |
 | `git diff --check` | aprovado; avisos CRLF informativos |
 
 Os dois skips Python são cenários de symlink não permitido no Windows observado. A
@@ -157,17 +158,9 @@ não devem ser reclassificados como conclusão de negócio:
 - fila e retenção são locais ao processo; não há durabilidade, coordenação
   multi-instância ou replay integral.
 
-## Condição para aceite integral e integração
+## Condição para integração
 
-Para converter `CONDITIONAL` em `PASS`, execute no SHA candidato um Playwright da
-página `/estudos/:studyId/diagnostico` que, a 200%, percorra controles por teclado e
-confirme acesso à distribuição, execução selecionada, sete eixos e tabelas sem perda
-de ação ou conteúdo. A evidência deve registrar projeto Playwright, browser e
-viewport, mostrar foco visível e provar acionamento dos controles pelo teclado.
-Qualquer alteração de código invalida o gate global atual e exige novo gate no novo
-SHA.
-
-Depois disso, publicação ainda exige ações separadas: push/PR, CI da revisão
+O aceite técnico local está integral. Publicação ainda exige ações separadas: push/PR, CI da revisão
 publicada, revisão e aprovação explícita do Gabriel. Este documento não as autoriza.
 
 ## Handoff para a Etapa 4

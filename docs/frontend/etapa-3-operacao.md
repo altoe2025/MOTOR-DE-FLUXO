@@ -2,10 +2,10 @@
 
 ## Estado deste guia
 
-Este guia descreve o candidato local `03e87b8222d26ef141ef519c8716b4e281b8a7b8`.
-O aceite técnico é **CONDITIONAL** porque o critério S15.14 ainda não possui prova
-browser específica de teclado e zoom a 200% na página nova de diagnóstico robusto.
-O gate global desse SHA está verde; push, PR, CI publicado e merge não foram feitos.
+Este guia descreve o candidato local `57be68990d4f98f8d6cb4ec7c095f121566811a4`.
+O aceite técnico é **PASS**: os 18 critérios S15 possuem evidência, inclusive teclado
+e zoom a 200% na página nova de diagnóstico robusto. O gate global desse SHA está
+verde; push, PR, CI publicado e merge não foram feitos.
 
 A Etapa 3 não altera o motor nem cria uma quarta origem executável. Perfil
 Operacional é evidência observada, copiada integralmente para o estudo; geração de

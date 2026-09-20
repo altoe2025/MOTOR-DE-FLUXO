@@ -11,8 +11,8 @@
 **Spec:** `docs/superpowers/specs/2026-09-20-frontend-etapa-3-design.md`
 
 **Estado de execução:** T0–T12 executadas localmente em `codex/frontend-etapa-3`.
-Gate global final verde em `03e87b8`; aceite técnico `CONDITIONAL` porque S15.14
-ainda carece de prova browser específica da página robusta por teclado e a 200%.
+Gate global final verde em `57be689`; aceite técnico `PASS`, incluindo S15.14 com
+prova browser específica da página robusta por teclado e a 200%.
 Não houve push, PR, CI publicado ou merge.
 
 ## Global Constraints
@@ -1295,13 +1295,14 @@ PR e merge. Este plano por si só não concede essas autorizações.
 - T0–T10 foram implementadas e revisadas no encadeamento `9f1e975..d8fd3e1`.
 - T11 produziu o candidato inicial `404533e`, invalidado pelos findings da primeira
   rodada, e o candidato final `03e87b8` após o fix `MOT-76`.
-- O gate global final em `03e87b8` aprovou contratos sem drift, 772 testes Python e
+- O gate global anterior em `03e87b8` aprovou contratos sem drift, 772 testes Python e
   772 sob `-O` (2 skips em cada modo), Ruff, mypy, 388 testes web, typecheck, lint,
   build, 14 E2E e scanner.
-- A auditoria T12 não confirmou finding Critical/Important de produto. O único gap
-  material de aceite é S15.14: a página robusta possui prova de série/tabela e
-  semântica acessível, mas não foi percorrida no browser por teclado e a zoom 200%.
-- Decisão: **CONDITIONAL**. A matriz completa, limites e handoff estão em
+- S15.14 foi fechado em `57be689`: Chromium local, viewport 1280 × 800, zoom 200%,
+  acionamento por teclado, foco visível, sete eixos e tabelas roláveis focáveis.
+- O gate global final em `57be689` aprovou 772 testes Python normal e sob `-O`, Ruff,
+  mypy, 388 testes web, typecheck, lint, build, 15 E2E e scanner.
+- Decisão: **PASS**. A matriz completa, limites e handoff estão em
   `docs/frontend/etapa-3-aceitacao.md`; operação em
   `docs/frontend/etapa-3-operacao.md`.
 - A Etapa 4 recebe o Perfil Operacional imutável como evidência. Receita geradora de

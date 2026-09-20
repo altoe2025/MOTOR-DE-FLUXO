@@ -12,9 +12,9 @@ EDF global.
 
 **Base integrada do front-end:** `origin/main` em `97601bf`, merge da PR #52, contém
 a Etapa 2 v2. A branch local `codex/frontend-etapa-3` chega ao candidato
-`03e87b8` antes do fechamento documental da MOT-77. Seu gate global está verde; o
-aceite técnico da Etapa 3 é **CONDITIONAL** por faltar a prova browser específica de
-teclado e zoom a 200% na página nova de diagnóstico robusto. Não houve push, PR,
+`57be689` antes do fechamento documental final da MOT-77. Seu gate global está
+verde e o aceite técnico da Etapa 3 é **PASS**, incluindo prova browser específica
+de teclado e zoom a 200% na página nova de diagnóstico robusto. Não houve push, PR,
 CI publicado, aprovação de merge ou merge desta branch.
 
 ```

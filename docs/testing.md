@@ -227,8 +227,8 @@ fallback wildcard.
 ### Gate global final da Etapa 3
 
 O gate foi executado uma vez no SHA
-`03e87b8222d26ef141ef519c8716b4e281b8a7b8`, sem mudança rastreada de produto
-posterior. `c46147f` e o commit documental que o sucede alteram somente documentação:
+`57be68990d4f98f8d6cb4ec7c095f121566811a4`, sem mudança rastreada de produto
+posterior. Os commits que o sucedem alteram somente documentação:
 
 | Verificação | Resultado |
 |---|---|
@@ -239,16 +239,16 @@ posterior. `c46147f` e o commit documental que o sucede alteram somente document
 | `python -m mypy servidor` | aprovado, 33 arquivos |
 | `npm --prefix web run test:unit` | 388 aprovados em 51 arquivos |
 | typecheck / lint / build | aprovados; aviso informativo de chunk > 500 kB |
-| `npm --prefix web run test:e2e` | 14 aprovados em 48,7 s |
-| scanner | aprovado, 376 textos e 10 binários |
+| `npm --prefix web run test:e2e` | 15 aprovados em 50,2 s |
+| scanner | aprovado, 378 textos e 10 binários |
 | `git diff --check` | aprovado; avisos CRLF informativos |
 
 Os dois skips são testes de symlink não permitido pelo Windows observado. Auth real
 continua condicionado às variáveis `MOT_REAL_AUTH_*`.
 
-O critério S15.14 da Etapa 3 não é integralmente provado por esse gate. O Playwright
-aplica zoom a 200% ao diagnóstico legado e à carteira; a página nova
-`/estudos/:studyId/diagnostico` possui testes de série/tabela, foco e controles
-semânticos, mas não um percurso browser próprio a 200% e por teclado. A matriz em
+S15.14 é provado por `diagnostic-jobs.spec.ts` no projeto `local`, Chromium Desktop,
+viewport 1280 × 800 e zoom 200%. O percurso aciona o diagnóstico por `Tab`/`Enter`,
+confirma foco visível, distribuição, execução selecionada, os sete eixos e rolagem
+horizontal por teclado nas tabelas nomeadas. A matriz em
 [`docs/frontend/etapa-3-aceitacao.md`](frontend/etapa-3-aceitacao.md) registra o
-aceite `CONDITIONAL` sem transformar essa lacuna de cobertura em falha funcional.
+aceite técnico local `PASS`.

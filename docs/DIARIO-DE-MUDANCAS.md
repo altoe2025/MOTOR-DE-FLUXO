@@ -62,12 +62,29 @@ Atualizada em 2026-09-20, durante o fechamento integrado local da Etapa 3.
 | `codex/autonetting-preferencial` | PR #36 mergeado na `main`; grade histórica não regenerada | Codex |
 | `codex/mot62-planejamento-etapa2-v2` | documentação da MOT-62; IDs, dependências e auditoria da Etapa 2 v2, sem código de produto | Codex |
 | `codex/mot63-observed-contracts` | implementação e documentação da Etapa 2 v2; aceite **CONDITIONAL**, sem push/PR/merge e sem início da Etapa 3 | Codex |
-| `codex/frontend-etapa-3` | T0–T12 concluídos localmente; gate global verde em `03e87b8`; aceite técnico **CONDITIONAL** por lacuna de evidência S15.14; sem push/PR/merge | Codex |
+| `codex/frontend-etapa-3` | T0–T12 concluídos localmente; gate global verde em `57be689`; aceite técnico **PASS**; sem push/PR/merge | Codex |
 
 Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+---
+
+## 2026-09-20 — Aceite integral de acessibilidade da Etapa 3 (MOT-77)
+
+1. **Sintoma.** S15.14 permanecia PARTIAL: a página robusta não tinha percurso
+   browser próprio por teclado e a 200% de zoom.
+2. **Causa.** As tabelas largas possuíam rolagem horizontal visual, mas seus
+   containers não entravam na ordem de foco, impedindo operação por setas sem mouse.
+3. **O que foi feito.** O E2E `diagnostic-jobs.spec.ts` cobre Chromium local em
+   1280 × 800, zoom 200%, `Tab`/`Enter`, foco visível, distribuição, execução
+   selecionada, sete eixos e rolagem horizontal. Os containers viraram regiões
+   nomeadas e focáveis. O gate de `57be689` aprovou 772 Python normal e `-O`, 388
+   testes web, 15 E2E, Ruff, mypy, typecheck, lint, build, contratos e scanner.
+4. **O que isso invalida.** Invalida a decisão `CONDITIONAL` baseada exclusivamente
+   na ausência de prova S15.14. O aceite técnico local da Etapa 3 passa a **PASS**.
+   Não autoriza push, PR, merge nem início da Etapa 4.
 
 ---
 

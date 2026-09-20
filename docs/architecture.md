@@ -190,8 +190,8 @@ equivalente para cada gráfico; não recalcula números do motor.
 - Jobs não são duráveis nem coordenados entre instâncias.
 - Purge integral e recuperação administrativa não ganharam novos controles de
   produto.
-- O aceite integral da Etapa 3 ainda requer prova browser de teclado e zoom a 200%
-  na página do diagnóstico robusto.
+- A página do diagnóstico robusto possui prova browser de teclado e zoom a 200%; as
+  tabelas horizontalmente roláveis são regiões nomeadas e focáveis.
 
 Operação e contratos detalhados estão em
 [`docs/frontend/etapa-3-operacao.md`](frontend/etapa-3-operacao.md); a matriz de

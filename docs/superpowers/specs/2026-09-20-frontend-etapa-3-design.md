@@ -2,7 +2,7 @@
 
 **Data:** 2026-09-20
 
-**Status:** aprovada e implementada localmente; aceite técnico `CONDITIONAL` em 2026-09-20
+**Status:** aprovada e implementada localmente; aceite técnico `PASS` em 2026-09-20
 
 **Base:** `origin/main` em `97601bf290128a199668f15efd9980beb5ca4ef8`
 
