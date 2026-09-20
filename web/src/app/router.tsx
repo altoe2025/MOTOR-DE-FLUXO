@@ -1,8 +1,13 @@
 import { useEffect, useRef } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useParams } from 'react-router-dom';
 
 import { useAuth } from '../auth/AuthProvider';
 import { CallbackPage, LoginPage, PasswordPage } from '../auth/AuthPages';
+import { CompaniesPage } from '../companies/CompaniesPage';
+import { CompanyCasesPage } from '../companies/CompanyCasesPage';
+import { CompanyPage } from '../companies/CompanyPage';
+import { CompanyProfilesPage } from '../companies/CompanyProfilesPage';
+import { CompanyStudiesPage } from '../companies/CompanyStudiesPage';
 import { PortfolioPage } from '../pages/PortfolioPage';
 import { PreviewPage } from '../pages/PreviewPage';
 import { StudiesPage } from '../pages/StudiesPage';
@@ -38,6 +43,11 @@ function ProtectedShell() {
   return <AppShell />;
 }
 
+function LegacyStudyRedirect() {
+  const { studyId } = useParams();
+  return <Navigate to={studyId === undefined ? '/estudos' : `/carteira/${studyId}`} replace />;
+}
+
 export function AppRoutes() {
   return (
     <Routes>
@@ -46,9 +56,15 @@ export function AppRoutes() {
       <Route path="/auth/callback" element={<CallbackPage />} />
       <Route path="/auth/definir-senha" element={<PasswordPage />} />
       <Route element={<ProtectedShell />}>
+        <Route path="/empresas" element={<CompaniesPage />} />
+        <Route path="/empresas/:companyId" element={<CompanyPage />} />
+        <Route path="/empresas/:companyId/casos" element={<CompanyCasesPage />} />
+        <Route path="/empresas/:companyId/perfis" element={<CompanyProfilesPage />} />
+        <Route path="/empresas/:companyId/estudos" element={<CompanyStudiesPage />} />
         <Route path="/carteira" element={<PortfolioPage />} />
+        <Route path="/carteira/:id" element={<StudyPortfolioPage />} />
         <Route path="/estudos" element={<StudiesPage />} />
-        <Route path="/estudos/:id" element={<StudyPortfolioPage />} />
+        <Route path="/estudos/:studyId" element={<LegacyStudyRedirect />} />
         <Route path="/diagnostico" element={<PreviewPage />} />
         <Route path="/comparar" element={<Destination title="Comparar cenários" description="Variantes compatíveis serão comparadas com a mesma base de evidência." emptyTitle="Nenhum cenário para comparar" emptyDescription="Crie variantes compatíveis a partir de uma carteira." />} />
         <Route path="/replay" element={<Destination title="Replay" description="Uma repetição específica poderá ser inspecionada dia a dia." emptyTitle="Nenhum replay disponível" emptyDescription="O replay depende de uma execução reproduzível." />} />

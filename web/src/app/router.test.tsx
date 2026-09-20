@@ -1,15 +1,26 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest';
 
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { StrictMode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { AuthProvider } from '../auth/AuthProvider';
 import type { AuthClient, AuthSession } from '../auth/types';
 import type { ApiClient } from '../api/client';
+import type { CompanyRecord, ObservedCase } from '../cases/domain';
+import type { OperationalProfileVersion } from '../profiles/domain';
+import type {
+  ApplicationRepository,
+  AppendProfileVersionMutation,
+  CASMutation,
+  ConfirmObservedCaseMutation,
+} from '../storage/applicationRepository';
+import { createStudy } from '../study/domain';
+import { makeObservedCase, makeScenarioDraft } from '../study/fixtures';
+import type { StudyDocument } from '../study/model';
 import { ApplicationProviders } from './providers';
 import { AppRoutes } from './router';
 
@@ -33,15 +44,46 @@ function client(initial: AuthSession | null, options: { loginError?: string } = 
   };
 }
 
-function renderAppAt(path: string, authClient: AuthClient = client(session())) {
+function LocationProbe() {
+  const location = useLocation();
+  return <output data-testid="location">{location.pathname}{location.search}</output>;
+}
+
+class RepositoryDouble implements ApplicationRepository {
+  constructor(
+    readonly companies: CompanyRecord[] = [],
+    readonly cases: ObservedCase[] = [],
+    readonly profiles: OperationalProfileVersion[] = [],
+    readonly studies: StudyDocument[] = [],
+  ) {}
+  async listCompanies() { return this.companies; }
+  async listObservedCases(companyId?: string) { return companyId === undefined ? this.cases : this.cases.filter((item) => item.companyId === companyId); }
+  async getObservedCase(id: string) { return this.cases.find((item) => item.id === id) ?? null; }
+  async confirmObservedCase(input: ConfirmObservedCaseMutation) { return input.observedCase; }
+  async listOperationalProfileVersions(companyId?: string) { return companyId === undefined ? this.profiles : this.profiles.filter((item) => item.companyId === companyId); }
+  async getOperationalProfileVersion(id: string) { return this.profiles.find((item) => item.id === id) ?? null; }
+  async appendOperationalProfileVersion(input: AppendProfileVersionMutation) { return input.document; }
+  async listStudies() { return this.studies; }
+  async getStudy(id: string) { return this.studies.find((item) => item.id === id) ?? null; }
+  async saveStudy(input: CASMutation<StudyDocument>) { return input.document; }
+  async restoreStudy(): Promise<StudyDocument> { throw new Error('não usado'); }
+  async purgeStudy() {}
+  close() {}
+}
+
+function renderAppAt(
+  path: string,
+  authClient: AuthClient = client(session()),
+  repository: ApplicationRepository | null = null,
+) {
   const apiClient: ApiClient = {
     getReferenceExample: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
     runPreview: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
   };
   return render(
     <AuthProvider client={authClient}>
-      <ApplicationProviders client={apiClient}>
-        <MemoryRouter initialEntries={[path]}><AppRoutes /></MemoryRouter>
+      <ApplicationProviders client={apiClient} {...(repository === null ? {} : { repositoryFactory: () => repository })}>
+        <MemoryRouter initialEntries={[path]}><AppRoutes /><LocationProbe /></MemoryRouter>
       </ApplicationProviders>
     </AuthProvider>,
   );
@@ -49,8 +91,7 @@ function renderAppAt(path: string, authClient: AuthClient = client(session())) {
 
 describe('application routes', () => {
   it.each([
-    ['/carteira', 'Carteira'], ['/diagnostico', 'Diagnóstico'], ['/comparar', 'Comparar cenários'],
-    ['/replay', 'Replay'], ['/premissas', 'Dados e premissas'],
+    ['/empresas', 'Empresas'], ['/estudos', 'Estudos'],
   ])('protege %s e marca o destino ativo', async (path, destination) => {
     renderAppAt(path);
     expect(await screen.findByRole('heading', { level: 1, name: destination })).toBeVisible();
@@ -141,5 +182,89 @@ describe('application routes', () => {
     expect(await screen.findByRole('heading', { name: 'Definir senha' })).toBeVisible();
     expect(authClient.auth.verifyOtp).toHaveBeenCalledTimes(1);
     expect(window.location.search).toBe('');
+  });
+
+  it.each([
+    ['/carteira', 'Carteira'], ['/diagnostico', 'Diagnóstico'], ['/comparar', 'Comparar cenários'],
+    ['/replay', 'Replay'], ['/premissas', 'Dados e premissas'],
+  ])('preserva a rota protegida %s fora da navegação global', async (path, heading) => {
+    renderAppAt(path);
+    expect(await screen.findByRole('heading', { level: 1, name: heading })).toBeVisible();
+    expect(screen.queryByRole('link', { name: heading })).not.toBeInTheDocument();
+  });
+
+  it('expõe somente Empresas e Estudos na navegação global', async () => {
+    renderAppAt('/empresas', client(session('user-a')), new RepositoryDouble());
+    const navigation = await screen.findByRole('navigation', { name: 'Navegação principal' });
+    expect(navigation).toHaveTextContent('Empresas');
+    expect(navigation).toHaveTextContent('Estudos');
+    expect(navigation.querySelectorAll('a')).toHaveLength(2);
+    expect(screen.getByRole('link', { name: 'Empresas' })).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('navega pelo catálogo e pelas quatro áreas da empresa com foco no título', async () => {
+    const company: CompanyRecord = {
+      id: 'company-1', ownerSub: 'user-a', displayName: 'Câmbio Exemplo', aliases: [],
+      createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', revision: 1,
+    };
+    const repository = new RepositoryDouble([company]);
+    const user = userEvent.setup();
+    renderAppAt('/empresas', client(session('user-a')), repository);
+    await user.click(await screen.findByRole('link', { name: 'Câmbio Exemplo' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Câmbio Exemplo' })).toHaveFocus();
+    for (const [label, path, heading] of [
+      ['Casos', '/empresas/company-1/casos', 'Casos de Câmbio Exemplo'],
+      ['Perfis', '/empresas/company-1/perfis', 'Perfis de Câmbio Exemplo'],
+      ['Estudos', '/empresas/company-1/estudos', 'Estudos de Câmbio Exemplo'],
+    ] as const) {
+      const link = within(screen.getByRole('navigation', { name: 'Áreas da empresa' })).getByRole('link', { name: label });
+      link.focus();
+      await user.keyboard('{Enter}');
+      expect(await screen.findByRole('heading', { level: 1, name: heading })).toHaveFocus();
+      expect(screen.getByTestId('location')).toHaveTextContent(path);
+    }
+  });
+
+  it('não revela empresa de outro owner nem rota inexistente', async () => {
+    const foreign: CompanyRecord = {
+      id: 'secret-company', ownerSub: 'user-b', displayName: 'Empresa secreta', aliases: [],
+      createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', revision: 1,
+    };
+    renderAppAt('/empresas/secret-company', client(session('user-a')), new RepositoryDouble([foreign]));
+    expect(await screen.findByRole('heading', { name: 'Empresa não encontrada' })).toBeVisible();
+    expect(screen.queryByText('Empresa secreta')).not.toBeInTheDocument();
+  });
+
+  it('renderiza casos em tabela semântica e aponta estudo pelo snapshot histórico', async () => {
+    const company: CompanyRecord = {
+      id: 'company-1', ownerSub: 'user-a', displayName: 'Câmbio Exemplo', aliases: [],
+      createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', revision: 1,
+    };
+    const caseRecord: ObservedCase = {
+      ...makeObservedCase(), id: 'case-1', ownerSub: 'user-a', companyId: company.id,
+      orders: [], sourceManifest: { ...makeObservedCase().sourceManifest, sourceKind: 'XLSX' },
+    };
+    const historical = {
+      schemaVersion: '3.0.0', id: 'study-linked', ownerSub: 'user-a', name: 'Estudo vinculado',
+      revision: 1, baseScenarioId: 'scenario-1', scenarios: [], evidenceSnapshots: [],
+      executions: [{ kind: 'PREVIEW', sourceSnapshot: { source: { kind: 'OBSERVED_CASE', caseId: 'case-1', caseRevision: 3 } } }],
+      createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', deletedAt: null,
+    } as unknown as StudyDocument;
+    renderAppAt('/empresas/company-1/casos?tipo=XLSX', client(session('user-a')), new RepositoryDouble([company], [caseRecord], [], [historical]));
+    expect(await screen.findByRole('table', { name: 'Histórico de casos' })).toBeVisible();
+    expect(screen.getByRole('columnheader', { name: 'Janela' })).toBeVisible();
+    expect(screen.getAllByRole('cell', { name: 'não coletado' })).toHaveLength(2);
+    expect(screen.getByRole('link', { name: /Estudo vinculado.*revisão 3/ })).toHaveAttribute('href', '/estudos/study-linked');
+    expect(screen.getByLabelText('Tipo de fonte')).toHaveValue('XLSX');
+  });
+
+  it('mantém o deep link legado e abre o mesmo estudo na carteira', async () => {
+    const study = await createStudy({
+      id: 'study-deep-link', ownerSub: 'user-a', name: 'Estudo profundo',
+      baseScenario: makeScenarioDraft(), now: '2026-01-01T00:00:00Z',
+    });
+    renderAppAt('/estudos/study-deep-link', client(session('user-a')), new RepositoryDouble([], [], [], [study]));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Estudo profundo' })).toBeVisible();
+    expect(screen.getByTestId('location')).toHaveTextContent('/carteira/study-deep-link');
   });
 });

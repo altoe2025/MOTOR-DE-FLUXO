@@ -70,6 +70,24 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 
 ---
 
+## 2026-09-20 — Navegação de empresas, casos e vínculos históricos (MOT-68)
+
+1. **Sintoma.** A aplicação ainda expunha destinos internos da Etapa 2 como
+   navegação global e não oferecia catálogo por empresa, cobertura observada,
+   histórico filtrável de casos, perfis versionados ou estudos relacionados.
+2. **Causa.** O shell e o roteador precediam os read models da Etapa 3; apesar dos
+   métodos de leitura já existirem no repositório, faltavam controllers e páginas
+   que os consumissem preservando isolamento por conta e relações históricas.
+3. **O que foi feito.** A branch `codex/frontend-etapa-3` limita a navegação global
+   a Empresas e Estudos, adiciona as quatro áreas por empresa, cobertura e volumes
+   sem zeros inventados, filtros persistidos na URL e tabelas semânticas. Vínculos
+   Caso→Estudo e Perfil→Estudo derivam apenas de snapshots imutáveis, e o deep link
+   legado `/estudos/:studyId` abre o mesmo estudo sob `/carteira/:studyId`.
+4. **O que isso invalida.** Deixa de valer que Carteira, Diagnóstico, Comparar,
+   Replay e Premissas sejam destinos globais, embora suas rotas compatíveis
+   continuem acessíveis. Nada muda em persistência, APIs, motor, perfil como
+   evidência ou números publicados.
+
 ## 2026-09-20 — Perfis versionados e estudos V3 persistidos (MOT-67)
 
 1. **Sintoma.** O banco local ainda tinha oito stores no schema físico/lógico 1,

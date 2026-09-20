@@ -1,6 +1,7 @@
 import type { ApplicationRepository } from '../storage/applicationRepository';
 import { RevisionConflictError } from '../storage/errors';
 import type { CompanyRecord, ObservedCase } from '../cases/domain';
+import type { OperationalProfileVersion } from '../profiles/domain';
 import type { StudyDocument } from './model';
 
 export type StudyControllerStatus =
@@ -251,10 +252,10 @@ export class StudyController {
     return this.#isCurrent(repository, epoch) ? studies : [];
   }
 
-  async listObservedCases(): Promise<ObservedCase[]> {
+  async listObservedCases(companyId?: string): Promise<ObservedCase[]> {
     this.#assertOpen();
     const { repository, epoch } = this.#session();
-    const cases = await repository.listObservedCases();
+    const cases = await repository.listObservedCases(companyId);
     return this.#isCurrent(repository, epoch) ? cases : [];
   }
 
@@ -263,6 +264,13 @@ export class StudyController {
     const { repository, epoch } = this.#session();
     const companies = await repository.listCompanies();
     return this.#isCurrent(repository, epoch) ? companies : [];
+  }
+
+  async listOperationalProfileVersions(companyId?: string): Promise<OperationalProfileVersion[]> {
+    this.#assertOpen();
+    const { repository, epoch } = this.#session();
+    const profiles = await repository.listOperationalProfileVersions(companyId);
+    return this.#isCurrent(repository, epoch) ? profiles : [];
   }
 
   async getObservedCase(id: string): Promise<ObservedCase | null> {
