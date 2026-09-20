@@ -70,6 +70,25 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 
 ---
 
+## 2026-09-20 — Diagnósticos em fila limitada e isolada (MOT-72)
+
+1. **Sintoma.** Os cinco contratos diagnósticos já estavam publicados, mas a API
+   não executava repetições, não expunha progresso e não possuía cancelamento,
+   retry, retenção ou limites operacionais.
+2. **Causa.** A MOT-70 fechou os DTOs e a MOT-71 entregou a análise pura; faltava o
+   coordenador que separa fila/registry do trabalho de CPU e registra o owner
+   autenticado em cada tentativa.
+3. **O que foi feito.** A branch `codex/frontend-etapa-3` ganhou fila FIFO em
+   memória, registry e idempotência sob lock, worker top-level em
+   `ProcessPoolExecutor` com `spawn`, uma repetição por job por vez, cancelamento
+   cooperativo, retry, expiração terminal e limites configuráveis. O lifespan cria
+   e fecha o executor; as cinco rotas autenticadas aplicam isolamento por `sub`,
+   limite de 1 MiB, respostas `no-store` e erros sanitizados. Repetições geradas
+   preservam as seeds do plano e o `input_fingerprint` autoritativo da request.
+4. **O que isso invalida.** Invalida apenas a ausência de execução operacional dos
+   contratos T5. A fila continua não durável; cancelamento não interrompe a
+   repetição corrente; prévia síncrona, regras do motor, persistência e UI não mudam.
+
 ## 2026-09-20 — Análise diagnóstica sem import privado e sem prazo zero inventado (MOT-71)
 
 1. **Sintoma.** O agregador T6 importava o percentil por um caminho interno de
