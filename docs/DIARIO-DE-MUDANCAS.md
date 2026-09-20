@@ -70,6 +70,28 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 
 ---
 
+## 2026-09-20 — Forma persistida fechada e expiração tardia de resultado (MOT-73)
+
+1. **Sintoma.** A segunda rodada de auditoria do T8 encontrou duas brechas: um
+   documento V3 artesanal ainda podia persistir estados diagnósticos transitórios
+   ou reservas `QUEUED` duplicadas; e um job observado como `SUCCEEDED` podia ter o
+   resultado removido antes do GET final, deixando a tentativa sem terminal local.
+2. **Causa.** A validação integral correlacionava apenas terminais com reservas, sem
+   validar a cardinalidade e os estados de todos os registros agrupados por
+   `attemptId`. O tratamento de 404 cobria o polling do job, mas não o GET do
+   resultado.
+3. **O que foi feito.** Parser, validação integral, append de domínio e fronteira
+   IndexedDB agora aceitam por tentativa exatamente uma reserva `QUEUED`, sozinha
+   ou acompanhada de um único terminal imutavelmente correlato; `RUNNING` e outros
+   estados transitórios, órfãos, duplicatas e grupos maiores são rejeitados antes
+   do CAS. Um 404 do resultado após `SUCCEEDED` anexa
+   `INTERRUPTED / SERVER_RESTART_OR_JOB_EXPIRED` pela mesma trilha protegida por
+   owner, epoch, `AbortSignal` e CAS; demais erros continuam sem fabricar terminal.
+4. **O que isso invalida.** Invalida documentos V3 diagnósticos que persistam
+   progresso transitório ou mais de uma reserva para o mesmo `attemptId`, e a
+   suposição de que observar `SUCCEEDED` garante que o resultado ainda exista. Não
+   muda contratos HTTP, motor, números ou UI T9.
+
 ## 2026-09-20 — Hardening de polling, sessão e correlação diagnóstica (MOT-73)
 
 1. **Sintoma.** A auditoria independente do T8 encontrou três brechas: polling

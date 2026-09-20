@@ -119,8 +119,9 @@ function idFactory(...values: string[]): () => string {
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
-  const promise = new Promise<T>((complete) => { resolve = complete; });
-  return { promise, resolve };
+  let reject!: (reason: unknown) => void;
+  const promise = new Promise<T>((complete, fail) => { resolve = complete; reject = fail; });
+  return { promise, resolve, reject };
 }
 
 async function reservedFixture() {
@@ -220,6 +221,89 @@ describe('executeStudyDiagnostic', () => {
     expect(authority.edits.at(-1)?.executions.at(-1)).toMatchObject({
       status: 'INTERRUPTED', error: { code: 'SERVER_RESTART_OR_JOB_EXPIRED' },
     });
+  });
+
+  it('converte 404 do resultado após SUCCEEDED em interrupção rastreável', async () => {
+    const { study, request } = await studyFixture();
+    const authority = new AuthorityDouble(study);
+
+    const result = await executeStudyDiagnostic({
+      authority,
+      scenarioId: SCENARIO_ID,
+      buildRequest: async () => request,
+      api: {
+        submitDiagnostic: vi.fn().mockResolvedValue(snapshot('QUEUED', request)),
+        getDiagnosticJob: vi.fn().mockResolvedValue(snapshot('SUCCEEDED', request)),
+        getDiagnosticResult: vi.fn().mockRejectedValue(new ApiError({
+          status: 404, code: 'JOB_NAO_ENCONTRADO', message: 'resultado expirou',
+        })),
+      },
+      nextId: idFactory(ATTEMPT_ID, RESERVATION_ID, TERMINAL_ID),
+      now: () => NOW,
+      waitForNextPoll: async () => undefined,
+    });
+
+    expect(result).toMatchObject({
+      status: 'INTERRUPTED', error: { code: 'SERVER_RESTART_OR_JOB_EXPIRED' },
+    });
+    expect(authority.edits.at(-1)?.executions.at(-1)).toMatchObject({
+      status: 'INTERRUPTED', error: { code: 'SERVER_RESTART_OR_JOB_EXPIRED' },
+    });
+  });
+
+  it('mantém erro não-404 do resultado sem fabricar terminal local', async () => {
+    const { study, request } = await studyFixture();
+    const authority = new AuthorityDouble(study);
+    const responseError = new ApiError({
+      status: 503, code: 'SERVICO_INDISPONIVEL', message: 'Tente novamente mais tarde.',
+    });
+
+    await expect(executeStudyDiagnostic({
+      authority,
+      scenarioId: SCENARIO_ID,
+      buildRequest: async () => request,
+      api: {
+        submitDiagnostic: vi.fn().mockResolvedValue(snapshot('QUEUED', request)),
+        getDiagnosticJob: vi.fn().mockResolvedValue(snapshot('SUCCEEDED', request)),
+        getDiagnosticResult: vi.fn().mockRejectedValue(responseError),
+      },
+      nextId: idFactory(ATTEMPT_ID, RESERVATION_ID, TERMINAL_ID),
+      now: () => NOW,
+      waitForNextPoll: async () => undefined,
+    })).rejects.toBe(responseError);
+    expect(authority.edits).toHaveLength(1);
+    expect(authority.detached).toHaveLength(0);
+  });
+
+  it('404 tardio do resultado não grava após novo epoch da mesma conta', async () => {
+    const { study, request } = await studyFixture();
+    const authority = new AuthorityDouble(study);
+    const resultResponse = deferred<never>();
+    const execution = executeStudyDiagnostic({
+      authority,
+      scenarioId: SCENARIO_ID,
+      buildRequest: async () => request,
+      api: {
+        submitDiagnostic: vi.fn().mockResolvedValue(snapshot('QUEUED', request)),
+        getDiagnosticJob: vi.fn().mockResolvedValue(snapshot('SUCCEEDED', request)),
+        getDiagnosticResult: vi.fn().mockReturnValue(resultResponse.promise),
+      },
+      nextId: idFactory(ATTEMPT_ID, RESERVATION_ID, TERMINAL_ID),
+      now: () => NOW,
+      waitForNextPoll: async () => undefined,
+    });
+    await vi.waitFor(() => expect(authority.edits).toHaveLength(1));
+    await vi.waitFor(() => expect(authority.snapshot.document?.executions).toHaveLength(1));
+    authority.snapshot = { ...authority.snapshot, sessionEpoch: 2 };
+    resultResponse.reject(new ApiError({
+      status: 404, code: 'JOB_NAO_ENCONTRADO', message: 'resultado expirou',
+    }));
+
+    const result = await execution;
+
+    expect(result).toMatchObject({ status: 'INTERRUPTED', current: false });
+    expect(authority.edits).toHaveLength(1);
+    expect(authority.detached).toHaveLength(0);
   });
 
   it('descarta resposta tardia depois da troca de conta sem cancelar o job remoto', async () => {

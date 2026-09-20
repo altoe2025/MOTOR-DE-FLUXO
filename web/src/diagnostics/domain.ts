@@ -1,6 +1,9 @@
 import type { DiagnosticExecutionRecord, StudyDocument } from '../study/model';
 import { assertValidStudy } from '../study/validation';
-import { diagnosticAttemptIdentityMatches } from './attemptIdentity';
+import {
+  diagnosticAttemptHasPersistedShape,
+  diagnosticAttemptIdentityMatches,
+} from './attemptIdentity';
 
 const TERMINAL = new Set(['SUCCEEDED', 'FAILED', 'CANCELLED', 'INTERRUPTED']);
 
@@ -9,6 +12,9 @@ export async function appendDiagnosticExecution(
   execution: DiagnosticExecutionRecord,
   now: string,
 ): Promise<StudyDocument> {
+  if (execution.status !== 'QUEUED' && !TERMINAL.has(execution.status)) {
+    throw new Error('Status diagnóstico transitório não pode ser persistido.');
+  }
   if (study.executions.some((existing) => existing.id === execution.id)) {
     throw new Error('Execução diagnóstica já anexada.');
   }
@@ -27,6 +33,9 @@ export async function appendDiagnosticExecution(
       || !diagnosticAttemptIdentityMatches(reservations[0]!, execution)) {
       throw new Error('Terminal diagnóstico não corresponde exatamente à reserva QUEUED.');
     }
+  }
+  if (!diagnosticAttemptHasPersistedShape([...sameAttempt, execution])) {
+    throw new Error('Tentativa diagnóstica possui forma persistida inválida.');
   }
   const timestamp = new Date(now);
   if (Number.isNaN(timestamp.valueOf()) || !now.endsWith('Z')) {

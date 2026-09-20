@@ -51,3 +51,23 @@ Três findings confirmados foram reproduzidos em RED e corrigidos:
 3. Um terminal `DIAGNOSTIC` agora exige exatamente uma reserva `QUEUED` do mesmo `attemptId` e identidade imutável canonicamente idêntica. A comparação inclui `jobId`, request completo (IDs, idempotência e sampling), cenário/revisão, fingerprint, snapshots de origem/premissas/período, `createdAt` e qualquer outro campo não terminal. A regra existe no append, na validação integral/parser e chega ao storage; regressões negativas cobrem cada dimensão e documento artesanal, enquanto retry válido permanece uma nova tentativa independente.
 
 Gate final do Round 1: 106 testes focados/adicionais verdes, `typecheck`, `lint` e `build` verdes; permaneceu apenas o warning conhecido de chunk maior que 500 kB.
+
+## Fix Round 2 — auditoria independente
+
+Dois findings adicionais foram reproduzidos em RED e corrigidos:
+
+1. A validação do documento V3 agora agrupa todos os registros `DIAGNOSTIC` por
+   `attemptId` e exige a forma persistida completa: exatamente uma reserva
+   `QUEUED`, zero ou um terminal correlato e no máximo dois registros. Isso rejeita
+   `RUNNING`/estados transitórios, reserva duplicada, terminal órfão e grupos
+   excedentes no append, parser, validação integral e `saveStudy` do IndexedDB.
+   Regressões diretas aceitam reserva isolada e reserva + terminal e recusam
+   `RUNNING` e duas reservas, inclusive por documento artesanal antes do CAS.
+2. Se o status já é `SUCCEEDED`, mas o GET do resultado retorna 404, a tentativa
+   termina como `INTERRUPTED / SERVER_RESTART_OR_JOB_EXPIRED` pela mesma rotina de
+   persistência terminal. A rotina mantém as guardas de owner, epoch e abort; uma
+   resposta 404 após novo epoch do mesmo owner não grava. Erros de resultado que
+   não são 404 continuam propagados sem fabricar terminal local.
+
+Gate final do Round 2: 112 testes focados/adicionais verdes, `typecheck`, `lint` e
+`build` verdes; permaneceu apenas o warning conhecido de chunk maior que 500 kB.

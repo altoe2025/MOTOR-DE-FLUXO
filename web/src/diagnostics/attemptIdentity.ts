@@ -1,6 +1,8 @@
 import { canonical } from '../study/fingerprints';
 import type { DiagnosticExecutionRecord } from '../study/model';
 
+const TERMINAL = new Set(['SUCCEEDED', 'FAILED', 'CANCELLED', 'INTERRUPTED']);
+
 function immutableAttemptIdentity(record: DiagnosticExecutionRecord) {
   const {
     id: _id,
@@ -25,4 +27,17 @@ export function diagnosticAttemptIdentityMatches(
   return reservation.status === 'QUEUED'
     && canonical(immutableAttemptIdentity(reservation))
       === canonical(immutableAttemptIdentity(terminal));
+}
+
+export function diagnosticAttemptHasPersistedShape(
+  records: readonly DiagnosticExecutionRecord[],
+): boolean {
+  if (records.length < 1 || records.length > 2) return false;
+  const reservations = records.filter((record) => record.status === 'QUEUED');
+  const terminals = records.filter((record) => TERMINAL.has(record.status));
+  if (reservations.length !== 1
+    || terminals.length > 1
+    || records.length !== reservations.length + terminals.length) return false;
+  return terminals.length === 0
+    || diagnosticAttemptIdentityMatches(reservations[0]!, terminals[0]!);
 }

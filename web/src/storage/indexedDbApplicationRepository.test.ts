@@ -676,7 +676,7 @@ describe('studies', () => {
     changed.executions[0].status = 'RUNNING';
     await expect(target.saveStudy({
       expectedRevision: 2, operationId: OPERATION_C, document: changed,
-    })).rejects.toBeInstanceOf(OperationConflictError);
+    })).rejects.toBeInstanceOf(InvalidDocumentError);
 
     const terminal: DiagnosticExecutionRecord = {
       ...structuredClone(reservation),
@@ -724,6 +724,46 @@ describe('studies', () => {
       expectedRevision: reserved.revision,
       operationId: OPERATION_C,
       document: handcrafted,
+    })).rejects.toBeInstanceOf(InvalidDocumentError);
+  });
+
+  it('rejeita RUNNING artesanal e reserva QUEUED duplicada antes do CAS', async () => {
+    const target = repository();
+    const original = await study();
+    await target.saveStudy({ expectedRevision: 0, operationId: OPERATION_A, document: original });
+    const reservation = await diagnosticReservationFor(original);
+    const running: DiagnosticExecutionRecord = {
+      ...structuredClone(reservation),
+      status: 'RUNNING',
+    };
+    const runningDocument: StudyDocument = {
+      ...structuredClone(original),
+      revision: original.revision + 1,
+      updatedAt: '2026-09-19T12:02:00Z',
+      executions: [running],
+    };
+    await expect(target.saveStudy({
+      expectedRevision: original.revision,
+      operationId: OPERATION_B,
+      document: runningDocument,
+    })).rejects.toBeInstanceOf(InvalidDocumentError);
+
+    const reserved = await appendDiagnosticExecution(original, reservation, reservation.createdAt);
+    await target.saveStudy({ expectedRevision: original.revision, operationId: OPERATION_C, document: reserved });
+    const duplicate: DiagnosticExecutionRecord = {
+      ...structuredClone(reservation),
+      id: '00000000-0000-4000-8000-000000000048',
+    };
+    const duplicateDocument: StudyDocument = {
+      ...structuredClone(reserved),
+      revision: reserved.revision + 1,
+      updatedAt: '2026-09-19T12:03:00Z',
+      executions: [...reserved.executions, duplicate],
+    };
+    await expect(target.saveStudy({
+      expectedRevision: reserved.revision,
+      operationId: OPERATION_D,
+      document: duplicateDocument,
     })).rejects.toBeInstanceOf(InvalidDocumentError);
   });
 

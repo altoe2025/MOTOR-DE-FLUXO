@@ -161,7 +161,19 @@ export async function executeStudyDiagnostic(
 
     let envelope: DiagnosticEnvelope | null = null;
     if (terminalSnapshot.status === 'SUCCEEDED') {
-      envelope = await options.api.getDiagnosticResult(reservation.jobId!, signal);
+      try {
+        envelope = await options.api.getDiagnosticResult(reservation.jobId!, signal);
+      } catch (error) {
+        if (!(error instanceof ApiError) || error.status !== 404) throw error;
+        return persistTerminal(
+          options.authority, ownerSub, epoch, reservedStudy, reservation,
+          terminalRecord(reservation, nextId(), 'INTERRUPTED', now(), null, {
+            code: 'SERVER_RESTART_OR_JOB_EXPIRED',
+            message: 'O resultado do job não está mais disponível no servidor.',
+          }),
+          signal,
+        );
+      }
       if (!sessionIsCurrent(options.authority, ownerSub, epoch, signal)) {
         return interrupted(reservation, null);
       }

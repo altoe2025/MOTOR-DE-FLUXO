@@ -4,7 +4,7 @@ import type { PreviaRequest } from '../api/client';
 import { createStudy } from '../study/domain';
 import { makeScenarioDraft } from '../study/fixtures';
 import type { DiagnosticExecutionRecord } from '../study/model';
-import { validateStudyDocument } from '../study/validation';
+import { parseStudyV3, validateStudyDocument } from '../study/validation';
 import { buildDiagnosticRequest } from './buildDiagnosticRequest';
 import { appendDiagnosticExecution } from './domain';
 
@@ -235,5 +235,47 @@ describe('appendDiagnosticExecution', () => {
       ok: false,
       issues: [expect.objectContaining({ code: 'INCOMPATIBLE_DIAGNOSTIC_ATTEMPT' })],
     });
+  });
+
+  it('aceita forma persistida com somente reserva ou reserva seguida de terminal', async () => {
+    const { study, reservation } = await fixture();
+    const reservationOnly = { ...study, executions: [reservation] };
+    const terminal: DiagnosticExecutionRecord = {
+      ...structuredClone(reservation),
+      id: '00000000-0000-4000-8000-000000000308',
+      status: 'FAILED',
+      error: { code: 'DIAGNOSTICO_INVALIDO', message: 'A execução falhou.' },
+      finishedAt: '2026-09-20T12:01:00Z',
+    };
+    const completed = { ...study, executions: [reservation, terminal] };
+
+    await expect(validateStudyDocument(reservationOnly)).resolves.toMatchObject({ ok: true });
+    await expect(validateStudyDocument(completed)).resolves.toMatchObject({ ok: true });
+    expect(parseStudyV3(reservationOnly)).toMatchObject({ executions: [{ status: 'QUEUED' }] });
+    expect(parseStudyV3(completed).executions.map((item) => item.status)).toEqual(['QUEUED', 'FAILED']);
+  });
+
+  it('rejeita RUNNING persistido e duas reservas QUEUED do mesmo attempt', async () => {
+    const { study, reservation } = await fixture();
+    const running = { ...structuredClone(reservation), status: 'RUNNING' as const };
+    const duplicate = {
+      ...structuredClone(reservation),
+      id: '00000000-0000-4000-8000-000000000309',
+    };
+
+    await expect(validateStudyDocument({ ...study, executions: [running] })).resolves.toEqual({
+      ok: false,
+      issues: expect.arrayContaining([
+        expect.objectContaining({ code: 'INCOMPATIBLE_DIAGNOSTIC_ATTEMPT' }),
+      ]),
+    });
+    await expect(validateStudyDocument({ ...study, executions: [reservation, duplicate] })).resolves.toEqual({
+      ok: false,
+      issues: expect.arrayContaining([
+        expect.objectContaining({ code: 'INCOMPATIBLE_DIAGNOSTIC_ATTEMPT' }),
+      ]),
+    });
+    expect(() => parseStudyV3({ ...study, executions: [running] })).toThrow('persistida');
+    expect(() => parseStudyV3({ ...study, executions: [reservation, duplicate] })).toThrow('persistida');
   });
 });
