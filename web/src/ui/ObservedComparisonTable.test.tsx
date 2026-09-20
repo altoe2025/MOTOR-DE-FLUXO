@@ -89,7 +89,7 @@ describe('StudyResultPage', () => {
     const study = {
       name: 'Estudo observado', executions: [execution],
       scenarios: [{
-        id: 'scenario-1', revision: 1,
+        id: 'scenario-1', revision: 1, inputFingerprint: 'a'.repeat(64),
         sourceSnapshot: { source: { kind: 'OBSERVED_CASE', caseId: 'case-1', caseRevision: 4 } },
       }],
     } as unknown as StudyDocument;
