@@ -86,4 +86,23 @@ describe('validateOperationalProfile', () => {
       expect(validation.issues.some((item) => item.code === 'INVALID_STRUCTURE')).toBe(true);
     }
   });
+
+  // Production break caught: a signed deadline-day metric emitted from a valid case fails its own read schema.
+  it('accepts a calculated profile whose deadline precedes its known date', async () => {
+    const negativeDeadlineCase: ObservedCase = {
+      ...selectedCase,
+      orders: [{
+        ...selectedCase.orders[0]!,
+        knownDate: '2026-01-02',
+        deadlineDate: '2026-01-01',
+      }],
+    };
+    const document = await calculateOperationalProfile({
+      id: 'profile-negative-deadline', ownerSub: 'owner-1', companyId: 'company-1',
+      version: 1, createdAt: '2026-09-20T14:00:00Z', cases: [negativeDeadlineCase],
+    });
+
+    expect(document.metrics.deadlineDays.p50ByCount).toMatchObject({ value: '-1' });
+    expect(await validateOperationalProfile(document)).toEqual({ ok: true, value: document });
+  });
 });

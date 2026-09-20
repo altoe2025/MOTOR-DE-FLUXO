@@ -70,6 +70,21 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 
 ---
 
+## 2026-09-20 — Prazo assinado no schema do Perfil Operacional (MOT-66)
+
+1. **Sintoma.** Um Caso Observado válido com `deadlineDate` anterior a `knownDate`
+   gerava corretamente prazo `-1`, mas o próprio perfil calculado era rejeitado ao
+   atravessar a validação runtime.
+2. **Causa.** O schema reutilizava o decimal não negativo de valores monetários e
+   frações nos quatro percentis de prazo, embora o contrato integrado de caso não
+   imponha ordem entre as duas datas.
+3. **O que foi feito.** Foi criado um decimal assinado exclusivo para evidências de
+   `deadlineDays`, aplicado aos percentis por contagem e por volume. Uma regressão
+   calcula e valida um perfil real com prazo `-1`.
+4. **O que isso invalida.** Nada em casos, cálculo, dinheiro, frações, contagens,
+   persistência, estudos, APIs, motor ou números publicados. Somente a rejeição
+   indevida de prazos negativos deixa de valer.
+
 ## 2026-09-20 — Validação fechada do Perfil Operacional (MOT-66)
 
 1. **Sintoma.** Um perfil com fingerprint recalculado ainda podia omitir uma métrica

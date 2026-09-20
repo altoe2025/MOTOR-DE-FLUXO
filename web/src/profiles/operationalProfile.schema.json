@@ -5,6 +5,7 @@
   "additionalProperties": false,
   "$defs": {
     "Decimal": { "type": "string", "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$" },
+    "SignedDecimal": { "type": "string", "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$" },
     "EvidenceStrings": { "type": "array", "items": { "type": "string" } },
     "UnavailableEvidence": {
       "type": "object", "additionalProperties": false,
@@ -18,6 +19,12 @@
     "DecimalEvidence": {
       "oneOf": [
         { "type": "object", "additionalProperties": false, "properties": { "state": { "const": "AVAILABLE" }, "value": { "$ref": "#/$defs/Decimal" }, "evidence": { "$ref": "#/$defs/EvidenceStrings" } }, "required": ["state", "value", "evidence"] },
+        { "$ref": "#/$defs/UnavailableEvidence" }
+      ]
+    },
+    "SignedDecimalEvidence": {
+      "oneOf": [
+        { "type": "object", "additionalProperties": false, "properties": { "state": { "const": "AVAILABLE" }, "value": { "$ref": "#/$defs/SignedDecimal" }, "evidence": { "$ref": "#/$defs/EvidenceStrings" } }, "required": ["state", "value", "evidence"] },
         { "$ref": "#/$defs/UnavailableEvidence" }
       ]
     },
@@ -148,7 +155,7 @@
         "frequency": { "type": "object", "additionalProperties": false, "properties": { "orderCount": { "$ref": "#/$defs/IntegerEvidence" }, "ordersPerCoveredDay": { "$ref": "#/$defs/DecimalEvidence" }, "ordersPer30Days": { "$ref": "#/$defs/DecimalEvidence" } }, "required": ["orderCount", "ordersPerCoveredDay", "ordersPer30Days"] },
         "ticketsBrl": { "type": "object", "additionalProperties": false, "properties": { "min": { "$ref": "#/$defs/DecimalEvidence" }, "p25": { "$ref": "#/$defs/DecimalEvidence" }, "p50": { "$ref": "#/$defs/DecimalEvidence" }, "p75": { "$ref": "#/$defs/DecimalEvidence" }, "max": { "$ref": "#/$defs/DecimalEvidence" } }, "required": ["min", "p25", "p50", "p75", "max"] },
         "direction": { "$ref": "#/$defs/DirectionEvidence" },
-        "deadlineDays": { "type": "object", "additionalProperties": false, "properties": { "p50ByCount": { "$ref": "#/$defs/DecimalEvidence" }, "p90ByCount": { "$ref": "#/$defs/DecimalEvidence" }, "p50ByVolume": { "$ref": "#/$defs/DecimalEvidence" }, "p90ByVolume": { "$ref": "#/$defs/DecimalEvidence" } }, "required": ["p50ByCount", "p90ByCount", "p50ByVolume", "p90ByVolume"] },
+        "deadlineDays": { "type": "object", "additionalProperties": false, "properties": { "p50ByCount": { "$ref": "#/$defs/SignedDecimalEvidence" }, "p90ByCount": { "$ref": "#/$defs/SignedDecimalEvidence" }, "p50ByVolume": { "$ref": "#/$defs/SignedDecimalEvidence" }, "p90ByVolume": { "$ref": "#/$defs/SignedDecimalEvidence" } }, "required": ["p50ByCount", "p90ByCount", "p50ByVolume", "p90ByVolume"] },
         "purposes": { "type": "object", "additionalProperties": false, "properties": { "byCode": { "$ref": "#/$defs/PurposeListEvidence" }, "knownCoverage": { "$ref": "#/$defs/PurposeCoverageEvidence" }, "missing": { "$ref": "#/$defs/MissingPurposeEvidence" } }, "required": ["byCode", "knownCoverage", "missing"] },
         "windows": { "$ref": "#/$defs/CoverageEvidence" },
         "seasonality": { "type": "object", "additionalProperties": false, "properties": { "observations": { "$ref": "#/$defs/SeasonalityObservationsEvidence" }, "comparison": { "$ref": "#/$defs/SeasonalityComparisonEvidence" } }, "required": ["observations", "comparison"] }
