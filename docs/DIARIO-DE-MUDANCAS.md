@@ -70,6 +70,23 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 
 ---
 
+## 2026-09-20 — Confirmação e vínculo do Perfil Operacional (MOT-69)
+
+1. **Sintoma.** A área de Perfis apenas listava versões já persistidas; não havia
+   seleção explícita de Casos Observados, prévia de compatibilidade/cobertura,
+   confirmação append-only nem vínculo do perfil como evidência de um estudo.
+2. **Causa.** O cálculo determinístico e o repositório da Etapa 3 já existiam, mas
+   faltava a orquestração session-bound no controller e a interface que conectasse
+   seleção, confirmação e CAS do estudo sem criar uma nova origem de carteira.
+3. **O que foi feito.** A branch `codex/frontend-etapa-3` adiciona o construtor e a
+   leitura somente de perfis, renderiza todos os estados de `EvidenceValue`, confirma
+   versões imutáveis pelo `ApplicationRepository` e copia o snapshot completo para o
+   estudo atual por CAS. Testes cobrem bloqueios, avisos, cobertura, conflito,
+   persistência/reload, troca A→B→A e preservação da origem da carteira.
+4. **O que isso invalida.** Invalida somente a ausência do fluxo de confirmação e
+   vínculo de perfis. `PortfolioSource` continua com três origens, execução continua
+   somente `PREVIEW`, e API, motor, regras de negócio e números publicados não mudam.
+
 ## 2026-09-20 — Ausência de qualidade sem zero inventado (MOT-68)
 
 1. **Sintoma.** A visão geral de uma empresa sem casos exibia `0 bloqueios · 0

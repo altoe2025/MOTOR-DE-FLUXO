@@ -112,6 +112,18 @@ a { color: inherit; }
 .company-table th { background: var(--surface); }
 .company-table td a { display: block; }
 .empty-copy { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); color: var(--muted); margin-top: var(--space-6); padding: var(--space-5); }
+.profile-builder, .profile-versions { margin-top: var(--space-6); }
+.profile-builder fieldset { border: 1px solid var(--border); display: grid; gap: var(--space-2); margin: var(--space-3) 0; padding: var(--space-4); }
+.profile-builder fieldset label, .profile-confirmation { align-items: flex-start; display: flex; gap: var(--space-2); }
+.profile-preview, .profile-version { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin: var(--space-4) 0; padding: var(--space-4); }
+.profile-summary, .profile-metrics { display: grid; gap: var(--space-3); grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr)); }
+.profile-summary dt, .profile-metrics dt { color: var(--muted); font-size: 0.8125rem; }
+.profile-summary dd, .profile-metrics dd { font-variant-numeric: tabular-nums; margin: var(--space-1) 0 0; overflow-wrap: anywhere; }
+.seasonality-list { display: grid; gap: var(--space-2); padding-left: var(--space-5); }
+.evidence-unavailable { color: var(--muted); }
+.profile-study-target { display: grid; gap: var(--space-1); margin-top: var(--space-6); max-width: 520px; }
+.profile-study-target label { font-weight: 650; }
+.profile-study-target select { background: white; border: 1px solid var(--border); border-radius: var(--radius); padding: var(--space-2); }
 @media (min-width: 1000px) { .study-editor { max-width: 860px; } }
 @media (max-width: 760px) { .app-shell { grid-template-columns: minmax(0, 1fr); } .sidebar { gap: var(--space-4); } .destination-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } .workspace-header, .workspace-content { min-width: 0; padding-left: var(--space-4); padding-right: var(--space-4); } .comparison-summary .headline-metrics, .mechanism-grid { grid-template-columns: 1fr; } .study-list__open { flex-basis: 100%; } .study-list__actions { width: 100%; } }
 @media (max-width: 480px) { .destination-list { grid-template-columns: 1fr; } .source-selector { padding: var(--space-3); } .source-actions > .button, .study-list__actions > .button { flex: 1 1 100%; } }

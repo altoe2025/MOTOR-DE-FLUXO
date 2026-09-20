@@ -62,10 +62,17 @@ class RepositoryDouble implements ApplicationRepository {
   async confirmObservedCase(input: ConfirmObservedCaseMutation) { return input.observedCase; }
   async listOperationalProfileVersions(companyId?: string) { return companyId === undefined ? this.profiles : this.profiles.filter((item) => item.companyId === companyId); }
   async getOperationalProfileVersion(id: string) { return this.profiles.find((item) => item.id === id) ?? null; }
-  async appendOperationalProfileVersion(input: AppendProfileVersionMutation) { return input.document; }
+  async appendOperationalProfileVersion(input: AppendProfileVersionMutation) {
+    this.profiles.push(input.document);
+    return input.document;
+  }
   async listStudies() { return this.studies; }
   async getStudy(id: string) { return this.studies.find((item) => item.id === id) ?? null; }
-  async saveStudy(input: CASMutation<StudyDocument>) { return input.document; }
+  async saveStudy(input: CASMutation<StudyDocument>) {
+    const index = this.studies.findIndex((item) => item.id === input.document.id);
+    if (index >= 0) this.studies[index] = input.document; else this.studies.push(input.document);
+    return input.document;
+  }
   async restoreStudy(): Promise<StudyDocument> { throw new Error('não usado'); }
   async purgeStudy() {}
   close() {}
@@ -277,5 +284,32 @@ describe('application routes', () => {
     renderAppAt('/estudos/study-deep-link', client(session('user-a')), new RepositoryDouble([], [], [], [study]));
     expect(await screen.findByRole('heading', { level: 1, name: 'Estudo profundo' })).toBeVisible();
     expect(screen.getByTestId('location')).toHaveTextContent('/carteira/study-deep-link');
+  });
+
+  it('confirma perfil e anexa o snapshot integral sem alterar a origem da carteira', async () => {
+    const company: CompanyRecord = {
+      id: 'company-1', ownerSub: 'user-a', displayName: 'Câmbio Exemplo', aliases: [],
+      createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', revision: 1,
+    };
+    const observed = { ...makeObservedCase(), ownerSub: 'user-a', companyId: company.id };
+    const study = await createStudy({
+      id: 'study-profile', ownerSub: 'user-a', name: 'Estudo com perfil',
+      baseScenario: makeScenarioDraft(), now: '2026-01-01T00:00:00Z',
+    });
+    const originalSource = structuredClone(study.scenarios[0]?.sourceSnapshot);
+    const repository = new RepositoryDouble([company], [observed], [], [study]);
+    const user = userEvent.setup();
+    renderAppAt('/empresas/company-1/perfis', client(session('user-a')), repository);
+
+    await user.click(await screen.findByRole('checkbox', { name: /case-1.*revisão 4/i }));
+    expect(await screen.findByRole('region', { name: 'Prévia do Perfil Operacional' })).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Confirmar versão' }));
+    expect(await screen.findByRole('heading', { name: 'Versão 1' })).toBeVisible();
+    await user.selectOptions(screen.getByLabelText('Estudo para receber a evidência'), study.id);
+    await user.click(screen.getByRole('button', { name: 'Usar como evidência em estudo' }));
+
+    await waitFor(() => expect(repository.studies[0]?.evidenceSnapshots).toHaveLength(1));
+    expect(repository.studies[0]?.evidenceSnapshots[0]?.profile).toEqual(repository.profiles[0]);
+    expect(repository.studies[0]?.scenarios[0]?.sourceSnapshot).toEqual(originalSource);
   });
 });

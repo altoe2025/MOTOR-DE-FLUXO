@@ -2,7 +2,8 @@ import type { ApplicationRepository } from '../storage/applicationRepository';
 import { RevisionConflictError } from '../storage/errors';
 import type { CompanyRecord, ObservedCase } from '../cases/domain';
 import type { OperationalProfileVersion } from '../profiles/domain';
-import type { StudyDocument } from './model';
+import { attachOperationalProfileEvidence } from './domain';
+import type { StudyDocument, StudyDocumentV3 } from './model';
 
 export type StudyControllerStatus =
   | 'IDLE'
@@ -49,6 +50,7 @@ export type StudyControllerOptions = Readonly<{
   scheduler?: StudyControllerScheduler;
   cancelPending?: () => Promise<void> | void;
   operationId?: () => string;
+  now?: () => string;
   autosaveDelayMs?: number;
   channelScope?: string;
 }>;
@@ -113,6 +115,7 @@ export class StudyController {
   readonly #scheduler: StudyControllerScheduler;
   readonly #cancelPending: () => Promise<void> | void;
   readonly #operationId: () => string;
+  readonly #now: () => string;
   readonly #autosaveDelayMs: number;
   readonly #channelScope: string;
   readonly #listeners = new Set<() => void>();
@@ -150,6 +153,7 @@ export class StudyController {
     this.#scheduler = options.scheduler ?? defaultScheduler;
     this.#cancelPending = options.cancelPending ?? (() => undefined);
     this.#operationId = options.operationId ?? defaultOperationId;
+    this.#now = options.now ?? (() => new Date().toISOString());
     this.#autosaveDelayMs = options.autosaveDelayMs ?? 250;
     this.#channelScope = options.channelScope ?? 'default';
   }
@@ -271,6 +275,64 @@ export class StudyController {
     const { repository, epoch } = this.#session();
     const profiles = await repository.listOperationalProfileVersions(companyId);
     return this.#isCurrent(repository, epoch) ? profiles : [];
+  }
+
+  async appendOperationalProfileVersion(
+    document: OperationalProfileVersion,
+  ): Promise<OperationalProfileVersion> {
+    this.#assertOpen();
+    const { repository, epoch } = this.#session();
+    if (document.ownerSub !== this.#snapshot.ownerSub) {
+      throw new Error('Owner do Perfil Operacional diverge da sessão.');
+    }
+    const stored = await repository.appendOperationalProfileVersion({
+      operationId: this.#operationId(),
+      document,
+    });
+    if (!this.#isCurrent(repository, epoch)) throw new StudyControllerSessionError();
+    return stored;
+  }
+
+  async attachProfileToCurrentStudy(
+    profile: OperationalProfileVersion,
+  ): Promise<StudyDocumentV3> {
+    this.#assertOpen();
+    const { repository, epoch } = this.#session();
+    const current = this.#snapshot.document;
+    if (current === null || this.#snapshot.status !== 'SAVED') {
+      throw new Error('Carregue um estudo salvo antes de anexar evidências.');
+    }
+    const selectionEpoch = this.#selectionEpoch;
+    const attached = await attachOperationalProfileEvidence(current, profile, this.#now());
+    if (!this.#isCurrent(repository, epoch, selectionEpoch)) {
+      throw new StudyControllerSessionError();
+    }
+    if (attached === current) return current;
+    const operationId = this.#operationId();
+    this.#publish({ ...this.#snapshot, status: 'SAVING', error: null });
+    try {
+      const saved = await repository.saveStudy({
+        document: attached,
+        expectedRevision: current.revision,
+        operationId,
+      });
+      if (!this.#isCurrent(repository, epoch, selectionEpoch)) {
+        throw new StudyControllerSessionError();
+      }
+      this.#persistedRevision = saved.revision;
+      this.#channel?.postMessage({ studyId: saved.id, revision: saved.revision, operationId });
+      this.#publish({ ...this.#snapshot, status: 'SAVED', document: saved, error: null });
+      return saved;
+    } catch (error) {
+      if (this.#isCurrent(repository, epoch, selectionEpoch)) {
+        this.#publish({
+          ...this.#snapshot,
+          status: error instanceof RevisionConflictError ? 'CONFLICT' : 'STORAGE_FAILURE',
+          error,
+        });
+      }
+      throw error;
+    }
   }
 
   async getObservedCase(id: string): Promise<ObservedCase | null> {

@@ -1,24 +1,56 @@
-import { Link, useParams } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
 
+import { useStudyController } from '../app/providers';
+import { ProfileBuilder } from '../profiles/components/ProfileBuilder';
+import { ProfileVersionList } from '../profiles/components/ProfileVersionList';
+import type { OperationalProfileVersion } from '../profiles/domain';
 import { CompanyPageFrame, CompanyRouteState } from './components/CompanyPageFrame';
-import { findProfileStudyLinks } from './studyLinks';
 import { useCompanyResources } from './useCompanyResources';
 
 export function CompanyProfilesPage() {
   const { companyId } = useParams();
+  const controller = useStudyController();
   const resources = useCompanyResources(companyId);
+  const [profiles, setProfiles] = useState<readonly OperationalProfileVersion[]>([]);
+  const [studyId, setStudyId] = useState('');
+  const [message, setMessage] = useState<string | null>(null);
+  useEffect(() => setProfiles(resources.profiles), [resources.profiles]);
   if (resources.loading || resources.company === null) return <CompanyRouteState loading={resources.loading} error={resources.error} />;
-  const profiles = [...resources.profiles].sort((left, right) => right.version - left.version);
+  const studies = resources.studies.filter((study) => study.deletedAt === null);
   return (
-    <CompanyPageFrame company={resources.company} title={`Perfis de ${resources.company.displayName}`} introduction="Versões imutáveis do Perfil Operacional e estudos que preservaram cada evidência.">
-      {profiles.length === 0 ? <p className="empty-copy">Perfil operacional não coletado.</p> : (
-        <div className="table-scroll" tabIndex={0} aria-label="Tabela rolável de perfis"><table className="company-table"><caption>Versões do perfil operacional</caption><thead><tr><th scope="col">Versão</th><th scope="col">Criado em</th><th scope="col">Cobertura</th><th scope="col">Qualidade</th><th scope="col">Estudos</th></tr></thead><tbody>
-          {profiles.map((profile) => {
-            const links = findProfileStudyLinks(profile, resources.studies);
-            return <tr key={profile.id}><td>{profile.version}</td><td>{profile.createdAt}</td><td>{profile.coverage.coveredDays} dias</td><td>{profile.compatibility.blockers.length} bloqueios · {profile.compatibility.warnings.length} avisos</td><td>{links.length === 0 ? 'nenhum estudo' : links.map((link) => <Link key={link.studyId} to={`/estudos/${link.studyId}`}>{link.studyName}</Link>)}</td></tr>;
-          })}
-        </tbody></table></div>
-      )}
+    <CompanyPageFrame company={resources.company} title={`Perfis de ${resources.company.displayName}`} introduction="Selecione casos, confirme uma versão imutável e preserve o snapshot como evidência de um estudo.">
+      <ProfileBuilder
+        company={resources.company}
+        cases={resources.cases}
+        versions={profiles}
+        onConfirm={async (profile) => {
+          setMessage(null);
+          const stored = await controller.appendOperationalProfileVersion(profile);
+          setProfiles((current) => [...current, stored]);
+          setMessage(`Versão ${stored.version} confirmada.`);
+          return stored;
+        }}
+      />
+      <div className="profile-study-target">
+        <label htmlFor="profile-study">Estudo para receber a evidência</label>
+        <select id="profile-study" value={studyId} onChange={(event) => setStudyId(event.currentTarget.value)}>
+          <option value="">Selecione um estudo</option>
+          {studies.map((study) => <option key={study.id} value={study.id}>{study.name}</option>)}
+        </select>
+      </div>
+      {message === null ? null : <p role="status" className="inline-notice">{message}</p>}
+      <ProfileVersionList
+        profiles={profiles}
+        attachDisabled={studyId === ''}
+        onAttach={async (profile) => {
+          setMessage(null);
+          const study = await controller.loadStudy(studyId);
+          if (study === null) throw new Error('Estudo não encontrado.');
+          const attached = await controller.attachProfileToCurrentStudy(profile);
+          setMessage(`Perfil v${profile.version} anexado ao estudo ${attached.name}.`);
+        }}
+      />
     </CompanyPageFrame>
   );
 }
