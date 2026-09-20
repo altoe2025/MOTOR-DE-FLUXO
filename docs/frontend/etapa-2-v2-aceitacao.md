@@ -90,17 +90,18 @@ Rastreio confirmado por inspeção e pelos testes citados:
 
 ```text
 PortfolioSource
-→ resolvePortfolioSource
+→ resolvePortfolioSource; preparar no servidor quando houver geração
 → PortfolioSourceSnapshot/sourceFingerprint
 → ScenarioDocument/inputFingerprint
-→ StudyController.flush + reserva CAS
-→ buildPreviewRequest
+→ buildPreviewRequest + validação do PreviaRequest
+→ StudyController.flush
+→ reserva da tentativa por CAS
 → POST /api/v1/previas autenticado
 → executar_previa/adaptador/motor
-→ PreviewEnvelope + validação de identidade
-→ ExecutionRecord terminal com snapshots
-→ saveDetachedStudy/IndexedDB
-→ StudyResultPage + compareObservedToMotor
+→ PreviewEnvelope + validação de identidade da resposta
+→ ExecutionRecord terminal + compareObservedToMotor
+→ saveDetachedStudy/CAS/IndexedDB
+→ StudyResultPage + histórico preservado
 ```
 
 Os findings da auditoria em `b46017b` eram materiais e não foram reclassificados como

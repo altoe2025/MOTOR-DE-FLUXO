@@ -121,8 +121,9 @@ Observado confirmado.
 ### 3. Editar premissas e executar
 
 1. Ajuste custos, janela e período em **Premissas e período** e salve.
-2. Clique **Executar cenário atual**. O serviço força o flush do autosave, reserva uma
-   tentativa por CAS, constrói `PreviaRequest`, faz um único POST e anexa um terminal.
+2. Clique **Executar cenário atual**. O serviço constrói e valida o `PreviaRequest`,
+   força o flush do autosave, reserva uma tentativa por CAS, faz um único POST e
+   anexa um terminal.
 3. Confira volumes, mecanismos, custos, identidade técnica e histórico. Para origem
    observada, a tabela **Observado × Motor** é independente do resumo do motor.
 4. Edite a origem ou premissas e execute de novo. O registro anterior permanece
@@ -283,16 +284,17 @@ esses casos nos estados `CONFLICT` ou `STORAGE_FAILURE` quando cabível.
 
 ```text
 origem confirmada/manual/sintética
+→ resolver origem; preparar no servidor quando houver geração
 → PortfolioSourceSnapshot + sourceFingerprint
 → ScenarioDocument + inputFingerprint
-→ flush/CAS e reserva de tentativa
-→ PreparationRequest, quando houver geração
-→ PreviaRequest canônico
-→ FastAPI autenticada → adaptador → motor
-→ PreviewEnvelope validado
-→ ExecutionRecord terminal e snapshots imutáveis
-→ IndexedDB transacional
-→ resumo do motor + Observado × Motor independente
+→ construir e validar PreviaRequest canônico
+→ flush das mutações pendentes
+→ reserva de tentativa por CAS
+→ POST autenticado → FastAPI → adaptador → motor
+→ validar PreviewEnvelope e identidade da resposta
+→ construir terminal correlacionado e Observado × Motor independente
+→ persistir ExecutionRecord e snapshots por CAS no IndexedDB
+→ apresentar resumo, conciliação e histórico
 ```
 
 Uma resposta só é aceita quando usuário/sessão, estudo, cenário, revisão, request,

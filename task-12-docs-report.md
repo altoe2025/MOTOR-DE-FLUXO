@@ -21,5 +21,5 @@ concluída e a Etapa 3 não foi iniciada.
 - merge depende de CI publicado e aprovação explícita do Gabriel.
 
 Nenhum código de produto, regra do motor, push, PR, merge ou item do Linear foi
-alterado. A validação documental final e o commit único são registrados no handoff da
-tarefa.
+alterado. A validação documental inicial está em `c7347ce`; o ajuste final alinha a
+ordem do fluxo de autoridade à implementação sem mudar o aceite ou suas evidências.
