@@ -26,7 +26,10 @@ test('browser executes the reference example through the real API and engine', a
   await expect(page.getByText(/Valores não calibrados/)).toBeVisible();
   await expect(page.getByText('Fingerprint')).toBeVisible();
 
-  await page.getByRole('link', { name: 'Carteira' }).click();
+  await expect(page.getByRole('link', { name: 'Empresas' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Estudos' })).toBeVisible();
+  await page.goto('/carteira');
+  await expect(page).toHaveURL(/\/carteira$/);
   await expect(page.getByLabel('Nome do estudo')).toHaveValue('Validação MOT-22');
   expect(calls).toEqual({ get: 1, post: 1 });
 });

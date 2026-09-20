@@ -1,7 +1,7 @@
 import { IndexedDbApplicationRepository } from './storage/indexedDbApplicationRepository';
 import type { CompanyRecord, ObservedCase } from './cases/domain';
 import { recoverInterruptedExecution, readRecoveredDraft } from './storage/migrations';
-import type { DeepMutable, ExecutionRecord, StudyDocument } from './study/model';
+import type { DeepMutable, PreviewExecutionRecord, StudyDocument } from './study/model';
 
 const E2E_OWNER_SUB = '00000000-0000-4000-8000-000000000021';
 
@@ -11,6 +11,10 @@ export type MotorE2EBridge = Readonly<{
   studySource(studyId: string): Promise<string | null>;
   studyName(studyId: string): Promise<string | null>;
   studyExecutionStatuses(studyId: string): Promise<readonly string[]>;
+  profileVersions(companyId: string): Promise<readonly number[]>;
+  profileSnapshot(studyId: string, ownerSub?: string): Promise<Readonly<{ attachedVersions: readonly number[]; availableVersions: readonly number[] }>>;
+  previewAttemptShapes(studyId: string): Promise<readonly Readonly<{ reservation: number; terminal: number }>[]>;
+  freezeStudyInput(studyId: string): Promise<void>;
   migrateLegacyFixtures(input: Readonly<{ draft: string; study: string; importer: string }>): Promise<Readonly<{ studies: readonly string[]; recoveredDraft: string | null; archivedImporter: boolean }>>;
   probeBlockedAndCorruptStorage(): Promise<Readonly<{ blocked: boolean; corruptionCode: string | null }>>;
   recoverInterruptedLegacyStudy(raw: string): Promise<readonly string[]>;
@@ -29,6 +33,63 @@ declare global {
 
 export function installE2EBridge(): void {
   window.__MOTOR_E2E__ = Object.freeze({
+    async freezeStudyInput(studyId: string) {
+      const repository = new IndexedDbApplicationRepository({ projectRef: 'local', ownerSub: E2E_OWNER_SUB });
+      try {
+        const study = await repository.getStudy(studyId);
+        if (study === null) throw new Error('Estudo E2E nao encontrado.');
+        const frozen = structuredClone(study) as DeepMutable<StudyDocument>;
+        const scenario = frozen.scenarios.find((item) => item.id === frozen.baseScenarioId);
+        if (scenario === undefined) throw new Error('Cenario E2E nao encontrado.');
+        delete scenario.sourceSnapshot.generationInputSnapshot;
+        frozen.revision += 1;
+        frozen.updatedAt = new Date().toISOString();
+        await repository.saveStudy({
+          expectedRevision: study.revision,
+          operationId: crypto.randomUUID(),
+          document: frozen,
+        });
+      } finally { repository.close(); }
+    },
+    async profileVersions(companyId: string) {
+      const repository = new IndexedDbApplicationRepository({ projectRef: 'local', ownerSub: E2E_OWNER_SUB });
+      try {
+        return (await repository.listOperationalProfileVersions(companyId))
+          .map((profile) => profile.version).sort((left, right) => left - right);
+      } finally { repository.close(); }
+    },
+    async profileSnapshot(studyId: string, ownerSub = E2E_OWNER_SUB) {
+      const repository = new IndexedDbApplicationRepository({ projectRef: 'local', ownerSub });
+      try {
+        const study = await repository.getStudy(studyId);
+        if (study === null) return { attachedVersions: [], availableVersions: [] };
+        const companyId = study.evidenceSnapshots[0]?.profile.companyId;
+        const profiles = companyId === undefined
+          ? []
+          : await repository.listOperationalProfileVersions(companyId);
+        return {
+          attachedVersions: study.evidenceSnapshots.map((snapshot) => snapshot.profile.version).sort((left, right) => left - right),
+          availableVersions: profiles.map((profile) => profile.version).sort((left, right) => left - right),
+        };
+      } finally { repository.close(); }
+    },
+    async previewAttemptShapes(studyId: string) {
+      const repository = new IndexedDbApplicationRepository({ projectRef: 'local', ownerSub: E2E_OWNER_SUB });
+      try {
+        const study = await repository.getStudy(studyId);
+        if (study === null) return [];
+        const attempts = new Map<string, { reservation: number; terminal: number }>();
+        for (const execution of study.executions) {
+          if (execution.kind !== 'PREVIEW') continue;
+          const key = execution.attemptId ?? execution.id;
+          const shape = attempts.get(key) ?? { reservation: 0, terminal: 0 };
+          if (execution.status === 'RUNNING') shape.reservation += 1;
+          if (['SUCCEEDED', 'FAILED', 'INTERRUPTED'].includes(execution.status)) shape.terminal += 1;
+          attempts.set(key, shape);
+        }
+        return [...attempts.values()];
+      } finally { repository.close(); }
+    },
     async prepareQuotaProbe() {
       return {
         databaseName: `motor-fluxo:quota-probe:${crypto.randomUUID()}`,
@@ -126,7 +187,8 @@ export function installE2EBridge(): void {
             provenance[`/ordens/${index}/${field}`] = evidence;
           }
         });
-        const running: ExecutionRecord = {
+        const running: PreviewExecutionRecord = {
+          kind: 'PREVIEW',
           id: crypto.randomUUID(), scenarioId: scenario.id, scenarioRevision: scenario.revision,
           inputFingerprint: scenario.inputFingerprint,
           requestSnapshot: {
@@ -141,7 +203,7 @@ export function installE2EBridge(): void {
         const pending = structuredClone(original) as DeepMutable<StudyDocument>;
         pending.revision += 1;
         pending.updatedAt = '2026-09-19T12:00:00Z';
-        pending.executions.push(running as DeepMutable<ExecutionRecord>);
+        pending.executions.push(running as DeepMutable<PreviewExecutionRecord>);
         await repository.saveStudy({ expectedRevision: original.revision, operationId: crypto.randomUUID(), document: pending });
         const recovered = await recoverInterruptedExecution(repository, original.id, pending.revision, crypto.randomUUID(), '2026-09-19T12:01:00Z');
         return recovered.executions.map((execution) => execution.status);

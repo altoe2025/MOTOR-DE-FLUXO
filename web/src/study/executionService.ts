@@ -98,9 +98,12 @@ function assertEnvelope(
 
 function activeReservation(study: StudyDocument, scenarioId: string): ExecutionRecord | null {
   const completedRequests = new Set(study.executions
+    .filter((execution) => execution.kind === 'PREVIEW')
     .filter((execution) => execution.status !== 'PREPARING' && execution.status !== 'RUNNING')
     .map((execution) => execution.requestSnapshot.request_id));
-  return study.executions.find((execution) =>
+  return study.executions.find((execution): execution is typeof execution & { kind: 'PREVIEW' } =>
+    execution.kind === 'PREVIEW'
+    &&
     execution.scenarioId === scenarioId
     && (execution.status === 'PREPARING' || execution.status === 'RUNNING')
     && !completedRequests.has(execution.requestSnapshot.request_id)) ?? null;
@@ -116,7 +119,8 @@ function terminalExists(
   requestId: string,
 ): boolean {
   return study.executions.some((execution) =>
-    execution.status !== 'PREPARING'
+    execution.kind === 'PREVIEW'
+    && execution.status !== 'PREPARING'
     && execution.status !== 'RUNNING'
     && (execution.attemptId === attemptId
       || execution.requestSnapshot.request_id === requestId));

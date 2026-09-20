@@ -1,5 +1,5 @@
 import { compareObservedToMotor } from '../cases/observedComparison';
-import type { ExecutionRecord, PortfolioSource, StudyDocument } from '../study/model';
+import type { ExecutionRecord, PortfolioSource, PreviewExecutionRecord, StudyDocument } from '../study/model';
 import { ExecutionHistory } from '../study/components/ExecutionHistory';
 import { ComparisonSummary } from '../ui/ComparisonSummary';
 import { CostTable } from '../ui/CostTable';
@@ -67,7 +67,7 @@ export function StudyResultPage({
       <section aria-labelledby="execution-history-title">
         <h2 id="execution-history-title">Histórico</h2>
         <ExecutionHistory
-          executions={study.executions}
+          executions={study.executions.filter((item): item is PreviewExecutionRecord => item.kind === 'PREVIEW')}
           scenarios={study.scenarios}
           selectedId={execution?.id ?? null}
           onSelect={onSelectExecution}

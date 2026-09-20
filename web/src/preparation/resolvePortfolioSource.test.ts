@@ -164,6 +164,7 @@ describe('resolvePortfolioSource', () => {
     expect(snapshot).toMatchObject({
       source: { kind: 'AUTHORED', authoredPortfolioId: 'portfolio-1' },
       capturedAt: NOW,
+      generationInputSnapshot: response.input_snapshot,
       observedOutcome: null,
       provenance: [{ kind: 'USER_ESTIMATE', source: 'autoria manual', recordedAt: NOW }],
     });
@@ -243,6 +244,7 @@ describe('resolvePortfolioSource', () => {
           generationFingerprint: 'b'.repeat(64),
         },
       },
+      generationInputSnapshot: response.input_snapshot,
       observedOutcome: null,
       provenance: [{ kind: 'SYNTHETIC_DEFAULT', source: 'catálogo oficial', recordedAt: NOW }],
     });

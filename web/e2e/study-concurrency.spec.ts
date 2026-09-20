@@ -24,7 +24,7 @@ test('two tabs expose CAS conflict while a second account stays isolated', async
   const pageB = await contextA.newPage();
   await pageA.goto('/estudos');
   await pageA.getByRole('button', { name: 'Novo estudo' }).click();
-  await expect(pageA).toHaveURL(/\/estudos\/[0-9a-f-]+$/);
+  await expect(pageA).toHaveURL(/\/carteira\/[0-9a-f-]+$/);
   const studyUrl = pageA.url();
   const studyId = studyUrl.split('/').at(-1)!;
   await pageA.waitForFunction(() => '__MOTOR_E2E__' in window);
@@ -123,7 +123,7 @@ test('real Chromium storage covers all legacy fixtures, interruption, blocked up
   expect(interrupted).toEqual(['INTERRUPTED']);
 
   await expect(page.evaluate(() => window.__MOTOR_E2E__!.probeBlockedAndCorruptStorage()))
-    .resolves.toEqual({ blocked: true, corruptionCode: 'DOCUMENT_CORRUPT' });
+    .resolves.toEqual({ blocked: true, corruptionCode: 'SCHEMA_UNSUPPORTED' });
 });
 
 test('injected Chromium quota failure is surfaced without claiming physical disk exhaustion', async ({ browser }) => {

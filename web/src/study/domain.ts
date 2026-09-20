@@ -1,4 +1,6 @@
 import { fingerprintPortfolioSource, fingerprintScenarioInput } from './fingerprints';
+import { validateOperationalProfile } from '../profiles/validation';
+import type { OperationalProfileVersion } from '../profiles/domain';
 import type {
   CreateStudyInput,
   DeepMutable,
@@ -9,6 +11,7 @@ import type {
   ScenarioDraft,
   ScenarioUpdate,
   StudyDocument,
+  StudyDocumentV3,
 } from './model';
 import { assertValidStudy } from './validation';
 
@@ -66,13 +69,14 @@ export async function createStudy(input: CreateStudyInput): Promise<StudyDocumen
   const now = checkedInstant(input.now);
   const baseScenario = await materializeScenario(input.baseScenario);
   return finalize({
-    schemaVersion: '2.0.0',
+    schemaVersion: '3.0.0',
     id: input.id,
     ownerSub: input.ownerSub,
     name: checkedName(input.name),
     revision: 1,
     baseScenarioId: baseScenario.id,
     scenarios: [baseScenario],
+    evidenceSnapshots: [],
     executions: [],
     createdAt: now,
     updatedAt: now,
@@ -164,9 +168,39 @@ export async function appendExecution(
   }
   return finalize({
     ...clone(study),
-    executions: [...study.executions.map(clone), clone(execution)],
+    executions: [...study.executions.map(clone), { ...clone(execution), kind: 'PREVIEW' }],
     revision: study.revision + 1,
     updatedAt: checkedInstant(now),
+  });
+}
+
+export async function attachOperationalProfileEvidence(
+  study: StudyDocumentV3,
+  profile: OperationalProfileVersion,
+  capturedAt: string,
+): Promise<StudyDocumentV3> {
+  const validation = await validateOperationalProfile(profile);
+  if (!validation.ok) throw new Error('Perfil Operacional inválido.');
+  if (profile.ownerSub !== study.ownerSub) {
+    throw new Error('Owner do Perfil Operacional diverge do estudo.');
+  }
+  const existing = study.evidenceSnapshots.find((snapshot) =>
+    snapshot.kind === 'OPERATIONAL_PROFILE' && snapshot.profile.id === profile.id);
+  if (existing !== undefined) {
+    if (existing.profile.documentFingerprint !== profile.documentFingerprint) {
+      throw new Error('Perfil Operacional já anexado com outro fingerprint.');
+    }
+    return study;
+  }
+  const captured = checkedInstant(capturedAt);
+  return finalize({
+    ...clone(study),
+    evidenceSnapshots: [
+      ...study.evidenceSnapshots.map(clone),
+      { kind: 'OPERATIONAL_PROFILE', capturedAt: captured, profile: clone(profile) },
+    ],
+    revision: study.revision + 1,
+    updatedAt: captured,
   });
 }
 

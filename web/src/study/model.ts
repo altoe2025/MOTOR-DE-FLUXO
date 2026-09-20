@@ -1,6 +1,7 @@
 import type { components } from '../api/generated';
 import type { FieldProvenance, ObservedOutcome } from '../cases/domain';
 import type { ObservedComparison } from '../cases/observedComparison';
+import type { OperationalProfileVersion } from '../profiles/domain';
 
 export type DeepReadonly<T> = T extends (...args: never[]) => unknown
   ? T
@@ -31,7 +32,10 @@ export type PeriodDocument =
   | Readonly<{ httpPeriod: DeepReadonly<components['schemas']['PeriodoNatural']> }>;
 export type PreviaRequest = DeepReadonly<components['schemas']['PreviaRequest']>;
 export type PreviewEnvelope = DeepReadonly<components['schemas']['PreviewEnvelope']>;
+export type DiagnosticRequest = DeepReadonly<components['schemas']['DiagnosticRequest']>;
+export type DiagnosticEnvelope = DeepReadonly<components['schemas']['DiagnosticEnvelope']>;
 export type PreparationResponse = DeepReadonly<components['schemas']['PreparationResponse']>;
+export type EffectiveInput = DeepReadonly<components['schemas']['EffectiveInput']>;
 export type SeedText = components['schemas']['EffectiveParticipant']['seed'];
 
 export type OrderFieldProvenance = Readonly<{
@@ -103,6 +107,7 @@ export type PortfolioSourceSnapshot = Readonly<{
   provenance: readonly FieldProvenance[];
   provenanceByOrder?: Readonly<Record<string, OrderFieldProvenance>>;
   observedOutcome: ObservedOutcome | null;
+  generationInputSnapshot?: EffectiveInput;
   sourceFingerprint: string;
 }>;
 
@@ -161,7 +166,7 @@ export type ExecutionRecord = Readonly<{
   finishedAt: string | null;
 }>;
 
-export type StudyDocument = Readonly<{
+export type StudyDocumentV2 = Readonly<{
   schemaVersion: '2.0.0';
   id: string;
   ownerSub: string;
@@ -175,6 +180,71 @@ export type StudyDocument = Readonly<{
   deletedAt: string | null;
 }>;
 
+export type PreviewExecutionRecord = Readonly<ExecutionRecord & {
+  kind: 'PREVIEW';
+}>;
+
+export type PersistedExecutionError = Readonly<{
+  code: string;
+  message: string;
+}>;
+
+export type DiagnosticExecutionStatus =
+  | 'QUEUED'
+  | 'RUNNING'
+  | 'SUCCEEDED'
+  | 'FAILED'
+  | 'CANCELLED'
+  | 'INTERRUPTED';
+
+export type DiagnosticExecutionRecord = DeepReadonly<{
+  kind: 'DIAGNOSTIC';
+  id: string;
+  attemptId: string;
+  scenarioId: string;
+  scenarioRevision: number;
+  inputFingerprint: string;
+  requestSnapshot: DiagnosticRequest;
+  sourceSnapshot: PortfolioSourceSnapshot;
+  premisesSnapshot: PremisesDocument;
+  periodSnapshot: PeriodDocument;
+  status: DiagnosticExecutionStatus;
+  jobId: string | null;
+  envelope: DiagnosticEnvelope | null;
+  error: PersistedExecutionError | null;
+  createdAt: string;
+  finishedAt: string | null;
+}>;
+
+export type ExecutionRecordV3 = PreviewExecutionRecord | DiagnosticExecutionRecord;
+
+export type StudyEvidenceSnapshot = DeepReadonly<{
+  kind: 'OPERATIONAL_PROFILE';
+  capturedAt: string;
+  profile: OperationalProfileVersion;
+}>;
+
+export type StudyDocumentV3 = Readonly<
+  Omit<StudyDocumentV2, 'schemaVersion' | 'executions'> & {
+    schemaVersion: '3.0.0';
+    evidenceSnapshots: readonly StudyEvidenceSnapshot[];
+    executions: readonly ExecutionRecordV3[];
+  }
+>;
+
+export type StudyDocument = StudyDocumentV3;
+
+export function migrateStudyDocumentV2(document: StudyDocumentV2): StudyDocumentV3 {
+  const { schemaVersion: _schemaVersion, executions, ...study } = structuredClone(document);
+  void _schemaVersion;
+  return {
+    ...study,
+    schemaVersion: '3.0.0',
+    evidenceSnapshots: [],
+    executions: executions.map((execution) => ({ ...execution, kind: 'PREVIEW' })),
+  };
+}
+
 export type StudyValidationIssue = Readonly<{
   path: string;
   code:
@@ -184,6 +254,7 @@ export type StudyValidationIssue = Readonly<{
     | 'DUPLICATE_ID'
     | 'MISSING_SCENARIO_REVISION'
     | 'DUPLICATE_EXECUTION_TERMINAL'
+    | 'INCOMPATIBLE_DIAGNOSTIC_ATTEMPT'
     | 'INCOMPATIBLE_ENVELOPE'
     | 'INCOMPATIBLE_EXECUTION_SNAPSHOT'
     | 'SOURCE_FINGERPRINT_MISMATCH'

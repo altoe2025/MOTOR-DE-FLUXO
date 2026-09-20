@@ -1,18 +1,22 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import type { CompanyRecord, ObservedCase } from '../cases/domain';
+import type { OperationalProfileVersion } from '../profiles/domain';
 import type {
   ApplicationRepository,
+  AppendProfileVersionMutation,
   CASMutation,
   ConfirmObservedCaseMutation,
 } from '../storage/applicationRepository';
-import { RevisionConflictError } from '../storage/errors';
-import { createStudy, renameStudy } from './domain';
-import { FIXTURE_NOW, FIXTURE_OWNER, makeScenarioDraft } from './fixtures';
+import { calculateOperationalProfile } from '../profiles/calculateOperationalProfile';
+import { OperationConflictError, RevisionConflictError } from '../storage/errors';
+import { attachOperationalProfileEvidence, createStudy, renameStudy } from './domain';
+import { FIXTURE_NOW, FIXTURE_OWNER, makeObservedCase, makeScenarioDraft } from './fixtures';
 import type { StudyDocument } from './model';
 import {
   StudyController,
   StudyControllerClosedError,
+  StudyControllerSessionError,
   type StudyBroadcastMessage,
   type StudyChannel,
   type StudyChannelFactory,
@@ -44,10 +48,15 @@ async function makeStudy(ownerSub = FIXTURE_OWNER, id = 'study-1'): Promise<Stud
 class RepositoryDouble implements ApplicationRepository {
   closed = false;
   readonly saveCalls: CASMutation<StudyDocument>[] = [];
+  readonly appendProfileCalls: AppendProfileVersionMutation[] = [];
   getStudyImplementation: (id: string) => Promise<StudyDocument | null>;
   saveStudyImplementation: (input: CASMutation<StudyDocument>) => Promise<StudyDocument>;
 
-  constructor(readonly ownerSub: string, initial: StudyDocument | null = null) {
+  constructor(
+    readonly ownerSub: string,
+    initial: StudyDocument | null = null,
+    readonly profiles: OperationalProfileVersion[] = [],
+  ) {
     this.getStudyImplementation = async () => initial;
     this.saveStudyImplementation = async (input) => input.document;
   }
@@ -57,6 +66,18 @@ class RepositoryDouble implements ApplicationRepository {
   async getObservedCase(): Promise<ObservedCase | null> { return null; }
   async confirmObservedCase(input: ConfirmObservedCaseMutation): Promise<ObservedCase> {
     return input.observedCase;
+  }
+  async listOperationalProfileVersions(companyId?: string): Promise<OperationalProfileVersion[]> {
+    return this.profiles.filter((profile) => companyId === undefined || profile.companyId === companyId);
+  }
+  async getOperationalProfileVersion(): Promise<OperationalProfileVersion | null> { return null; }
+  async appendOperationalProfileVersion(input: AppendProfileVersionMutation): Promise<OperationalProfileVersion> {
+    this.appendProfileCalls.push(input);
+    if (this.profiles.some((profile) => profile.companyId === input.document.companyId && profile.version === input.document.version)) {
+      throw new OperationConflictError('Versão da empresa já foi alocada.');
+    }
+    this.profiles.push(structuredClone(input.document));
+    return input.document;
   }
   async listStudies(): Promise<StudyDocument[]> { return []; }
   async getStudy(id: string): Promise<StudyDocument | null> {
@@ -144,6 +165,7 @@ function controller(input: {
       return repository;
     },
     operationId: () => `operation-${++operation}`,
+    now: () => FIXTURE_NOW,
     autosaveDelayMs: 10,
     channelScope: 'test-project',
     ...(input.hub === undefined ? {} : { channelFactory: input.hub.factory }),
@@ -153,6 +175,92 @@ function controller(input: {
 }
 
 describe('StudyController', () => {
+  async function profile(ownerSub = FIXTURE_OWNER, version = 1, id = `profile-${version}`): Promise<OperationalProfileVersion> {
+    const observed = makeObservedCase();
+    return calculateOperationalProfile({
+      id, ownerSub, companyId: observed.companyId, version,
+      createdAt: FIXTURE_NOW, cases: [{ ...observed, ownerSub }],
+    });
+  }
+
+  it('gera operationId ao confirmar perfil e preserva versões no reload', async () => {
+    const repository = new RepositoryDouble(FIXTURE_OWNER);
+    const subject = controller({ repositories: [repository] });
+    await subject.switchSession(FIXTURE_OWNER);
+    const document = await profile();
+
+    await expect(subject.appendOperationalProfileVersion(document)).resolves.toEqual(document);
+    expect(repository.appendProfileCalls[0]).toEqual({ operationId: 'operation-1', document });
+    expect(await subject.listOperationalProfileVersions(document.companyId)).toEqual([document]);
+  });
+
+  it('propaga conflito quando duas abas confirmam a mesma próxima versão', async () => {
+    const repository = new RepositoryDouble(FIXTURE_OWNER);
+    const first = controller({ repositories: [repository] });
+    const second = controller({ repositories: [repository] });
+    await first.switchSession(FIXTURE_OWNER);
+    await second.switchSession(FIXTURE_OWNER);
+    const document = await profile();
+
+    await first.appendOperationalProfileVersion(document);
+    await expect(second.appendOperationalProfileVersion(await profile(FIXTURE_OWNER, 1, 'profile-rival')))
+      .rejects.toBeInstanceOf(OperationConflictError);
+  });
+
+  it('anexa cópia integral do perfil ao estudo atual usando CAS', async () => {
+    const study = await makeStudy();
+    const repository = new RepositoryDouble(FIXTURE_OWNER, study);
+    const subject = controller({ repositories: [repository] });
+    await subject.switchSession(FIXTURE_OWNER);
+    await subject.loadStudy(study.id);
+    const document = await profile();
+
+    const attached = await subject.attachProfileToCurrentStudy(document);
+
+    expect(attached.revision).toBe(2);
+    expect(attached.evidenceSnapshots[0]).toMatchObject({ kind: 'OPERATIONAL_PROFILE', profile: document });
+    expect(attached.scenarios[0]?.sourceSnapshot).toEqual(study.scenarios[0]?.sourceSnapshot);
+    expect(repository.saveCalls[0]).toMatchObject({ expectedRevision: 1, operationId: 'operation-1' });
+    expect(subject.snapshot).toMatchObject({ status: 'SAVED', document: attached });
+  });
+
+  it('não retorna anexação idempotente da sessão A depois da troca para B', async () => {
+    const document = await profile();
+    const attached = await attachOperationalProfileEvidence(await makeStudy(), document, FIXTURE_NOW);
+    const repositoryA = new RepositoryDouble(FIXTURE_OWNER, attached);
+    const repositoryB = new RepositoryDouble(OWNER_B);
+    const subject = controller({ repositories: [repositoryA, repositoryB] });
+    await subject.switchSession(FIXTURE_OWNER);
+    await subject.loadStudy(attached.id);
+
+    const staleAttach = subject.attachProfileToCurrentStudy(document);
+    await subject.switchSession(OWNER_B);
+
+    await expect(staleAttach).rejects.toBeInstanceOf(StudyControllerSessionError);
+    expect(subject.snapshot.ownerSub).toBe(OWNER_B);
+  });
+
+  it('rejeita perfil de outra conta e preserva isolamento no reload A → B → A', async () => {
+    const study = await makeStudy();
+    const persistedProfiles: OperationalProfileVersion[] = [];
+    const repositoryA = new RepositoryDouble(FIXTURE_OWNER, study, persistedProfiles);
+    const repositoryB = new RepositoryDouble(OWNER_B);
+    const reopenedA = new RepositoryDouble(FIXTURE_OWNER, study, persistedProfiles);
+    const subject = controller({ repositories: [repositoryA, repositoryB, reopenedA] });
+    await subject.switchSession(FIXTURE_OWNER);
+    await subject.loadStudy(study.id);
+    await expect(subject.attachProfileToCurrentStudy(await profile(OWNER_B))).rejects.toThrow(/Owner/);
+    const document = await profile();
+    await subject.appendOperationalProfileVersion(document);
+
+    await subject.switchSession(OWNER_B);
+    expect(await subject.listOperationalProfileVersions()).toEqual([]);
+    await expect(subject.attachProfileToCurrentStudy(await profile(FIXTURE_OWNER))).rejects.toThrow();
+
+    await subject.switchSession(FIXTURE_OWNER);
+    expect(await subject.listOperationalProfileVersions()).toEqual([document]);
+  });
+
   it('salva um estudo novo a partir de IDLE com CAS de criação', async () => {
     const created = await makeStudy();
     const repository = new RepositoryDouble(FIXTURE_OWNER);

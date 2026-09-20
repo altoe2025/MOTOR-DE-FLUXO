@@ -1,10 +1,13 @@
 import type { CompanyRecord, ObservedCase } from '../cases/domain';
 import { validateObservedCase } from '../cases/validation';
+import type { OperationalProfileVersion } from '../profiles/domain';
+import { validateOperationalProfile } from '../profiles/validation';
 import { canonical } from '../study/fingerprints';
-import type { ExecutionRecord, StudyDocument } from '../study/model';
-import { validateStudyDocument } from '../study/validation';
+import type { ExecutionRecordV3, StudyDocument } from '../study/model';
+import { parseStudyV3, validateStudyDocument } from '../study/validation';
 import type {
   ApplicationRepository,
+  AppendProfileVersionMutation,
   CASMutation,
   ConfirmObservedCaseMutation,
 } from './applicationRepository';
@@ -24,7 +27,7 @@ import {
   validateStoredStudy,
 } from './migrations';
 
-const DATABASE_VERSION = 1;
+const DATABASE_VERSION = 2;
 
 const STORE_NAMES = [
   'companies',
@@ -34,6 +37,7 @@ const STORE_NAMES = [
   'studies',
   'executions',
   'operations',
+  'profile_versions',
   'meta',
 ] as const;
 
@@ -83,6 +87,23 @@ type ObservedCaseOperationRow = Readonly<{
   result_document: ObservedCase;
 }>;
 
+type ProfileVersionRow = Readonly<{
+  profile_version_id: string;
+  owner_sub: string;
+  company_id: string;
+  version: number;
+  document: OperationalProfileVersion;
+}>;
+
+type ProfileVersionOperationRow = Readonly<{
+  operation_id: string;
+  owner_sub: string;
+  entity_kind: 'profile_version';
+  entity_id: string;
+  intent: string;
+  result_document: OperationalProfileVersion;
+}>;
+
 type StudyOperationRow = Readonly<{
   operation_id: string;
   owner_sub: string;
@@ -99,7 +120,7 @@ type PurgedOperationRow = Readonly<{
   entity_kind: 'purged';
 }>;
 
-type OperationRow = ObservedCaseOperationRow | StudyOperationRow | PurgedOperationRow;
+type OperationRow = ObservedCaseOperationRow | ProfileVersionOperationRow | StudyOperationRow | PurgedOperationRow;
 
 type StudyRow = Readonly<{
   study_id: string;
@@ -113,7 +134,7 @@ type ExecutionRow = Readonly<{
   execution_id: string;
   owner_sub: string;
   sequence: number;
-  document: ExecutionRecord;
+  document: ExecutionRecordV3;
 }>;
 
 function requestResult<T>(request: IDBRequest<T>): Promise<T> {
@@ -183,9 +204,10 @@ function sameDocument(left: unknown, right: unknown): boolean {
 }
 
 function isInterruptionTransition(
-  previous: ExecutionRecord,
-  candidate: ExecutionRecord,
+  previous: ExecutionRecordV3,
+  candidate: ExecutionRecordV3,
 ): boolean {
+  if (previous.kind !== 'PREVIEW' || candidate.kind !== 'PREVIEW') return false;
   if ((previous.status !== 'PREPARING' && previous.status !== 'RUNNING')
     || candidate.status !== 'INTERRUPTED'
     || previous.finishedAt !== null
@@ -234,7 +256,7 @@ function assembleOperationStudy(
   };
 }
 
-function createSchema(database: IDBDatabase): void {
+function createBaseStores(database: IDBDatabase): void {
   const companies = database.createObjectStore('companies', { keyPath: 'company_id' });
   companies.createIndex('by_owner', 'owner_sub');
   companies.createIndex('by_owner_display_name', ['owner_sub', 'display_name']);
@@ -271,8 +293,177 @@ function createSchema(database: IDBDatabase): void {
   operations.createIndex('by_owner', 'owner_sub');
   operations.createIndex('by_owner_entity', ['owner_sub', 'entity_kind', 'entity_id']);
 
-  const meta = database.createObjectStore('meta', { keyPath: 'key' });
-  meta.add({ key: 'schema_version', value: DATABASE_VERSION });
+  database.createObjectStore('meta', { keyPath: 'key' });
+}
+
+function createProfileStore(database: IDBDatabase): void {
+  const profiles = database.createObjectStore('profile_versions', { keyPath: 'profile_version_id' });
+  profiles.createIndex('by_owner', 'owner_sub');
+  profiles.createIndex('by_owner_company', ['owner_sub', 'company_id']);
+  profiles.createIndex(
+    'by_owner_company_version',
+    ['owner_sub', 'company_id', 'version'],
+    { unique: true },
+  );
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function migrateStoredStudyPart(value: unknown): Record<string, unknown> {
+  if (!isObject(value)) throw new InvalidDocumentError('StudyDocument V2 persistido inválido.');
+  if (value.schemaVersion !== '2.0.0') {
+    if (typeof value.schemaVersion === 'string' && value.schemaVersion !== '3.0.0') {
+      throw new SchemaUnsupportedError(`StudyDocument ${value.schemaVersion} não suportado.`);
+    }
+    throw new InvalidDocumentError('StudyDocument V2 persistido inválido.');
+  }
+  const migrated = structuredClone(value);
+  migrated.schemaVersion = '3.0.0';
+  migrated.evidenceSnapshots = [];
+  return migrated;
+}
+
+function migrateStoredExecution(value: unknown): Record<string, unknown> {
+  if (!isObject(value) || 'kind' in value) {
+    throw new InvalidDocumentError('Execução PREVIEW V2 persistida inválida.');
+  }
+  return { ...structuredClone(value), kind: 'PREVIEW' };
+}
+
+function migrateStudyIntent(intent: unknown): string {
+  if (typeof intent !== 'string') throw new InvalidDocumentError('Intent de estudo inválido.');
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(intent);
+  } catch {
+    throw new InvalidDocumentError('Intent de estudo inválido.');
+  }
+  if (!isObject(parsed) || !isObject(parsed.document)) {
+    throw new InvalidDocumentError('Intent de estudo inválido.');
+  }
+  const document = migrateStoredStudyPart(parsed.document);
+  if (!Array.isArray(parsed.document.executions)) {
+    throw new InvalidDocumentError('Intent de estudo sem execuções.');
+  }
+  document.executions = parsed.document.executions.map(migrateStoredExecution);
+  return canonical({ ...parsed, document });
+}
+
+const upgradeFailures = new WeakMap<IDBTransaction, unknown>();
+
+function abortUpgrade(transaction: IDBTransaction, error: unknown): void {
+  upgradeFailures.set(transaction, error);
+  try {
+    transaction.abort();
+  } catch {
+    // The failing request may already have aborted the transaction.
+  }
+}
+
+function upgradeSchema(
+  database: IDBDatabase,
+  transaction: IDBTransaction,
+  oldVersion: number,
+): void {
+  if (oldVersion === 0) {
+    createBaseStores(database);
+    createProfileStore(database);
+    transaction.objectStore('meta').add({ key: 'schema_version', value: DATABASE_VERSION });
+    return;
+  }
+  if (oldVersion !== 1) {
+    abortUpgrade(transaction, new SchemaUnsupportedError('Versão física futura do banco local.'));
+    return;
+  }
+
+  createProfileStore(database);
+  const fail = (error: unknown) => abortUpgrade(transaction, error);
+  const studies = transaction.objectStore('studies');
+  const executions = transaction.objectStore('executions');
+  const operations = transaction.objectStore('operations');
+  const studyRequest = studies.getAll();
+  const executionRequest = executions.getAll();
+  const operationRequest = operations.getAll();
+  const metaRequest = transaction.objectStore('meta').get('schema_version');
+  let studyRows: Array<Record<string, unknown>> | null = null;
+  let executionRows: Array<Record<string, unknown>> | null = null;
+  let operationRows: Array<Record<string, unknown>> | null = null;
+  let schemaMarker: Record<string, unknown> | null = null;
+  const migrate = () => {
+    if (studyRows === null || executionRows === null || operationRows === null
+      || schemaMarker === null) return;
+    try {
+      if (typeof schemaMarker.value !== 'number' || !Number.isSafeInteger(schemaMarker.value)) {
+        throw new InvalidDocumentError('Marcador de schema local inválido.');
+      }
+      if (schemaMarker.value > DATABASE_VERSION) {
+        throw new SchemaUnsupportedError(
+          `Schema local ${String(schemaMarker.value)} é mais novo que o suportado.`,
+        );
+      }
+      if (schemaMarker.value !== 1) {
+        throw new InvalidDocumentError('Marcador físico e lógico são incompatíveis.');
+      }
+      const migratedExecutions: Array<Record<string, unknown>> = executionRows.map((row) => ({
+        ...row,
+        document: migrateStoredExecution(row.document),
+      }));
+      for (const row of studyRows) {
+        const document = migrateStoredStudyPart(row.document);
+        const matchingExecutions = migratedExecutions
+          .filter((execution) => execution.study_id === row.study_id)
+          .sort((left, right) => Number(left.sequence) - Number(right.sequence))
+          .map((execution) => execution.document);
+        parseStudyV3({ ...document, executions: matchingExecutions });
+        studies.put({ ...row, document });
+      }
+      for (const row of migratedExecutions) executions.put(row);
+      for (const row of operationRows) {
+        if (row.entity_kind !== 'study' && row.entity_kind !== 'restore_study') continue;
+        if (!Array.isArray(row.result_execution_ids)
+          || row.result_execution_ids.some((id) => typeof id !== 'string')) {
+          throw new InvalidDocumentError('Resultado idempotente possui execuções inválidas.');
+        }
+        const resultDocument = migrateStoredStudyPart(row.result_document);
+        const resultExecutions = row.result_execution_ids.map((id) => {
+          const execution = migratedExecutions.find((candidate) =>
+            candidate.study_id === row.entity_id && candidate.execution_id === id);
+          if (execution === undefined) {
+            throw new InvalidDocumentError('Resultado idempotente referencia execução ausente.');
+          }
+          return execution.document;
+        });
+        parseStudyV3({ ...resultDocument, executions: resultExecutions });
+        operations.put({
+          ...row,
+          ...(row.entity_kind === 'study' ? { intent: migrateStudyIntent(row.intent) } : {}),
+          result_document: resultDocument,
+          result_execution_ids: structuredClone(row.result_execution_ids),
+        });
+      }
+      transaction.objectStore('meta').put({ key: 'schema_version', value: DATABASE_VERSION });
+    } catch (error) {
+      fail(error);
+    }
+  };
+  studyRequest.onsuccess = () => {
+    studyRows = studyRequest.result as Array<Record<string, unknown>>;
+    migrate();
+  };
+  executionRequest.onsuccess = () => {
+    executionRows = executionRequest.result as Array<Record<string, unknown>>;
+    migrate();
+  };
+  operationRequest.onsuccess = () => {
+    operationRows = operationRequest.result as Array<Record<string, unknown>>;
+    migrate();
+  };
+  metaRequest.onsuccess = () => {
+    schemaMarker = isObject(metaRequest.result) ? metaRequest.result : {};
+    migrate();
+  };
 }
 
 export class IndexedDbApplicationRepository implements ApplicationRepository {
@@ -295,14 +486,25 @@ export class IndexedDbApplicationRepository implements ApplicationRepository {
     if (this.#databasePromise === null) {
       this.#databasePromise = new Promise((resolve, reject) => {
         const request = indexedDB.open(this.#databaseName, DATABASE_VERSION);
+        let upgradeTransaction: IDBTransaction | null = null;
         request.onerror = () => {
           const error = request.error;
           this.#databasePromise = null;
-          reject(error?.name === 'VersionError'
+          reject(upgradeTransaction !== null && upgradeFailures.has(upgradeTransaction)
+            ? upgradeFailures.get(upgradeTransaction)
+            : error?.name === 'VersionError'
             ? new SchemaUnsupportedError('Versão física futura do banco local.')
             : error);
         };
-        request.onupgradeneeded = () => createSchema(request.result);
+        request.onupgradeneeded = (event) => {
+          upgradeTransaction = request.transaction;
+          if (upgradeTransaction === null) {
+            request.result.close();
+            reject(new InvalidDocumentError('Transação de upgrade ausente.'));
+            return;
+          }
+          upgradeSchema(request.result, upgradeTransaction, event.oldVersion);
+        };
         request.onsuccess = () => {
           const database = request.result;
           database.onversionchange = () => {
@@ -355,6 +557,104 @@ export class IndexedDbApplicationRepository implements ApplicationRepository {
       transaction.objectStore('observed_cases').get(id),
     );
     return row?.owner_sub === this.#ownerSub ? structuredClone(row.document) : null;
+  }
+
+  async listOperationalProfileVersions(companyId?: string): Promise<OperationalProfileVersion[]> {
+    const database = await this.#database();
+    const transaction = database.transaction('profile_versions', 'readonly');
+    const index = transaction.objectStore('profile_versions')
+      .index(companyId === undefined ? 'by_owner' : 'by_owner_company');
+    const key = companyId === undefined ? this.#ownerSub : [this.#ownerSub, companyId];
+    const rows = await requestResult<ProfileVersionRow[]>(index.getAll(key));
+    return rows.map((row) => structuredClone(row.document)).sort((left, right) =>
+      left.companyId.localeCompare(right.companyId)
+      || left.version - right.version
+      || left.id.localeCompare(right.id));
+  }
+
+  async getOperationalProfileVersion(id: string): Promise<OperationalProfileVersion | null> {
+    const database = await this.#database();
+    const transaction = database.transaction('profile_versions', 'readonly');
+    const row = await requestResult<ProfileVersionRow | undefined>(
+      transaction.objectStore('profile_versions').get(id),
+    );
+    return row?.owner_sub === this.#ownerSub ? structuredClone(row.document) : null;
+  }
+
+  async appendOperationalProfileVersion(
+    input: AppendProfileVersionMutation,
+  ): Promise<OperationalProfileVersion> {
+    rejectBinary(input);
+    validateMutation(0, input.operationId);
+    const validation = await validateOperationalProfile(input.document);
+    if (!validation.ok) {
+      throw new InvalidDocumentError(validation.issues[0]?.message ?? 'Perfil Operacional inválido.');
+    }
+    if (input.document.ownerSub !== this.#ownerSub) throw new OwnerMismatchError();
+
+    const database = await this.#database();
+    const intent = canonical(input);
+    return transactionResult(
+      database,
+      ['profile_versions', 'operations'],
+      'readwrite',
+      async (transaction) => {
+        const operations = transaction.objectStore('operations');
+        const previousOperation = await requestResult<OperationRow | undefined>(
+          operations.get(input.operationId),
+        );
+        if (previousOperation !== undefined) {
+          if (previousOperation.owner_sub !== this.#ownerSub
+            || previousOperation.entity_kind !== 'profile_version'
+            || previousOperation.entity_id !== input.document.id
+            || previousOperation.intent !== intent) {
+            throw new OperationConflictError();
+          }
+          return structuredClone(previousOperation.result_document);
+        }
+
+        const profiles = transaction.objectStore('profile_versions');
+        const [sameIdentity, companyRows] = await Promise.all([
+          requestResult<ProfileVersionRow | undefined>(profiles.get(input.document.id)),
+          requestResult<ProfileVersionRow[]>(profiles.index('by_owner_company')
+            .getAll([this.#ownerSub, input.document.companyId])),
+        ]);
+        if (sameIdentity !== undefined) {
+          if (sameIdentity.owner_sub !== this.#ownerSub) throw new OwnerMismatchError();
+          if (!sameDocument(sameIdentity.document, input.document)) {
+            throw new OperationConflictError('Versão imutável já possui outro conteúdo.');
+          }
+        } else {
+          const duplicateVersion = companyRows.find((row) => row.version === input.document.version);
+          if (duplicateVersion !== undefined) {
+            throw new OperationConflictError('Versão da empresa já foi alocada.');
+          }
+          const expectedVersion = companyRows.reduce(
+            (maximum, row) => Math.max(maximum, row.version),
+            0,
+          ) + 1;
+          if (input.document.version !== expectedVersion) {
+            throw new InvalidDocumentError(`Versão esperada: ${expectedVersion}.`);
+          }
+          profiles.add({
+            profile_version_id: input.document.id,
+            owner_sub: this.#ownerSub,
+            company_id: input.document.companyId,
+            version: input.document.version,
+            document: structuredClone(input.document),
+          } satisfies ProfileVersionRow);
+        }
+        operations.add({
+          operation_id: input.operationId,
+          owner_sub: this.#ownerSub,
+          entity_kind: 'profile_version',
+          entity_id: input.document.id,
+          intent,
+          result_document: structuredClone(input.document),
+        } satisfies ProfileVersionOperationRow);
+        return structuredClone(input.document);
+      },
+    );
   }
 
   async confirmObservedCase(input: ConfirmObservedCaseMutation): Promise<ObservedCase> {

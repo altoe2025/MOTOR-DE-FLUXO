@@ -91,7 +91,10 @@ describe('validateStudyDocument', () => {
     execution.requestSnapshot.scenario_revision = 2;
     execution.envelope!.scenario_revision = 2;
 
-    const result = await validateStudyDocument({ ...study, executions: [execution] });
+    const result = await validateStudyDocument({
+      ...study,
+      executions: [{ ...execution, kind: 'PREVIEW' as const }],
+    });
 
     expect(result).toEqual({
       ok: false,
@@ -158,7 +161,10 @@ describe('validateStudyDocument', () => {
     duplicate.id = '00000000-0000-4000-8000-000000000031';
     duplicate.envelope!.execution_id = duplicate.id;
 
-    const result = await validateStudyDocument({ ...study, executions: [terminal, duplicate] });
+    const result = await validateStudyDocument({
+      ...study,
+      executions: [terminal, duplicate].map((item) => ({ ...item, kind: 'PREVIEW' as const })),
+    });
 
     expect(result).toEqual({
       ok: false,

@@ -22,7 +22,7 @@ export default defineConfig({
   projects: [
     {
       name: 'local',
-      testMatch: /(?:foundation|study-.*)\.spec\.ts/,
+      testMatch: /(?:foundation|study-.*|company-profiles|diagnostic-jobs|stage2-regression)\.spec\.ts/,
       use: { ...devices['Desktop Chrome'] },
     },
     {

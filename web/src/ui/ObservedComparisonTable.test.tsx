@@ -59,6 +59,7 @@ describe('ObservedComparisonTable', () => {
 describe('StudyResultPage', () => {
   it('separa resultado do motor, conciliação, identidade, origem e histórico', () => {
     const execution = {
+      kind: 'PREVIEW',
       id: 'execution-1', scenarioId: 'scenario-1', scenarioRevision: 1,
       status: 'SUCCEEDED', envelope: {
         kind: 'PREVIA', api_version: '1.0.0', execution_fingerprint: 'fingerprint-1',

@@ -33,7 +33,7 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-09-19, após o aceite condicional local da Etapa 2 v2.
+Atualizada em 2026-09-20, durante o fechamento integrado local da Etapa 3.
 
 | Branch | Situação | Dono |
 |---|---|---|
@@ -62,6 +62,7 @@ Atualizada em 2026-09-19, após o aceite condicional local da Etapa 2 v2.
 | `codex/autonetting-preferencial` | PR #36 mergeado na `main`; grade histórica não regenerada | Codex |
 | `codex/mot62-planejamento-etapa2-v2` | documentação da MOT-62; IDs, dependências e auditoria da Etapa 2 v2, sem código de produto | Codex |
 | `codex/mot63-observed-contracts` | implementação e documentação da Etapa 2 v2; aceite **CONDITIONAL**, sem push/PR/merge e sem início da Etapa 3 | Codex |
+| `codex/frontend-etapa-3` | T0–T12 concluídos localmente; gate global verde em `57be689`; aceite técnico **PASS**; sem push/PR/merge | Codex |
 
 Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
@@ -69,6 +70,586 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
 ---
+
+## 2026-09-20 — Aceite integral de acessibilidade da Etapa 3 (MOT-77)
+
+1. **Sintoma.** S15.14 permanecia PARTIAL: a página robusta não tinha percurso
+   browser próprio por teclado e a 200% de zoom.
+2. **Causa.** As tabelas largas possuíam rolagem horizontal visual, mas seus
+   containers não entravam na ordem de foco, impedindo operação por setas sem mouse.
+3. **O que foi feito.** O E2E `diagnostic-jobs.spec.ts` cobre Chromium local em
+   1280 × 800, zoom 200%, `Tab`/`Enter`, foco visível, distribuição, execução
+   selecionada, sete eixos e rolagem horizontal. Os containers viraram regiões
+   nomeadas e focáveis. O gate de `57be689` aprovou 772 Python normal e `-O`, 388
+   testes web, 15 E2E, Ruff, mypy, typecheck, lint, build, contratos e scanner.
+4. **O que isso invalida.** Invalida a decisão `CONDITIONAL` baseada exclusivamente
+   na ausência de prova S15.14. O aceite técnico local da Etapa 3 passa a **PASS**.
+   Não autoriza push, PR, merge nem início da Etapa 4.
+
+---
+
+## 2026-09-20 — Auditoria final e aceite condicional da Etapa 3 (MOT-77)
+
+1. **Sintoma.** T0–T11 tinham implementação, revisões e um gate global verde no
+   mesmo SHA, mas faltavam a documentação operacional efetiva, a matriz individual
+   dos 18 critérios S15 e o rastreamento final dos dois fluxos de autoridade. A
+   evidência de acessibilidade também não distinguia o diagnóstico legado da nova
+   página robusta.
+2. **Causa.** Operação, arquitetura e mapa ainda descreviam a Etapa 2/estado de
+   partida, enquanto a prova de zoom a 200% existente no Playwright exercitava
+   `/diagnostico`, não `/estudos/:studyId/diagnostico`. Testes unitários comprovavam
+   série/tabela, foco e controles semânticos, mas não havia percurso browser do novo
+   diagnóstico por teclado e a 200%.
+3. **O que foi feito.** Na branch `codex/frontend-etapa-3`, foram auditados
+   `casos → perfil → profile_versions → estudo` e
+   `cenário → request → job → eixos → terminal → IndexedDB → UI`. Foram registrados
+   DB 2, schemas, endpoints, limites, estados e métodos estatísticos efetivos; criados
+   os guias de operação e aceite; atualizados mapa, arquitetura, testes, plano e a
+   especificação histórica. A matriz S15 marcou 17 critérios PASS e S15.14 PARTIAL,
+   emitindo decisão técnica local **CONDITIONAL**. Nenhum código de produto mudou e
+   o gate T11 não foi repetido.
+4. **O que isso invalida.** Invalida o mapa/arquitetura que tratavam a Etapa 3 como
+   não iniciada e qualquer leitura de que o gate global, sozinho, provava zoom e
+   teclado da página robusta. Não invalida os 772 testes Python, 388 unitários web,
+   14 E2E, contratos sem drift, medições 10/30/100 ou gates do SHA `03e87b8`. Não
+   autoriza push, PR, CI publicado, merge ou início da Etapa 4.
+
+## 2026-09-20 — Fix Round 1 do fechamento integrado da Etapa 3 (MOT-76)
+
+1. **Sintoma.** A primeira rodada global da T11 terminou condicional: Ruff encontrou
+   dois I001 mecânicos; dois testes Playwright ainda esperavam a navegação/erro do
+   storage anteriores; o scanner não via logs Python multiline nem segredos UTF-16;
+   e a prova de shutdown usava apenas o pool controlado em processo.
+2. **Causa.** As expectativas E2E ainda dependiam do link removido `Carteira`, de
+   uma rota transitória `/estudos/:uuid` e do código `DOCUMENT_CORRUPT` anterior ao
+   schema V3. O scanner era regex por linha/Latin-1, e o double do executor não
+   exercitava o lifecycle real de processos `spawn`.
+3. **O que foi feito.** Os dois imports receberam somente a formatação I001. Os
+   testes browser passaram a validar `Empresas`/`Estudos`, acessar diretamente a
+   rota pública `/carteira`, esperar a rota estável `/carteira/:uuid` e reconhecer
+   `SCHEMA_UNSUPPORTED` para documento V2 no storage V3. Logs Python são analisados
+   por AST e binários UTF-16LE/BE são normalizados explicitamente. Um teste
+   event-driven bloqueia um `ProcessPoolExecutor` real sob `spawn`, cancela o job e
+   prova que close não deixa future, worker ou dispatcher pendente.
+4. **O que isso invalida.** Invalida o gate condicional registrado para o SHA
+   `404533e`: seus dois I001 e dois failures Playwright deixam de representar o
+   candidato corrigido. Não altera regras do motor, contratos financeiros,
+   semântica de storage ou produto; apenas alinha evidência, scanner e lifecycle ao
+   estado já vigente. Medições 10/30/100 continuam técnicas, não comerciais.
+
+## 2026-09-20 — Aceitação integrada e regressão da Etapa 3 (MOT-76)
+
+1. **Sintoma.** Os fluxos Empresa→Perfil→Estudo e diagnóstico robusto tinham testes
+   focados, mas ainda faltava uma aceitação conjunta com fila controlável,
+   isolamento entre contas, regressão das Etapas 1–2, scanner ampliado e medição
+   10/30/100. Reloads nas rotas públicas novas de Empresa, diagnóstico e carteira
+   também retornavam JSON 404 embora a navegação pelo router funcionasse.
+2. **Causa.** O projeto Playwright local ainda selecionava apenas os specs anteriores
+   e o fallback SPA do servidor mantinha a allowlist da etapa anterior. Segurança e
+   performance possuíam evidências parciais, sem varrer binários/logs sensíveis nem
+   registrar as três cardinalidades diagnósticas no mesmo gate de CI.
+3. **O que foi feito.** Na branch `codex/frontend-etapa-3`, foram adicionadas
+   aceitações Python/Playwright para perfil versionado, CAS em duas abas, fila,
+   progresso, cancelamento, idempotência, isolamento 404, reload, entrada fixa,
+   distribuição gerada, falha sem parcial e regressão da Etapa 2. O worker E2E é
+   liberado por condição, prova teto de concorrência e encerra sem pendências. O
+   scanner passou a cobrir binários, URLs completas/query e payloads sensíveis em
+   logs. A CI mede 10/30/100 e preserva `-O`, frontend, E2E e scanner. A allowlist
+   SPA ganhou apenas os paths públicos exatos já declarados no router, inclusive
+   `/carteira/:uuid`, sem wildcard genérico.
+4. **O que isso invalida.** Invalida evidência de aceite da Etapa 3 baseada apenas
+   nos gates focados T0–T10 e a suposição de que um deep link funcional no router
+   necessariamente recarregava pelo servidor. Não altera motor, regras financeiras,
+   contratos diagnósticos, snapshots persistidos ou números de negócio. Os tempos
+   10/30/100 são medição sintética local, não SLA nem projeção comercial. Auth real
+   continua condicionado a credenciais externas e a pendência Ruff legada permanece
+   fora do escopo.
+
+## 2026-09-20 — Lacunas e evidência por métrica na comparação temporal (MOT-75)
+
+1. **Sintoma.** A comparação temporal mostrava dias cobertos, mas ocultava lacunas
+   de um perfil formado por casos descontínuos. Além disso, cada métrica projetada
+   recebia apenas a proveniência agregada do documento, perdendo as referências de
+   `EvidenceValue.evidence` que sustentavam especificamente aquele valor.
+2. **Causa.** A projeção temporal não carregava `gapDays` e reutilizava um único
+   array de proveniência para todas as métricas do perfil.
+3. **O que foi feito.** `TimelineObservation` e cada valor alinhado passaram a
+   preservar `gapDays`; casos individuais registram zero pela janela contínua do
+   próprio contrato e perfis usam `coverage.gapDays`. A linha temporal e a tabela
+   exibem lacunas antes dos valores e diferenças. Cada métrica também conserva suas
+   referências próprias, separadas da proveniência de documento/fonte, inclusive
+   mantendo lista vazia quando a indisponibilidade não registra referência.
+4. **O que isso invalida.** Invalida leituras da primeira entrega da MOT-75 que
+   inferiam continuidade apenas pelos dias cobertos ou tratavam proveniência
+   agregada como evidência de cada métrica. Compatibilidade, deltas, motor, servidor,
+   diagnóstico, persistência e limites da etapa seguinte permanecem inalterados.
+
+## 2026-09-20 — Comparação temporal restrita de casos e perfis (MOT-75)
+
+1. **Sintoma.** Casos observados e versões imutáveis de Perfil Operacional estavam
+   disponíveis por empresa, mas não havia uma leitura temporal conjunta que
+   preservasse cobertura, ausência, definição e proveniência antes de calcular
+   diferenças.
+2. **Causa.** As páginas apresentavam cada fonte separadamente e ainda não existia
+   uma projeção comum, pura e semanticamente fechada para evidências versionadas.
+3. **O que foi feito.** Na branch `codex/frontend-etapa-3`, casos e perfis passaram a
+   ser projetados nas mesmas quatro famílias compatíveis — volume, direção, ticket e
+   prazo — com período, dias cobertos, estado de cobertura, definição, unidade,
+   método e proveniência. A comparação bloqueia empresa ou semântica divergente,
+   ordena de forma determinística e só calcula diferenças entre valores disponíveis.
+   A Empresa recebeu seleção acessível de 2–6 observações, linha temporal e tabela;
+   Casos e Perfis apontam para essa leitura.
+4. **O que isso invalida.** Invalida a suposição de que diferenças temporais exigem
+   tratar ausência como zero ou antecipar comparação de cenários. Não altera motor,
+   servidor, diagnóstico, schema de persistência, `PortfolioSource` nem resultados
+   financeiros; não introduz variante, causalidade ou análise individual.
+
+## 2026-09-20 — Ordem semântica no snapshot diagnóstico fixo (MOT-73)
+
+1. **Sintoma.** Uma reserva diagnóstica fixa válida era rejeitada com
+   `INCOMPATIBLE_EXECUTION_SNAPSHOT` quando o snapshot preservava as ordens em
+   sequência física `b,a`, mas o request de prévia as enviava na sequência
+   canônica `a,b`.
+2. **Causa.** A validação de snapshots `PREVIEW` já comparava ordens normalizadas
+   por `id`, enquanto o ramo `FIXED_INPUT` de `DIAGNOSTIC` comparava diretamente os
+   arrays e tratava posição como parte do conteúdo.
+3. **O que foi feito.** A validação de ambos os tipos de execução passou a usar a
+   mesma projeção ordenada por `id` antes da comparação canônica. Regressões no
+   domínio e no IndexedDB cobrem snapshot físico não ordenado com request canônico;
+   um controle negativo confirma que alteração real em `valor_brl` continua sendo
+   rejeitada.
+4. **O que isso invalida.** Invalida a interpretação de que a posição no array de
+   ordens faz parte da identidade analítica. IDs e todos os valores das ordens
+   continuam comparados integralmente; não muda contratos, persistência, motor,
+   números ou UI T9.
+
+## 2026-09-20 — Cancelamento acionável e decimais lossless na UI (MOT-74)
+
+1. **Sintoma.** Durante polling, o botão de cancelamento era exibido, mas a mesma
+   flag que bloqueava nova execução também fazia o handler retornar sem chamar o
+   serviço. Além disso, o adapter do gráfico convertia strings decimais em `Number`,
+   arredondando valores canônicos acima da precisão segura do JavaScript.
+2. **Causa.** Execução em andamento e ação de cancelamento compartilhavam um único
+   estado `busy`; gráfico e tabela partiam da mesma série, mas apenas o gráfico
+   aplicava coerção numérica com perda.
+3. **O que foi feito.** Na branch `codex/frontend-etapa-3`, execução e cancelamento
+   passaram a ter estados separados, com trava síncrona contra cancelamento
+   duplicado. Um teste integrado cobre submit, polling, confirmação pelo job exato,
+   serviço de cancelamento, terminal `CANCELLED` e histórico. O adapter ECharts
+   mantém os decimais canônicos como strings tanto no option quanto na tabela, com
+   regressão para `9007199254740993.01`.
+4. **O que isso invalida.** Invalida a suposição de que botão visível implicava
+   cancelamento acionável durante polling e qualquer leitura do gráfico baseada em
+   coerção IEEE-754. Contratos, storage, servidor, motor e valores recebidos não
+   mudam; a UI continua sem recalcular métricas financeiras.
+
+## 2026-09-20 — Apresentação acessível do diagnóstico robusto (MOT-74)
+
+1. **Sintoma.** O diagnóstico robusto possuía contratos, executor e histórico
+   imutável, mas não havia página para configurar a amostragem, acompanhar o job e
+   ler distribuição, execução selecionada, sete eixos e proveniência sem confundir
+   ausência com zero.
+2. **Causa.** A Etapa 3 tinha encerrado T8 na fronteira de serviço; faltavam a
+   adaptação exclusivamente apresentacional dos envelopes validados, a rota do
+   estudo e uma visualização acessível reconciliada com tabelas.
+3. **O que foi feito.** Na branch `codex/frontend-etapa-3`, a rota
+   `/estudos/:studyId/diagnostico` passou a consumir o serviço T8, restaurar
+   reservas/terminais e expor 10/30/100 apenas para origem gerável. ECharts 6.1.0
+   foi integrado por módulos, sem wrapper, com SVG, descrição, `ResizeObserver`,
+   movimento reduzido e descarte. Distribuição e execução selecionada usam props
+   distintas; os sete eixos exibem métricas canônicas, gráfico/tabela da mesma
+   série, consequências, limitações e referências. O fluxo legado `/diagnostico`
+   continua disponível e a navegação volta a expor “Diagnóstico”.
+4. **O que isso invalida.** Invalida a suposição de que os envelopes do T8 só eram
+   inspecionáveis por testes ou payload bruto. Não altera contratos HTTP, motor,
+   storage/CAS, números, regras de simulação nem a comparação temporal T10; a UI
+   não recalcula métricas e estados indisponíveis continuam sem fabricar zeros.
+
+## 2026-09-20 — Forma persistida fechada e expiração tardia de resultado (MOT-73)
+
+1. **Sintoma.** A segunda rodada de auditoria do T8 encontrou duas brechas: um
+   documento V3 artesanal ainda podia persistir estados diagnósticos transitórios
+   ou reservas `QUEUED` duplicadas; e um job observado como `SUCCEEDED` podia ter o
+   resultado removido antes do GET final, deixando a tentativa sem terminal local.
+2. **Causa.** A validação integral correlacionava apenas terminais com reservas, sem
+   validar a cardinalidade e os estados de todos os registros agrupados por
+   `attemptId`. O tratamento de 404 cobria o polling do job, mas não o GET do
+   resultado.
+3. **O que foi feito.** Parser, validação integral, append de domínio e fronteira
+   IndexedDB agora aceitam por tentativa exatamente uma reserva `QUEUED`, sozinha
+   ou acompanhada de um único terminal imutavelmente correlato; `RUNNING` e outros
+   estados transitórios, órfãos, duplicatas e grupos maiores são rejeitados antes
+   do CAS. Um 404 do resultado após `SUCCEEDED` anexa
+   `INTERRUPTED / SERVER_RESTART_OR_JOB_EXPIRED` pela mesma trilha protegida por
+   owner, epoch, `AbortSignal` e CAS; demais erros continuam sem fabricar terminal.
+4. **O que isso invalida.** Invalida documentos V3 diagnósticos que persistam
+   progresso transitório ou mais de uma reserva para o mesmo `attemptId`, e a
+   suposição de que observar `SUCCEEDED` garante que o resultado ainda exista. Não
+   muda contratos HTTP, motor, números ou UI T9.
+
+## 2026-09-20 — Hardening de polling, sessão e correlação diagnóstica (MOT-73)
+
+1. **Sintoma.** A auditoria independente do T8 encontrou três brechas: polling
+   parava em `AGGREGATING`; uma troca de sessão durante um `flush` terminal podia
+   permitir escrita tardia; e um terminal artesanal podia reutilizar `attemptId`
+   sem preservar integralmente a identidade da reserva.
+2. **Causa.** A lista de estados ativos omitia uma fase do contrato T7, a guarda de
+   owner/epoch/signal era feita antes — mas não depois — de awaits que cediam
+   controle, e validação/append correlacionavam terminais apenas pela presença do
+   `attemptId`, sem comparar todos os campos imutáveis.
+3. **O que foi feito.** `AGGREGATING` agora mantém polling. O fluxo revalida
+   owner, epoch e `AbortSignal` após cada await relevante e imediatamente antes de
+   `edit`/`saveDetachedStudy`. Cada terminal exige exatamente uma reserva `QUEUED`
+   do mesmo attempt e identidade canônica idêntica (job/request/sampling, cenário,
+   fingerprint, snapshots e demais campos invariantes), no domínio, na validação
+   integral e, por consequência, na fronteira IndexedDB. Regressões cobrem races de
+   owner, mesmo owner com novo epoch, abort, documento artesanal e retry válido.
+4. **O que isso invalida.** Invalida a suposição de que checar sessão somente antes
+   de `flush` bastava e qualquer documento diagnóstico que correlacionasse terminal
+   apenas por `attemptId`. Não muda contratos HTTP, motor, números ou UI T9.
+
+## 2026-09-20 — Orquestração e histórico imutável de diagnósticos (MOT-73)
+
+1. **Sintoma.** O cliente web conhecia os contratos gerados do diagnóstico, mas não
+   conseguia montar planos determinísticos, reservar uma tentativa antes do POST,
+   retomar jobs após reload nem preservar um resultado terminal sem transformar
+   progresso transitório em autoridade local.
+2. **Causa.** Faltavam o cliente dos cinco endpoints, o builder canônico, as queries
+   owner-scoped e um modelo V3 que distinguisse execuções `PREVIEW` de reservas e
+   terminais `DIAGNOSTIC`. O storage conhecia apenas o histórico da Etapa 2.
+3. **O que foi feito.** Na branch `codex/frontend-etapa-3`, o web client passou a
+   construir requests fixos ou gerados com IDs/seeds determinísticos, reservar
+   `jobId = idempotency_key` por CAS antes do POST, retomar polling sem novo POST e
+   anexar no máximo um terminal por `attemptId`. Cancelamento, retry, 404 após
+   restart, troca de conta, troca de estudo e respostas tardias preservam a
+   autoridade owner/epoch. Schema, validação e IndexedDB aceitam o histórico misto
+   de forma append-only e rejeitam mutação, duplicidade e envelopes divergentes.
+4. **O que isso invalida.** Invalida consumidores que tratavam `executions` de V3
+   como uma lista exclusivamente `PREVIEW` e a hipótese de que retries diagnósticos
+   teriam `request_id` novo. Progresso de job continua deliberadamente transitório;
+   não há mudança no motor, no servidor MOT-72 nem na UI de diagnóstico MOT-74.
+
+## 2026-09-20 — ID público previsível e registry por owner (MOT-72)
+
+1. **Sintoma.** O cliente conhecia a chave idempotente antes do POST, mas o
+   servidor criava outro UUID para o job. Além disso, o registry indexava apenas
+   esse UUID global, impedindo que dois owners reutilizassem legalmente a mesma
+   chave sem colisão ou risco de sobrescrita.
+2. **Causa.** A chave idempotente identificava somente o binding do comando; uma
+   fábrica aleatória separada criava o identificador público, e jobs/fila/callbacks
+   não carregavam o owner na coordenada interna.
+3. **O que foi feito.** `job_id` agora é exatamente `idempotency_key` tanto no
+   submit quanto no retry. Registry, fila, callbacks, cancelamento e retenção usam
+   internamente `(owner_sub, job_id)`. A identidade canônica completa do comando,
+   o tipo submit/retry e o alvo original continuam definindo conflitos dentro de
+   cada owner. Testes cobrem ID conhecido antes do POST/retry, dois owners com o
+   mesmo UUID e isolamento de lookup, resultado, cancelamento e retry.
+4. **O que isso invalida.** Invalida consumidores que aguardavam o POST para
+   descobrir um UUID aleatório e qualquer hipótese de unicidade global de
+   `job_id`; a identidade pública é owner-scoped. DTOs/OpenAPI, motor, UI,
+   persistência e prévia síncrona não mudam.
+
+## 2026-09-20 — Correção de estado, identidade e retenção da fila (MOT-72)
+
+1. **Sintoma.** Um job gerado cedido entre repetições podia produzir snapshot
+   `QUEUED` incompatível com progresso já iniciado; a idempotência confiava apenas
+   no fingerprint declarado; retry podia colidir com comando alheio; entrada fixa
+   sobrescrevia o fingerprint calculado pela T6; e terminais só expiravam quando
+   outro endpoint tocava o registry.
+2. **Causa.** A fila interna e o estado público compartilhavam o mesmo marcador, o
+   binding idempotente não armazenava a identidade do comando completo, a agregação
+   aplicava o handoff de metadados gerados a ambos os tipos de entrada e a limpeza
+   de retenção vivia apenas nos métodos públicos.
+3. **O que foi feito.** Jobs cedidos permanecem logicamente `RUNNING/EXECUTING` e
+   podem ser cancelados imediatamente entre repetições. O binding agora combina
+   owner/chave com hash canônico de todo o request exceto a própria chave, tipo do
+   comando e alvo de retry. `FIXED_INPUT` preserva o resumo T6; somente
+   `GENERATED_INPUT` recebe fingerprint e seeds autoritativos do plano. O próprio
+   dispatcher acorda no próximo deadline e remove terminais sem tráfego posterior.
+4. **O que isso invalida.** Invalida snapshots intermediários `QUEUED` de jobs já
+   iniciados, reaproveitamento de chave com payload/comando diferente, fingerprint
+   declarado no resumo de entrada fixa e a expectativa de limpeza somente lazy.
+   DTOs públicos, motor, UI, persistência e prévia síncrona não mudam.
+
+## 2026-09-20 — Diagnósticos em fila limitada e isolada (MOT-72)
+
+1. **Sintoma.** Os cinco contratos diagnósticos já estavam publicados, mas a API
+   não executava repetições, não expunha progresso e não possuía cancelamento,
+   retry, retenção ou limites operacionais.
+2. **Causa.** A MOT-70 fechou os DTOs e a MOT-71 entregou a análise pura; faltava o
+   coordenador que separa fila/registry do trabalho de CPU e registra o owner
+   autenticado em cada tentativa.
+3. **O que foi feito.** A branch `codex/frontend-etapa-3` ganhou fila FIFO em
+   memória, registry e idempotência sob lock, worker top-level em
+   `ProcessPoolExecutor` com `spawn`, uma repetição por job por vez, cancelamento
+   cooperativo, retry, expiração terminal e limites configuráveis. O lifespan cria
+   e fecha o executor; as cinco rotas autenticadas aplicam isolamento por `sub`,
+   limite de 1 MiB, respostas `no-store` e erros sanitizados. Repetições geradas
+   preservam as seeds do plano e o `input_fingerprint` autoritativo da request.
+4. **O que isso invalida.** Invalida apenas a ausência de execução operacional dos
+   contratos T5. A fila continua não durável; cancelamento não interrompe a
+   repetição corrente; prévia síncrona, regras do motor, persistência e UI não mudam.
+
+## 2026-09-20 — Análise diagnóstica sem import privado e sem prazo zero inventado (MOT-71)
+
+1. **Sintoma.** O agregador T6 importava o percentil por um caminho interno de
+   `motor` e publicava prazo disponível igual a zero quando a coorte medida não
+   continha volume.
+2. **Causa.** A primeira implementação reutilizou diretamente a função estatística
+   interna e tratou o caso vazio com o mesmo valor neutro usado antes da construção
+   do `EvidenceMetric`.
+3. **O que foi feito.** O diagnóstico agora implementa localmente o nearest-rank
+   empírico com `Decimal`, sem importar `motor`. Coorte vazia torna prazo, D+0,
+   espera, HHI e maior participação `INCOMPATIBLE`, com razão e referências
+   estáveis. Regressões cobrem a fronteira de imports e o estado vazio.
+4. **O que isso invalida.** Invalida somente a disponibilidade artificial de
+   `deadline_days=0` para carteira medida vazia e a dependência interna do motor.
+   Carteiras com volume, resultados do motor e contratos públicos não mudam.
+
+## 2026-09-20 — Sete eixos puros do diagnóstico robusto (MOT-71)
+
+1. **Sintoma.** O contrato do diagnóstico já publicava os sete eixos, mas ainda não
+   existia cálculo auditável para preenchê-los. Além disso, a participação por
+   cliente exigia UUID embora entradas fixas válidas usem identificadores como
+   `astropay`, `nomad` e `wise`.
+2. **Causa.** A MOT-70 fechou a forma pública antes dos agregadores. Nesse corte,
+   `ParticipantShare` herdou por engano a identidade UUID da receita geradora, mesmo
+   representando o `cliente_id` textual das operações explícitas.
+3. **O que foi feito.** A branch `codex/frontend-etapa-3` adiciona análise pura com
+   `Decimal` para potencial, captura, tempo, resíduo, composição, robustez econômica
+   e perfil operacional; separa execução selecionada da distribuição; deriva
+   consequências versionadas e limitações com referências verificadas. O contrato
+   de participação passa a usar o `Identificador` estrito de `OrdemEntrada`, com
+   OpenAPI e tipos gerados novamente pelos comandos oficiais.
+4. **O que isso invalida.** Invalida somente o formato UUID antes publicado para
+   `ParticipantShare.participant_id`. Requests, receitas geradoras, resultados do
+   motor e contratos UUID das seeds permanecem iguais; a análise não cria HTTP,
+   fila, persistência ou interface.
+
+## 2026-09-20 — UUID URN na validação diagnóstica do cliente (MOT-70)
+
+1. **Sintoma.** `ajv-formats` e Pydantic aceitavam `urn:uuid:<UUID>`, mas a
+   normalização semântica gerada só reconhecia a forma bare e rejeitava requests que
+   o servidor aceitava.
+2. **Causa.** `normalizeUuidIdentity` aplicava a regex canônica diretamente ao texto
+   inteiro, sem retirar o prefixo URN aceito pelos dois lados.
+3. **O que foi feito.** A interseção foi caracterizada: bare e `urn:uuid:` minúsculo
+   aceitam payload em qualquer caixa; compacto/braces falham no AJV e `URN:UUID:`
+   falha no Pydantic. O gerador agora remove somente o prefixo URN comum antes de
+   canonicalizar identidades, mantendo chaves de seed textuais.
+4. **O que isso invalida.** A cobertura de paridade UUID declarada na correção
+   anterior para a variante URN. Requests bare, regras do motor e resultados não
+   mudam.
+
+## 2026-09-20 — Identidade UUID canônica no plano diagnóstico (MOT-70)
+
+1. **Sintoma.** O cliente tratava UUIDs textuais com caixas diferentes como IDs
+   distintos e comparava o ID bruto do participante com chaves de seed. Isso
+   divergia do Pydantic, que canonicaliza valores UUID, mas preserva as chaves do
+   mapa como texto.
+2. **Causa.** A checagem semântica gerada usava igualdade direta de strings para
+   participante, repetição e seleção.
+3. **O que foi feito.** O gerador oficial passou a normalizar valores-identidade
+   UUID antes de comparar participantes, detectar repetição duplicada e resolver a
+   seleção. Chaves de `participant_seeds` permanecem textuais e precisam coincidir
+   com o ID canônico, reproduzindo a aceitação/rejeição do servidor.
+4. **O que isso invalida.** A paridade declarada na correção anterior para payloads
+   com UUID em caixa alta ou mista. Requests canônicos e resultados do motor não
+   mudam.
+
+## 2026-09-20 — Paridade integral do plano gerado no cliente (MOT-70)
+
+1. **Sintoma.** O boundary AJV ainda aceitava mapas de seed que não correspondiam
+   aos participantes da preparação, IDs de repetição duplicados, a mesma seed para
+   um participante em repetições diferentes e seleção fora do plano explícito.
+2. **Causa.** A primeira checagem semântica validava contagem e entradas isoladas,
+   mas não reconstruía as relações globais que o `GeneratedInputPlan` do servidor
+   já impunha.
+3. **O que foi feito.** O gerador oficial passou a comparar exatamente o conjunto
+   de participantes em cada repetição, rastrear IDs e seeds já usados e exigir que
+   `selected_repetition_id` pertença ao plano. Entradas estruturalmente inválidas
+   continuam retornando `false` sem lançar exceção.
+4. **O que isso invalida.** A afirmação de paridade semântica completa feita após a
+   primeira correção do boundary cliente. Requests válidos e resultados do motor
+   permanecem inalterados.
+
+## 2026-09-20 — Validação semântica do plano diagnóstico no cliente (MOT-70)
+
+1. **Sintoma.** O validador AJV aceitava plano `GENERATED_INPUT` com `count`
+   diferente do número de repetições, chave de participante que não era UUID e seed
+   acima do limite canônico, embora a fronteira Pydantic rejeitasse esses payloads.
+2. **Causa.** Essas relações vivem em `model_validator` e não são representáveis
+   integralmente pelo JSON Schema gerado apenas com as palavras-chave usadas.
+3. **O que foi feito.** O gerador oficial agora compõe a validação estrutural AJV
+   com uma checagem semântica determinística para contagem, chaves UUID e teto de
+   seed; testes de regressão cobrem os três desvios sem editar artefatos gerados.
+4. **O que isso invalida.** A conclusão anterior de que a validação estrutural AJV
+   bastava para esses invariantes específicos. Requests válidos e resultados do
+   motor não mudam.
+
+## 2026-09-20 — Contratos públicos do diagnóstico robusto (MOT-70)
+
+1. **Sintoma.** A API não possuía contratos versionados para solicitar, acompanhar
+   e ler um diagnóstico robusto; fila, progresso, amostragem e os sete eixos não
+   apareciam no OpenAPI nem nos validadores do cliente.
+2. **Causa.** A Etapa 2 publicava somente preparação e prévia individual. A
+   fronteira contratual do diagnóstico precisava ser fechada antes do executor.
+3. **O que foi feito.** A branch `codex/frontend-etapa-3` ganhou DTOs estritos para
+   entrada fixa ou gerada, seeds e fingerprints explícitos, snapshot de job,
+   evidências, sete eixos e envelope limitado. Cinco operações foram registradas
+   apenas em `create_schema_app`; OpenAPI, tipos e validadores foram regenerados
+   pelos comandos oficiais, sem handlers operacionais.
+4. **O que isso invalida.** Nada nos resultados do motor, nas prévias existentes ou
+   na persistência. O contrato gerado anterior deixa de representar toda a
+   superfície planejada da Etapa 3.
+
+## 2026-09-20 — Vínculo único de perfil enquanto CAS está pendente (MOT-69)
+
+1. **Sintoma.** Duas ativações rápidas de “Usar como evidência em estudo” podiam
+   iniciar vínculos simultâneos e produzir conflito ou mensagem enganosa de estudo
+   não encontrado.
+2. **Causa.** A lista não mantinha estado compartilhado de anexação; cada botão podia
+   disparar uma nova sequência `loadStudy` + CAS enquanto a anterior estava pendente.
+3. **O que foi feito.** `ProfileVersionList` agora aplica lock síncrono e desabilita
+   todas as ações de vínculo até a promessa terminar. Um teste com promessa deferida
+   cobre dupla ativação e ausência de alerta falso.
+4. **O que isso invalida.** Somente a possibilidade de vínculos concorrentes
+   iniciados pela própria lista. Perfil, estudo, carteira e resultados não mudam.
+
+## 2026-09-20 — Confirmação e vínculo do Perfil Operacional (MOT-69)
+
+1. **Sintoma.** A área de Perfis apenas listava versões já persistidas; não havia
+   seleção explícita de Casos Observados, prévia de compatibilidade/cobertura,
+   confirmação append-only nem vínculo do perfil como evidência de um estudo.
+2. **Causa.** O cálculo determinístico e o repositório da Etapa 3 já existiam, mas
+   faltava a orquestração session-bound no controller e a interface que conectasse
+   seleção, confirmação e CAS do estudo sem criar uma nova origem de carteira.
+3. **O que foi feito.** A branch `codex/frontend-etapa-3` adiciona o construtor e a
+   leitura somente de perfis, renderiza todos os estados de `EvidenceValue`, confirma
+   versões imutáveis pelo `ApplicationRepository` e copia o snapshot completo para o
+   estudo atual por CAS. Testes cobrem bloqueios, avisos, cobertura, conflito,
+   persistência/reload, troca A→B→A e preservação da origem da carteira.
+4. **O que isso invalida.** Invalida somente a ausência do fluxo de confirmação e
+   vínculo de perfis. `PortfolioSource` continua com três origens, execução continua
+   somente `PREVIEW`, e API, motor, regras de negócio e números publicados não mudam.
+
+## 2026-09-20 — Ausência de qualidade sem zero inventado (MOT-68)
+
+1. **Sintoma.** A visão geral de uma empresa sem casos exibia `0 bloqueios · 0
+   avisos · 0 não coletados` no campo Qualidade.
+2. **Causa.** O componente formatava sempre os contadores agregados, mesmo quando
+   não existia caso que sustentasse uma avaliação de qualidade.
+3. **O que foi feito.** A branch `codex/frontend-etapa-3` agora exibe “não coletado”
+   quando a empresa não tem casos e preserva as contagens quando existe evidência.
+   Uma regressão de rota/componente cobre explicitamente o estado vazio.
+4. **O que isso invalida.** Somente a apresentação de zeros como avaliação de
+   qualidade para empresas sem casos. Casos existentes, filtros, vínculos,
+   persistência, motor e números publicados não mudam.
+
+## 2026-09-20 — Navegação de empresas, casos e vínculos históricos (MOT-68)
+
+1. **Sintoma.** A aplicação ainda expunha destinos internos da Etapa 2 como
+   navegação global e não oferecia catálogo por empresa, cobertura observada,
+   histórico filtrável de casos, perfis versionados ou estudos relacionados.
+2. **Causa.** O shell e o roteador precediam os read models da Etapa 3; apesar dos
+   métodos de leitura já existirem no repositório, faltavam controllers e páginas
+   que os consumissem preservando isolamento por conta e relações históricas.
+3. **O que foi feito.** A branch `codex/frontend-etapa-3` limita a navegação global
+   a Empresas e Estudos, adiciona as quatro áreas por empresa, cobertura e volumes
+   sem zeros inventados, filtros persistidos na URL e tabelas semânticas. Vínculos
+   Caso→Estudo e Perfil→Estudo derivam apenas de snapshots imutáveis, e o deep link
+   legado `/estudos/:studyId` abre o mesmo estudo sob `/carteira/:studyId`.
+4. **O que isso invalida.** Deixa de valer que Carteira, Diagnóstico, Comparar,
+   Replay e Premissas sejam destinos globais, embora suas rotas compatíveis
+   continuem acessíveis. Nada muda em persistência, APIs, motor, perfil como
+   evidência ou números publicados.
+
+## 2026-09-20 — Perfis versionados e estudos V3 persistidos (MOT-67)
+
+1. **Sintoma.** O banco local ainda tinha oito stores no schema físico/lógico 1,
+   não persistia versões imutáveis do Perfil Operacional e mantinha estudos e
+   resultados idempotentes no contrato 2.0.0 sem evidência de perfil.
+2. **Causa.** A Etapa 3 havia fechado apenas o contrato preparatório de Study V3;
+   a migração transacional, o store append-only e a integração da evidência
+   dependiam do Perfil Operacional concreto da MOT-66.
+3. **O que foi feito.** A branch `codex/frontend-etapa-3` sobe IndexedDB e marcador
+   lógico para 2, cria `profile_versions`, migra atomicamente estudos, execuções e
+   payloads de operações para Study V3/PREVIEW, adiciona o port único de perfis e
+   permite anexar cópia validada e imutável do perfil ao estudo. A fixture física
+   real da Etapa 2 cobre replay, reabertura idempotente e rollback integral.
+4. **O que isso invalida.** Deixa de valer que o banco `motor-fluxo:app:v2:*` tenha
+   oito stores/schema 1, que `StudyDocument` corrente seja 2.0.0 e que
+   `evidenceSnapshots` aceite somente a coleção vazia. DIAGNOSTIC, uma quarta origem
+   de portfólio, contratos HTTP, motor e números publicados continuam inalterados.
+
+## 2026-09-20 — Prazo assinado no schema do Perfil Operacional (MOT-66)
+
+1. **Sintoma.** Um Caso Observado válido com `deadlineDate` anterior a `knownDate`
+   gerava corretamente prazo `-1`, mas o próprio perfil calculado era rejeitado ao
+   atravessar a validação runtime.
+2. **Causa.** O schema reutilizava o decimal não negativo de valores monetários e
+   frações nos quatro percentis de prazo, embora o contrato integrado de caso não
+   imponha ordem entre as duas datas.
+3. **O que foi feito.** Foi criado um decimal assinado exclusivo para evidências de
+   `deadlineDays`, aplicado aos percentis por contagem e por volume. Uma regressão
+   calcula e valida um perfil real com prazo `-1`.
+4. **O que isso invalida.** Nada em casos, cálculo, dinheiro, frações, contagens,
+   persistência, estudos, APIs, motor ou números publicados. Somente a rejeição
+   indevida de prazos negativos deixa de valer.
+
+## 2026-09-20 — Validação fechada do Perfil Operacional (MOT-66)
+
+1. **Sintoma.** Um perfil com fingerprint recalculado ainda podia omitir uma métrica
+   obrigatória ou substituir `provenance.fields` por objetos arbitrários e atravessar
+   a validação de leitura.
+2. **Causa.** O schema `1.0.0` usava um mapa genérico de evidências para quatro
+   famílias métricas e tipava a proveniência apenas como `object`.
+3. **O que foi feito.** O schema agora enumera e exige todas as chaves e formas de
+   valor de volume, frequência, tickets, direção, prazo, finalidade, janelas e
+   sazonalidade. A validação registra e referencia a união discriminada oficial de
+   `FieldProvenance` do contrato de Caso Observado. Duas regressões recalculam o
+   fingerprint após adulterar o documento e provam a rejeição estrutural.
+4. **O que isso invalida.** Nada em perfis gerados corretamente, IndexedDB, estudos,
+   APIs, motor ou números publicados. Fica inválida a suposição de que um fingerprint
+   íntegro sozinho compensaria lacunas estruturais no documento lido.
+
+## 2026-09-20 — Perfil Operacional puro e versionado (MOT-66)
+
+1. **Sintoma.** Casos Observados confirmados ainda não podiam ser combinados em um
+   Perfil Operacional determinístico, com cobertura, métricas e ausência de evidência
+   representadas por contrato explícito.
+2. **Causa.** A fundação da Etapa 3 congelou os contratos existentes sem antecipar o
+   domínio de perfil; faltavam compatibilidade da seleção, cálculo civil UTC,
+   percentis, fingerprints e validação runtime próprios.
+3. **O que foi feito.** Na branch `codex/frontend-etapa-3`, foi criado
+   `web/src/profiles/` com domínio `1.0.0`, matriz de blockers e warnings, métricas
+   determinísticas em Decimal.js, cobertura sem duplicar dias sobrepostos,
+   sazonalidade civil, proveniência, JSON canônico, SHA-256 e schema/validação dos
+   fingerprints. Testes dourados derivados à mão cobrem o contrato S06.
+4. **O que isso invalida.** Nada em IndexedDB, estudos, APIs, motor ou números já
+   publicados. O perfil continua puro e não persistido; alocação append-only de
+   versões e vínculo como evidência pertencem às tarefas seguintes.
+
+## 2026-09-20 — Freeze compatível dos contratos da Etapa 3 (MOT-65)
+
+1. **Sintoma.** A Etapa 3 ainda não tinha uma fixture byte-estável do IndexedDB
+   físico 1 nem um contrato executável que demonstrasse como estudos 2.0.0 seriam
+   lidos após a introdução da discriminação de execuções e de evidências.
+2. **Causa.** A Etapa 2 persistia execuções de prévia sem `kind` e não possuía
+   `evidenceSnapshots`; ao mesmo tempo, os contratos de Perfil Operacional e de
+   diagnóstico pertencem a tarefas posteriores e não podiam ser antecipados por
+   tipos parciais.
+3. **O que foi feito.** Na branch `codex/mot-65-etapa-3-t0`, foi capturada uma
+   representação anonimizada real das stores `studies`, `executions` e `meta` do
+   schema físico 1, com as três origens e uma tentativa com reserva mais terminal.
+   O modelo e o schema agora expõem a migração pura 2.0.0 → 3.0.0, acrescentando
+   somente `kind: 'PREVIEW'` e `evidenceSnapshots: []`; a validação rejeita kinds
+   ainda não suportados, evidência não vazia, envelope incompatível e terminal
+   duplicado por tentativa.
+4. **O que isso invalida.** Nada nos números, regras do motor, IndexedDB existente
+   ou comportamento da Etapa 2. Fica inválida apenas a suposição de que T0 já
+   aceitaria Perfil Operacional ou `DIAGNOSTIC`: T1/T4 e T5/T8 continuam donas da
+   abertura desses contratos.
 
 ## 2026-09-20 — Instante único na proveniência de preparação (MOT-33)
 

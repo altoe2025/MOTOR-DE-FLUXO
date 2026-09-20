@@ -22,14 +22,22 @@ from servidor.auth import (
     TokenVerifier,
 )
 from servidor.config import Settings
+from servidor.contracts.diagnostics import (
+    DiagnosticEnvelope,
+    DiagnosticRequest,
+    DiagnosticRetryRequest,
+    JobSnapshot,
+)
 from servidor.contracts.input import PreviaRequest
 from servidor.contracts.preparation import PreparationRequest, PreparationResponse
 from servidor.contracts.preview import PreviewEnvelope, ReferenceExample
+from servidor.contracts.primitives import UUIDValue
 from servidor.contracts.session import HealthResponse, SessionResponse
+from servidor.diagnostics.executor import DiagnosticExecutor
 from servidor.errors import ApiFailure, entrada_invalida, failure_response
 from servidor.generate_reference_fixture import build_reference_request
 from servidor.preparation import preparar_carteira
-from servidor.routes import examples, preparation, preview, session
+from servidor.routes import diagnostics, examples, preparation, preview, session
 from servidor.static import install_static_routes
 
 _LOGGER = logging.getLogger("servidor.http")
@@ -43,6 +51,7 @@ SchemaBearer = Annotated[
 def create_app(
     settings: Settings | None = None,
     verifier: TokenVerifier | None = None,
+    diagnostic_executor: DiagnosticExecutor | None = None,
 ) -> FastAPI:
     configured = settings or Settings()  # type: ignore[call-arg]
     owns_verifier = verifier is None
@@ -50,6 +59,14 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
+        executor = diagnostic_executor or DiagnosticExecutor(
+            build_sha=configured.motor_build_sha,
+            max_workers=configured.diagnostic_max_workers,
+            max_jobs_per_owner=configured.diagnostic_max_jobs_per_user,
+            max_jobs_global=configured.diagnostic_max_jobs_global,
+            retention_seconds=configured.diagnostic_retention_seconds,
+        )
+        app.state.diagnostic_executor = executor
         fixture = PreviaRequest.model_validate(build_reference_request())
         app.state.reference_example = ReferenceExample(
             cenario=fixture.cenario,
@@ -59,6 +76,7 @@ def create_app(
         try:
             yield
         finally:
+            executor.close()
             if owns_verifier and isinstance(configured_verifier, JWKSTokenVerifier):
                 configured_verifier.close()
 
@@ -142,6 +160,7 @@ def create_app(
     app.include_router(examples.router)
     app.include_router(preparation.router)
     app.include_router(preview.router)
+    app.include_router(diagnostics.router)
 
     @app.api_route(
         "/api/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"]
@@ -184,5 +203,48 @@ def create_schema_app() -> FastAPI:
         _: SchemaBearer, request: PreparationRequest
     ) -> PreparationResponse:
         return preparar_carteira(request, build_sha=request.expected_build_sha)
+
+    @app.post(
+        "/api/v1/diagnosticos", response_model=JobSnapshot, status_code=202
+    )
+    def diagnostic_schema(
+        _: SchemaBearer, request: DiagnosticRequest
+    ) -> JobSnapshot:
+        raise HTTPException(status_code=501, detail="endpoint disponível na T7")
+
+    @app.get("/api/v1/diagnosticos/{job_id}", response_model=JobSnapshot)
+    def diagnostic_job_schema(_: SchemaBearer, job_id: UUIDValue) -> JobSnapshot:
+        raise HTTPException(status_code=501, detail="endpoint disponível na T7")
+
+    @app.get(
+        "/api/v1/diagnosticos/{job_id}/resultado",
+        response_model=DiagnosticEnvelope,
+    )
+    def diagnostic_result_schema(
+        _: SchemaBearer, job_id: UUIDValue
+    ) -> DiagnosticEnvelope:
+        raise HTTPException(status_code=501, detail="endpoint disponível na T7")
+
+    @app.post(
+        "/api/v1/diagnosticos/{job_id}/cancelamentos",
+        response_model=JobSnapshot,
+        status_code=202,
+    )
+    def diagnostic_cancellation_schema(
+        _: SchemaBearer, job_id: UUIDValue
+    ) -> JobSnapshot:
+        raise HTTPException(status_code=501, detail="endpoint disponível na T7")
+
+    @app.post(
+        "/api/v1/diagnosticos/{job_id}/retries",
+        response_model=JobSnapshot,
+        status_code=202,
+    )
+    def diagnostic_retry_schema(
+        _: SchemaBearer,
+        job_id: UUIDValue,
+        request: DiagnosticRetryRequest,
+    ) -> JobSnapshot:
+        raise HTTPException(status_code=501, detail="endpoint disponível na T7")
 
     return app

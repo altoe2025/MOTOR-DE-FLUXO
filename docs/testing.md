@@ -2,10 +2,11 @@
 
 ## Contexto
 
-Reconferido em 2026-09-16 na branch `codex/autonetting-preferencial`: a suíte Python
-tem **670 testes aprovados e 2 ignorados**, tanto na execução normal quanto sob
-`python -O`. O front-end tem **89 testes unitários aprovados**; build, lint e os
-**3 testes Playwright** também passam.
+Reconferido em 2026-09-20 no candidato local `03e87b8` da branch
+`codex/frontend-etapa-3`: a suíte Python tem **772 testes aprovados e 2 ignorados**,
+tanto na execução normal quanto sob `python -O`. O front-end tem **388 testes
+unitários aprovados em 51 arquivos**; typecheck, lint, build e os **14 testes
+Playwright** também passam. Esse estado não foi publicado ou mergeado.
 
 ## Decisão
 
@@ -165,3 +166,89 @@ segredos em query strings de URLs nos arquivos rastreados e no bundle de produç
 O projeto `real-auth` continua condicionado a `MOT_REAL_AUTH_BASE_URL`,
 `MOT_REAL_AUTH_EMAIL` e `MOT_REAL_AUTH_PASSWORD` fornecidos pelo ambiente. A
 aceitação local não fabrica credenciais reais nem publica artefatos.
+
+## Aceitação integrada da Etapa 3 — MOT-76
+
+Os specs `company-profiles`, `diagnostic-jobs` e `stage2-regression` entram no
+projeto Playwright local sem substituir a regressão existente. Eles percorrem a
+mesma origem do servidor e cobrem Empresa→Perfil→Estudo, imutabilidade do snapshot
+v1 após a criação de v2, CAS de versões em duas abas, fila diagnóstica controlada,
+progresso, cancelamento, idempotência, isolamento 404 entre contas, reload de
+terminal, entrada fixa sem distribuição, 10 repetições geradas, falha sem resultado
+parcial e leitura dos artefatos/migrações da Etapa 2. Em 2026-09-20, os cinco testes
+novos passaram juntos no Chromium local em 1,0 minuto.
+
+O pool controlado usa `Condition`/`Future`, sem sleeps. Com dois workers e três jobs,
+somente dois trabalhos são submetidos até a liberação de um slot; `max_active`
+permanece 2. Cancelamento de enfileirado não cria trabalho e o fechamento espera o
+pool, cancela pendências e termina com zero ativos. O runner E2E usa um worker para
+manter fila e cancelamento determinísticos; o teste Python separado prova o teto 2.
+Uma segunda prova usa o `DiagnosticExecutor` real com `ProcessPoolExecutor` e
+contexto Windows `spawn`: eventos compartilhados bloqueiam/liberam o worker sem
+sleep, o cancelamento ocorre enquanto a repetição está ativa e, após `close`, ambos
+os jobs estão `CANCELLED`, o future terminou, o processo não está vivo e o dispatcher
+foi encerrado.
+
+O scanner de credenciais agora lê também arquivos binários e rejeita chamadas de
+log que serializem URL completa/query, corpo, payload, cenário ou ordens. Tokens e
+IDs financeiros usados na aceitação são sintéticos e não são impressos.
+Chamadas Python são analisadas por AST, inclusive quando ocupam várias linhas, sem
+confundir `request.url.path` com URL completa. Binários ASCII/Latin-1 e UTF-16 com
+BOM ou distribuição de NUL compatível com UTF-16LE/BE são normalizados antes da
+busca por formatos de segredo.
+
+### Medição sintética 10/30/100
+
+`python -m tests.web_api.measure_diagnostics --max-100-ms 180000` executa cada
+repetição pelo `execute_repetition` real e agrega com `aggregate_diagnostic`. A
+medição é serial, em processo, uma rodada por cardinalidade, com `perf_counter`; ela
+inclui geração, motor, envelope de prévia, análise e agregação, mas não inclui fila,
+HTTP, spawn nem latência de rede. Por isso é uma regressão técnica reproduzível, não
+um benchmark de capacidade nem promessa comercial.
+
+Ambiente local observado: Windows 11 AMD64, Python 3.12.14, 8 CPUs lógicas, um
+worker da metodologia. Resultados:
+
+| Repetições | Tempo total | Envelope JSON |
+|---:|---:|---:|
+| 10 | 133,3 ms | 28.281 bytes |
+| 30 | 384,6 ms | 39.681 bytes |
+| 100 | 959,1 ms | 64.173 bytes |
+
+A CI registra ambiente e os três resultados e aplica somente um teto técnico amplo
+de 180 s para 100 repetições. Variações entre máquinas são esperadas; os contratos
+continuam limitados exatamente a 10/30/100.
+
+O fallback do servidor estático também possui regressão para reload/deep link das
+rotas públicas declaradas: `/carteira/:uuid`, `/estudos/:uuid`, o diagnóstico do
+estudo e as páginas exatas de Empresa. Segmentos desconhecidos continuam 404; não há
+fallback wildcard.
+
+### Gate global final da Etapa 3
+
+O gate foi executado uma vez no SHA
+`57be68990d4f98f8d6cb4ec7c095f121566811a4`, sem mudança rastreada de produto
+posterior. Os commits que o sucedem alteram somente documentação:
+
+| Verificação | Resultado |
+|---|---|
+| OpenAPI + geração TypeScript + diff dos quatro artefatos | aprovado, sem drift |
+| `python -m pytest -q` | 772 aprovados, 2 ignorados |
+| `python -O -m pytest -q` | 772 aprovados, 2 ignorados |
+| `python -m ruff check servidor tests/web_api` | aprovado |
+| `python -m mypy servidor` | aprovado, 33 arquivos |
+| `npm --prefix web run test:unit` | 388 aprovados em 51 arquivos |
+| typecheck / lint / build | aprovados; aviso informativo de chunk > 500 kB |
+| `npm --prefix web run test:e2e` | 15 aprovados em 50,2 s |
+| scanner | aprovado, 378 textos e 10 binários |
+| `git diff --check` | aprovado; avisos CRLF informativos |
+
+Os dois skips são testes de symlink não permitido pelo Windows observado. Auth real
+continua condicionado às variáveis `MOT_REAL_AUTH_*`.
+
+S15.14 é provado por `diagnostic-jobs.spec.ts` no projeto `local`, Chromium Desktop,
+viewport 1280 × 800 e zoom 200%. O percurso aciona o diagnóstico por `Tab`/`Enter`,
+confirma foco visível, distribuição, execução selecionada, os sete eixos e rolagem
+horizontal por teclado nas tabelas nomeadas. A matriz em
+[`docs/frontend/etapa-3-aceitacao.md`](frontend/etapa-3-aceitacao.md) registra o
+aceite técnico local `PASS`.

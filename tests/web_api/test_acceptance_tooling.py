@@ -45,6 +45,7 @@ def test_ci_runs_the_complete_acceptance_gate_and_detects_generated_diff():
         "python -m build --wheel",
         "python -m tests.web_api.scan_credentials",
         "python -m tests.web_api.measure_reference",
+        "python -m tests.web_api.measure_diagnostics",
     )
     for command in required:
         assert command in serialized
@@ -63,7 +64,9 @@ def test_playwright_exposes_local_and_real_auth_projects():
     assert "VITE_MOTOR_BUILD_SHA: buildSha" in build_runner
     assert '"test:e2e:real": "node scripts/run-real-e2e.mjs"' in package
     assert "name: 'local'" in config
-    assert "testMatch: /(?:foundation|study-.*)\\.spec\\.ts/" in config
+    assert "company-profiles" in config
+    assert "diagnostic-jobs" in config
+    assert "stage2-regression" in config
     assert "name: 'real-auth'" in config
     assert "process.env.CI === 'true'" in config
     real_runner = (ROOT / "web/scripts/run-real-e2e.mjs").read_text(encoding="utf-8")

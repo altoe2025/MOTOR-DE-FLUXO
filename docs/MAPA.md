@@ -1,7 +1,7 @@
 # Mapa do repositório
 
-Índice para achar as coisas sem procurar. Estado técnico de branches e planejamento
-do front-end atualizados em 2026-09-19.
+Índice para achar as coisas sem procurar. Estado técnico e planejamento do
+front-end atualizados em 2026-09-20.
 
 ## Comece por aqui
 
@@ -10,10 +10,12 @@ funcional, as MOT-15–MOT-22 e a política de autonetting preferencial já fora
 integrados. A grade histórica não foi regenerada e continua identificada como legado
 EDF global.
 
-**Candidata da Etapa 2 v2:** `codex/mot63-observed-contracts` parte de `c30cff0` e
-chega a `b5a2d9a` antes do fechamento documental. O aceite é **CONDITIONAL**: não há
-PR, CI publicado, aprovação de merge nem início da Etapa 3. Consulte a matriz S15 e
-as pendências antes de interpretar qualquer item como integrado.
+**Base integrada do front-end:** `origin/main` em `97601bf`, merge da PR #52, contém
+a Etapa 2 v2. A branch local `codex/frontend-etapa-3` chega ao candidato
+`57be689` antes do fechamento documental final da MOT-77. Seu gate global está
+verde e o aceite técnico da Etapa 3 é **PASS**, incluindo prova browser específica
+de teclado e zoom a 200% na página nova de diagnóstico robusto. Não houve push, PR,
+CI publicado, aprovação de merge ou merge desta branch.
 
 ```
 main
@@ -56,6 +58,10 @@ make test          # a contagem vigente é registrada em docs/testing.md
 | Plano técnico vigente da Etapa 2 | `docs/superpowers/plans/2026-09-19-frontend-etapa-2-plano-tecnico-v2.md` |
 | Operar o fluxo implementado da Etapa 2 v2 | `docs/frontend/etapa-2-v2-operacao.md` |
 | Aceite condicional, matriz S15 e handoff | `docs/frontend/etapa-2-v2-aceitacao.md` |
+| Auditoria da base da Etapa 3 | `docs/frontend/etapa-3-auditoria-partida.md` |
+| Especificação e plano técnico da Etapa 3 | `docs/superpowers/specs/2026-09-20-frontend-etapa-3-design.md`, `docs/superpowers/plans/2026-09-20-frontend-etapa-3-plano-tecnico.md` |
+| Operar Empresas, Perfis e diagnóstico robusto | `docs/frontend/etapa-3-operacao.md` |
+| Aceite da Etapa 3, matriz S15 e handoff | `docs/frontend/etapa-3-aceitacao.md` |
 | IDs T0–T12 e auditoria de `50fc384`/`1270458` | seção "Rastreabilidade aprovada no Linear" e matriz da Task 0 no plano técnico v2 da Etapa 2 |
 | Importação de fontes reais e Caso Observado | `docs/superpowers/specs/2026-09-19-importacao-dados-reais-design-v2.md` |
 | Plano vigente do importador | `docs/superpowers/plans/2026-09-19-importacao-dados-reais-plano-tecnico-v2.md` |
@@ -67,9 +73,9 @@ versões de 2026-09-19.
 
 Os dois relatórios são **autocontidos**: não pressupõem a conversa que os gerou.
 
-O gate documental da Etapa 2 é MOT-62. A execução usa MOT-63, MOT-23–MOT-33 e
-MOT-64 conforme a tabela do plano técnico v2. Esses IDs e relações foram atualizados
-após aprovação explícita em 2026-09-19; não implicam autorização de merge.
+O gate documental da Etapa 2 é MOT-62. A Etapa 3 usa MOT-65–MOT-77 para T0–T12,
+conforme seu plano técnico. O candidato final e a matriz de evidência não implicam
+autorização de publicação ou merge.
 
 ## Dados
 

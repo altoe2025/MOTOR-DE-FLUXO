@@ -5,9 +5,11 @@ import { describe, expect, it, vi } from 'vitest';
 import type { PreviaRequest, PreviewEnvelope } from '../api/client';
 import { ApiError } from '../api/errors';
 import type { CompanyRecord, ObservedCase } from '../cases/domain';
+import type { OperationalProfileVersion } from '../profiles/domain';
 import { buildPreviewRequest, type PreviewRequestProvenance } from '../preparation/buildPreviewRequest';
 import type {
   ApplicationRepository,
+  AppendProfileVersionMutation,
   CASMutation,
   ConfirmObservedCaseMutation,
 } from '../storage/applicationRepository';
@@ -68,6 +70,11 @@ class MemoryRepository implements ApplicationRepository {
   async listObservedCases(): Promise<ObservedCase[]> { return []; }
   async getObservedCase(): Promise<ObservedCase | null> { return null; }
   async confirmObservedCase(input: ConfirmObservedCaseMutation): Promise<ObservedCase> { return input.observedCase; }
+  async listOperationalProfileVersions(): Promise<OperationalProfileVersion[]> { return []; }
+  async getOperationalProfileVersion(): Promise<OperationalProfileVersion | null> { return null; }
+  async appendOperationalProfileVersion(input: AppendProfileVersionMutation): Promise<OperationalProfileVersion> {
+    return input.document;
+  }
   async listStudies(): Promise<StudyDocument[]> {
     return [...(this.document === null ? [] : [this.document]), ...this.additionalDocuments.values()];
   }
@@ -457,6 +464,7 @@ describe('executeStudyScenario', () => {
 
     const afterExecution = subject.controller.snapshot.document!;
     const succeeded = afterExecution.executions.at(-1)!;
+    if (succeeded.kind !== 'PREVIEW') throw new Error('execução preview esperada');
     const changed = await updateScenario(
       afterExecution,
       afterExecution.baseScenarioId,

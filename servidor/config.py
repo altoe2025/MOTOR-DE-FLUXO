@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     supabase_allowed_user_ids: Annotated[frozenset[UUID], NoDecode]
     motor_build_sha: str = Field(pattern=r"^[0-9a-f]{40}$")
     web_dist_dir: Path | None = None
+    diagnostic_max_workers: int = Field(default=2, ge=1, le=4)
+    diagnostic_max_jobs_per_user: int = Field(default=3, ge=1)
+    diagnostic_max_jobs_global: int = Field(default=32, ge=1)
+    diagnostic_retention_seconds: int = Field(default=86400, ge=1)
 
     @field_validator("supabase_allowed_user_ids", mode="before")
     @classmethod

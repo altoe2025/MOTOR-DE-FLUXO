@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import type { CompanyRecord } from '../cases/domain';
 import { createStudy, moveStudyToTrash } from '../study/domain';
 import { FIXTURE_NOW, makeObservedCase, makeObservedSnapshot, makeScenarioDraft } from '../study/fixtures';
-import type { DeepMutable, ExecutionRecord, StudyDocument } from '../study/model';
+import type { DeepMutable, PreviewExecutionRecord, StudyDocument } from '../study/model';
 import { IndexedDbApplicationRepository } from './indexedDbApplicationRepository';
 import { recoverInterruptedExecution, recoverInterruptedStudy } from './migrations';
 
@@ -31,7 +31,8 @@ async function studyWithRunningExecution(): Promise<StudyDocument> {
   });
   const mutable = structuredClone(document) as DeepMutable<StudyDocument>;
   const scenario = mutable.scenarios[0]!;
-  const execution: ExecutionRecord = {
+  const execution: PreviewExecutionRecord = {
+    kind: 'PREVIEW',
     id: '00000000-0000-4000-8000-000000000030',
     scenarioId: scenario.id,
     scenarioRevision: scenario.revision,
@@ -59,7 +60,7 @@ async function studyWithRunningExecution(): Promise<StudyDocument> {
     createdAt: '2026-09-19T12:01:00Z',
     finishedAt: null,
   };
-  mutable.executions.push(execution as DeepMutable<ExecutionRecord>);
+  mutable.executions.push(execution as DeepMutable<PreviewExecutionRecord>);
   return mutable;
 }
 

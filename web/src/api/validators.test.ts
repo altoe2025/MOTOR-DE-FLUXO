@@ -3,6 +3,9 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 import {
+  validateDiagnosticEnvelope,
+  validateDiagnosticRequest,
+  validateJobSnapshot,
   validatePreparationRequest,
   validatePreparationResponse,
   validatePreviaRequest,
@@ -17,6 +20,7 @@ const source = {
   source: 'Fixture validators MOT-25',
   recorded_at: '2026-09-19T00:00:00Z',
 };
+const generatedParticipantId = 'abcdefab-cdef-4abc-8def-abcdefabc200';
 
 function preparationRequest() {
   const paths = [
@@ -88,6 +92,99 @@ function preparationResponse() {
   };
 }
 
+function diagnosticRequest() {
+  const previewRequest = JSON.parse(readFileSync(fixturePath, 'utf8'));
+  return {
+    api_version: '1.0.0',
+    request_id: '00000000-0000-4000-8000-000000000020',
+    idempotency_key: '00000000-0000-4000-8000-000000000021',
+    study_id: previewRequest.study_id,
+    scenario_id: previewRequest.scenario_id,
+    scenario_revision: previewRequest.scenario_revision,
+    input_fingerprint: 'a'.repeat(64),
+    sampling: {
+      kind: 'FIXED_INPUT',
+      count: 1,
+      preview_request: previewRequest,
+    },
+    selected_repetition_id: '00000000-0000-4000-8000-000000000022',
+    provenance: {},
+  };
+}
+
+function generatedDiagnosticRequest() {
+  const request = diagnosticRequest();
+  const baseInput = preparationRequest().input;
+  const participantPaths = [
+    'profile',
+    'seed',
+    'monthly_volume_brl',
+    'ticket_median_brl',
+    'out_fraction',
+    'deadline/mode',
+    'eh_efx',
+    'purpose_out',
+    'purpose_in',
+  ].map((field) => `/participants/${generatedParticipantId}/${field}`);
+  const preparationInput = {
+    ...baseInput,
+    participants: [{
+      id: generatedParticipantId,
+      profile: 'tesouraria_corporativa',
+      seed: '1',
+      monthly_volume_brl: '1000000',
+      ticket_median_brl: '100000',
+      out_fraction: '0.5',
+      deadline: { mode: 'PROFILE' },
+      eh_efx: false,
+      purpose_out: 'DISPONIBILIDADE',
+      purpose_in: 'EXPORTACAO',
+    }],
+    sources: {
+      ...baseInput.sources,
+      ...Object.fromEntries(participantPaths.map((path) => [path, source])),
+    },
+  };
+  const repetitions = Array.from({ length: 10 }, (_, index) => ({
+    repetition_id: `00000000-0000-4000-8000-${String(index + 100).padStart(12, '0')}`,
+    participant_seeds: {
+      [generatedParticipantId]: String(index + 100),
+    } as Record<string, string>,
+  }));
+  return {
+    ...request,
+    sampling: {
+      kind: 'GENERATED_INPUT',
+      count: 10,
+      preparation_input: preparationInput,
+      repetitions,
+    },
+    selected_repetition_id: repetitions[0]?.repetition_id,
+  };
+}
+
+function jobSnapshot() {
+  return {
+    api_version: '1.0.0',
+    job_id: '00000000-0000-4000-8000-000000000023',
+    request_id: '00000000-0000-4000-8000-000000000020',
+    status: 'RUNNING',
+    progress: {
+      completed: 3,
+      failed: 0,
+      total: 10,
+      current_repetition_id: '00000000-0000-4000-8000-000000000024',
+      phase: 'EXECUTING',
+      created_at: '2026-09-20T12:00:00Z',
+      started_at: '2026-09-20T12:00:01Z',
+      updated_at: '2026-09-20T12:00:02Z',
+      finished_at: null,
+    },
+    retry_of_job_id: null,
+    error: null,
+  };
+}
+
 describe('generated runtime validation', () => {
   it('accepts the versioned reference request', () => {
     const payload: unknown = JSON.parse(readFileSync(fixturePath, 'utf8'));
@@ -112,5 +209,200 @@ describe('generated runtime validation', () => {
 
     expect(validatePreparationRequest(request)).toBe(false);
     expect(validatePreparationResponse(response)).toBe(false);
+  });
+
+  it('validates the strict fixed-input diagnostic request', () => {
+    expect(validateDiagnosticRequest(diagnosticRequest())).toBe(true);
+    expect(validateDiagnosticRequest({ ...diagnosticRequest(), raw_filename: 'orders.csv' })).toBe(false);
+
+    const wrongCount = diagnosticRequest();
+    wrongCount.sampling.count = 2;
+    expect(validateDiagnosticRequest(wrongCount)).toBe(false);
+  });
+
+  it('rejects a generated request when count differs from explicit repetitions', () => {
+    const request = generatedDiagnosticRequest();
+    expect(validateDiagnosticRequest(request)).toBe(true);
+    request.sampling.repetitions.push({
+      repetition_id: '00000000-0000-4000-8000-000000000110',
+      participant_seeds: {},
+    });
+
+    expect(validateDiagnosticRequest(request)).toBe(false);
+  });
+
+  it('rejects invalid participant seed keys and seeds above the canonical maximum', () => {
+    const invalidKey = generatedDiagnosticRequest();
+    invalidKey.sampling.repetitions[0]!.participant_seeds = { 'not-a-uuid': '1' };
+    expect(validateDiagnosticRequest(invalidKey)).toBe(false);
+
+    const oversizedSeed = generatedDiagnosticRequest();
+    oversizedSeed.sampling.repetitions[0]!.participant_seeds = {
+      [generatedParticipantId]: '9223372036854775808',
+    };
+    expect(validateDiagnosticRequest(oversizedSeed)).toBe(false);
+  });
+
+  it('requires every repetition seed map to match the preparation participants', () => {
+    const empty = generatedDiagnosticRequest();
+    empty.sampling.repetitions[0]!.participant_seeds = {};
+    expect(validateDiagnosticRequest(empty)).toBe(false);
+
+    const extra = generatedDiagnosticRequest();
+    extra.sampling.repetitions[0]!.participant_seeds = {
+      [generatedParticipantId]: '100',
+      '00000000-0000-4000-8000-000000000201': '101',
+    };
+    expect(validateDiagnosticRequest(extra)).toBe(false);
+
+    const missing = generatedDiagnosticRequest();
+    delete (missing.sampling.repetitions[0] as {
+      participant_seeds?: Record<string, string>;
+    }).participant_seeds;
+    expect(validateDiagnosticRequest(missing)).toBe(false);
+  });
+
+  it('accepts uppercase participant identity with canonical seed-map keys', () => {
+    const request = generatedDiagnosticRequest();
+    request.sampling.preparation_input.participants[0]!.id =
+      generatedParticipantId.toUpperCase();
+
+    expect(validateDiagnosticRequest(request)).toBe(true);
+  });
+
+  it('rejects uppercase or mixed-case participant seed-map keys', () => {
+    const uppercase = generatedDiagnosticRequest();
+    uppercase.sampling.preparation_input.participants[0]!.id =
+      generatedParticipantId.toUpperCase();
+    for (const repetition of uppercase.sampling.repetitions) {
+      const seed = repetition.participant_seeds[generatedParticipantId]!;
+      repetition.participant_seeds = {
+        [generatedParticipantId.toUpperCase()]: seed,
+      };
+    }
+    expect(validateDiagnosticRequest(uppercase)).toBe(false);
+
+    const mixed = generatedDiagnosticRequest();
+    const mixedKey = 'AbCdEfAb-CdEf-4AbC-8dEf-AbCdEfAbC200';
+    for (const repetition of mixed.sampling.repetitions) {
+      const seed = repetition.participant_seeds[generatedParticipantId]!;
+      repetition.participant_seeds = { [mixedKey]: seed };
+    }
+    expect(validateDiagnosticRequest(mixed)).toBe(false);
+  });
+
+  it('accepts a URN participant identity only with canonical seed-map keys', () => {
+    const request = generatedDiagnosticRequest();
+    request.sampling.preparation_input.participants[0]!.id =
+      `urn:uuid:${generatedParticipantId.toUpperCase()}`;
+    expect(validateDiagnosticRequest(request)).toBe(true);
+
+    const urnKey = generatedDiagnosticRequest();
+    urnKey.sampling.preparation_input.participants[0]!.id =
+      `urn:uuid:${generatedParticipantId}`;
+    for (const repetition of urnKey.sampling.repetitions) {
+      const seed = repetition.participant_seeds[generatedParticipantId]!;
+      repetition.participant_seeds = {
+        [`urn:uuid:${generatedParticipantId}`]: seed,
+      };
+    }
+    expect(validateDiagnosticRequest(urnKey)).toBe(false);
+  });
+
+  it('rejects duplicate repetition ids', () => {
+    const request = generatedDiagnosticRequest();
+    request.sampling.repetitions[1]!.repetition_id =
+      request.sampling.repetitions[0]!.repetition_id;
+
+    expect(validateDiagnosticRequest(request)).toBe(false);
+  });
+
+  it('rejects repetition ids that differ only by UUID letter case', () => {
+    const request = generatedDiagnosticRequest();
+    const repetitionId = 'abcdefab-cdef-4abc-8def-abcdefabcdef';
+    request.sampling.repetitions[0]!.repetition_id = repetitionId;
+    request.sampling.repetitions[1]!.repetition_id = repetitionId.toUpperCase();
+    request.selected_repetition_id = repetitionId;
+
+    expect(validateDiagnosticRequest(request)).toBe(false);
+  });
+
+  it('treats bare and URN repetition ids as the same identity', () => {
+    const request = generatedDiagnosticRequest();
+    const repetitionId = 'abcdefab-cdef-4abc-8def-abcdefabcdef';
+    request.sampling.repetitions[0]!.repetition_id = repetitionId;
+    request.sampling.repetitions[1]!.repetition_id =
+      `urn:uuid:${repetitionId.toUpperCase()}`;
+    request.selected_repetition_id = repetitionId;
+
+    expect(validateDiagnosticRequest(request)).toBe(false);
+  });
+
+  it('rejects a duplicate seed for the same participant across repetitions', () => {
+    const request = generatedDiagnosticRequest();
+    request.sampling.repetitions[1]!.participant_seeds[generatedParticipantId] =
+      request.sampling.repetitions[0]!.participant_seeds[generatedParticipantId]!;
+
+    expect(validateDiagnosticRequest(request)).toBe(false);
+  });
+
+  it('requires selected_repetition_id to exist in the explicit plan', () => {
+    const request = generatedDiagnosticRequest();
+    request.selected_repetition_id = '00000000-0000-4000-8000-000000000999';
+
+    expect(validateDiagnosticRequest(request)).toBe(false);
+  });
+
+  it('matches selected repetition identity independently of UUID letter case', () => {
+    const request = generatedDiagnosticRequest();
+    const repetitionId = 'abcdefab-cdef-4abc-8def-abcdefabcdef';
+    request.sampling.repetitions[0]!.repetition_id = repetitionId;
+    request.selected_repetition_id = repetitionId.toUpperCase();
+
+    expect(validateDiagnosticRequest(request)).toBe(true);
+  });
+
+  it('matches URN repetition and selection identities to canonical UUIDs', () => {
+    const selectedUrn = generatedDiagnosticRequest();
+    const repetitionId = 'abcdefab-cdef-4abc-8def-abcdefabcdef';
+    selectedUrn.sampling.repetitions[0]!.repetition_id = repetitionId;
+    selectedUrn.selected_repetition_id = `urn:uuid:${repetitionId.toUpperCase()}`;
+    expect(validateDiagnosticRequest(selectedUrn)).toBe(true);
+
+    const repetitionUrn = generatedDiagnosticRequest();
+    repetitionUrn.sampling.repetitions[0]!.repetition_id =
+      `urn:uuid:${repetitionId.toUpperCase()}`;
+    repetitionUrn.selected_repetition_id = repetitionId;
+    expect(validateDiagnosticRequest(repetitionUrn)).toBe(true);
+  });
+
+  it('rejects an uppercase URN prefix accepted only by structural AJV', () => {
+    const request = generatedDiagnosticRequest();
+    request.selected_repetition_id =
+      `URN:UUID:${request.sampling.repetitions[0]!.repetition_id}`;
+
+    expect(validateDiagnosticRequest(request)).toBe(false);
+  });
+
+  it('returns false without throwing for malformed generated input', () => {
+    const malformed = {
+      sampling: {
+        kind: 'GENERATED_INPUT',
+        count: 10,
+        repetitions: [{ participant_seeds: { [generatedParticipantId]: {} } }],
+      },
+    };
+
+    expect(() => validateDiagnosticRequest(malformed)).not.toThrow();
+    expect(validateDiagnosticRequest(malformed)).toBe(false);
+  });
+
+  it('validates job progress and exposes the diagnostic envelope validator', () => {
+    expect(validateJobSnapshot(jobSnapshot())).toBe(true);
+
+    const impossible = jobSnapshot();
+    impossible.progress.completed = 101;
+    expect(validateJobSnapshot(impossible)).toBe(false);
+    expect(validateDiagnosticEnvelope({ file_payload: 'not-an-envelope' })).toBe(false);
   });
 });

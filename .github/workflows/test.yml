@@ -72,5 +72,7 @@ jobs:
       - name: Run same-origin browser acceptance
         run: npm --prefix web run test:e2e
 
-      - name: Measure the reference envelope
-        run: python -m tests.web_api.measure_reference --max-p95-ms 5000
+      - name: Measure the reference and diagnostic limits
+        run: |
+          python -m tests.web_api.measure_reference --max-p95-ms 5000
+          python -m tests.web_api.measure_diagnostics --max-100-ms 180000

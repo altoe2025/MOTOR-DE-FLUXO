@@ -7,6 +7,7 @@ import { createApiClient } from './client';
 import { ApiError } from './errors';
 
 type PreviaRequest = components['schemas']['PreviaRequest'];
+type DiagnosticRequest = components['schemas']['DiagnosticRequest'];
 
 const requestFixture = JSON.parse(readFileSync(fileURLToPath(
   new URL('../../../contracts/fixtures/reference-request.json', import.meta.url),
@@ -61,7 +62,93 @@ function jsonResponse(body: unknown, status = 200): Response {
   });
 }
 
+function diagnosticRequestFixture(): DiagnosticRequest {
+  return {
+    api_version: '1.0.0',
+    request_id: '00000000-0000-4000-8000-000000000020',
+    idempotency_key: '00000000-0000-4000-8000-000000000021',
+    study_id: requestFixture.study_id,
+    scenario_id: requestFixture.scenario_id,
+    scenario_revision: requestFixture.scenario_revision,
+    input_fingerprint: 'a'.repeat(64),
+    sampling: { kind: 'FIXED_INPUT', count: 1, preview_request: requestFixture },
+    selected_repetition_id: '00000000-0000-4000-8000-000000000022',
+    provenance: {},
+  };
+}
+
+function jobSnapshotFixture(status: 'QUEUED' | 'RUNNING' | 'CANCEL_REQUESTED' = 'QUEUED') {
+  return {
+    api_version: '1.0.0',
+    job_id: '00000000-0000-4000-8000-000000000021',
+    request_id: '00000000-0000-4000-8000-000000000020',
+    status,
+    progress: {
+      completed: 0,
+      failed: 0,
+      total: 1,
+      current_repetition_id: null,
+      phase: 'QUEUED',
+      created_at: '2026-09-20T12:00:00Z',
+      started_at: null,
+      updated_at: '2026-09-20T12:00:00Z',
+      finished_at: null,
+    },
+    retry_of_job_id: null,
+    error: null,
+  };
+}
+
 describe('typed API client', () => {
+  it('submete diagnóstico validado uma única vez pela rota oficial', async () => {
+    const request = diagnosticRequestFixture();
+    const snapshot = jobSnapshotFixture();
+    const fetch = vi.fn().mockResolvedValue(jsonResponse(snapshot, 202));
+    const client = createApiClient({ getAccessToken: async () => 'token', fetch });
+
+    await expect(client.submitDiagnostic(request)).resolves.toEqual(snapshot);
+    expect(fetch).toHaveBeenCalledOnce();
+    expect(fetch).toHaveBeenCalledWith('/api/v1/diagnosticos', expect.objectContaining({
+      method: 'POST', body: JSON.stringify(request),
+    }));
+  });
+
+  it('consulta status e resultado pelas rotas isoladas do job', async () => {
+    const snapshot = jobSnapshotFixture('RUNNING');
+    const fetch = vi.fn()
+      .mockResolvedValueOnce(jsonResponse(snapshot))
+      .mockResolvedValueOnce(jsonResponse({ file_payload: 'invalid' }));
+    const client = createApiClient({ getAccessToken: async () => 'token', fetch });
+
+    await expect(client.getDiagnosticJob(snapshot.job_id)).resolves.toEqual(snapshot);
+    await expect(client.getDiagnosticResult(snapshot.job_id)).rejects.toMatchObject({
+      code: 'RESPOSTA_INVALIDA',
+    });
+    expect(fetch.mock.calls.map(([path, init]) => [path, init?.method])).toEqual([
+      [`/api/v1/diagnosticos/${snapshot.job_id}`, 'GET'],
+      [`/api/v1/diagnosticos/${snapshot.job_id}/resultado`, 'GET'],
+    ]);
+  });
+
+  it('cancela e repete por POST sem retry de transporte implícito', async () => {
+    const snapshot = jobSnapshotFixture();
+    const retryKey = '00000000-0000-4000-8000-000000000099';
+    const fetch = vi.fn()
+      .mockResolvedValueOnce(jsonResponse({ ...snapshot, status: 'CANCEL_REQUESTED' }, 202))
+      .mockResolvedValueOnce(jsonResponse({ ...snapshot, job_id: retryKey }, 202));
+    const client = createApiClient({ getAccessToken: async () => 'token', fetch });
+
+    await client.cancelDiagnostic(snapshot.job_id);
+    await client.retryDiagnostic(snapshot.job_id, retryKey);
+
+    expect(fetch.mock.calls.map(([path, init]) => [path, init?.method, init?.body])).toEqual([
+      [`/api/v1/diagnosticos/${snapshot.job_id}/cancelamentos`, 'POST', undefined],
+      [`/api/v1/diagnosticos/${snapshot.job_id}/retries`, 'POST', JSON.stringify({
+        api_version: '1.0.0', request_id: retryKey, idempotency_key: retryKey,
+      })],
+    ]);
+  });
+
   it('valida e envia a preparação canônica pela rota oficial', async () => {
     const { request, response } = preparationFixture();
     const fetch = vi.fn().mockResolvedValue(jsonResponse(response));

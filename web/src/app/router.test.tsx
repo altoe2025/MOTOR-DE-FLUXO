@@ -1,15 +1,26 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest';
 
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
-import { StrictMode } from 'react';
+import { MemoryRouter, useLocation, useNavigate } from 'react-router-dom';
+import { StrictMode, type ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { AuthProvider } from '../auth/AuthProvider';
 import type { AuthClient, AuthSession } from '../auth/types';
-import type { ApiClient } from '../api/client';
+import type { ApiClient, DiagnosticRequest, JobSnapshot } from '../api/client';
+import type { CompanyRecord, ObservedCase } from '../cases/domain';
+import type { OperationalProfileVersion } from '../profiles/domain';
+import type {
+  ApplicationRepository,
+  AppendProfileVersionMutation,
+  CASMutation,
+  ConfirmObservedCaseMutation,
+} from '../storage/applicationRepository';
+import { createStudy } from '../study/domain';
+import { makeObservedCase, makeScenarioDraft } from '../study/fixtures';
+import type { StudyDocument } from '../study/model';
 import { ApplicationProviders } from './providers';
 import { AppRoutes } from './router';
 
@@ -33,24 +44,93 @@ function client(initial: AuthSession | null, options: { loginError?: string } = 
   };
 }
 
-function renderAppAt(path: string, authClient: AuthClient = client(session())) {
-  const apiClient: ApiClient = {
+function LocationProbe() {
+  const location = useLocation();
+  return <output data-testid="location">{location.pathname}{location.search}</output>;
+}
+
+function RouteSwitch({ to }: Readonly<{ to: string }>) {
+  const navigate = useNavigate();
+  return <button type="button" onClick={() => navigate(to)}>Trocar rota de teste</button>;
+}
+
+class RepositoryDouble implements ApplicationRepository {
+  constructor(
+    readonly companies: CompanyRecord[] = [],
+    readonly cases: ObservedCase[] = [],
+    readonly profiles: OperationalProfileVersion[] = [],
+    readonly studies: StudyDocument[] = [],
+  ) {}
+  async listCompanies() { return this.companies; }
+  async listObservedCases(companyId?: string) { return companyId === undefined ? this.cases : this.cases.filter((item) => item.companyId === companyId); }
+  async getObservedCase(id: string) { return this.cases.find((item) => item.id === id) ?? null; }
+  async confirmObservedCase(input: ConfirmObservedCaseMutation) { return input.observedCase; }
+  async listOperationalProfileVersions(companyId?: string) { return companyId === undefined ? this.profiles : this.profiles.filter((item) => item.companyId === companyId); }
+  async getOperationalProfileVersion(id: string) { return this.profiles.find((item) => item.id === id) ?? null; }
+  async appendOperationalProfileVersion(input: AppendProfileVersionMutation) {
+    this.profiles.push(input.document);
+    return input.document;
+  }
+  async listStudies() { return this.studies; }
+  async getStudy(id: string) { return this.studies.find((item) => item.id === id) ?? null; }
+  async saveStudy(input: CASMutation<StudyDocument>) {
+    const index = this.studies.findIndex((item) => item.id === input.document.id);
+    if (index >= 0) this.studies[index] = input.document; else this.studies.push(input.document);
+    return input.document;
+  }
+  async restoreStudy(): Promise<StudyDocument> { throw new Error('não usado'); }
+  async purgeStudy() {}
+  close() {}
+}
+
+function renderAppAt(
+  path: string,
+  authClient: AuthClient = client(session()),
+  repository: ApplicationRepository | null = null,
+  extra: ReactNode = null,
+  providedApiClient?: ApiClient,
+) {
+  const apiClient: ApiClient = providedApiClient ?? {
     getReferenceExample: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
     runPreview: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
+    submitDiagnostic: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
+    getDiagnosticJob: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
+    getDiagnosticResult: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
+    cancelDiagnostic: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
+    retryDiagnostic: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
   };
   return render(
     <AuthProvider client={authClient}>
-      <ApplicationProviders client={apiClient}>
-        <MemoryRouter initialEntries={[path]}><AppRoutes /></MemoryRouter>
+      <ApplicationProviders client={apiClient} {...(repository === null ? {} : { repositoryFactory: () => repository })}>
+        <MemoryRouter initialEntries={[path]}><AppRoutes /><LocationProbe />{extra}</MemoryRouter>
       </ApplicationProviders>
     </AuthProvider>,
   );
 }
 
+function diagnosticSnapshot(request: DiagnosticRequest, status: JobSnapshot['status']): JobSnapshot {
+  const terminal = status === 'SUCCEEDED' || status === 'FAILED' || status === 'CANCELLED';
+  return {
+    api_version: '1.0.0', job_id: request.idempotency_key, request_id: request.request_id, status,
+    progress: {
+      completed: terminal ? request.sampling.count : 0,
+      failed: 0,
+      total: request.sampling.count,
+      current_repetition_id: null,
+      phase: terminal ? 'TERMINAL' : status === 'QUEUED' ? 'QUEUED' : 'EXECUTING',
+      created_at: '2026-09-20T12:00:00Z',
+      started_at: status === 'QUEUED' ? null : '2026-09-20T12:00:00Z',
+      updated_at: '2026-09-20T12:00:00Z',
+      finished_at: terminal ? '2026-09-20T12:01:00Z' : null,
+    },
+    retry_of_job_id: null,
+    error: null,
+  };
+}
+
 describe('application routes', () => {
   it.each([
-    ['/carteira', 'Carteira'], ['/diagnostico', 'Diagnóstico'], ['/comparar', 'Comparar cenários'],
-    ['/replay', 'Replay'], ['/premissas', 'Dados e premissas'],
+    ['/empresas', 'Empresas'], ['/estudos', 'Estudos'],
   ])('protege %s e marca o destino ativo', async (path, destination) => {
     renderAppAt(path);
     expect(await screen.findByRole('heading', { level: 1, name: destination })).toBeVisible();
@@ -141,5 +221,245 @@ describe('application routes', () => {
     expect(await screen.findByRole('heading', { name: 'Definir senha' })).toBeVisible();
     expect(authClient.auth.verifyOtp).toHaveBeenCalledTimes(1);
     expect(window.location.search).toBe('');
+  });
+
+  it.each([
+    ['/carteira', 'Carteira'], ['/comparar', 'Comparar cenários'],
+    ['/replay', 'Replay'], ['/premissas', 'Dados e premissas'],
+  ])('preserva a rota protegida %s fora da navegação global', async (path, heading) => {
+    renderAppAt(path);
+    expect(await screen.findByRole('heading', { level: 1, name: heading })).toBeVisible();
+    expect(screen.queryByRole('link', { name: heading })).not.toBeInTheDocument();
+  });
+
+  it('expõe Empresas, Estudos e Diagnóstico na navegação global', async () => {
+    renderAppAt('/empresas', client(session('user-a')), new RepositoryDouble());
+    const navigation = await screen.findByRole('navigation', { name: 'Navegação principal' });
+    expect(navigation).toHaveTextContent('Empresas');
+    expect(navigation).toHaveTextContent('Estudos');
+    expect(navigation).toHaveTextContent('Diagnóstico');
+    expect(navigation.querySelectorAll('a')).toHaveLength(3);
+    expect(screen.getByRole('link', { name: 'Empresas' })).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('abre o diagnóstico robusto no contexto do estudo sem substituir a prévia legada', async () => {
+    const draft = makeScenarioDraft();
+    const { generationInputSnapshot: _generationInputSnapshot, ...fixedSource } = draft.sourceSnapshot;
+    const study = await createStudy({
+      id: 'study-diagnostic', ownerSub: 'user-a', name: 'Estudo diagnóstico',
+      baseScenario: { ...draft, sourceSnapshot: fixedSource }, now: '2026-01-01T00:00:00Z',
+    });
+    void _generationInputSnapshot;
+    renderAppAt('/estudos/study-diagnostic/diagnostico', client(session('user-a')), new RepositoryDouble([], [], [], [study]));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Diagnóstico robusto' }, { timeout: 5000 })).toBeVisible();
+    expect(await screen.findByText(/entrada fixa.*uma execução individual/i)).toBeVisible();
+    expect(screen.getByTestId('location')).toHaveTextContent('/estudos/study-diagnostic/diagnostico');
+  });
+
+  it('descarta load tardio do estudo anterior ao trocar a rota diagnóstica', async () => {
+    const first = await createStudy({ id: 'study-first', ownerSub: 'user-a', name: 'Estudo anterior', baseScenario: makeScenarioDraft(), now: '2026-01-01T00:00:00Z' });
+    const second = await createStudy({ id: 'study-second', ownerSub: 'user-a', name: 'Estudo vigente', baseScenario: makeScenarioDraft(), now: '2026-01-01T00:00:00Z' });
+    const pending = new Map<string, (study: StudyDocument | null) => void>();
+    class DelayedRepository extends RepositoryDouble {
+      override async getStudy(id: string) { return new Promise<StudyDocument | null>((resolve) => pending.set(id, resolve)); }
+    }
+    const user = userEvent.setup();
+    renderAppAt('/estudos/study-first/diagnostico', client(session('user-a')), new DelayedRepository([], [], [], [first, second]), <RouteSwitch to="/estudos/study-second/diagnostico" />);
+    await waitFor(() => expect(pending.has('study-first')).toBe(true), { timeout: 5000 });
+    await user.click(screen.getByRole('button', { name: 'Trocar rota de teste' }));
+    await waitFor(() => expect(pending.has('study-second')).toBe(true), { timeout: 5000 });
+    await act(async () => pending.get('study-second')?.(second));
+    expect(await screen.findByText('Estudo Estudo vigente')).toBeVisible();
+    await act(async () => pending.get('study-first')?.(first));
+    expect(screen.getByText('Estudo Estudo vigente')).toBeVisible();
+    expect(screen.queryByText('Estudo Estudo anterior')).not.toBeInTheDocument();
+  });
+
+  it('cancela pelo serviço enquanto a execução continua em polling e preserva o histórico', async () => {
+    const studyId = '00000000-0000-4000-8000-000000000901';
+    const scenario = makeScenarioDraft();
+    scenario.sourceSnapshot.orders.sort((left, right) => left.id.localeCompare(right.id));
+    const study = await createStudy({
+      id: studyId, ownerSub: 'user-a', name: 'Estudo cancelável',
+      baseScenario: scenario, now: '2026-01-01T00:00:00Z',
+    });
+    let submittedRequest: DiagnosticRequest | null = null;
+    let cancellationRequested = false;
+    const submitDiagnostic = vi.fn(async (request: DiagnosticRequest) => {
+      submittedRequest = request;
+      return diagnosticSnapshot(request, 'RUNNING');
+    });
+    const getDiagnosticJob = vi.fn(async () => {
+      if (submittedRequest === null) throw new Error('submit ausente');
+      return diagnosticSnapshot(submittedRequest, cancellationRequested ? 'CANCELLED' : 'RUNNING');
+    });
+    const cancelDiagnostic = vi.fn(async () => {
+      if (submittedRequest === null) throw new Error('submit ausente');
+      cancellationRequested = true;
+      return diagnosticSnapshot(submittedRequest, 'CANCEL_REQUESTED');
+    });
+    const apiClient: ApiClient = {
+      getReferenceExample: vi.fn(async () => { throw new Error('não chamado'); }),
+      runPreview: vi.fn(async () => { throw new Error('não chamado'); }),
+      submitDiagnostic,
+      getDiagnosticJob,
+      getDiagnosticResult: vi.fn(async () => { throw new Error('não chamado'); }),
+      cancelDiagnostic,
+      retryDiagnostic: vi.fn(async () => { throw new Error('não chamado'); }),
+    };
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const user = userEvent.setup();
+
+    renderAppAt(
+      `/estudos/${studyId}/diagnostico`, client(session('user-a')),
+      new RepositoryDouble([], [], [], [study]), null, apiClient,
+    );
+    await user.click(await screen.findByRole('button', { name: 'Executar diagnóstico' }, { timeout: 5000 }));
+    expect(await screen.findByRole('heading', { name: 'Executando' })).toBeVisible();
+    const cancelButton = screen.getByRole('button', { name: 'Cancelar diagnóstico' });
+    act(() => { cancelButton.click(); cancelButton.click(); });
+
+    const request = submittedRequest as DiagnosticRequest | null;
+    if (request === null) throw new Error('request diagnóstico ausente');
+    expect(confirm).toHaveBeenCalledWith(`Cancelar o diagnóstico do job ${request.idempotency_key}?`);
+    await waitFor(() => {
+      expect(cancelDiagnostic).toHaveBeenCalledWith(request.idempotency_key, expect.any(AbortSignal));
+      expect(cancelDiagnostic).toHaveBeenCalledTimes(1);
+    });
+    expect(await screen.findByRole('heading', { name: 'Diagnóstico cancelado' }, { timeout: 5000 })).toBeVisible();
+    const history = screen.getByRole('table', { name: 'Histórico de tentativas diagnósticas' });
+    expect(history).toHaveTextContent('CANCELLED');
+    expect(history).toHaveTextContent(request.idempotency_key);
+  }, 15_000);
+
+  it('navega pelo catálogo e pelas quatro áreas da empresa com foco no título', async () => {
+    const company: CompanyRecord = {
+      id: 'company-1', ownerSub: 'user-a', displayName: 'Câmbio Exemplo', aliases: [],
+      createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', revision: 1,
+    };
+    const repository = new RepositoryDouble([company]);
+    const user = userEvent.setup();
+    renderAppAt('/empresas', client(session('user-a')), repository);
+    await user.click(await screen.findByRole('link', { name: 'Câmbio Exemplo' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Câmbio Exemplo' })).toHaveFocus();
+    for (const [label, path, heading] of [
+      ['Casos', '/empresas/company-1/casos', 'Casos de Câmbio Exemplo'],
+      ['Perfis', '/empresas/company-1/perfis', 'Perfis de Câmbio Exemplo'],
+      ['Estudos', '/empresas/company-1/estudos', 'Estudos de Câmbio Exemplo'],
+    ] as const) {
+      const link = within(screen.getByRole('navigation', { name: 'Áreas da empresa' })).getByRole('link', { name: label });
+      link.focus();
+      await user.keyboard('{Enter}');
+      expect(await screen.findByRole('heading', { level: 1, name: heading })).toHaveFocus();
+      expect(screen.getByTestId('location')).toHaveTextContent(path);
+    }
+  });
+
+  it('não revela empresa de outro owner nem rota inexistente', async () => {
+    const foreign: CompanyRecord = {
+      id: 'secret-company', ownerSub: 'user-b', displayName: 'Empresa secreta', aliases: [],
+      createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', revision: 1,
+    };
+    renderAppAt('/empresas/secret-company', client(session('user-a')), new RepositoryDouble([foreign]));
+    expect(await screen.findByRole('heading', { name: 'Empresa não encontrada' })).toBeVisible();
+    expect(screen.queryByText('Empresa secreta')).not.toBeInTheDocument();
+  });
+
+  it('não representa qualidade ausente como zero quando a empresa não tem casos', async () => {
+    const company: CompanyRecord = {
+      id: 'company-empty', ownerSub: 'user-a', displayName: 'Empresa sem casos', aliases: [],
+      createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', revision: 1,
+    };
+    renderAppAt('/empresas/company-empty', client(session('user-a')), new RepositoryDouble([company]));
+    const quality = (await screen.findByText('Qualidade')).closest('div');
+    expect(quality).toHaveTextContent('não coletado');
+    expect(quality).not.toHaveTextContent('0 bloqueios');
+  });
+
+  it('integra a comparação temporal na empresa e mantém Casos e Perfis como fontes sem linguagem da Etapa 4', async () => {
+    const company: CompanyRecord = {
+      id: 'company-timeline', ownerSub: 'user-a', displayName: 'Empresa temporal', aliases: [],
+      createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', revision: 1,
+    };
+    const first = { ...makeObservedCase(), id: 'case-january', ownerSub: 'user-a', companyId: company.id };
+    const second = {
+      ...makeObservedCase(), id: 'case-february', ownerSub: 'user-a', companyId: company.id,
+      window: { startDate: '2026-02-01', endDate: '2026-02-28', closingDate: '2026-02-28' },
+    };
+    const repository = new RepositoryDouble([company], [first, second]);
+
+    const companyView = renderAppAt('/empresas/company-timeline', client(session('user-a')), repository);
+    expect(await screen.findByRole('heading', { name: 'Comparação temporal' })).toBeVisible();
+    expect(screen.getAllByRole('checkbox')).toHaveLength(2);
+    const content = document.body.textContent?.toLocaleLowerCase('pt-BR') ?? '';
+    expect(content).not.toMatch(/cenário-base|hipótese|marginal|criar variante/);
+    companyView.unmount();
+
+    const casesView = renderAppAt('/empresas/company-timeline/casos', client(session('user-a')), repository);
+    expect(await screen.findByRole('link', { name: 'Comparar observações no tempo' })).toHaveAttribute('href', '/empresas/company-timeline#comparacao-temporal');
+    casesView.unmount();
+
+    renderAppAt('/empresas/company-timeline/perfis', client(session('user-a')), repository);
+    expect(await screen.findByRole('link', { name: 'Comparar observações no tempo' })).toHaveAttribute('href', '/empresas/company-timeline#comparacao-temporal');
+  });
+
+  it('renderiza casos em tabela semântica e aponta estudo pelo snapshot histórico', async () => {
+    const company: CompanyRecord = {
+      id: 'company-1', ownerSub: 'user-a', displayName: 'Câmbio Exemplo', aliases: [],
+      createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', revision: 1,
+    };
+    const caseRecord: ObservedCase = {
+      ...makeObservedCase(), id: 'case-1', ownerSub: 'user-a', companyId: company.id,
+      orders: [], sourceManifest: { ...makeObservedCase().sourceManifest, sourceKind: 'XLSX' },
+    };
+    const historical = {
+      schemaVersion: '3.0.0', id: 'study-linked', ownerSub: 'user-a', name: 'Estudo vinculado',
+      revision: 1, baseScenarioId: 'scenario-1', scenarios: [], evidenceSnapshots: [],
+      executions: [{ kind: 'PREVIEW', sourceSnapshot: { source: { kind: 'OBSERVED_CASE', caseId: 'case-1', caseRevision: 3 } } }],
+      createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', deletedAt: null,
+    } as unknown as StudyDocument;
+    renderAppAt('/empresas/company-1/casos?tipo=XLSX', client(session('user-a')), new RepositoryDouble([company], [caseRecord], [], [historical]));
+    expect(await screen.findByRole('table', { name: 'Histórico de casos' })).toBeVisible();
+    expect(screen.getByRole('columnheader', { name: 'Janela' })).toBeVisible();
+    expect(screen.getAllByRole('cell', { name: 'não coletado' })).toHaveLength(2);
+    expect(screen.getByRole('link', { name: /Estudo vinculado.*revisão 3/ })).toHaveAttribute('href', '/estudos/study-linked');
+    expect(screen.getByLabelText('Tipo de fonte')).toHaveValue('XLSX');
+  });
+
+  it('mantém o deep link legado e abre o mesmo estudo na carteira', async () => {
+    const study = await createStudy({
+      id: 'study-deep-link', ownerSub: 'user-a', name: 'Estudo profundo',
+      baseScenario: makeScenarioDraft(), now: '2026-01-01T00:00:00Z',
+    });
+    renderAppAt('/estudos/study-deep-link', client(session('user-a')), new RepositoryDouble([], [], [], [study]));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Estudo profundo' })).toBeVisible();
+    expect(screen.getByTestId('location')).toHaveTextContent('/carteira/study-deep-link');
+  });
+
+  it('confirma perfil e anexa o snapshot integral sem alterar a origem da carteira', async () => {
+    const company: CompanyRecord = {
+      id: 'company-1', ownerSub: 'user-a', displayName: 'Câmbio Exemplo', aliases: [],
+      createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', revision: 1,
+    };
+    const observed = { ...makeObservedCase(), ownerSub: 'user-a', companyId: company.id };
+    const study = await createStudy({
+      id: 'study-profile', ownerSub: 'user-a', name: 'Estudo com perfil',
+      baseScenario: makeScenarioDraft(), now: '2026-01-01T00:00:00Z',
+    });
+    const originalSource = structuredClone(study.scenarios[0]?.sourceSnapshot);
+    const repository = new RepositoryDouble([company], [observed], [], [study]);
+    const user = userEvent.setup();
+    renderAppAt('/empresas/company-1/perfis', client(session('user-a')), repository);
+
+    await user.click(await screen.findByRole('checkbox', { name: /case-1.*revisão 4/i }));
+    expect(await screen.findByRole('region', { name: 'Prévia do Perfil Operacional' })).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Confirmar versão' }));
+    expect(await screen.findByRole('heading', { name: 'Versão 1' })).toBeVisible();
+    await user.selectOptions(screen.getByLabelText('Estudo para receber a evidência'), study.id);
+    await user.click(screen.getByRole('button', { name: 'Usar como evidência em estudo' }));
+
+    await waitFor(() => expect(repository.studies[0]?.evidenceSnapshots).toHaveLength(1));
+    expect(repository.studies[0]?.evidenceSnapshots[0]?.profile).toEqual(repository.profiles[0]);
+    expect(repository.studies[0]?.scenarios[0]?.sourceSnapshot).toEqual(originalSource);
   });
 });
