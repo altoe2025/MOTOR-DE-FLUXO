@@ -155,6 +155,70 @@
       "title": "AlocacaoDTO",
       "type": "object"
     },
+    "AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence": {
+          "items": {
+            "maxLength": 300,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 200,
+          "title": "Evidence",
+          "type": "array"
+        },
+        "state": {
+          "const": "AVAILABLE",
+          "title": "State",
+          "type": "string"
+        },
+        "value": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "state",
+        "value",
+        "evidence"
+      ],
+      "title": "AvailableEvidenceMetric[Annotated[str, FieldInfo(annotation=NoneType, required=True, metadata=[Strict(strict=True), MinLen(min_length=1), MaxLen(max_length=80), _PydanticGeneralMetadata(pattern='^-?(0|[1-9][0-9]*)(\\\\.[0-9]+)?$')])]]",
+      "type": "object"
+    },
+    "AvailableEvidenceMetric_DistributionSummary_": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence": {
+          "items": {
+            "maxLength": 300,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 200,
+          "title": "Evidence",
+          "type": "array"
+        },
+        "state": {
+          "const": "AVAILABLE",
+          "title": "State",
+          "type": "string"
+        },
+        "value": {
+          "$ref": "#/$defs/DistributionSummary"
+        }
+      },
+      "required": [
+        "state",
+        "value",
+        "evidence"
+      ],
+      "title": "AvailableEvidenceMetric[DistributionSummary]",
+      "type": "object"
+    },
     "CenarioEntrada": {
       "additionalProperties": false,
       "properties": {
@@ -249,6 +313,111 @@
         "direcao_residuo"
       ],
       "title": "CicloDTO",
+      "type": "object"
+    },
+    "CompositionDependencyAxis": {
+      "additionalProperties": false,
+      "properties": {
+        "hhi": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Hhi"
+        },
+        "largest_share": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Largest Share"
+        },
+        "participants": {
+          "items": {
+            "$ref": "#/$defs/ParticipantShare"
+          },
+          "maxItems": 100,
+          "title": "Participants",
+          "type": "array"
+        }
+      },
+      "required": [
+        "hhi",
+        "largest_share",
+        "participants"
+      ],
+      "title": "CompositionDependencyAxis",
+      "type": "object"
+    },
+    "CrossBorderResidualAxis": {
+      "additionalProperties": false,
+      "properties": {
+        "by_day": {
+          "items": {
+            "$ref": "#/$defs/ResidualBreakdown"
+          },
+          "maxItems": 731,
+          "title": "By Day",
+          "type": "array"
+        },
+        "by_purpose": {
+          "items": {
+            "$ref": "#/$defs/ResidualBreakdown"
+          },
+          "maxItems": 200,
+          "title": "By Purpose",
+          "type": "array"
+        },
+        "in_brl": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "In Brl"
+        },
+        "out_brl": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Out Brl"
+        },
+        "remitted_brl": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Remitted Brl"
+        }
+      },
+      "required": [
+        "remitted_brl",
+        "out_brl",
+        "in_brl",
+        "by_day",
+        "by_purpose"
+      ],
+      "title": "CrossBorderResidualAxis",
       "type": "object"
     },
     "CustoEntrada": {
@@ -405,10 +574,531 @@
       "title": "DerivedEvidence",
       "type": "object"
     },
+    "DiagnosticAxes": {
+      "additionalProperties": false,
+      "properties": {
+        "composition_dependency": {
+          "$ref": "#/$defs/CompositionDependencyAxis"
+        },
+        "cross_border_residual": {
+          "$ref": "#/$defs/CrossBorderResidualAxis"
+        },
+        "economic_robustness": {
+          "$ref": "#/$defs/EconomicRobustnessAxis"
+        },
+        "operational_profile": {
+          "$ref": "#/$defs/OperationalProfileAxis"
+        },
+        "policy_capture": {
+          "$ref": "#/$defs/PolicyCaptureAxis"
+        },
+        "structural_potential": {
+          "$ref": "#/$defs/StructuralPotentialAxis"
+        },
+        "temporal_compatibility": {
+          "$ref": "#/$defs/TemporalCompatibilityAxis"
+        }
+      },
+      "required": [
+        "structural_potential",
+        "policy_capture",
+        "temporal_compatibility",
+        "cross_border_residual",
+        "composition_dependency",
+        "economic_robustness",
+        "operational_profile"
+      ],
+      "title": "DiagnosticAxes",
+      "type": "object"
+    },
+    "DiagnosticConsequence": {
+      "additionalProperties": false,
+      "properties": {
+        "axis": {
+          "enum": [
+            "STRUCTURAL_POTENTIAL",
+            "POLICY_CAPTURE",
+            "TEMPORAL_COMPATIBILITY",
+            "CROSS_BORDER_RESIDUAL",
+            "COMPOSITION_DEPENDENCY",
+            "ECONOMIC_ROBUSTNESS",
+            "OPERATIONAL_PROFILE"
+          ],
+          "title": "Axis",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "maxLength": 300,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 20,
+          "minItems": 1,
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "rule_id": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Rule Id",
+          "type": "string"
+        },
+        "rule_version": {
+          "const": "1.0.0",
+          "title": "Rule Version",
+          "type": "string"
+        },
+        "statement_code": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Statement Code",
+          "type": "string"
+        }
+      },
+      "required": [
+        "rule_id",
+        "rule_version",
+        "axis",
+        "statement_code",
+        "evidence_refs"
+      ],
+      "title": "DiagnosticConsequence",
+      "type": "object"
+    },
+    "DiagnosticEnvelope": {
+      "additionalProperties": false,
+      "properties": {
+        "api_version": {
+          "const": "1.0.0",
+          "title": "Api Version",
+          "type": "string"
+        },
+        "axes": {
+          "$ref": "#/$defs/DiagnosticAxes"
+        },
+        "consequences": {
+          "items": {
+            "$ref": "#/$defs/DiagnosticConsequence"
+          },
+          "maxItems": 100,
+          "title": "Consequences",
+          "type": "array"
+        },
+        "job_id": {
+          "format": "uuid",
+          "title": "Job Id",
+          "type": "string"
+        },
+        "limitations": {
+          "items": {
+            "$ref": "#/$defs/DiagnosticLimitation"
+          },
+          "maxItems": 100,
+          "title": "Limitations",
+          "type": "array"
+        },
+        "provenance": {
+          "$ref": "#/$defs/DiagnosticProvenance"
+        },
+        "repetitions": {
+          "items": {
+            "$ref": "#/$defs/RepetitionSummary"
+          },
+          "maxItems": 100,
+          "minItems": 1,
+          "title": "Repetitions",
+          "type": "array"
+        },
+        "request_fingerprint": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Request Fingerprint",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "selected_execution": {
+          "$ref": "#/$defs/PreviewEnvelope"
+        },
+        "statistics": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/SingleExecutionStatistics"
+            },
+            {
+              "$ref": "#/$defs/DistributionStatistics"
+            }
+          ],
+          "title": "Statistics"
+        }
+      },
+      "required": [
+        "api_version",
+        "schema_version",
+        "job_id",
+        "request_fingerprint",
+        "statistics",
+        "axes",
+        "repetitions",
+        "selected_execution",
+        "consequences",
+        "limitations",
+        "provenance"
+      ],
+      "title": "DiagnosticEnvelope",
+      "type": "object"
+    },
+    "DiagnosticLimitation": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Code",
+          "type": "string"
+        },
+        "condition": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Condition",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "maxLength": 300,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 20,
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "severity": {
+          "enum": [
+            "INFO",
+            "WARNING"
+          ],
+          "title": "Severity",
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "severity",
+        "condition",
+        "evidence_refs"
+      ],
+      "title": "DiagnosticLimitation",
+      "type": "object"
+    },
+    "DiagnosticProvenance": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence_refs": {
+          "items": {
+            "maxLength": 300,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 500,
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "request_paths": {
+          "additionalProperties": {
+            "$ref": "#/$defs/OrigemValor"
+          },
+          "maxProperties": 500,
+          "title": "Request Paths",
+          "type": "object"
+        }
+      },
+      "required": [
+        "request_paths",
+        "evidence_refs"
+      ],
+      "title": "DiagnosticProvenance",
+      "type": "object"
+    },
+    "DiagnosticRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "api_version": {
+          "const": "1.0.0",
+          "title": "Api Version",
+          "type": "string"
+        },
+        "idempotency_key": {
+          "format": "uuid",
+          "title": "Idempotency Key",
+          "type": "string"
+        },
+        "input_fingerprint": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Input Fingerprint",
+          "type": "string"
+        },
+        "provenance": {
+          "additionalProperties": {
+            "$ref": "#/$defs/OrigemValor"
+          },
+          "maxProperties": 500,
+          "title": "Provenance",
+          "type": "object"
+        },
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "sampling": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/FixedInputPlan"
+            },
+            {
+              "$ref": "#/$defs/GeneratedInputPlan"
+            }
+          ],
+          "title": "Sampling"
+        },
+        "scenario_id": {
+          "format": "uuid",
+          "title": "Scenario Id",
+          "type": "string"
+        },
+        "scenario_revision": {
+          "minimum": 1,
+          "title": "Scenario Revision",
+          "type": "integer"
+        },
+        "selected_repetition_id": {
+          "format": "uuid",
+          "title": "Selected Repetition Id",
+          "type": "string"
+        },
+        "study_id": {
+          "format": "uuid",
+          "title": "Study Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "api_version",
+        "request_id",
+        "idempotency_key",
+        "study_id",
+        "scenario_id",
+        "scenario_revision",
+        "input_fingerprint",
+        "sampling",
+        "selected_repetition_id",
+        "provenance"
+      ],
+      "title": "DiagnosticRequest",
+      "type": "object"
+    },
+    "DiagnosticRetryRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "api_version": {
+          "const": "1.0.0",
+          "title": "Api Version",
+          "type": "string"
+        },
+        "idempotency_key": {
+          "format": "uuid",
+          "title": "Idempotency Key",
+          "type": "string"
+        },
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "api_version",
+        "request_id",
+        "idempotency_key"
+      ],
+      "title": "DiagnosticRetryRequest",
+      "type": "object"
+    },
     "DiagnosticosExperimentaisDTO": {
       "additionalProperties": false,
       "properties": {},
       "title": "DiagnosticosExperimentaisDTO",
+      "type": "object"
+    },
+    "DistributionStatistics": {
+      "additionalProperties": false,
+      "properties": {
+        "count": {
+          "enum": [
+            10,
+            30,
+            100
+          ],
+          "title": "Count",
+          "type": "integer"
+        },
+        "kind": {
+          "const": "DISTRIBUTION",
+          "title": "Kind",
+          "type": "string"
+        },
+        "percentile_method": {
+          "const": "EMPIRICAL_NEAREST_RANK",
+          "title": "Percentile Method",
+          "type": "string"
+        },
+        "selected_repetition_id": {
+          "format": "uuid",
+          "title": "Selected Repetition Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "count",
+        "selected_repetition_id",
+        "percentile_method"
+      ],
+      "title": "DistributionStatistics",
+      "type": "object"
+    },
+    "DistributionSummary": {
+      "additionalProperties": false,
+      "properties": {
+        "amplitude": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Amplitude",
+          "type": "string"
+        },
+        "maximum": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Maximum",
+          "type": "string"
+        },
+        "minimum": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Minimum",
+          "type": "string"
+        },
+        "p10": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "P10",
+          "type": "string"
+        },
+        "p25": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "P25",
+          "type": "string"
+        },
+        "p50": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "P50",
+          "type": "string"
+        },
+        "p75": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "P75",
+          "type": "string"
+        },
+        "p90": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "P90",
+          "type": "string"
+        }
+      },
+      "required": [
+        "minimum",
+        "p10",
+        "p25",
+        "p50",
+        "p75",
+        "p90",
+        "maximum",
+        "amplitude"
+      ],
+      "title": "DistributionSummary",
+      "type": "object"
+    },
+    "EconomicRobustnessAxis": {
+      "additionalProperties": false,
+      "properties": {
+        "baseline_brl": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_DistributionSummary_"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Baseline Brl"
+        },
+        "netability_fraction": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_DistributionSummary_"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Netability Fraction"
+        },
+        "netted_brl": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_DistributionSummary_"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Netted Brl"
+        },
+        "savings_brl": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_DistributionSummary_"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Savings Brl"
+        }
+      },
+      "required": [
+        "baseline_brl",
+        "netted_brl",
+        "savings_brl",
+        "netability_fraction"
+      ],
+      "title": "EconomicRobustnessAxis",
       "type": "object"
     },
     "EffectiveInput": {
@@ -643,6 +1333,70 @@
       "title": "FixedDeadline",
       "type": "object"
     },
+    "FixedInputPlan": {
+      "additionalProperties": false,
+      "properties": {
+        "count": {
+          "const": 1,
+          "title": "Count",
+          "type": "integer"
+        },
+        "kind": {
+          "const": "FIXED_INPUT",
+          "title": "Kind",
+          "type": "string"
+        },
+        "preview_request": {
+          "$ref": "#/$defs/PreviaRequest"
+        }
+      },
+      "required": [
+        "kind",
+        "count",
+        "preview_request"
+      ],
+      "title": "FixedInputPlan",
+      "type": "object"
+    },
+    "GeneratedInputPlan": {
+      "additionalProperties": false,
+      "properties": {
+        "count": {
+          "enum": [
+            10,
+            30,
+            100
+          ],
+          "title": "Count",
+          "type": "integer"
+        },
+        "kind": {
+          "const": "GENERATED_INPUT",
+          "title": "Kind",
+          "type": "string"
+        },
+        "preparation_input": {
+          "$ref": "#/$defs/EffectiveInput"
+        },
+        "repetitions": {
+          "items": {
+            "$ref": "#/$defs/RepetitionPlan"
+          },
+          "maxItems": 100,
+          "minItems": 10,
+          "title": "Repetitions",
+          "type": "array"
+        }
+      },
+      "required": [
+        "kind",
+        "count",
+        "preparation_input",
+        "repetitions"
+      ],
+      "title": "GeneratedInputPlan",
+      "type": "object"
+    },
     "HTTPValidationError": {
       "properties": {
         "detail": {
@@ -702,6 +1456,203 @@
         "proveniencia"
       ],
       "title": "InputSnapshot",
+      "type": "object"
+    },
+    "JobError": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Message",
+          "type": "string"
+        },
+        "repetition_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Repetition Id"
+        }
+      },
+      "required": [
+        "code",
+        "message",
+        "repetition_id"
+      ],
+      "title": "JobError",
+      "type": "object"
+    },
+    "JobProgress": {
+      "additionalProperties": false,
+      "properties": {
+        "completed": {
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Completed",
+          "type": "integer"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "current_repetition_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Current Repetition Id"
+        },
+        "failed": {
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Failed",
+          "type": "integer"
+        },
+        "finished_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Finished At"
+        },
+        "phase": {
+          "enum": [
+            "QUEUED",
+            "EXECUTING",
+            "AGGREGATING",
+            "TERMINAL"
+          ],
+          "title": "Phase",
+          "type": "string"
+        },
+        "started_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Started At"
+        },
+        "total": {
+          "maximum": 100,
+          "minimum": 1,
+          "title": "Total",
+          "type": "integer"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "completed",
+        "failed",
+        "total",
+        "current_repetition_id",
+        "phase",
+        "created_at",
+        "started_at",
+        "updated_at",
+        "finished_at"
+      ],
+      "title": "JobProgress",
+      "type": "object"
+    },
+    "JobSnapshot": {
+      "additionalProperties": false,
+      "properties": {
+        "api_version": {
+          "const": "1.0.0",
+          "title": "Api Version",
+          "type": "string"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/JobError"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "job_id": {
+          "format": "uuid",
+          "title": "Job Id",
+          "type": "string"
+        },
+        "progress": {
+          "$ref": "#/$defs/JobProgress"
+        },
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "retry_of_job_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Retry Of Job Id"
+        },
+        "status": {
+          "enum": [
+            "QUEUED",
+            "RUNNING",
+            "AGGREGATING",
+            "CANCEL_REQUESTED",
+            "SUCCEEDED",
+            "FAILED",
+            "CANCELLED"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "api_version",
+        "job_id",
+        "request_id",
+        "status",
+        "progress",
+        "retry_of_job_id",
+        "error"
+      ],
+      "title": "JobSnapshot",
       "type": "object"
     },
     "ManifestoDTO": {
@@ -819,6 +1770,87 @@
       "title": "ManifestoDTO",
       "type": "object"
     },
+    "OperationalProfileAxis": {
+      "additionalProperties": false,
+      "properties": {
+        "cycle_count": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Cycle Count"
+        },
+        "due_order_count": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Due Order Count"
+        },
+        "maximum_open_queue": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Maximum Open Queue"
+        },
+        "order_count": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Order Count"
+        },
+        "processing_duration_ms": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Processing Duration Ms"
+        },
+        "weighted_wait_days": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Weighted Wait Days"
+        }
+      },
+      "required": [
+        "order_count",
+        "cycle_count",
+        "maximum_open_queue",
+        "due_order_count",
+        "weighted_wait_days",
+        "processing_duration_ms"
+      ],
+      "title": "OperationalProfileAxis",
+      "type": "object"
+    },
     "OrdemEntrada": {
       "additionalProperties": false,
       "description": "Operação explícita; direção oposta do mesmo cliente continua outra ordem.",
@@ -919,6 +1951,37 @@
       "title": "OrigemValor",
       "type": "object"
     },
+    "ParticipantShare": {
+      "additionalProperties": false,
+      "properties": {
+        "participant_id": {
+          "format": "uuid",
+          "title": "Participant Id",
+          "type": "string"
+        },
+        "share": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Share",
+          "type": "string"
+        },
+        "volume_brl": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Volume Brl",
+          "type": "string"
+        }
+      },
+      "required": [
+        "participant_id",
+        "volume_brl",
+        "share"
+      ],
+      "title": "ParticipantShare",
+      "type": "object"
+    },
     "PeriodoLegado": {
       "additionalProperties": false,
       "properties": {
@@ -959,6 +2022,75 @@
         "periodo_medicao_dias"
       ],
       "title": "PeriodoNatural",
+      "type": "object"
+    },
+    "PolicyCaptureAxis": {
+      "additionalProperties": false,
+      "properties": {
+        "captured_fraction": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Captured Fraction"
+        },
+        "inter_client_brl": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Inter Client Brl"
+        },
+        "intra_client_brl": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Intra Client Brl"
+        },
+        "matched_brl": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Matched Brl"
+        },
+        "uncaptured_potential_brl": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Uncaptured Potential Brl"
+        }
+      },
+      "required": [
+        "matched_brl",
+        "intra_client_brl",
+        "inter_client_brl",
+        "uncaptured_potential_brl",
+        "captured_fraction"
+      ],
+      "title": "PolicyCaptureAxis",
       "type": "object"
     },
     "PreparationParameter": {
@@ -1511,6 +2643,143 @@
       "title": "RegraIOF",
       "type": "object"
     },
+    "RepetitionPlan": {
+      "additionalProperties": false,
+      "properties": {
+        "participant_seeds": {
+          "additionalProperties": {
+            "maxLength": 19,
+            "minLength": 1,
+            "pattern": "^(0|[1-9][0-9]*)$",
+            "type": "string"
+          },
+          "maxProperties": 100,
+          "title": "Participant Seeds",
+          "type": "object"
+        },
+        "repetition_id": {
+          "format": "uuid",
+          "title": "Repetition Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "repetition_id",
+        "participant_seeds"
+      ],
+      "title": "RepetitionPlan",
+      "type": "object"
+    },
+    "RepetitionSummary": {
+      "additionalProperties": false,
+      "properties": {
+        "baseline_brl": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Baseline Brl",
+          "type": "string"
+        },
+        "duration_ms": {
+          "minimum": 0,
+          "title": "Duration Ms",
+          "type": "integer"
+        },
+        "execution_fingerprint": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Execution Fingerprint",
+          "type": "string"
+        },
+        "input_fingerprint": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Input Fingerprint",
+          "type": "string"
+        },
+        "netability_fraction": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Netability Fraction",
+          "type": "string"
+        },
+        "netted_brl": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Netted Brl",
+          "type": "string"
+        },
+        "participant_seeds": {
+          "additionalProperties": {
+            "maxLength": 19,
+            "minLength": 1,
+            "pattern": "^(0|[1-9][0-9]*)$",
+            "type": "string"
+          },
+          "maxProperties": 100,
+          "title": "Participant Seeds",
+          "type": "object"
+        },
+        "repetition_id": {
+          "format": "uuid",
+          "title": "Repetition Id",
+          "type": "string"
+        },
+        "savings_brl": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Savings Brl",
+          "type": "string"
+        }
+      },
+      "required": [
+        "repetition_id",
+        "participant_seeds",
+        "input_fingerprint",
+        "execution_fingerprint",
+        "baseline_brl",
+        "netted_brl",
+        "savings_brl",
+        "netability_fraction",
+        "duration_ms"
+      ],
+      "title": "RepetitionSummary",
+      "type": "object"
+    },
+    "ResidualBreakdown": {
+      "additionalProperties": false,
+      "properties": {
+        "direction": {
+          "enum": [
+            "OUT",
+            "IN"
+          ],
+          "title": "Direction",
+          "type": "string"
+        },
+        "key": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Key",
+          "type": "string"
+        },
+        "value_brl": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Value Brl",
+          "type": "string"
+        }
+      },
+      "required": [
+        "key",
+        "direction",
+        "value_brl"
+      ],
+      "title": "ResidualBreakdown",
+      "type": "object"
+    },
     "ResultadoCanonicoDTO": {
       "additionalProperties": false,
       "properties": {
@@ -1695,6 +2964,213 @@
         "user_id"
       ],
       "title": "SessionResponse",
+      "type": "object"
+    },
+    "SingleExecutionStatistics": {
+      "additionalProperties": false,
+      "properties": {
+        "count": {
+          "const": 1,
+          "title": "Count",
+          "type": "integer"
+        },
+        "kind": {
+          "const": "SINGLE_EXECUTION",
+          "title": "Kind",
+          "type": "string"
+        },
+        "percentile_method": {
+          "title": "Percentile Method",
+          "type": "null"
+        },
+        "selected_repetition_id": {
+          "format": "uuid",
+          "title": "Selected Repetition Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "count",
+        "selected_repetition_id",
+        "percentile_method"
+      ],
+      "title": "SingleExecutionStatistics",
+      "type": "object"
+    },
+    "StructuralPotentialAxis": {
+      "additionalProperties": false,
+      "properties": {
+        "ceiling_brl": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Ceiling Brl"
+        },
+        "gross_in_brl": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Gross In Brl"
+        },
+        "gross_out_brl": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Gross Out Brl"
+        },
+        "imbalance_brl": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Imbalance Brl"
+        }
+      },
+      "required": [
+        "gross_out_brl",
+        "gross_in_brl",
+        "imbalance_brl",
+        "ceiling_brl"
+      ],
+      "title": "StructuralPotentialAxis",
+      "type": "object"
+    },
+    "TemporalCompatibilityAxis": {
+      "additionalProperties": false,
+      "properties": {
+        "deadline_closures": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Deadline Closures"
+        },
+        "deadline_days": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Deadline Days"
+        },
+        "horizon_closures": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Horizon Closures"
+        },
+        "same_day_fraction": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Same Day Fraction"
+        },
+        "weighted_wait_days": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Weighted Wait Days"
+        },
+        "window_closures": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Window Closures"
+        }
+      },
+      "required": [
+        "deadline_days",
+        "same_day_fraction",
+        "weighted_wait_days",
+        "window_closures",
+        "deadline_closures",
+        "horizon_closures"
+      ],
+      "title": "TemporalCompatibilityAxis",
+      "type": "object"
+    },
+    "UnavailableEvidenceMetric": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence": {
+          "items": {
+            "maxLength": 300,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 200,
+          "title": "Evidence",
+          "type": "array"
+        },
+        "reason": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        },
+        "state": {
+          "enum": [
+            "NOT_COLLECTED",
+            "INSUFFICIENT_COVERAGE",
+            "INCOMPATIBLE"
+          ],
+          "title": "State",
+          "type": "string"
+        }
+      },
+      "required": [
+        "state",
+        "reason",
+        "evidence"
+      ],
+      "title": "UnavailableEvidenceMetric",
       "type": "object"
     },
     "ValidationError": {

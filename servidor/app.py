@@ -22,9 +22,16 @@ from servidor.auth import (
     TokenVerifier,
 )
 from servidor.config import Settings
+from servidor.contracts.diagnostics import (
+    DiagnosticEnvelope,
+    DiagnosticRequest,
+    DiagnosticRetryRequest,
+    JobSnapshot,
+)
 from servidor.contracts.input import PreviaRequest
 from servidor.contracts.preparation import PreparationRequest, PreparationResponse
 from servidor.contracts.preview import PreviewEnvelope, ReferenceExample
+from servidor.contracts.primitives import UUIDValue
 from servidor.contracts.session import HealthResponse, SessionResponse
 from servidor.errors import ApiFailure, entrada_invalida, failure_response
 from servidor.generate_reference_fixture import build_reference_request
@@ -184,5 +191,48 @@ def create_schema_app() -> FastAPI:
         _: SchemaBearer, request: PreparationRequest
     ) -> PreparationResponse:
         return preparar_carteira(request, build_sha=request.expected_build_sha)
+
+    @app.post(
+        "/api/v1/diagnosticos", response_model=JobSnapshot, status_code=202
+    )
+    def diagnostic_schema(
+        _: SchemaBearer, request: DiagnosticRequest
+    ) -> JobSnapshot:
+        raise HTTPException(status_code=501, detail="endpoint disponível na T7")
+
+    @app.get("/api/v1/diagnosticos/{job_id}", response_model=JobSnapshot)
+    def diagnostic_job_schema(_: SchemaBearer, job_id: UUIDValue) -> JobSnapshot:
+        raise HTTPException(status_code=501, detail="endpoint disponível na T7")
+
+    @app.get(
+        "/api/v1/diagnosticos/{job_id}/resultado",
+        response_model=DiagnosticEnvelope,
+    )
+    def diagnostic_result_schema(
+        _: SchemaBearer, job_id: UUIDValue
+    ) -> DiagnosticEnvelope:
+        raise HTTPException(status_code=501, detail="endpoint disponível na T7")
+
+    @app.post(
+        "/api/v1/diagnosticos/{job_id}/cancelamentos",
+        response_model=JobSnapshot,
+        status_code=202,
+    )
+    def diagnostic_cancellation_schema(
+        _: SchemaBearer, job_id: UUIDValue
+    ) -> JobSnapshot:
+        raise HTTPException(status_code=501, detail="endpoint disponível na T7")
+
+    @app.post(
+        "/api/v1/diagnosticos/{job_id}/retries",
+        response_model=JobSnapshot,
+        status_code=202,
+    )
+    def diagnostic_retry_schema(
+        _: SchemaBearer,
+        job_id: UUIDValue,
+        request: DiagnosticRetryRequest,
+    ) -> JobSnapshot:
+        raise HTTPException(status_code=501, detail="endpoint disponível na T7")
 
     return app

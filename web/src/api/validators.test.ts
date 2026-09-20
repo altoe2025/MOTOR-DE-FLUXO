@@ -3,6 +3,9 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 import {
+  validateDiagnosticEnvelope,
+  validateDiagnosticRequest,
+  validateJobSnapshot,
   validatePreparationRequest,
   validatePreparationResponse,
   validatePreviaRequest,
@@ -88,6 +91,48 @@ function preparationResponse() {
   };
 }
 
+function diagnosticRequest() {
+  const previewRequest = JSON.parse(readFileSync(fixturePath, 'utf8'));
+  return {
+    api_version: '1.0.0',
+    request_id: '00000000-0000-4000-8000-000000000020',
+    idempotency_key: '00000000-0000-4000-8000-000000000021',
+    study_id: previewRequest.study_id,
+    scenario_id: previewRequest.scenario_id,
+    scenario_revision: previewRequest.scenario_revision,
+    input_fingerprint: 'a'.repeat(64),
+    sampling: {
+      kind: 'FIXED_INPUT',
+      count: 1,
+      preview_request: previewRequest,
+    },
+    selected_repetition_id: '00000000-0000-4000-8000-000000000022',
+    provenance: {},
+  };
+}
+
+function jobSnapshot() {
+  return {
+    api_version: '1.0.0',
+    job_id: '00000000-0000-4000-8000-000000000023',
+    request_id: '00000000-0000-4000-8000-000000000020',
+    status: 'RUNNING',
+    progress: {
+      completed: 3,
+      failed: 0,
+      total: 10,
+      current_repetition_id: '00000000-0000-4000-8000-000000000024',
+      phase: 'EXECUTING',
+      created_at: '2026-09-20T12:00:00Z',
+      started_at: '2026-09-20T12:00:01Z',
+      updated_at: '2026-09-20T12:00:02Z',
+      finished_at: null,
+    },
+    retry_of_job_id: null,
+    error: null,
+  };
+}
+
 describe('generated runtime validation', () => {
   it('accepts the versioned reference request', () => {
     const payload: unknown = JSON.parse(readFileSync(fixturePath, 'utf8'));
@@ -112,5 +157,23 @@ describe('generated runtime validation', () => {
 
     expect(validatePreparationRequest(request)).toBe(false);
     expect(validatePreparationResponse(response)).toBe(false);
+  });
+
+  it('validates the strict fixed-input diagnostic request', () => {
+    expect(validateDiagnosticRequest(diagnosticRequest())).toBe(true);
+    expect(validateDiagnosticRequest({ ...diagnosticRequest(), raw_filename: 'orders.csv' })).toBe(false);
+
+    const wrongCount = diagnosticRequest();
+    wrongCount.sampling.count = 2;
+    expect(validateDiagnosticRequest(wrongCount)).toBe(false);
+  });
+
+  it('validates job progress and exposes the diagnostic envelope validator', () => {
+    expect(validateJobSnapshot(jobSnapshot())).toBe(true);
+
+    const impossible = jobSnapshot();
+    impossible.progress.completed = 101;
+    expect(validateJobSnapshot(impossible)).toBe(false);
+    expect(validateDiagnosticEnvelope({ file_payload: 'not-an-envelope' })).toBe(false);
   });
 });

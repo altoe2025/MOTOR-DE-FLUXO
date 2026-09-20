@@ -70,6 +70,22 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 
 ---
 
+## 2026-09-20 — Contratos públicos do diagnóstico robusto (MOT-70)
+
+1. **Sintoma.** A API não possuía contratos versionados para solicitar, acompanhar
+   e ler um diagnóstico robusto; fila, progresso, amostragem e os sete eixos não
+   apareciam no OpenAPI nem nos validadores do cliente.
+2. **Causa.** A Etapa 2 publicava somente preparação e prévia individual. A
+   fronteira contratual do diagnóstico precisava ser fechada antes do executor.
+3. **O que foi feito.** A branch `codex/frontend-etapa-3` ganhou DTOs estritos para
+   entrada fixa ou gerada, seeds e fingerprints explícitos, snapshot de job,
+   evidências, sete eixos e envelope limitado. Cinco operações foram registradas
+   apenas em `create_schema_app`; OpenAPI, tipos e validadores foram regenerados
+   pelos comandos oficiais, sem handlers operacionais.
+4. **O que isso invalida.** Nada nos resultados do motor, nas prévias existentes ou
+   na persistência. O contrato gerado anterior deixa de representar toda a
+   superfície planejada da Etapa 3.
+
 ## 2026-09-20 — Vínculo único de perfil enquanto CAS está pendente (MOT-69)
 
 1. **Sintoma.** Duas ativações rápidas de “Usar como evidência em estudo” podiam

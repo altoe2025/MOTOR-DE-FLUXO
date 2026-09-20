@@ -1,4 +1,89 @@
 export interface paths {
+    "/api/v1/diagnosticos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Diagnostic Schema */
+        post: operations["diagnostic_schema_api_v1_diagnosticos_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/diagnosticos/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Diagnostic Job Schema */
+        get: operations["diagnostic_job_schema_api_v1_diagnosticos__job_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/diagnosticos/{job_id}/cancelamentos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Diagnostic Cancellation Schema */
+        post: operations["diagnostic_cancellation_schema_api_v1_diagnosticos__job_id__cancelamentos_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/diagnosticos/{job_id}/resultado": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Diagnostic Result Schema */
+        get: operations["diagnostic_result_schema_api_v1_diagnosticos__job_id__resultado_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/diagnosticos/{job_id}/retries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Diagnostic Retry Schema */
+        post: operations["diagnostic_retry_schema_api_v1_diagnosticos__job_id__retries_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/examples/reference": {
         parameters: {
             query?: never;
@@ -132,6 +217,29 @@ export interface components {
             /** Valor Brl */
             valor_brl: string;
         };
+        /** AvailableEvidenceMetric[Annotated[str, FieldInfo(annotation=NoneType, required=True, metadata=[Strict(strict=True), MinLen(min_length=1), MaxLen(max_length=80), _PydanticGeneralMetadata(pattern='^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$')])]] */
+        "AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________": {
+            /** Evidence */
+            evidence: string[];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "AVAILABLE";
+            /** Value */
+            value: string;
+        };
+        /** AvailableEvidenceMetric[DistributionSummary] */
+        AvailableEvidenceMetric_DistributionSummary_: {
+            /** Evidence */
+            evidence: string[];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "AVAILABLE";
+            value: components["schemas"]["DistributionSummary"];
+        };
         /** CenarioEntrada */
         CenarioEntrada: {
             custo: components["schemas"]["CustoEntrada"];
@@ -164,6 +272,28 @@ export interface components {
             direcao_residuo: "OUT" | "IN";
             /** Residuo */
             residuo: string;
+        };
+        /** CompositionDependencyAxis */
+        CompositionDependencyAxis: {
+            /** Hhi */
+            hhi: components["schemas"]["AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"] | components["schemas"]["UnavailableEvidenceMetric"];
+            /** Largest Share */
+            largest_share: components["schemas"]["AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"] | components["schemas"]["UnavailableEvidenceMetric"];
+            /** Participants */
+            participants: components["schemas"]["ParticipantShare"][];
+        };
+        /** CrossBorderResidualAxis */
+        CrossBorderResidualAxis: {
+            /** By Day */
+            by_day: components["schemas"]["ResidualBreakdown"][];
+            /** By Purpose */
+            by_purpose: components["schemas"]["ResidualBreakdown"][];
+            /** In Brl */
+            in_brl: components["schemas"]["AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"] | components["schemas"]["UnavailableEvidenceMetric"];
+            /** Out Brl */
+            out_brl: components["schemas"]["AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"] | components["schemas"]["UnavailableEvidenceMetric"];
+            /** Remitted Brl */
+            remitted_brl: components["schemas"]["AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"] | components["schemas"]["UnavailableEvidenceMetric"];
         };
         /** CustoEntrada */
         CustoEntrada: {
@@ -209,8 +339,205 @@ export interface components {
              */
             rule: "dimensionamento-v1" | "geracao-v1" | "soma-ordens-v1";
         };
+        /** DiagnosticAxes */
+        DiagnosticAxes: {
+            composition_dependency: components["schemas"]["CompositionDependencyAxis"];
+            cross_border_residual: components["schemas"]["CrossBorderResidualAxis"];
+            economic_robustness: components["schemas"]["EconomicRobustnessAxis"];
+            operational_profile: components["schemas"]["OperationalProfileAxis"];
+            policy_capture: components["schemas"]["PolicyCaptureAxis"];
+            structural_potential: components["schemas"]["StructuralPotentialAxis"];
+            temporal_compatibility: components["schemas"]["TemporalCompatibilityAxis"];
+        };
+        /** DiagnosticConsequence */
+        DiagnosticConsequence: {
+            /**
+             * Axis
+             * @enum {string}
+             */
+            axis: "STRUCTURAL_POTENTIAL" | "POLICY_CAPTURE" | "TEMPORAL_COMPATIBILITY" | "CROSS_BORDER_RESIDUAL" | "COMPOSITION_DEPENDENCY" | "ECONOMIC_ROBUSTNESS" | "OPERATIONAL_PROFILE";
+            /** Evidence Refs */
+            evidence_refs: string[];
+            /** Rule Id */
+            rule_id: string;
+            /**
+             * Rule Version
+             * @constant
+             */
+            rule_version: "1.0.0";
+            /** Statement Code */
+            statement_code: string;
+        };
+        /** DiagnosticEnvelope */
+        DiagnosticEnvelope: {
+            /**
+             * Api Version
+             * @constant
+             */
+            api_version: "1.0.0";
+            axes: components["schemas"]["DiagnosticAxes"];
+            /** Consequences */
+            consequences: components["schemas"]["DiagnosticConsequence"][];
+            /**
+             * Job Id
+             * Format: uuid
+             */
+            job_id: string;
+            /** Limitations */
+            limitations: components["schemas"]["DiagnosticLimitation"][];
+            provenance: components["schemas"]["DiagnosticProvenance"];
+            /** Repetitions */
+            repetitions: components["schemas"]["RepetitionSummary"][];
+            /** Request Fingerprint */
+            request_fingerprint: string;
+            /**
+             * Schema Version
+             * @constant
+             */
+            schema_version: "1.0.0";
+            selected_execution: components["schemas"]["PreviewEnvelope"];
+            /** Statistics */
+            statistics: components["schemas"]["SingleExecutionStatistics"] | components["schemas"]["DistributionStatistics"];
+        };
+        /** DiagnosticLimitation */
+        DiagnosticLimitation: {
+            /** Code */
+            code: string;
+            /** Condition */
+            condition: string;
+            /** Evidence Refs */
+            evidence_refs: string[];
+            /**
+             * Severity
+             * @enum {string}
+             */
+            severity: "INFO" | "WARNING";
+        };
+        /** DiagnosticProvenance */
+        DiagnosticProvenance: {
+            /** Evidence Refs */
+            evidence_refs: string[];
+            /** Request Paths */
+            request_paths: {
+                [key: string]: components["schemas"]["OrigemValor"];
+            };
+        };
+        /** DiagnosticRequest */
+        DiagnosticRequest: {
+            /**
+             * Api Version
+             * @constant
+             */
+            api_version: "1.0.0";
+            /**
+             * Idempotency Key
+             * Format: uuid
+             */
+            idempotency_key: string;
+            /** Input Fingerprint */
+            input_fingerprint: string;
+            /** Provenance */
+            provenance: {
+                [key: string]: components["schemas"]["OrigemValor"];
+            };
+            /**
+             * Request Id
+             * Format: uuid
+             */
+            request_id: string;
+            /** Sampling */
+            sampling: components["schemas"]["FixedInputPlan"] | components["schemas"]["GeneratedInputPlan"];
+            /**
+             * Scenario Id
+             * Format: uuid
+             */
+            scenario_id: string;
+            /** Scenario Revision */
+            scenario_revision: number;
+            /**
+             * Selected Repetition Id
+             * Format: uuid
+             */
+            selected_repetition_id: string;
+            /**
+             * Study Id
+             * Format: uuid
+             */
+            study_id: string;
+        };
+        /** DiagnosticRetryRequest */
+        DiagnosticRetryRequest: {
+            /**
+             * Api Version
+             * @constant
+             */
+            api_version: "1.0.0";
+            /**
+             * Idempotency Key
+             * Format: uuid
+             */
+            idempotency_key: string;
+            /**
+             * Request Id
+             * Format: uuid
+             */
+            request_id: string;
+        };
         /** DiagnosticosExperimentaisDTO */
         DiagnosticosExperimentaisDTO: Record<string, never>;
+        /** DistributionStatistics */
+        DistributionStatistics: {
+            /**
+             * Count
+             * @enum {integer}
+             */
+            count: 10 | 30 | 100;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "DISTRIBUTION";
+            /**
+             * Percentile Method
+             * @constant
+             */
+            percentile_method: "EMPIRICAL_NEAREST_RANK";
+            /**
+             * Selected Repetition Id
+             * Format: uuid
+             */
+            selected_repetition_id: string;
+        };
+        /** DistributionSummary */
+        DistributionSummary: {
+            /** Amplitude */
+            amplitude: string;
+            /** Maximum */
+            maximum: string;
+            /** Minimum */
+            minimum: string;
+            /** P10 */
+            p10: string;
+            /** P25 */
+            p25: string;
+            /** P50 */
+            p50: string;
+            /** P75 */
+            p75: string;
+            /** P90 */
+            p90: string;
+        };
+        /** EconomicRobustnessAxis */
+        EconomicRobustnessAxis: {
+            /** Baseline Brl */
+            baseline_brl: components["schemas"]["AvailableEvidenceMetric_DistributionSummary_"] | components["schemas"]["UnavailableEvidenceMetric"];
+            /** Netability Fraction */
+            netability_fraction: components["schemas"]["AvailableEvidenceMetric_DistributionSummary_"] | components["schemas"]["UnavailableEvidenceMetric"];
+            /** Netted Brl */
+            netted_brl: components["schemas"]["AvailableEvidenceMetric_DistributionSummary_"] | components["schemas"]["UnavailableEvidenceMetric"];
+            /** Savings Brl */
+            savings_brl: components["schemas"]["AvailableEvidenceMetric_DistributionSummary_"] | components["schemas"]["UnavailableEvidenceMetric"];
+        };
         /** EffectiveInput */
         EffectiveInput: {
             costs: components["schemas"]["CustoEntrada"];
@@ -303,6 +630,36 @@ export interface components {
              */
             mode: "FIXED";
         };
+        /** FixedInputPlan */
+        FixedInputPlan: {
+            /**
+             * Count
+             * @constant
+             */
+            count: 1;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "FIXED_INPUT";
+            preview_request: components["schemas"]["PreviaRequest"];
+        };
+        /** GeneratedInputPlan */
+        GeneratedInputPlan: {
+            /**
+             * Count
+             * @enum {integer}
+             */
+            count: 10 | 30 | 100;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "GENERATED_INPUT";
+            preparation_input: components["schemas"]["EffectiveInput"];
+            /** Repetitions */
+            repetitions: components["schemas"]["RepetitionPlan"][];
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -325,6 +682,72 @@ export interface components {
             proveniencia: {
                 [key: string]: components["schemas"]["OrigemValor"];
             };
+        };
+        /** JobError */
+        JobError: {
+            /** Code */
+            code: string;
+            /** Message */
+            message: string;
+            /** Repetition Id */
+            repetition_id: string | null;
+        };
+        /** JobProgress */
+        JobProgress: {
+            /** Completed */
+            completed: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Current Repetition Id */
+            current_repetition_id: string | null;
+            /** Failed */
+            failed: number;
+            /** Finished At */
+            finished_at: string | null;
+            /**
+             * Phase
+             * @enum {string}
+             */
+            phase: "QUEUED" | "EXECUTING" | "AGGREGATING" | "TERMINAL";
+            /** Started At */
+            started_at: string | null;
+            /** Total */
+            total: number;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** JobSnapshot */
+        JobSnapshot: {
+            /**
+             * Api Version
+             * @constant
+             */
+            api_version: "1.0.0";
+            error: components["schemas"]["JobError"] | null;
+            /**
+             * Job Id
+             * Format: uuid
+             */
+            job_id: string;
+            progress: components["schemas"]["JobProgress"];
+            /**
+             * Request Id
+             * Format: uuid
+             */
+            request_id: string;
+            /** Retry Of Job Id */
+            retry_of_job_id: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "QUEUED" | "RUNNING" | "AGGREGATING" | "CANCEL_REQUESTED" | "SUCCEEDED" | "FAILED" | "CANCELLED";
         };
         /** ManifestoDTO */
         ManifestoDTO: {
@@ -370,6 +793,21 @@ export interface components {
             /** Versao Motor */
             versao_motor: string;
         };
+        /** OperationalProfileAxis */
+        OperationalProfileAxis: {
+            /** Cycle Count */
+            cycle_count: components["schemas"]["AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"] | components["schemas"]["UnavailableEvidenceMetric"];
+            /** Due Order Count */
+            due_order_count: components["schemas"]["AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"] | components["schemas"]["UnavailableEvidenceMetric"];
+            /** Maximum Open Queue */
+            maximum_open_queue: components["schemas"]["AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"] | components["schemas"]["UnavailableEvidenceMetric"];
+            /** Order Count */
+            order_count: components["schemas"]["AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"] | components["schemas"]["UnavailableEvidenceMetric"];
+            /** Processing Duration Ms */
+            processing_duration_ms: components["schemas"]["AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"] | components["schemas"]["UnavailableEvidenceMetric"];
+            /** Weighted Wait Days */
+            weighted_wait_days: components["schemas"]["AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"] | components["schemas"]["UnavailableEvidenceMetric"];
+        };
         /**
          * OrdemEntrada
          * @description Operação explícita; direção oposta do mesmo cliente continua outra ordem.
@@ -410,6 +848,18 @@ export interface components {
              */
             tipo: "PADRAO_SINTETICO" | "ESTIMATIVA_USUARIO" | "DADO_OBSERVADO" | "NAO_COLETADO";
         };
+        /** ParticipantShare */
+        ParticipantShare: {
+            /**
+             * Participant Id
+             * Format: uuid
+             */
+            participant_id: string;
+            /** Share */
+            share: string;
+            /** Volume Brl */
+            volume_brl: string;
+        };
         /** PeriodoLegado */
         PeriodoLegado: {
             /**
@@ -429,6 +879,19 @@ export interface components {
             modo: "NATURAL";
             /** Periodo Medicao Dias */
             periodo_medicao_dias: number;
+        };
+        /** PolicyCaptureAxis */
+        PolicyCaptureAxis: {
+            /** Captured Fraction */
+            captured_fraction: components["schemas"]["AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"] | components["schemas"]["UnavailableEvidenceMetric"];
+            /** Inter Client Brl */
+            inter_client_brl: components["schemas"]["AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"] | components["schemas"]["UnavailableEvidenceMetric"];
+            /** Intra Client Brl */
+            intra_client_brl: components["schemas"]["AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"] | components["schemas"]["UnavailableEvidenceMetric"];
+            /** Matched Brl */
+            matched_brl: components["schemas"]["AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"] | components["schemas"]["UnavailableEvidenceMetric"];
+            /** Uncaptured Potential Brl */
+            uncaptured_potential_brl: components["schemas"]["AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"] | components["schemas"]["UnavailableEvidenceMetric"];
         };
         /** PreparationParameter */
         PreparationParameter: {
@@ -686,6 +1149,56 @@ export interface components {
             /** Finalidade */
             finalidade: string;
         };
+        /** RepetitionPlan */
+        RepetitionPlan: {
+            /** Participant Seeds */
+            participant_seeds: {
+                [key: string]: string;
+            };
+            /**
+             * Repetition Id
+             * Format: uuid
+             */
+            repetition_id: string;
+        };
+        /** RepetitionSummary */
+        RepetitionSummary: {
+            /** Baseline Brl */
+            baseline_brl: string;
+            /** Duration Ms */
+            duration_ms: number;
+            /** Execution Fingerprint */
+            execution_fingerprint: string;
+            /** Input Fingerprint */
+            input_fingerprint: string;
+            /** Netability Fraction */
+            netability_fraction: string;
+            /** Netted Brl */
+            netted_brl: string;
+            /** Participant Seeds */
+            participant_seeds: {
+                [key: string]: string;
+            };
+            /**
+             * Repetition Id
+             * Format: uuid
+             */
+            repetition_id: string;
+            /** Savings Brl */
+            savings_brl: string;
+        };
+        /** ResidualBreakdown */
+        ResidualBreakdown: {
+            /**
+             * Direction
+             * @enum {string}
+             */
+            direction: "OUT" | "IN";
+            /** Key */
+            key: string;
+            /** Value Brl */
+            value_brl: string;
+        };
         /** ResultadoCanonicoDTO */
         ResultadoCanonicoDTO: {
             agregado: components["schemas"]["AgregadoDTO"];
@@ -745,6 +1258,64 @@ export interface components {
              */
             user_id: string;
         };
+        /** SingleExecutionStatistics */
+        SingleExecutionStatistics: {
+            /**
+             * Count
+             * @constant
+             */
+            count: 1;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "SINGLE_EXECUTION";
+            /** Percentile Method */
+            percentile_method: null;
+            /**
+             * Selected Repetition Id
+             * Format: uuid
+             */
+            selected_repetition_id: string;
+        };
+        /** StructuralPotentialAxis */
+        StructuralPotentialAxis: {
+            /** Ceiling Brl */
+            ceiling_brl: components["schemas"]["AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"] | components["schemas"]["UnavailableEvidenceMetric"];
+            /** Gross In Brl */
+            gross_in_brl: components["schemas"]["AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"] | components["schemas"]["UnavailableEvidenceMetric"];
+            /** Gross Out Brl */
+            gross_out_brl: components["schemas"]["AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"] | components["schemas"]["UnavailableEvidenceMetric"];
+            /** Imbalance Brl */
+            imbalance_brl: components["schemas"]["AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"] | components["schemas"]["UnavailableEvidenceMetric"];
+        };
+        /** TemporalCompatibilityAxis */
+        TemporalCompatibilityAxis: {
+            /** Deadline Closures */
+            deadline_closures: components["schemas"]["AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"] | components["schemas"]["UnavailableEvidenceMetric"];
+            /** Deadline Days */
+            deadline_days: components["schemas"]["AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"] | components["schemas"]["UnavailableEvidenceMetric"];
+            /** Horizon Closures */
+            horizon_closures: components["schemas"]["AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"] | components["schemas"]["UnavailableEvidenceMetric"];
+            /** Same Day Fraction */
+            same_day_fraction: components["schemas"]["AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"] | components["schemas"]["UnavailableEvidenceMetric"];
+            /** Weighted Wait Days */
+            weighted_wait_days: components["schemas"]["AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"] | components["schemas"]["UnavailableEvidenceMetric"];
+            /** Window Closures */
+            window_closures: components["schemas"]["AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"] | components["schemas"]["UnavailableEvidenceMetric"];
+        };
+        /** UnavailableEvidenceMetric */
+        UnavailableEvidenceMetric: {
+            /** Evidence */
+            evidence: string[];
+            /** Reason */
+            reason: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "INCOMPATIBLE" | "INSUFFICIENT_COVERAGE" | "NOT_COLLECTED";
+        };
         /** ValidationError */
         ValidationError: {
             /** Context */
@@ -767,6 +1338,167 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    diagnostic_schema_api_v1_diagnosticos_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DiagnosticRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobSnapshot"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    diagnostic_job_schema_api_v1_diagnosticos__job_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobSnapshot"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    diagnostic_cancellation_schema_api_v1_diagnosticos__job_id__cancelamentos_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobSnapshot"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    diagnostic_result_schema_api_v1_diagnosticos__job_id__resultado_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiagnosticEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    diagnostic_retry_schema_api_v1_diagnosticos__job_id__retries_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DiagnosticRetryRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobSnapshot"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     reference_example_schema_api_v1_examples_reference_get: {
         parameters: {
             query?: never;

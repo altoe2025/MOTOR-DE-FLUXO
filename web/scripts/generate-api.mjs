@@ -51,6 +51,9 @@ export const validatePreviewEnvelope = ajv.compile({ $ref: 'https://motor-de-flu
 export const validateReferenceExample = ajv.compile({ $ref: 'https://motor-de-fluxo.local/contracts/schemas.json#/$defs/ReferenceExample' });
 export const validatePreparationRequest = ajv.compile({ $ref: 'https://motor-de-fluxo.local/contracts/schemas.json#/$defs/PreparationRequest' });
 export const validatePreparationResponse = ajv.compile({ $ref: 'https://motor-de-fluxo.local/contracts/schemas.json#/$defs/PreparationResponse' });
+export const validateDiagnosticRequest = ajv.compile({ $ref: 'https://motor-de-fluxo.local/contracts/schemas.json#/$defs/DiagnosticRequest' });
+export const validateJobSnapshot = ajv.compile({ $ref: 'https://motor-de-fluxo.local/contracts/schemas.json#/$defs/JobSnapshot' });
+export const validateDiagnosticEnvelope = ajv.compile({ $ref: 'https://motor-de-fluxo.local/contracts/schemas.json#/$defs/DiagnosticEnvelope' });
 `;
 
 await mkdir(apiDirectory, { recursive: true });
