@@ -3,6 +3,7 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 
 const destinations = [
+  { to: '/estudos', label: 'Estudos' },
   { to: '/carteira', label: 'Carteira' },
   { to: '/diagnostico', label: 'Diagnóstico' },
   { to: '/comparar', label: 'Comparar cenários' },

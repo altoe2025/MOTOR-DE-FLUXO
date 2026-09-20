@@ -1,4 +1,4 @@
-import type { PreviewEnvelope } from '../study/types';
+import type { PreviewEnvelope } from '../study/model';
 import { formatFraction, formatMoney } from '../presentation/format';
 
 export function ComparisonSummary({ envelope }: { envelope: PreviewEnvelope }) {
@@ -29,8 +29,10 @@ export function ComparisonSummary({ envelope }: { envelope: PreviewEnvelope }) {
   return (
     <section className="comparison-summary" aria-labelledby="comparison-summary-title">
       <p className="eyebrow">Prévia canônica</p>
-      <h2 id="comparison-summary-title">Resumo da comparação</h2>
+      <h2 id="comparison-summary-title">Resultado do motor</h2>
       <dl className="headline-metrics">
+        <div><dt>Volume bruto</dt><dd>{formatMoney(aggregate.volume_bruto_periodo_brl)}</dd></div>
+        <div><dt>Resíduo remetido</dt><dd>{formatMoney(aggregate.volume_remetido_periodo_brl)}</dd></div>
         <div><dt>Economia no período</dt><dd data-testid="economia-brl">{formatMoney(aggregate.economia_periodo_brl)}</dd></div>
         <div><dt>Volume compensado</dt><dd>{formatMoney(aggregate.volume_casado_periodo_brl)}</dd></div>
         <div><dt>Taxa de netabilidade</dt><dd data-testid="netabilidade">{formatFraction(aggregate.taxa_netabilidade_periodo)}</dd></div>

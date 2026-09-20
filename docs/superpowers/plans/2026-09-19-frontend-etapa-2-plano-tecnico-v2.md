@@ -879,22 +879,22 @@ Usar `test: fecha percurso completo da etapa 2 (MOT-32)`.
 - Consumes: gates e evidências Task 11.
 - Produces: operação reproduzível, aceitação e fronteiras para Etapa 3.
 
-- [ ] **Step 1: Conferir os 12 critérios S15**
+- [x] **Step 1: Conferir os 12 critérios S15**
 
 Cada critério aponta para teste, comando, SHA e evidência. Falha ou não executado não
 vira aprovado.
 
-- [ ] **Step 2: Documentar operação**
+- [x] **Step 2: Documentar operação**
 
 Iniciar ambiente, criar estudo, importar/selecionar caso, executar, reabrir, resolver
 conflito, recuperar storage e limpar dados da conta.
 
-- [ ] **Step 3: Documentar contratos efetivos**
+- [x] **Step 3: Documentar contratos efetivos**
 
 Registrar schema local, stores, migrations, tipos públicos, fingerprints, limites,
 erros e versões realmente implementados.
 
-- [ ] **Step 4: Revisão crítica**
+- [x] **Step 4: Revisão crítica**
 
 Usar `superpowers:requesting-code-review` e `project-auditor`. Rastrear origem →
 snapshot → request → API → motor → resultado → persistência → conciliação.
@@ -904,6 +904,25 @@ snapshot → request → API → motor → resultado → persistência → conci
 Usar `superpowers:verification-before-completion` e
 `superpowers:finishing-a-development-branch`. Merge depende de CI e aprovação do
 Gabriel; não iniciar Etapa 3 automaticamente.
+
+### Evidência final da Task 12
+
+**Decisão: CONDITIONAL.** Auditoria em `b46017b` encontrou seis Important; a primeira
+remediação até `ab97c79` deixou três Important; a segunda remediação e o check final
+até `b5a2d9a` não deixaram novo Critical/Important. S15.1–S15.11 possuem evidência no
+escopo local suportado. A matriz completa, comandos e SHAs estão em
+`docs/frontend/etapa-2-v2-aceitacao.md`; a operação e os contratos efetivos estão em
+`docs/frontend/etapa-2-v2-operacao.md`.
+
+Os gates globais pertencem a `53e74f1`; o fix/prova de quota pertence a `b46017b`;
+os gates após a auditoria foram focados até `b5a2d9a`. A regressão global não foi
+repetida no SHA final. O Ruff literal `python -m ruff check servidor tests` permanece
+reprovado por 296 violações legadas e não recebeu exceção aprovada. `test:e2e:real`
+permaneceu skipped sem as três variáveis/credenciais reais.
+
+Step 5 continua aberto: não houve push, PR, merge, publicação ou mudança no Linear.
+Antes de merge são obrigatórios CI na revisão publicada e aprovação explícita do
+Gabriel. Este estado não conclui a Etapa 2 e não inicia a Etapa 3.
 
 ## Dependências
 

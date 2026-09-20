@@ -16,6 +16,10 @@ if (root === null) {
 const rootElement = root;
 
 async function bootstrap() {
+  if (import.meta.env.MODE === 'e2e') {
+    const { installE2EBridge } = await import('./e2eBridge');
+    installE2EBridge();
+  }
   const authClient = import.meta.env.MODE === 'e2e'
     ? (await import('./auth/e2eAuthClient')).createE2eAuthClient()
     : (await import('./auth/supabaseClient')).getSupabaseAuthClient();

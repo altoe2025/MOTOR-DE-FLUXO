@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Annotated, Literal
 
 from pydantic import Field, StrictBool, StrictInt, field_validator, model_validator
@@ -171,6 +172,8 @@ class PeriodoNatural(StrictModel):
 
 PeriodoEntrada = Annotated[PeriodoLegado | PeriodoNatural, Field(discriminator="modo")]
 
+_UNCOLLECTED_EFX_POINTER_RE = re.compile(r"^/ordens/[0-9]+/eh_efx$")
+
 
 def _required_provenance_paths(scenario: CenarioEntrada) -> set[str]:
     paths = {
@@ -204,9 +207,9 @@ def _required_provenance_paths(scenario: CenarioEntrada) -> set[str]:
     return paths
 
 
-def _pointer_exists(document: object, pointer: str) -> bool:
+def _resolve_pointer(document: object, pointer: str) -> object:
     if not pointer.startswith("/"):
-        return False
+        raise ValueError("JSON Pointer deve começar com /")
     current = document
     try:
         for raw in pointer[1:].split("/"):
@@ -216,8 +219,16 @@ def _pointer_exists(document: object, pointer: str) -> bool:
             elif isinstance(current, dict):
                 current = current[token]
             else:
-                return False
-    except (KeyError, IndexError, ValueError, TypeError):
+                raise TypeError("JSON Pointer não pode atravessar valor escalar")
+    except (KeyError, IndexError, ValueError, TypeError) as error:
+        raise ValueError("JSON Pointer não resolvido") from error
+    return current
+
+
+def _pointer_exists(document: object, pointer: str) -> bool:
+    try:
+        _resolve_pointer(document, pointer)
+    except ValueError:
         return False
     return True
 
@@ -247,6 +258,15 @@ class PreviaRequest(StrictModel):
         ]
         if invalid:
             raise ValueError(f"caminho de proveniência inexistente: {invalid[0]}")
+        for pointer, origin in self.proveniencia.items():
+            if origin.tipo != "NAO_COLETADO":
+                continue
+            if _UNCOLLECTED_EFX_POINTER_RE.fullmatch(pointer) is None:
+                raise ValueError(
+                    "NAO_COLETADO só pode ser usado em /ordens/{i}/eh_efx"
+                )
+            if _resolve_pointer(scenario_json, pointer) is not False:
+                raise ValueError("NAO_COLETADO exige eh_efx=false")
         if isinstance(self.periodo, PeriodoNatural):
             total = self.periodo.dias_aquecimento + self.periodo.periodo_medicao_dias
             if any(order.dia_conhecida >= total for order in self.cenario.ordens):

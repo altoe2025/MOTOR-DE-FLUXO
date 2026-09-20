@@ -12,6 +12,8 @@ import {
 
 import type { ApiClient, PreviaRequest, PreviewEnvelope } from '../api/client';
 import { ApiError } from '../api/errors';
+import { validatePreviewEnvelope } from '../api/validators';
+import { canonical } from '../study/fingerprints';
 
 type PreviewStatus = 'idle' | 'running';
 
@@ -20,9 +22,11 @@ type PreviewValue = {
   envelope: PreviewEnvelope | null;
   error: ApiError | null;
   executeReference(): Promise<void>;
+  executeRequest(input: PreviaRequest): Promise<PreviewEnvelope>;
+  restoreEnvelope(input: PreviaRequest, envelope: PreviewEnvelope, expectedExecutionId?: string): void;
 };
 
-type StoredState = Omit<PreviewValue, 'executeReference'>;
+type StoredState = Pick<PreviewValue, 'status' | 'envelope' | 'error'>;
 type InFlight = { marker: symbol; ownerId: string; controller: AbortController };
 
 const EMPTY_STATE: StoredState = { status: 'idle', envelope: null, error: null };
@@ -46,6 +50,27 @@ function contextError(): ApiError {
     code: 'CONTEXTO_DIVERGENTE',
     message: 'A resposta pertence a outra execução e foi descartada.',
   });
+}
+
+function assertCompatibleEnvelope(
+  input: PreviaRequest,
+  envelope: PreviewEnvelope,
+  expectedExecutionId?: string,
+): void {
+  if (!validatePreviewEnvelope(envelope)
+    || envelope.api_version !== input.api_version
+    || envelope.request_id !== input.request_id
+    || envelope.study_id !== input.study_id
+    || envelope.scenario_id !== input.scenario_id
+    || envelope.scenario_revision !== input.scenario_revision
+    || (expectedExecutionId !== undefined && envelope.execution_id !== expectedExecutionId)
+    || canonical(envelope.input_snapshot) !== canonical({
+      cenario: input.cenario,
+      periodo: input.periodo,
+      proveniencia: input.proveniencia,
+    })) {
+    throw contextError();
+  }
 }
 
 function asApiError(error: unknown): ApiError {
@@ -117,14 +142,7 @@ export function PreviewProvider({
       };
       const envelope = await mutation.mutateAsync({ input: request, signal: controller.signal });
       if (ownerRef.current !== activeOwner || inFlightRef.current?.marker !== marker) return;
-      if (
-        envelope.request_id !== request.request_id
-        || envelope.study_id !== request.study_id
-        || envelope.scenario_id !== request.scenario_id
-        || envelope.scenario_revision !== request.scenario_revision
-      ) {
-        throw contextError();
-      }
+      assertCompatibleEnvelope(request, envelope);
       update(activeOwner, () => ({ status: 'idle', envelope: immutableClone(envelope), error: null }));
     } catch (error) {
       if (ownerRef.current === activeOwner && inFlightRef.current?.marker === marker) {
@@ -135,8 +153,54 @@ export function PreviewProvider({
     }
   }, [client, mutation, queryClient, update]);
 
+  const executeRequest = useCallback(async (
+    input: PreviaRequest,
+  ): Promise<PreviewEnvelope> => {
+    const activeOwner = ownerRef.current;
+    if (activeOwner === null) throw contextError();
+    if (inFlightRef.current !== null) {
+      throw new ApiError({ status: 0, code: 'EXECUCAO_EM_ANDAMENTO', message: 'Já existe uma execução em andamento.' });
+    }
+    const marker = Symbol('preview-request');
+    const controller = new AbortController();
+    inFlightRef.current = { marker, ownerId: activeOwner, controller };
+    update(activeOwner, (state) => ({ ...state, status: 'running', error: null }));
+    try {
+      const envelope = await mutation.mutateAsync({ input: immutableClone(input), signal: controller.signal });
+      if (ownerRef.current !== activeOwner || inFlightRef.current?.marker !== marker) throw contextError();
+      assertCompatibleEnvelope(input, envelope);
+      const restored = immutableClone(envelope);
+      update(activeOwner, () => ({ status: 'idle', envelope: restored, error: null }));
+      return restored;
+    } catch (error) {
+      const apiError = asApiError(error);
+      if (ownerRef.current === activeOwner && inFlightRef.current?.marker === marker) {
+        update(activeOwner, (state) => ({ ...state, status: 'idle', error: apiError }));
+      }
+      throw apiError;
+    } finally {
+      if (inFlightRef.current?.marker === marker) inFlightRef.current = null;
+    }
+  }, [mutation, update]);
+
+  const restoreEnvelope = useCallback((
+    input: PreviaRequest,
+    envelope: PreviewEnvelope,
+    expectedExecutionId?: string,
+  ): void => {
+    const activeOwner = ownerRef.current;
+    if (activeOwner === null) throw contextError();
+    assertCompatibleEnvelope(input, envelope, expectedExecutionId);
+    update(activeOwner, () => ({ status: 'idle', envelope: immutableClone(envelope), error: null }));
+  }, [update]);
+
   const state = ownerId === null ? EMPTY_STATE : (statesRef.current.get(ownerId) ?? EMPTY_STATE);
-  const value = useMemo<PreviewValue>(() => ({ ...state, executeReference }), [executeReference, state]);
+  const value = useMemo<PreviewValue>(() => ({
+    ...state,
+    executeReference,
+    executeRequest,
+    restoreEnvelope,
+  }), [executeReference, executeRequest, restoreEnvelope, state]);
   return <PreviewContext.Provider value={value}>{children}</PreviewContext.Provider>;
 }
 

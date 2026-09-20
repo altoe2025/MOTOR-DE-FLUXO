@@ -33,6 +33,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/preparacoes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Preparation */
+        post: operations["preparation_api_v1_preparacoes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/previas": {
         parameters: {
             query?: never;
@@ -182,8 +199,78 @@ export interface components {
             /** Total */
             total: string;
         };
+        /** DerivedEvidence */
+        DerivedEvidence: {
+            /** Inputs */
+            inputs: string[];
+            /**
+             * Rule
+             * @enum {string}
+             */
+            rule: "dimensionamento-v1" | "geracao-v1" | "soma-ordens-v1";
+        };
         /** DiagnosticosExperimentaisDTO */
         DiagnosticosExperimentaisDTO: Record<string, never>;
+        /** EffectiveInput */
+        EffectiveInput: {
+            costs: components["schemas"]["CustoEntrada"];
+            /** Measurement Days */
+            measurement_days: number;
+            /** Participants */
+            participants: components["schemas"]["EffectiveParticipant"][];
+            /** Sources */
+            sources: {
+                [key: string]: components["schemas"]["EffectiveSource"];
+            };
+            /** Warmup Days */
+            warmup_days: number;
+            /** Window Days */
+            window_days: number;
+        };
+        /** EffectiveParticipant */
+        EffectiveParticipant: {
+            /** Deadline */
+            deadline: components["schemas"]["ProfileDeadline"] | components["schemas"]["FixedDeadline"];
+            /** Eh Efx */
+            eh_efx: boolean;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Monthly Volume Brl */
+            monthly_volume_brl: string;
+            /** Out Fraction */
+            out_fraction: string;
+            /**
+             * Profile
+             * @enum {string}
+             */
+            profile: "remessa_outbound_massiva" | "psp_inbound" | "cripto_native_sem_fiat" | "payroll_fornecedor" | "exportador" | "tesouraria_corporativa";
+            /** Purpose In */
+            purpose_in: string;
+            /** Purpose Out */
+            purpose_out: string;
+            /** Seed */
+            seed: string;
+            /** Ticket Median Brl */
+            ticket_median_brl: string;
+        };
+        /** EffectiveSource */
+        EffectiveSource: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "PADRAO_SINTETICO" | "ESTIMATIVA_USUARIO";
+            /**
+             * Recorded At
+             * Format: date-time
+             */
+            recorded_at: string;
+            /** Source */
+            source: string;
+        };
         /** EstatisticaPrevia */
         EstatisticaPrevia: {
             /**
@@ -205,6 +292,16 @@ export interface components {
             repetition_id: string;
             /** Seed */
             seed: null;
+        };
+        /** FixedDeadline */
+        FixedDeadline: {
+            /** Days */
+            days: number;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            mode: "FIXED";
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -311,7 +408,7 @@ export interface components {
              * Tipo
              * @enum {string}
              */
-            tipo: "PADRAO_SINTETICO" | "ESTIMATIVA_USUARIO" | "DADO_OBSERVADO";
+            tipo: "PADRAO_SINTETICO" | "ESTIMATIVA_USUARIO" | "DADO_OBSERVADO" | "NAO_COLETADO";
         };
         /** PeriodoLegado */
         PeriodoLegado: {
@@ -332,6 +429,107 @@ export interface components {
             modo: "NATURAL";
             /** Periodo Medicao Dias */
             periodo_medicao_dias: number;
+        };
+        /** PreparationParameter */
+        PreparationParameter: {
+            /** Cadence Monthly */
+            cadence_monthly: string;
+            /** Deadline Max */
+            deadline_max: number;
+            /** Deadline Min */
+            deadline_min: number;
+            /** Expected Period Brl */
+            expected_period_brl: string;
+            /**
+             * Participant Id
+             * Format: uuid
+             */
+            participant_id: string;
+            /** Sigma */
+            sigma: string;
+        };
+        /** PreparationRequest */
+        PreparationRequest: {
+            /** Expected Build Sha */
+            expected_build_sha: string;
+            input: components["schemas"]["EffectiveInput"];
+            /**
+             * Preparation Version
+             * @constant
+             */
+            preparation_version: "1.0.0";
+            /**
+             * Request Id
+             * Format: uuid
+             */
+            request_id: string;
+            /**
+             * Scenario Id
+             * Format: uuid
+             */
+            scenario_id: string;
+            /** Scenario Revision */
+            scenario_revision: number;
+            /**
+             * Study Id
+             * Format: uuid
+             */
+            study_id: string;
+        };
+        /** PreparationResponse */
+        PreparationResponse: {
+            /** Composition */
+            composition: components["schemas"]["RealizedComposition"][];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Derived Provenance */
+            derived_provenance: {
+                [key: string]: components["schemas"]["DerivedEvidence"];
+            };
+            /** Generation Fingerprint */
+            generation_fingerprint: string;
+            /**
+             * Generator Version
+             * @constant
+             */
+            generator_version: "dimensionamento-v1";
+            input_snapshot: components["schemas"]["EffectiveInput"];
+            /** Motor Build Sha */
+            motor_build_sha: string;
+            /** Orders */
+            orders: components["schemas"]["OrdemEntrada"][];
+            /** Parameters */
+            parameters: components["schemas"]["PreparationParameter"][];
+            /**
+             * Preparation Id
+             * Format: uuid
+             */
+            preparation_id: string;
+            /**
+             * Preparation Version
+             * @constant
+             */
+            preparation_version: "1.0.0";
+            /**
+             * Request Id
+             * Format: uuid
+             */
+            request_id: string;
+            /**
+             * Scenario Id
+             * Format: uuid
+             */
+            scenario_id: string;
+            /** Scenario Revision */
+            scenario_revision: number;
+            /**
+             * Study Id
+             * Format: uuid
+             */
+            study_id: string;
         };
         /** PresentationContract */
         PresentationContract: {
@@ -442,6 +640,29 @@ export interface components {
              * Format: uuid
              */
             study_id: string;
+        };
+        /** ProfileDeadline */
+        ProfileDeadline: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            mode: "PROFILE";
+        };
+        /** RealizedComposition */
+        RealizedComposition: {
+            /** In Brl */
+            in_brl: string;
+            /** Order Count */
+            order_count: number;
+            /** Out Brl */
+            out_brl: string;
+            /** Out Fraction */
+            out_fraction: string | null;
+            /** Participant Id */
+            participant_id: string | null;
+            /** Total Brl */
+            total_brl: string;
         };
         /** ReferenceExample */
         ReferenceExample: {
@@ -582,6 +803,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HealthResponse"];
+                };
+            };
+        };
+    };
+    preparation_api_v1_preparacoes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PreparationRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreparationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

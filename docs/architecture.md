@@ -64,3 +64,69 @@ linhas só preserva o comportamento atual quando todos estes campos forem idênt
 
 Diferença em qualquer componente mantém operações separadas, pois pode alterar a
 prioridade, o custo ou a origem do casamento.
+
+## Aplicação web — fluxo persistente da Etapa 2 v2
+
+O navegador não reimplementa geração, netting ou custo. As três origens vigentes
+convergem antes da API:
+
+```text
+Caso Observado confirmado ─┐
+Autoria manual ────────────┼─→ PortfolioSourceSnapshot
+Exemplo sintético ─────────┘        │
+                                    ▼
+                    sourceFingerprint + ScenarioDocument
+                                    │
+                                    ▼
+                   inputFingerprint + PreviaRequest
+                                    │
+                                    ▼
+                  FastAPI → adaptador → motor → envelope
+                                    │
+                                    ▼
+                ExecutionRecord imutável + IndexedDB local
+                                    │
+                                    ▼
+             resultado canônico + Observado × Motor separado
+```
+
+`web/src/preparation/resolvePortfolioSource.ts` é a costura de origem; sintético e
+manual paramétrico usam a preparação oficial do servidor, enquanto observado e manual
+explícito preservam ordens. `buildPreviewRequest.ts` projeta snapshot, premissas,
+período e proveniência para o contrato público. `executionService.ts` força o flush,
+reserva a tentativa por CAS, executa um único POST e anexa um terminal correlacionado.
+
+A persistência passa somente por `ApplicationRepository`. A implementação IndexedDB
+usa um banco por projeto e `owner_sub`, oito stores (`companies`, `observed_cases`,
+`import_batches`, `import_events`, `studies`, `executions`, `operations`, `meta`) e
+CAS por `expectedRevision` + `operationId`. `BroadcastChannel` notifica outras abas,
+mas não substitui CAS. Troca de conta fecha banco/canal, cancela requests e troca o
+cache de queries.
+
+Execuções são append-only. Novas execuções preservam os snapshots de origem,
+premissas e período, além do request e do envelope. A versão documental permanece
+`2.0.0`; os snapshots foram mantidos opcionais no schema para ler documentos 2.0.0
+anteriores, e a UI só usa o cenário atual como fallback histórico quando cenário,
+revisão e `inputFingerprint` continuam iguais.
+
+Fingerprints têm responsabilidades separadas:
+
+- `sourceFingerprint`: identidade canônica da origem, ordens e proveniência;
+- `inputFingerprint`: origem + premissas + período;
+- `generation_fingerprint`: determinantes da geração no servidor;
+- `execution_fingerprint`: entrada numérica executada e versões;
+- `provenance_fingerprint`: proveniência HTTP canônica.
+
+Detalhes de operação, migrations, erros, limites e versões estão em
+[`docs/frontend/etapa-2-v2-operacao.md`](frontend/etapa-2-v2-operacao.md). O estado de
+aceite e a matriz S15 estão em
+[`docs/frontend/etapa-2-v2-aceitacao.md`](frontend/etapa-2-v2-aceitacao.md).
+
+### Fronteiras que permanecem abertas
+
+- A UI da Etapa 2 seleciona Casos Observados `CONFIRMED`, mas não importa arquivos nem
+  confirma casos; essa produção fica a montante.
+- Limpeza integral de conta, purge definitivo e recuperação de tentativa interrompida
+  não têm controles de produto expostos nesta etapa.
+- Perfil Operacional, telas completas de Empresa e diagnóstico de múltiplas
+  repetições pertencem à Etapa 3 e não foram iniciados.

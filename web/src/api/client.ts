@@ -1,6 +1,8 @@
 import type { components } from './generated';
 import { ApiError, type ApiErrorField } from './errors';
 import {
+  validatePreparationRequest,
+  validatePreparationResponse,
   validatePreviaRequest,
   validatePreviewEnvelope,
   validateReferenceExample,
@@ -9,11 +11,14 @@ import {
 export type PreviaRequest = components['schemas']['PreviaRequest'];
 export type PreviewEnvelope = components['schemas']['PreviewEnvelope'];
 export type ReferenceExample = components['schemas']['ReferenceExample'];
+export type PreparationRequest = components['schemas']['PreparationRequest'];
+export type PreparationResponse = components['schemas']['PreparationResponse'];
 
 type FetchLike = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
 export type ApiClient = {
   getReferenceExample(signal?: AbortSignal): Promise<ReferenceExample>;
+  preparePortfolio?(input: PreparationRequest, signal?: AbortSignal): Promise<PreparationResponse>;
   runPreview(input: PreviaRequest, signal?: AbortSignal): Promise<PreviewEnvelope>;
 };
 
@@ -162,6 +167,19 @@ export function createApiClient({
       const document = await request('/api/v1/examples/reference', { method: 'GET' }, signal);
       if (!validateReferenceExample(document)) throw invalidResponse(200);
       return deepFreeze(document as ReferenceExample);
+    },
+
+    async preparePortfolio(input, signal) {
+      if (!validatePreparationRequest(input)) {
+        throw new ApiError({ status: 0, code: 'ENTRADA_CLIENTE_INVALIDA', message: 'A entrada local não passou pela validação.' });
+      }
+      const document = await request('/api/v1/preparacoes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(input),
+      }, signal);
+      if (!validatePreparationResponse(document)) throw invalidResponse(200);
+      return deepFreeze(document as PreparationResponse);
     },
 
     async runPreview(input, signal) {

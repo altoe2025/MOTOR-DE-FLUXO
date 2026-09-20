@@ -1,7 +1,7 @@
 * { box-sizing: border-box; }
 html { background: var(--canvas); color: var(--ink); font-family: var(--font-body); }
 body { margin: 0; min-width: 320px; min-height: 100vh; }
-button, input { font: inherit; }
+button, input, select { font: inherit; }
 button, input, a { min-height: 32px; }
 a { color: inherit; }
 :focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
@@ -70,4 +70,27 @@ a { color: inherit; }
 .draft-card h2 { font-family: var(--font-heading); font-size: 1.5rem; margin: 0 0 var(--space-4); }
 .save-status { color: var(--muted); font-size: 0.875rem; margin: 0; }
 .session-loading { padding: var(--space-8); }
-@media (max-width: 760px) { .app-shell { grid-template-columns: 1fr; } .sidebar { gap: var(--space-4); } .destination-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } .workspace-header, .workspace-content { padding-left: var(--space-4); padding-right: var(--space-4); } .comparison-summary .headline-metrics, .mechanism-grid { grid-template-columns: 1fr; } }
+.study-list { display: grid; gap: var(--space-3); list-style: none; margin: var(--space-6) 0; padding: 0; }
+.list-toolbar { display: flex; justify-content: flex-end; margin-top: var(--space-4); }
+.study-list__item { align-items: center; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); display: flex; flex-wrap: wrap; gap: var(--space-3); padding: var(--space-3); }
+.study-list__open { background: transparent; border: 0; color: var(--ink); cursor: pointer; display: grid; flex: 1; gap: var(--space-1); min-width: 0; padding: var(--space-2); text-align: left; }
+.study-list__actions, .source-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.study-list__open span, .study-list__open small { color: var(--muted); }
+.study-list__open[aria-current='true'] { background: #e8f0ed; border-radius: var(--radius); }
+.study-editor { max-width: 760px; }
+.study-editor form, .source-selector, .source-panel { margin-top: var(--space-6); }
+.source-selector { border: 1px solid var(--border); border-radius: var(--radius); padding: var(--space-4); }
+.source-selector legend { font-family: var(--font-heading); font-weight: 700; padding: 0 var(--space-1); }
+.source-selector__choices { display: grid; gap: var(--space-3); margin-bottom: var(--space-4); }
+.source-selector__choices label { align-items: center; display: flex; gap: var(--space-2); }
+.source-selector select { background: white; border: 1px solid var(--border); border-radius: var(--radius); max-width: 100%; min-height: 32px; padding: var(--space-2); width: 100%; }
+.source-panel { background: var(--surface); border-left: 4px solid var(--accent); min-width: 0; padding: var(--space-4); }
+.parameter-grid { display: grid; gap: var(--space-3); grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); }
+.parameter-grid label { display: grid; gap: var(--space-1); min-width: 0; }
+.authoring-group, .authoring-participant { border: 1px solid var(--border); margin: var(--space-4) 0; min-width: 0; padding: var(--space-3); }
+.observed-summary dl { display: grid; gap: var(--space-3); grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr)); }
+.observed-summary dt { color: var(--muted); font-size: 0.8125rem; }
+.observed-summary dd { margin: var(--space-1) 0 0; overflow-wrap: anywhere; }
+@media (min-width: 1000px) { .study-editor { max-width: 860px; } }
+@media (max-width: 760px) { .app-shell { grid-template-columns: minmax(0, 1fr); } .sidebar { gap: var(--space-4); } .destination-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } .workspace-header, .workspace-content { min-width: 0; padding-left: var(--space-4); padding-right: var(--space-4); } .comparison-summary .headline-metrics, .mechanism-grid { grid-template-columns: 1fr; } .study-list__open { flex-basis: 100%; } .study-list__actions { width: 100%; } }
+@media (max-width: 480px) { .destination-list { grid-template-columns: 1fr; } .source-selector { padding: var(--space-3); } .source-actions > .button, .study-list__actions > .button { flex: 1 1 100%; } }

@@ -39,6 +39,7 @@ function Probe() {
   return (
     <div>
       <button type="button" disabled={preview.status === 'running'} onClick={() => void preview.executeReference()}>executar</button>
+      <button type="button" onClick={() => void preview.executeRequest(requestFixture)}>explícito</button>
       <output data-testid="status">{preview.status}</output>
       <output data-testid="economia">{preview.envelope?.result.agregado.economia_periodo_brl ?? '-'}</output>
       <output data-testid="erro">{preview.error?.code ?? '-'}</output>
@@ -158,5 +159,50 @@ describe('PreviewProvider', () => {
     expect(await screen.findByText('AUTH_INDISPONIVEL')).toBeVisible();
     expect(screen.getByTestId('economia')).toHaveTextContent('1026000.000000');
     expect(client.runPreview).toHaveBeenCalledTimes(2);
+  });
+
+  it('executa request explícito uma vez e valida identidade e snapshot', async () => {
+    const client = api({
+      runPreview: vi.fn(async (input) => ({
+        ...matchingEnvelope(input),
+        execution_id: envelopeFixture.execution_id,
+        input_snapshot: {
+          cenario: structuredClone(input.cenario),
+          periodo: structuredClone(input.periodo),
+          proveniencia: structuredClone(input.proveniencia),
+        },
+      })),
+    });
+    const user = userEvent.setup();
+    render(<Harness client={client} />);
+
+    await user.click(screen.getByRole('button', { name: 'explícito' }));
+
+    expect(await screen.findByText('1026000.000000')).toBeVisible();
+    expect(client.runPreview).toHaveBeenCalledOnce();
+  });
+
+  it('rejeita restauração incompatível sem substituir o resultado anterior', async () => {
+    function RestoreProbe() {
+      const preview = usePreview();
+      return <button type="button" onClick={() => {
+        const valid = matchingEnvelope(requestFixture);
+        preview.restoreEnvelope(requestFixture, valid, valid.execution_id);
+        expect(() => preview.restoreEnvelope(requestFixture, { ...valid, request_id: 'outro' }))
+          .toThrow('outra execução');
+        expect(() => preview.restoreEnvelope(requestFixture, valid, 'execução-divergente'))
+          .toThrow('outra execução');
+      }}>restaurar</button>;
+    }
+    const client = api();
+    const user = userEvent.setup();
+    render(
+      <QueryClientProvider client={createUserQueryClient()}>
+        <PreviewProvider client={client} ownerId="user-a"><RestoreProbe /></PreviewProvider>
+      </QueryClientProvider>,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'restaurar' }));
+    expect(client.runPreview).not.toHaveBeenCalled();
   });
 });

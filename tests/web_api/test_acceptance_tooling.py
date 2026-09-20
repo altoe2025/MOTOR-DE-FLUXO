@@ -58,9 +58,12 @@ def test_ci_runs_the_complete_acceptance_gate_and_detects_generated_diff():
 def test_playwright_exposes_local_and_real_auth_projects():
     package = (ROOT / "web/package.json").read_text(encoding="utf-8")
     config = (ROOT / "web/playwright.config.ts").read_text(encoding="utf-8")
-    assert '"test:e2e": "vite build --mode e2e && playwright test --project=local"' in package
+    assert '"test:e2e": "node scripts/build-e2e.mjs && playwright test --project=local"' in package
+    build_runner = (ROOT / "web/scripts/build-e2e.mjs").read_text(encoding="utf-8")
+    assert "VITE_MOTOR_BUILD_SHA: buildSha" in build_runner
     assert '"test:e2e:real": "node scripts/run-real-e2e.mjs"' in package
     assert "name: 'local'" in config
+    assert "testMatch: /(?:foundation|study-.*)\\.spec\\.ts/" in config
     assert "name: 'real-auth'" in config
     assert "process.env.CI === 'true'" in config
     real_runner = (ROOT / "web/scripts/run-real-e2e.mjs").read_text(encoding="utf-8")
@@ -82,9 +85,11 @@ def test_credential_scan_detects_secret_shapes_without_flagging_publishable_key(
             "openai.txt": "OPENAI_API_KEY=" + "sk-proj-" + "abcdefghijklmnopqrstuvwxyz123456",
             "service.txt": "SUPABASE_" + "SERVICE_ROLE_KEY=super-secret-value",
             "jwt.txt": "token=" + "eyJhbGciOiJIUzI1NiJ9." + "eyJyb2xlIjoic2VydmljZV9yb2xlIn0.signature",
+            "history.txt": "https://app.invalid/callback?" + "access_token=controlled-secret-token",
         }
     )
     assert [finding.path for finding in findings] == [
+        "history.txt",
         "jwt.txt",
         "openai.txt",
         "service.txt",
