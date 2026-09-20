@@ -70,6 +70,23 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 
 ---
 
+## 2026-09-20 — Perfil Operacional puro e versionado (MOT-66)
+
+1. **Sintoma.** Casos Observados confirmados ainda não podiam ser combinados em um
+   Perfil Operacional determinístico, com cobertura, métricas e ausência de evidência
+   representadas por contrato explícito.
+2. **Causa.** A fundação da Etapa 3 congelou os contratos existentes sem antecipar o
+   domínio de perfil; faltavam compatibilidade da seleção, cálculo civil UTC,
+   percentis, fingerprints e validação runtime próprios.
+3. **O que foi feito.** Na branch `codex/frontend-etapa-3`, foi criado
+   `web/src/profiles/` com domínio `1.0.0`, matriz de blockers e warnings, métricas
+   determinísticas em Decimal.js, cobertura sem duplicar dias sobrepostos,
+   sazonalidade civil, proveniência, JSON canônico, SHA-256 e schema/validação dos
+   fingerprints. Testes dourados derivados à mão cobrem o contrato S06.
+4. **O que isso invalida.** Nada em IndexedDB, estudos, APIs, motor ou números já
+   publicados. O perfil continua puro e não persistido; alocação append-only de
+   versões e vínculo como evidência pertencem às tarefas seguintes.
+
 ## 2026-09-20 — Freeze compatível dos contratos da Etapa 3 (MOT-65)
 
 1. **Sintoma.** A Etapa 3 ainda não tinha uma fixture byte-estável do IndexedDB
