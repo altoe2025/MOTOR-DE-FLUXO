@@ -10,7 +10,7 @@ Base auditada: `b46017b`. A remediação ficou restrita a `web/`; nenhum arquivo
 | 1. Execução histórica preserva o snapshot analítico exato, inclusive origem, caso observado, premissas, período e comparação | `executionService.test.ts` cobre alteração posterior do cenário; `validation.test.ts` rejeita snapshot histórico adulterado; `ExecutionHistory.test.tsx`, `ObservedComparisonTable.test.tsx` e `study-observed.spec.ts` exercitam reabertura/renderização | `56a95e4`, `630835c`, `9a504c9` |
 | 2. Conversão OBSERVED → AUTHORED copia operações explícitas sem gerador ou reamostragem | `resolvePortfolioSource.test.ts` compara IDs, cliente compartilhado, direção, datas, valor, finalidade e EFX; `studyEditor.test.tsx` edita a definição explícita convertida | `ab6fc85`, `6c1518f` |
 | 3. Proveniência permanece associada a ordem/campo e a premissas/período | `resolvePortfolioSource.test.ts` e `buildPreviewRequest.test.ts` misturam `OBSERVED`, `USER_CORRECTED` e `INFERRED`; `studyEditor.test.tsx` cobre autoria; schema valida a estrutura completa | `ab6fc85`, `199af7a`, `41dbdc6` |
-| 4. Resposta de A após navegação para B conclui A por CAS sem trocar a seleção B | `executionService.test.ts` cobre POST pendente, troca A → B, resposta, permanência em B e reabertura de A com `INTERRUPTED` + `SUCCEEDED` | `401ed10` |
+| 4. Resposta de A após navegação para B conclui A por CAS sem trocar a seleção B | `executionService.test.ts` cobre POST pendente, troca A → B, resposta, permanência em B e reabertura de A com reserva `RUNNING` interna + único terminal `SUCCEEDED` | `401ed10`, `6ae7e7e` |
 | 5. Autoria e editor tipado sobrevivem a persistência/rehidratação | `indexedDbApplicationRepository.test.ts` e `studyEditor.test.tsx` cobrem editar → salvar → reload → editar, grupos, participantes, herança, overrides, operações explícitas e Decimals mantidos como texto | `ab6fc85`, `6c1518f`, `41dbdc6` |
 | 6. Fontes legadas reais alimentam o provider de produção sem binários | `productionRepository.test.ts` inicializa com fonte legada real e verifica original, marcadores e arquivo; `migrations.test.ts` e `recovery.test.ts` preservam compatibilidade e recuperação | `84e3773` |
 
@@ -41,11 +41,32 @@ Base auditada: `b46017b`. A remediação ficou restrita a `web/`; nenhum arquivo
 | `python -O -m pytest -q tests/web_api` via `.venv` | 191 aprovados, 2 ignorados |
 | `python -m ruff check servidor tests/web_api` via `.venv` | aprovado |
 | E2E `study-concurrency.spec.ts` | 4 aprovados |
-| E2E `study-observed.spec.ts` | 1 aprovado após atualizar a expectativa antiga para os dois registros preservados (`INTERRUPTED` + `SUCCEEDED`) |
+| E2E `study-observed.spec.ts` | 1 aprovado; a reserva append-only fica interna e somente o terminal `SUCCEEDED` é visível |
 | `git diff --check` | aprovado no fechamento |
 
 Não foi repetida a regressão global: a rodada foi deliberadamente proporcional ao
 escopo transversal pedido para a remediação.
+
+## Reauditoria final
+
+| Important confirmado | Evidência automatizada | Commit(s) |
+|---|---|---|
+| Correção de operação explícita altera proveniência somente nos campos editados | `studyEditor.test.tsx` edita ID, cliente, direção, data, valor, finalidade e EFX; o request final mantém o prazo não editado como `DADO_OBSERVADO` e projeta o novo valor como `ESTIMATIVA_USUARIO`, com `actionId` e `recordedAt` | `f8732c0`, `ff5ff17` |
+| Fallback de origem para execução legada exige correspondência integral | `ExecutionHistory.test.tsx` prova o fallback apenas com `scenarioId`, revisão e `inputFingerprint` iguais, e exibe `Origem indisponível` após mudança de revisão/origem | `1da7947`, `ff5ff17` |
+| Cada tentativa possui somente um terminal semântico e o log permanece append-only | `executionService.test.ts` cobre sucesso, falha, cancelamento, abandono e A → B; `validation.test.ts` rejeita segundo terminal pelo mesmo `attemptId` ou `request_id`; `ExecutionHistory.test.tsx` oculta a reserva resolvida | `6ae7e7e`, `ff5ff17` |
+
+A correlação nova usa `attemptId` opcional para manter documentos `2.0.0` legados
+válidos. Execuções novas persistem a reserva `RUNNING` e anexam exatamente um
+terminal (`SUCCEEDED`, `FAILED` ou `INTERRUPTED`) com o mesmo `attemptId` e
+`request_id`. `activeReservation` ignora uma reserva quando o terminal correlato já
+existe; a validação semântica impede um segundo terminal.
+
+Gates proporcionais desta reauditoria: 63 testes focados em 8 arquivos aprovados;
+typecheck e lint aprovados; build aprovado com o mesmo aviso conhecido de chunk;
+E2E observado aprovado (1/1). A primeira passagem do typecheck detectou três
+inconsistências estáticas, corrigidas em `ff5ff17`; somente esse gate falho foi
+repetido. Não houve nova regressão global nem repetição dos gates Python, pois
+nenhum contrato Python ou arquivo em `motor/` mudou nesta rodada.
 
 ## Limites honestos carregados
 
