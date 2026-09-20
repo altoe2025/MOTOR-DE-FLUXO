@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 
 import type { ObservedCase } from '../../cases/domain';
+import { calculateOperationalProfile } from '../../profiles/calculateOperationalProfile';
 import { makeObservedCase } from '../../study/fixtures';
 import { TemporalComparison } from './TemporalComparison';
 
@@ -14,6 +15,7 @@ function aCase(id: string, startDate: string, valueBrl: string): ObservedCase {
     ...base, id, revision: 1,
     window: { startDate, endDate: startDate, closingDate: startDate },
     orders: [{ ...base.orders[0]!, id: `${id}-order`, knownDate: startDate, deadlineDate: startDate, valueBrl }],
+    controlTotals: [{ ...base.controlTotals[0]!, valueBrl }],
   };
 }
 
@@ -47,5 +49,29 @@ describe('TemporalComparison', () => {
     expect(screen.getAllByRole('checkbox')[6]).toBeDisabled();
     const text = screen.getByRole('region', { name: 'Comparação temporal' }).textContent?.toLocaleLowerCase('pt-BR') ?? '';
     expect(text).not.toMatch(/cenário-base|hipótese|marginal|criar variante/);
+  });
+
+  // Production break caught: a non-contiguous profile hides its gaps or displays them only after metric values.
+  it('shows profile gaps in coverage and before each value', async () => {
+    const user = userEvent.setup();
+    const first = aCase('case-first', '2026-01-01', '100');
+    const last = aCase('case-last', '2026-01-05', '150');
+    const profile = await calculateOperationalProfile({
+      id: 'profile-gap', ownerSub: first.ownerSub, companyId: first.companyId, version: 1,
+      createdAt: '2026-02-01T12:00:00Z', cases: [first, last],
+      confirmedDistinctSourceSha256: [first.sourceManifest.files[0]!.sha256],
+    });
+    render(<TemporalComparison cases={[first]} profiles={[profile]} />);
+    await user.click(screen.getByRole('checkbox', { name: /case-first.*revisão 1/i }));
+    await user.click(screen.getByRole('checkbox', { name: /perfil operacional.*versão 1/i }));
+
+    const timeline = screen.getByRole('list', { name: 'Linha temporal das observações' });
+    expect(within(timeline).getByText(/3 dia\(s\) de lacuna/)).toBeVisible();
+    const table = screen.getByRole('table', { name: 'Valores da comparação temporal' });
+    const profileCells = within(table).getAllByRole('cell').filter((cell) => cell.textContent?.includes('3 dia(s) de lacuna'));
+    expect(profileCells).toHaveLength(4);
+    for (const cell of profileCells) {
+      expect(cell.textContent?.indexOf('3 dia(s) de lacuna')).toBeLessThan(cell.textContent?.indexOf('Valor:') ?? Number.MAX_SAFE_INTEGER);
+    }
   });
 });

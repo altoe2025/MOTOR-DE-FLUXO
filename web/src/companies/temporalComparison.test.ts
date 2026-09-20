@@ -31,6 +31,7 @@ function observedCase(input: Readonly<{
   orders?: readonly ObservedOrder[];
 }>): ObservedCase {
   const base = makeObservedCase();
+  const sourceSha = [...input.id].map((character) => character.charCodeAt(0).toString(16)).join('').padEnd(64, '0').slice(0, 64);
   return {
     ...base,
     id: input.id,
@@ -42,6 +43,10 @@ function observedCase(input: Readonly<{
       closingDate: input.endDate ?? '2026-01-10',
     },
     orders: input.orders ?? [order(`${input.id}-out`, 'OUT', '100', 2), order(`${input.id}-in`, 'IN', '300', 4)],
+    sourceManifest: {
+      ...base.sourceManifest,
+      files: [{ ...base.sourceManifest.files[0]!, sha256: sourceSha }],
+    },
     observedOutcome: null,
   };
 }
@@ -64,7 +69,7 @@ describe('timeline projections', () => {
     expect(projected).toMatchObject({
       id: 'OBSERVED_CASE:case-a@7', kind: 'OBSERVED_CASE', companyId: 'company-1',
       period: { startDate: '2026-01-01', endDate: '2026-01-10' }, coveredDays: 10,
-      coverageState: 'AVAILABLE', sourceVersion: '7',
+      gapDays: 0, coverageState: 'AVAILABLE', sourceVersion: '7',
       provenance: { sourceId: 'case-a', sourceVersion: '7' },
     });
     expect(projected.metrics.map((metric) => [metric.metricId, metric.unit, metric.definitionVersion, metric.percentileMethod, metric.value])).toEqual([
@@ -97,6 +102,35 @@ describe('timeline projections', () => {
     expect(projected.metrics.find((metric) => metric.metricId === 'TICKET_P50_BRL')?.value).toEqual({
       state: 'NOT_COLLECTED', reason: 'Ticket não coletado.',
     });
+  });
+
+  // Production break caught: profile gaps and metric-specific evidence are flattened into aggregate document provenance.
+  it('preserves profile gaps and distinct evidence refs without inventing refs for unavailable values', async () => {
+    const first = observedCase({ id: 'case-first', startDate: '2026-01-01', endDate: '2026-01-02' });
+    const last = observedCase({ id: 'case-last', startDate: '2026-01-05', endDate: '2026-01-05' });
+    const profile = await calculateOperationalProfile({
+      id: 'profile-gap', ownerSub: first.ownerSub, companyId: first.companyId, version: 2,
+      createdAt: '2026-02-01T12:00:00Z', cases: [first, last],
+    });
+    const withDistinctEvidence = {
+      ...profile,
+      metrics: {
+        ...profile.metrics,
+        volume: { ...profile.metrics.volume, totalBrl: { state: 'AVAILABLE', value: '800', evidence: ['metric:volume'] } },
+        ticketsBrl: { ...profile.metrics.ticketsBrl, p50: { state: 'AVAILABLE', value: '100', evidence: ['metric:ticket'] } },
+        deadlineDays: {
+          ...profile.metrics.deadlineDays,
+          p50ByCount: { state: 'NOT_COLLECTED', reason: 'Prazo ausente.', evidence: [] },
+        },
+      },
+    } as typeof profile;
+
+    const projected = projectProfileForTimeline(withDistinctEvidence);
+    expect(projected.gapDays).toBe(2);
+    expect(projected.metrics.find((metric) => metric.metricId === 'TOTAL_VOLUME_BRL')?.evidenceRefs).toEqual(['metric:volume']);
+    expect(projected.metrics.find((metric) => metric.metricId === 'TICKET_P50_BRL')?.evidenceRefs).toEqual(['metric:ticket']);
+    expect(projected.metrics.find((metric) => metric.metricId === 'DEADLINE_P50_DAYS')?.evidenceRefs).toEqual([]);
+    expect(projected.provenance.evidence).toContain('profile:profile-gap@2');
   });
 });
 
@@ -132,9 +166,11 @@ describe('compareCompanyTimeline', () => {
       observationId: earlier.id,
       period: earlier.period,
       coveredDays: 10,
+      gapDays: 0,
       coverageState: 'AVAILABLE',
       definitionVersion: 'gross-observed-volume-v1',
       provenance: earlier.metrics[0]?.provenance,
+      evidenceRefs: earlier.metrics[0]?.evidenceRefs,
     });
     expect(volume?.deltas).toEqual([{ fromObservationId: earlier.id, toObservationId: later.id, value: '100' }]);
     const ticket = comparison.metricRows.find((row) => row.metricId === 'TICKET_P50_BRL');

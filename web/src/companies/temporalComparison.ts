@@ -24,6 +24,7 @@ export type TimelineMetricObservation = Readonly<{
   percentileMethod: string | null;
   value: TimelineMetricValue;
   provenance: readonly string[];
+  evidenceRefs: readonly string[];
 }>;
 
 export type TimelineObservation = Readonly<{
@@ -34,6 +35,7 @@ export type TimelineObservation = Readonly<{
   sourceVersion: string;
   period: Readonly<{ startDate: string; endDate: string }>;
   coveredDays: number;
+  gapDays: number;
   coverageState: EvidenceValue<unknown>['state'];
   provenance: Readonly<{ sourceId: string; sourceVersion: string; evidence: readonly string[] }>;
   metrics: readonly TimelineMetricObservation[];
@@ -54,10 +56,12 @@ export type TemporalComparison = Readonly<{
       observationId: string;
       period: TimelineObservation['period'];
       coveredDays: number;
+      gapDays: number;
       coverageState: TimelineObservation['coverageState'];
       definitionVersion: string;
       value: TimelineMetricValue;
       provenance: readonly string[];
+      evidenceRefs: readonly string[];
     }>[];
     deltas: readonly Readonly<{
       fromObservationId: string;
@@ -100,11 +104,12 @@ function provenanceOfCase(input: ObservedCase): readonly string[] {
 }
 
 function metric(
-  definition: Omit<TimelineMetricObservation, 'value' | 'provenance'>,
+  definition: Omit<TimelineMetricObservation, 'value' | 'provenance' | 'evidenceRefs'>,
   value: TimelineMetricValue,
   provenance: readonly string[],
+  evidenceRefs: readonly string[],
 ): TimelineMetricObservation {
-  return { ...definition, value, provenance };
+  return { ...definition, value, provenance, evidenceRefs };
 }
 
 export function projectObservedCaseForTimeline(input: ObservedCase): TimelineObservation {
@@ -117,6 +122,11 @@ export function projectObservedCaseForTimeline(input: ObservedCase): TimelineObs
   const deadlines = nearestRank(input.orders.map((order) => new Decimal(
     (dateValue(order.deadlineDate) - dateValue(order.knownDate)) / DAY_MS,
   )), '0.5');
+  const caseEvidence = [`case:${input.id}@${input.revision}`];
+  const totalValue = total.gt(0) ? available(total.toString()) : notCollected('Nenhuma ordem observada no caso.');
+  const directionValue = total.gt(0) ? available(out.div(total).toString()) : notCollected('Direção não disponível sem volume observado.');
+  const ticketValue = tickets === null ? notCollected('Ticket não coletado.') : available(tickets);
+  const deadlineValue = deadlines === null ? notCollected('Prazo não coletado.') : available(deadlines);
   return {
     id: `OBSERVED_CASE:${input.id}@${input.revision}`,
     kind: 'OBSERVED_CASE',
@@ -125,13 +135,14 @@ export function projectObservedCaseForTimeline(input: ObservedCase): TimelineObs
     sourceVersion: String(input.revision),
     period: { startDate: input.window.startDate, endDate: input.window.endDate },
     coveredDays: inclusiveDays(input.window.startDate, input.window.endDate),
+    gapDays: 0,
     coverageState: 'AVAILABLE',
     provenance: { sourceId: input.id, sourceVersion: String(input.revision), evidence: provenance },
     metrics: [
-      metric(METRICS[0], total.gt(0) ? available(total.toString()) : notCollected('Nenhuma ordem observada no caso.'), provenance),
-      metric(METRICS[1], total.gt(0) ? available(out.div(total).toString()) : notCollected('Direção não disponível sem volume observado.'), provenance),
-      metric(METRICS[2], tickets === null ? notCollected('Ticket não coletado.') : available(tickets), provenance),
-      metric(METRICS[3], deadlines === null ? notCollected('Prazo não coletado.') : available(deadlines), provenance),
+      metric(METRICS[0], totalValue, provenance, totalValue.state === 'AVAILABLE' ? caseEvidence : []),
+      metric(METRICS[1], directionValue, provenance, directionValue.state === 'AVAILABLE' ? caseEvidence : []),
+      metric(METRICS[2], ticketValue, provenance, ticketValue.state === 'AVAILABLE' ? caseEvidence : []),
+      metric(METRICS[3], deadlineValue, provenance, deadlineValue.state === 'AVAILABLE' ? caseEvidence : []),
     ],
   };
 }
@@ -163,13 +174,14 @@ export function projectProfileForTimeline(input: OperationalProfileVersion): Tim
     sourceVersion: String(input.version),
     period: { startDate: input.coverage.firstDate, endDate: input.coverage.lastDate },
     coveredDays: input.coverage.coveredDays,
+    gapDays: input.coverage.gapDays,
     coverageState,
     provenance: { sourceId: input.id, sourceVersion: String(input.version), evidence: provenance },
     metrics: [
-      metric(METRICS[0], fromEvidence(input.metrics.volume.totalBrl), provenance),
-      metric(METRICS[1], direction, provenance),
-      metric(ticketDefinition, fromEvidence(input.metrics.ticketsBrl.p50), provenance),
-      metric(deadlineDefinition, fromEvidence(input.metrics.deadlineDays.p50ByCount), provenance),
+      metric(METRICS[0], fromEvidence(input.metrics.volume.totalBrl), provenance, input.metrics.volume.totalBrl.evidence),
+      metric(METRICS[1], direction, provenance, input.metrics.direction.evidence),
+      metric(ticketDefinition, fromEvidence(input.metrics.ticketsBrl.p50), provenance, input.metrics.ticketsBrl.p50.evidence),
+      metric(deadlineDefinition, fromEvidence(input.metrics.deadlineDays.p50ByCount), provenance, input.metrics.deadlineDays.p50ByCount.evidence),
     ],
   };
 }
@@ -216,10 +228,12 @@ export function compareCompanyTimeline(items: readonly TemporalComparisonItem[])
         observationId: observation.id,
         period: observation.period,
         coveredDays: observation.coveredDays,
+        gapDays: observation.gapDays,
         coverageState: observation.coverageState,
         definitionVersion: found?.definitionVersion ?? 'INCOMPATIBLE',
         value: found?.value ?? notCollected('Métrica não coletada.'),
         provenance: found?.provenance ?? observation.provenance.evidence,
+        evidenceRefs: found?.evidenceRefs ?? [],
       };
     });
     const deltas = compatible ? values.slice(1).map((current, index) => {

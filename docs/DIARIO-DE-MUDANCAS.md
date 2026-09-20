@@ -70,6 +70,25 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 
 ---
 
+## 2026-09-20 — Lacunas e evidência por métrica na comparação temporal (MOT-75)
+
+1. **Sintoma.** A comparação temporal mostrava dias cobertos, mas ocultava lacunas
+   de um perfil formado por casos descontínuos. Além disso, cada métrica projetada
+   recebia apenas a proveniência agregada do documento, perdendo as referências de
+   `EvidenceValue.evidence` que sustentavam especificamente aquele valor.
+2. **Causa.** A projeção temporal não carregava `gapDays` e reutilizava um único
+   array de proveniência para todas as métricas do perfil.
+3. **O que foi feito.** `TimelineObservation` e cada valor alinhado passaram a
+   preservar `gapDays`; casos individuais registram zero pela janela contínua do
+   próprio contrato e perfis usam `coverage.gapDays`. A linha temporal e a tabela
+   exibem lacunas antes dos valores e diferenças. Cada métrica também conserva suas
+   referências próprias, separadas da proveniência de documento/fonte, inclusive
+   mantendo lista vazia quando a indisponibilidade não registra referência.
+4. **O que isso invalida.** Invalida leituras da primeira entrega da MOT-75 que
+   inferiam continuidade apenas pelos dias cobertos ou tratavam proveniência
+   agregada como evidência de cada métrica. Compatibilidade, deltas, motor, servidor,
+   diagnóstico, persistência e limites da etapa seguinte permanecem inalterados.
+
 ## 2026-09-20 — Comparação temporal restrita de casos e perfis (MOT-75)
 
 1. **Sintoma.** Casos observados e versões imutáveis de Perfil Operacional estavam

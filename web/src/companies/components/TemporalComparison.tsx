@@ -70,7 +70,7 @@ export function TemporalComparison({ cases, profiles }: {
             <ol aria-label="Linha temporal das observações">
               {comparison.observations.map((item) => (
                 <li key={item.id}>
-                  <strong>{item.label}</strong> — {item.period.startDate} a {item.period.endDate}; {item.coveredDays} dia(s) coberto(s); {item.coverageState}.
+                  <strong>{item.label}</strong> — {item.period.startDate} a {item.period.endDate}; {item.coveredDays} dia(s) coberto(s); {item.gapDays} dia(s) de lacuna; {item.coverageState}.
                   <details><summary>Proveniência</summary><ul>{item.provenance.evidence.map((evidence) => <li key={evidence}>{evidence}</li>)}</ul></details>
                 </li>
               ))}
@@ -88,7 +88,18 @@ export function TemporalComparison({ cases, profiles }: {
                 <tbody>{comparison.metricRows.map((row) => (
                   <tr key={row.metricId}>
                     <th scope="row">{row.label}</th>
-                    {row.values.map((entry) => <td key={entry.observationId}>{formatValue(entry.value, row.unit)}</td>)}
+                    {row.values.map((entry) => (
+                      <td key={entry.observationId}>
+                        <span>{entry.coveredDays} dia(s) coberto(s); {entry.gapDays} dia(s) de lacuna; {entry.coverageState}.</span><br />
+                        <span>Valor: {formatValue(entry.value, row.unit)}</span>
+                        <details>
+                          <summary>Evidência do valor</summary>
+                          {entry.evidenceRefs.length === 0
+                            ? <p>Sem referência específica registrada.</p>
+                            : <ul>{entry.evidenceRefs.map((evidence) => <li key={evidence}>{evidence}</li>)}</ul>}
+                        </details>
+                      </td>
+                    ))}
                     <td>{row.deltas.length === 0 ? 'indisponível' : row.deltas.map((delta) => delta.value === undefined ? `indisponível: ${delta.unavailableReason}` : formatValue({ state: 'AVAILABLE', value: delta.value }, row.unit)).join(' · ')}</td>
                   </tr>
                 ))}</tbody>
