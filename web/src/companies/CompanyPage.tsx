@@ -24,7 +24,7 @@ export function CompanyPage() {
         <div><dt>Lacunas</dt><dd>{overview.coverage === null ? 'não coletado' : `${overview.coverage.gapDays} dias`}</dd></div>
         <div><dt>Volume OUT</dt><dd>{valueOrNotCollected(overview.volume.outBrl)}</dd></div>
         <div><dt>Volume IN</dt><dd>{valueOrNotCollected(overview.volume.inBrl)}</dd></div>
-        <div><dt>Qualidade</dt><dd>{overview.quality.blockerCount} bloqueios · {overview.quality.warningCount} avisos · {overview.quality.notCollectedCount} não coletados</dd></div>
+        <div><dt>Qualidade</dt><dd>{overview.caseCount === 0 ? 'não coletado' : `${overview.quality.blockerCount} bloqueios · ${overview.quality.warningCount} avisos · ${overview.quality.notCollectedCount} não coletados`}</dd></div>
         <div><dt>Perfil mais recente</dt><dd>{overview.latestProfile === null ? 'não coletado' : `versão ${overview.latestProfile.version}`}</dd></div>
         <div><dt>Estudos relacionados</dt><dd>{overview.relatedStudies.length === 0 ? 'nenhum estudo' : overview.relatedStudies.length}</dd></div>
       </dl>

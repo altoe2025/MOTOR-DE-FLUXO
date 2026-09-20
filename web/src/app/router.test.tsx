@@ -235,6 +235,17 @@ describe('application routes', () => {
     expect(screen.queryByText('Empresa secreta')).not.toBeInTheDocument();
   });
 
+  it('não representa qualidade ausente como zero quando a empresa não tem casos', async () => {
+    const company: CompanyRecord = {
+      id: 'company-empty', ownerSub: 'user-a', displayName: 'Empresa sem casos', aliases: [],
+      createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', revision: 1,
+    };
+    renderAppAt('/empresas/company-empty', client(session('user-a')), new RepositoryDouble([company]));
+    const quality = (await screen.findByText('Qualidade')).closest('div');
+    expect(quality).toHaveTextContent('não coletado');
+    expect(quality).not.toHaveTextContent('0 bloqueios');
+  });
+
   it('renderiza casos em tabela semântica e aponta estudo pelo snapshot histórico', async () => {
     const company: CompanyRecord = {
       id: 'company-1', ownerSub: 'user-a', displayName: 'Câmbio Exemplo', aliases: [],

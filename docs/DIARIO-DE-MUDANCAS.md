@@ -70,6 +70,19 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 
 ---
 
+## 2026-09-20 — Ausência de qualidade sem zero inventado (MOT-68)
+
+1. **Sintoma.** A visão geral de uma empresa sem casos exibia `0 bloqueios · 0
+   avisos · 0 não coletados` no campo Qualidade.
+2. **Causa.** O componente formatava sempre os contadores agregados, mesmo quando
+   não existia caso que sustentasse uma avaliação de qualidade.
+3. **O que foi feito.** A branch `codex/frontend-etapa-3` agora exibe “não coletado”
+   quando a empresa não tem casos e preserva as contagens quando existe evidência.
+   Uma regressão de rota/componente cobre explicitamente o estado vazio.
+4. **O que isso invalida.** Somente a apresentação de zeros como avaliação de
+   qualidade para empresas sem casos. Casos existentes, filtros, vínculos,
+   persistência, motor e números publicados não mudam.
+
 ## 2026-09-20 — Navegação de empresas, casos e vínculos históricos (MOT-68)
 
 1. **Sintoma.** A aplicação ainda expunha destinos internos da Etapa 2 como
