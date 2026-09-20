@@ -112,6 +112,7 @@ function request(study: StudyDocument, scenario: ScenarioDocument, groups: reado
     }),
   ];
   const period = scenario.period.httpPeriod;
+  const recordedAt = new Date().toISOString();
   return {
     preparation_version: '1.0.0', request_id: uuid(), study_id: study.id,
     scenario_id: scenario.id, scenario_revision: scenario.revision,
@@ -127,7 +128,7 @@ function request(study: StudyDocument, scenario: ScenarioDocument, groups: reado
         source: sourceKind === 'PADRAO_SINTETICO'
           ? 'catálogo oficial de exemplos'
           : 'autoria manual no editor',
-        recorded_at: new Date().toISOString(),
+        recorded_at: recordedAt,
       }])),
     },
   };

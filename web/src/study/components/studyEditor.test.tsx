@@ -15,6 +15,7 @@ import {
 import { requiredBuildSha } from '../sourceConfiguration';
 import { buildPreviewRequest, type PreviewRequestProvenance } from '../../preparation/buildPreviewRequest';
 import { resolvePortfolioSource } from '../../preparation/resolvePortfolioSource';
+import type { PortfolioSourceDraft } from './PortfolioSourceSelector';
 import { StudyEditor } from './StudyEditor';
 import { StudyList } from './StudyList';
 
@@ -74,11 +75,20 @@ describe('StudyEditor', () => {
     const { onSourceChange } = await subject(); const user = userEvent.setup();
     expect(screen.getAllByRole('option')).toHaveLength(5);
     await user.selectOptions(screen.getByLabelText('Escolha do exemplo sintético'), 'psp-inbound');
+    let instant = 0;
+    const clock = vi.spyOn(Date.prototype, 'toISOString').mockImplementation(
+      () => `2026-09-19T12:00:00.${String(instant++).padStart(3, '0')}Z`,
+    );
     await user.click(screen.getByRole('button', { name: 'Preparar exemplo' }));
+    clock.mockRestore();
     expect(onSourceChange).toHaveBeenCalledWith(expect.objectContaining({
       kind: 'SYNTHETIC', exampleId: 'psp-inbound',
       preparation: expect.objectContaining({ input: expect.objectContaining({ participants: expect.any(Array) }) }),
     }));
+    const applied = onSourceChange.mock.calls[0]![0] as PortfolioSourceDraft;
+    if (applied.kind !== 'SYNTHETIC') throw new Error('draft sintético esperado');
+    const preparation = applied.preparation;
+    expect(new Set(Object.values(preparation.input.sources).map((source) => source.recorded_at)).size).toBe(1);
   });
 
   it('prepara autoria manual com grupos, participante, herança e overrides como Decimal textual', async () => {

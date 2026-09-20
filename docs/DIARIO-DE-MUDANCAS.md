@@ -70,6 +70,20 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 
 ---
 
+## 2026-09-20 — Instante único na proveniência de preparação (MOT-33)
+
+1. **Sintoma.** O E2E sintético podia bloquear a execução com “Proveniência agregada
+   ambígua para as ordens do snapshot” após preparar um exemplo válido.
+2. **Causa.** O editor capturava `new Date()` separadamente para cada path do mesmo
+   request de preparação; quando o `map` atravessava um milissegundo, uma única
+   origem ganhava dois instantes e parecia heterogênea ao builder da execução.
+3. **O que foi feito.** `PortfolioSourceSelector.tsx` agora captura um único instante
+   por request, e `studyEditor.test.tsx` cobre a atomicidade desse registro mesmo
+   quando o relógio avança entre chamadas.
+4. **O que isso invalida.** Nada em números, regras do motor ou contratos HTTP. Fica
+   invalidada apenas a leitura de que esse bloqueio representava proveniência
+   materialmente heterogênea.
+
 ## 2026-09-19 — Aceite condicional e handoff da Etapa 2 v2 (MOT-33)
 
 1. **Sintoma.** A MOT-32 havia fechado o percurso integrado em `53e74f1` e o fix de
