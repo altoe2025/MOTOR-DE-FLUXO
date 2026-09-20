@@ -70,6 +70,22 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 
 ---
 
+## 2026-09-20 — Análise diagnóstica sem import privado e sem prazo zero inventado (MOT-71)
+
+1. **Sintoma.** O agregador T6 importava o percentil por um caminho interno de
+   `motor` e publicava prazo disponível igual a zero quando a coorte medida não
+   continha volume.
+2. **Causa.** A primeira implementação reutilizou diretamente a função estatística
+   interna e tratou o caso vazio com o mesmo valor neutro usado antes da construção
+   do `EvidenceMetric`.
+3. **O que foi feito.** O diagnóstico agora implementa localmente o nearest-rank
+   empírico com `Decimal`, sem importar `motor`. Coorte vazia torna prazo, D+0,
+   espera, HHI e maior participação `INCOMPATIBLE`, com razão e referências
+   estáveis. Regressões cobrem a fronteira de imports e o estado vazio.
+4. **O que isso invalida.** Invalida somente a disponibilidade artificial de
+   `deadline_days=0` para carteira medida vazia e a dependência interna do motor.
+   Carteiras com volume, resultados do motor e contratos públicos não mudam.
+
 ## 2026-09-20 — Sete eixos puros do diagnóstico robusto (MOT-71)
 
 1. **Sintoma.** O contrato do diagnóstico já publicava os sete eixos, mas ainda não

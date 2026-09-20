@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import ast
 from copy import deepcopy
+from pathlib import Path
 
 import pytest
 
@@ -613,11 +615,41 @@ def test_analysis_is_deterministic_bounded_and_does_not_import_motor_privates():
     with pytest.raises(ValueError, match="1, 10, 30 ou 100"):
         analyze_diagnostic_repetitions((mixed, mixed))
 
-    import servidor.diagnostics.analysis as module
-
-    motor_dependencies = {
-        value.__module__
-        for value in vars(module).values()
-        if getattr(value, "__module__", "").startswith("motor")
+    source = Path("servidor/diagnostics/analysis.py").read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    imported_modules = {
+        node.module
+        for node in ast.walk(tree)
+        if isinstance(node, ast.ImportFrom) and node.module is not None
     }
-    assert motor_dependencies == {"motor.analise.estatistica"}
+    imported_modules.update(
+        alias.name
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Import)
+        for alias in node.names
+    )
+    assert not {name for name in imported_modules if name.startswith("motor")}
+
+
+def test_empty_measured_portfolio_reports_unavailable_ratios_and_timing():
+    request = _request([], window=1, horizon=0)
+    envelope = _preview(
+        request,
+        [],
+        gross="0",
+        matched="0",
+        intra="0",
+        inter="0",
+        remitted="0",
+        repetition_index=14,
+    )
+    axes = analyze_diagnostic_repetitions(
+        (RepetitionInput(request=request, envelope=envelope, duration_ms=1),)
+    )
+
+    assert axes.temporal_compatibility.deadline_days.state == "INCOMPATIBLE"
+    assert axes.temporal_compatibility.deadline_days.reason == "PORTFOLIO_HAS_NO_VOLUME"
+    assert axes.temporal_compatibility.same_day_fraction.state == "INCOMPATIBLE"
+    assert axes.temporal_compatibility.weighted_wait_days.state == "INCOMPATIBLE"
+    assert axes.composition_dependency.hhi.state == "INCOMPATIBLE"
+    assert axes.composition_dependency.largest_share.state == "INCOMPATIBLE"

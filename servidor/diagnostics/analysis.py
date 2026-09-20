@@ -7,11 +7,10 @@ import json
 from collections import defaultdict
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from decimal import Decimal
+from decimal import ROUND_CEILING, Decimal
 from types import MappingProxyType
 from typing import Literal, cast
 
-from motor.analise.estatistica import percentil_empirico
 from servidor.contracts.diagnostics import (
     CompositionDependencyAxis,
     CrossBorderResidualAxis,
@@ -152,15 +151,29 @@ def _distribution(values: tuple[Decimal, ...], evidence: str) -> dict[str, objec
     minimum, maximum = min(values), max(values)
     summary = DistributionSummary(
         minimum=_decimal_text(minimum),
-        p10=_decimal_text(percentil_empirico(values, Decimal(".10"))),
-        p25=_decimal_text(percentil_empirico(values, Decimal(".25"))),
-        p50=_decimal_text(percentil_empirico(values, Decimal(".50"))),
-        p75=_decimal_text(percentil_empirico(values, Decimal(".75"))),
-        p90=_decimal_text(percentil_empirico(values, Decimal(".90"))),
+        p10=_decimal_text(_empirical_percentile(values, Decimal(".10"))),
+        p25=_decimal_text(_empirical_percentile(values, Decimal(".25"))),
+        p50=_decimal_text(_empirical_percentile(values, Decimal(".50"))),
+        p75=_decimal_text(_empirical_percentile(values, Decimal(".75"))),
+        p90=_decimal_text(_empirical_percentile(values, Decimal(".90"))),
         maximum=_decimal_text(maximum),
         amplitude=_decimal_text(maximum - minimum),
     )
     return {"state": "AVAILABLE", "value": summary, "evidence": [evidence]}
+
+
+def _empirical_percentile(values: tuple[Decimal, ...], q: Decimal) -> Decimal:
+    """Observação no posto ``max(1, ceil(q*n))``, sem interpolação."""
+    ordered = tuple(sorted(values))
+    if not ordered:
+        raise ValueError("percentil exige ao menos uma observação")
+    if not q.is_finite() or not Decimal(0) <= q <= Decimal(1):
+        raise ValueError("q deve estar em [0,1]")
+    rank = max(
+        1,
+        int((q * len(ordered)).to_integral_value(rounding=ROUND_CEILING)),
+    )
+    return ordered[rank - 1]
 
 
 def _weighted_percentile(
@@ -356,19 +369,33 @@ def analyze_diagnostic_repetitions(
             "deadline_days": _available(
                 deadline_days,
                 "/selected_execution/input_snapshot/cenario/ordens",
+            )
+            if gross
+            else _incompatible(
+                "PORTFOLIO_HAS_NO_VOLUME",
+                "/axes/structural_potential/gross_out_brl",
+                "/axes/structural_potential/gross_in_brl",
             ),
             "same_day_fraction": _available(
                 same_day_volume / gross,
                 "/selected_execution/input_snapshot/cenario/ordens",
             )
             if gross
-            else _incompatible("PORTFOLIO_HAS_NO_VOLUME"),
+            else _incompatible(
+                "PORTFOLIO_HAS_NO_VOLUME",
+                "/axes/structural_potential/gross_out_brl",
+                "/axes/structural_potential/gross_in_brl",
+            ),
             "weighted_wait_days": _available(
                 waited / gross,
                 "/selected_execution/result/agregado/execucao_completa/ciclos",
             )
             if gross
-            else _incompatible("PORTFOLIO_HAS_NO_VOLUME"),
+            else _incompatible(
+                "PORTFOLIO_HAS_NO_VOLUME",
+                "/axes/structural_potential/gross_out_brl",
+                "/axes/structural_potential/gross_in_brl",
+            ),
             "window_closures": _available(
                 window_closures,
                 "/selected_execution/result/agregado/execucao_completa/ciclos",
@@ -451,12 +478,20 @@ def analyze_diagnostic_repetitions(
                 "/axes/composition_dependency/participants",
             )
             if shares
-            else _incompatible("PORTFOLIO_HAS_NO_VOLUME"),
+            else _incompatible(
+                "PORTFOLIO_HAS_NO_VOLUME",
+                "/axes/structural_potential/gross_out_brl",
+                "/axes/structural_potential/gross_in_brl",
+            ),
             "largest_share": _available(
                 max(shares), "/axes/composition_dependency/participants"
             )
             if shares
-            else _incompatible("PORTFOLIO_HAS_NO_VOLUME"),
+            else _incompatible(
+                "PORTFOLIO_HAS_NO_VOLUME",
+                "/axes/structural_potential/gross_out_brl",
+                "/axes/structural_potential/gross_in_brl",
+            ),
             "participants": participants,
         }
     )
