@@ -211,6 +211,46 @@
         }
       ]
     },
+    "ScenarioInputProvenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "premises": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "windowDays": { "$ref": "https://motor-de-fluxo.local/cases/observedCase.schema.json#/$defs/FieldProvenance" },
+            "costs": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "iof_out": { "$ref": "https://motor-de-fluxo.local/cases/observedCase.schema.json#/$defs/FieldProvenance" },
+                "iof_in": { "$ref": "https://motor-de-fluxo.local/cases/observedCase.schema.json#/$defs/FieldProvenance" },
+                "carry_cnr": { "$ref": "https://motor-de-fluxo.local/cases/observedCase.schema.json#/$defs/FieldProvenance" },
+                "custo_fixo_remessa": { "$ref": "https://motor-de-fluxo.local/cases/observedCase.schema.json#/$defs/FieldProvenance" },
+                "custo_oportunidade_aa": { "$ref": "https://motor-de-fluxo.local/cases/observedCase.schema.json#/$defs/FieldProvenance" },
+                "spread_rail_bps": { "$ref": "https://motor-de-fluxo.local/cases/observedCase.schema.json#/$defs/FieldProvenance" },
+                "ptax": { "$ref": "https://motor-de-fluxo.local/cases/observedCase.schema.json#/$defs/FieldProvenance" }
+              },
+              "required": [
+                "iof_out", "iof_in", "carry_cnr", "custo_fixo_remessa",
+                "custo_oportunidade_aa", "spread_rail_bps", "ptax"
+              ]
+            }
+          },
+          "required": ["windowDays", "costs"]
+        },
+        "period": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "horizonDays": { "$ref": "https://motor-de-fluxo.local/cases/observedCase.schema.json#/$defs/FieldProvenance" }
+          },
+          "required": ["horizonDays"]
+        }
+      },
+      "required": ["premises", "period"]
+    },
     "ScenarioDocument": {
       "type": "object",
       "additionalProperties": false,
@@ -221,7 +261,7 @@
         "sourceSnapshot": { "$ref": "#/$defs/PortfolioSourceSnapshot" },
         "premises": { "$ref": "#/$defs/PremisesDocument" },
         "period": { "$ref": "#/$defs/PeriodDocument" },
-        "inputProvenance": { "type": "object" },
+        "inputProvenance": { "$ref": "#/$defs/ScenarioInputProvenance" },
         "inputFingerprint": { "$ref": "#/$defs/Digest" }
       },
       "required": [
