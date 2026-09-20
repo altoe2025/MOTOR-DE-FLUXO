@@ -1,8 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import type { CompanyRecord, ObservedCase } from '../cases/domain';
+import type { OperationalProfileVersion } from '../profiles/domain';
 import type {
   ApplicationRepository,
+  AppendProfileVersionMutation,
   CASMutation,
   ConfirmObservedCaseMutation,
 } from '../storage/applicationRepository';
@@ -57,6 +59,11 @@ class RepositoryDouble implements ApplicationRepository {
   async getObservedCase(): Promise<ObservedCase | null> { return null; }
   async confirmObservedCase(input: ConfirmObservedCaseMutation): Promise<ObservedCase> {
     return input.observedCase;
+  }
+  async listOperationalProfileVersions(): Promise<OperationalProfileVersion[]> { return []; }
+  async getOperationalProfileVersion(): Promise<OperationalProfileVersion | null> { return null; }
+  async appendOperationalProfileVersion(input: AppendProfileVersionMutation): Promise<OperationalProfileVersion> {
+    return input.document;
   }
   async listStudies(): Promise<StudyDocument[]> { return []; }
   async getStudy(id: string): Promise<StudyDocument | null> {

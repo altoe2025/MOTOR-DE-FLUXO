@@ -3,6 +3,8 @@ import addFormats from 'ajv-formats';
 
 import httpSchemas from '../api/schemas.json';
 import observedCaseSchema from '../cases/observedCase.schema.json';
+import operationalProfileSchema from '../profiles/operationalProfile.schema.json';
+import { validateOperationalProfile } from '../profiles/validation';
 import {
   canonical,
   canonicalInputSnapshot,
@@ -14,6 +16,7 @@ import type {
   ExecutionRecord,
   PreviewExecutionRecord,
   StudyDocument,
+  StudyDocumentV2,
   StudyDocumentV3,
   StudyValidation,
   StudyValidationIssue,
@@ -24,9 +27,13 @@ const ajv = new Ajv2020({ allErrors: true, strict: true });
 addFormats(ajv);
 ajv.addSchema(httpSchemas);
 ajv.addSchema(observedCaseSchema);
-const validateStudySchema: ValidateFunction<StudyDocument> = ajv.compile(studySchema);
+ajv.addSchema(operationalProfileSchema);
+const validateStudyV2Schema: ValidateFunction<StudyDocumentV2> = ajv.compile(studySchema);
 const validateExecutionSchema: ValidateFunction<ExecutionRecord> = ajv.compile({
   $ref: `${studySchema.$id}#/$defs/ExecutionRecord`,
+});
+const validatePreviewExecutionSchema = ajv.compile({
+  $ref: `${studySchema.$id}#/$defs/PreviewExecutionRecord`,
 });
 const validateStudyV3Schema: ValidateFunction<StudyDocumentV3> = ajv.compile({
   $ref: `${studySchema.$id}#/$defs/StudyDocumentV3`,
@@ -77,7 +84,7 @@ export function parseStudyV3(value: unknown): StudyDocumentV3 {
   let candidate: unknown = value;
   if (value !== null && typeof value === 'object' && 'schemaVersion' in value
     && value.schemaVersion === '2.0.0') {
-    if (!validateStudySchema(value)) throw new Error('Documento de estudo V3 inválido.');
+    if (!validateStudyV2Schema(value)) throw new Error('Documento de estudo V3 inválido.');
     candidate = migrateStudyDocumentV2(value);
   }
   if (!validateStudyV3Schema(candidate)) throw new Error('Documento de estudo V3 inválido.');
@@ -127,16 +134,20 @@ export function validateExecutionRecord(
   value: unknown,
   study: StudyDocument,
 ): StudyValidation<ExecutionRecord> {
-  if (!validateExecutionSchema(value)) {
-    return { ok: false, issues: (validateExecutionSchema.errors ?? []).map(structuralIssue) };
+  const validator = value !== null && typeof value === 'object' && 'kind' in value
+    ? validatePreviewExecutionSchema
+    : validateExecutionSchema;
+  if (!validator(value)) {
+    return { ok: false, issues: (validator.errors ?? []).map(structuralIssue) };
   }
-  if (!envelopeIsCompatible(value, study)) {
+  const execution = value as ExecutionRecord;
+  if (!envelopeIsCompatible(execution, study)) {
     return {
       ok: false,
       issues: [issue('/envelope', 'INCOMPATIBLE_ENVELOPE', 'Envelope incompatível com a execução.')],
     };
   }
-  if (!executionSnapshotIsCompatible(value)) {
+  if (!executionSnapshotIsCompatible(execution)) {
     return {
       ok: false,
       issues: [issue(
@@ -146,15 +157,15 @@ export function validateExecutionRecord(
       )],
     };
   }
-  return { ok: true, value };
+  return { ok: true, value: execution };
 }
 
 export async function validateStudyDocument(
   value: unknown,
   expectedOwnerSub?: string,
 ): Promise<StudyValidation<StudyDocument>> {
-  if (!validateStudySchema(value)) {
-    return { ok: false, issues: (validateStudySchema.errors ?? []).map(structuralIssue) };
+  if (!validateStudyV3Schema(value)) {
+    return { ok: false, issues: (validateStudyV3Schema.errors ?? []).map(structuralIssue) };
   }
   const issues: StudyValidationIssue[] = [];
   if (expectedOwnerSub !== undefined && value.ownerSub !== expectedOwnerSub) {
@@ -166,6 +177,34 @@ export async function validateStudyDocument(
   }
   if (!scenarioIds.includes(value.baseScenarioId)) {
     issues.push(issue('/baseScenarioId', 'BASE_SCENARIO_MISSING', 'Cenário base ausente.'));
+  }
+  const evidenceIds = new Map<string, string>();
+  for (const [index, evidence] of value.evidenceSnapshots.entries()) {
+    const profileValidation = await validateOperationalProfile(evidence.profile);
+    if (!profileValidation.ok) {
+      issues.push(issue(
+        `/evidenceSnapshots/${index}/profile`,
+        'INVALID_STRUCTURE',
+        'Perfil Operacional preservado é inválido.',
+      ));
+    }
+    if (evidence.profile.ownerSub !== value.ownerSub) {
+      issues.push(issue(
+        `/evidenceSnapshots/${index}/profile/ownerSub`,
+        'OWNER_MISMATCH',
+        'Owner do Perfil Operacional diverge do estudo.',
+      ));
+    }
+    const previousFingerprint = evidenceIds.get(evidence.profile.id);
+    if (previousFingerprint !== undefined
+      && previousFingerprint !== evidence.profile.documentFingerprint) {
+      issues.push(issue(
+        `/evidenceSnapshots/${index}/profile/id`,
+        'DUPLICATE_ID',
+        'Identificador de Perfil Operacional possui evidências divergentes.',
+      ));
+    }
+    evidenceIds.set(evidence.profile.id, evidence.profile.documentFingerprint);
   }
   for (const [index, scenario] of value.scenarios.entries()) {
     if (scenario.sourceSnapshot.source.kind === 'SYNTHETIC') {

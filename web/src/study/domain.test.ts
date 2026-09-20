@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  attachOperationalProfileEvidence,
   appendExecution,
   createStudy,
   duplicateStudy,
@@ -8,6 +9,7 @@ import {
   renameStudy,
   updateScenario,
 } from './domain';
+import { calculateOperationalProfile } from '../profiles/calculateOperationalProfile';
 import { fingerprintPortfolioSource } from './fingerprints';
 import {
   FIXTURE_NOW,
@@ -18,7 +20,8 @@ import {
   makeScenarioDraft,
   makeSyntheticSnapshot,
 } from './fixtures';
-import type { DeepMutable, ExecutionRecord, StudyDocument } from './model';
+import type { DeepMutable, ExecutionRecord, PreviewExecutionRecord, StudyDocument } from './model';
+import type { OperationalProfileVersion } from '../profiles/domain';
 
 const NEXT = '2026-09-19T13:00:00Z';
 
@@ -64,7 +67,7 @@ function executionFor(study: StudyDocument): ExecutionRecord {
   };
 }
 
-describe('agregado StudyDocument v2', () => {
+describe('agregado StudyDocument V3', () => {
   it.each([
     ['OBSERVED_CASE', makeObservedSnapshot()],
     ['AUTHORED', makeAuthoredSnapshot()],
@@ -212,7 +215,7 @@ describe('agregado StudyDocument v2', () => {
     expect(original.executions).toEqual([]);
     expect(appended.executions).toHaveLength(1);
     expect(() => {
-      (appended.executions[0] as DeepMutable<ExecutionRecord>).status = 'FAILED';
+      (appended.executions[0] as unknown as DeepMutable<PreviewExecutionRecord>).status = 'FAILED';
     }).toThrow();
     expect(() => {
       (existing as DeepMutable<ExecutionRecord>).status = 'FAILED';
@@ -237,5 +240,59 @@ describe('agregado StudyDocument v2', () => {
     incompatible.requestSnapshot.study_id = '00000000-0000-4000-8000-000000000099';
     await expect(appendExecution(original, incompatible, NEXT))
       .rejects.toThrow('Documento de estudo inválido');
+  });
+});
+
+describe('evidência de Perfil Operacional no Study V3', () => {
+  async function operationalProfile(
+    overrides: Partial<{ id: string; createdAt: string }> = {},
+  ): Promise<OperationalProfileVersion> {
+    const observed = { ...makeObservedCase(), ownerSub: FIXTURE_OWNER };
+    return calculateOperationalProfile({
+      id: overrides.id ?? 'profile-evidence-1',
+      ownerSub: FIXTURE_OWNER,
+      companyId: observed.companyId,
+      version: 1,
+      createdAt: overrides.createdAt ?? '2026-09-20T14:00:00Z',
+      cases: [observed],
+    });
+  }
+
+  it('attaches a complete detached profile and is idempotent by id plus fingerprint', async () => {
+    const original = await studyWith();
+    const profile = await operationalProfile();
+    const attached = await attachOperationalProfileEvidence(
+      original,
+      profile,
+      '2026-09-20T15:00:00Z',
+    );
+
+    expect(attached).not.toBe(original);
+    expect(attached.evidenceSnapshots).toEqual([{
+      kind: 'OPERATIONAL_PROFILE',
+      capturedAt: '2026-09-20T15:00:00Z',
+      profile,
+    }]);
+    expect(attached.evidenceSnapshots[0]!.profile).not.toBe(profile);
+    expect(Object.isFrozen(attached.evidenceSnapshots[0]!.profile)).toBe(true);
+    expect(await attachOperationalProfileEvidence(
+      attached,
+      structuredClone(profile),
+      '2026-09-20T16:00:00Z',
+    )).toBe(attached);
+  });
+
+  it('rejects an invalid profile and the same profile id with another valid fingerprint', async () => {
+    const original = await studyWith();
+    const profile = await operationalProfile();
+    const attached = await attachOperationalProfileEvidence(original, profile, NEXT);
+    const changed = await operationalProfile({ createdAt: '2026-09-20T18:00:00Z' });
+    await expect(attachOperationalProfileEvidence(attached, changed, NEXT))
+      .rejects.toThrow('Perfil Operacional');
+
+    const corrupt = structuredClone(profile) as DeepMutable<OperationalProfileVersion>;
+    corrupt.documentFingerprint = '0'.repeat(64);
+    await expect(attachOperationalProfileEvidence(original, corrupt, NEXT))
+      .rejects.toThrow('Perfil Operacional');
   });
 });

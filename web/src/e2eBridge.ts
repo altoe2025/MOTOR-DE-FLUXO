@@ -1,7 +1,7 @@
 import { IndexedDbApplicationRepository } from './storage/indexedDbApplicationRepository';
 import type { CompanyRecord, ObservedCase } from './cases/domain';
 import { recoverInterruptedExecution, readRecoveredDraft } from './storage/migrations';
-import type { DeepMutable, ExecutionRecord, StudyDocument } from './study/model';
+import type { DeepMutable, PreviewExecutionRecord, StudyDocument } from './study/model';
 
 const E2E_OWNER_SUB = '00000000-0000-4000-8000-000000000021';
 
@@ -126,7 +126,8 @@ export function installE2EBridge(): void {
             provenance[`/ordens/${index}/${field}`] = evidence;
           }
         });
-        const running: ExecutionRecord = {
+        const running: PreviewExecutionRecord = {
+          kind: 'PREVIEW',
           id: crypto.randomUUID(), scenarioId: scenario.id, scenarioRevision: scenario.revision,
           inputFingerprint: scenario.inputFingerprint,
           requestSnapshot: {
@@ -141,7 +142,7 @@ export function installE2EBridge(): void {
         const pending = structuredClone(original) as DeepMutable<StudyDocument>;
         pending.revision += 1;
         pending.updatedAt = '2026-09-19T12:00:00Z';
-        pending.executions.push(running as DeepMutable<ExecutionRecord>);
+        pending.executions.push(running as DeepMutable<PreviewExecutionRecord>);
         await repository.saveStudy({ expectedRevision: original.revision, operationId: crypto.randomUUID(), document: pending });
         const recovered = await recoverInterruptedExecution(repository, original.id, pending.revision, crypto.randomUUID(), '2026-09-19T12:01:00Z');
         return recovered.executions.map((execution) => execution.status);

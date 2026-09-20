@@ -3,10 +3,10 @@ import { createStudy } from '../study/domain';
 import { canonical } from '../study/fingerprints';
 import type {
   DeepMutable,
-  ExecutionRecord,
   PortfolioSourceSnapshot,
   PreviewEnvelope,
   StudyDocument,
+  PreviewExecutionRecord,
 } from '../study/model';
 import { validateStudyDocument } from '../study/validation';
 import type { ApplicationRepository } from './applicationRepository';
@@ -17,7 +17,7 @@ import {
   SchemaUnsupportedError,
 } from './errors';
 
-const DATABASE_SCHEMA_VERSION = 1;
+const DATABASE_SCHEMA_VERSION = 2;
 
 export type LegacySource = Readonly<{
   sourceKey: string;
@@ -287,7 +287,7 @@ async function convertStudy(source: LegacySource, ownerSub: string): Promise<Stu
     now: legacy.created_at,
   });
   const scenario = converted.scenarios[0]!;
-  const executions: ExecutionRecord[] = legacy.results.map((value) => {
+  const executions: PreviewExecutionRecord[] = legacy.results.map((value) => {
     if (!validatePreviewEnvelope(value)) {
       throw new DocumentCorruptError('Resultado legado inválido; o original foi preservado.');
     }
@@ -298,6 +298,7 @@ async function convertStudy(source: LegacySource, ownerSub: string): Promise<Stu
       throw new DocumentCorruptError('Resultado legado pertence a outro estudo ou cenário.');
     }
     return {
+      kind: 'PREVIEW',
       id: envelope.execution_id,
       scenarioId: envelope.scenario_id,
       scenarioRevision: envelope.scenario_revision,
@@ -348,7 +349,7 @@ export async function validateStoredStudy(
   ownerSub: string,
 ): Promise<StudyDocument> {
   if (isRecord(value) && typeof value.schemaVersion === 'string'
-    && value.schemaVersion !== '2.0.0') {
+    && value.schemaVersion !== '3.0.0') {
     throw new SchemaUnsupportedError(`StudyDocument ${value.schemaVersion} não suportado.`);
   }
   const validation = await validateStudyDocument(value, ownerSub);

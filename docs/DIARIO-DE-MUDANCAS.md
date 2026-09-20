@@ -70,6 +70,24 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 
 ---
 
+## 2026-09-20 — Perfis versionados e estudos V3 persistidos (MOT-67)
+
+1. **Sintoma.** O banco local ainda tinha oito stores no schema físico/lógico 1,
+   não persistia versões imutáveis do Perfil Operacional e mantinha estudos e
+   resultados idempotentes no contrato 2.0.0 sem evidência de perfil.
+2. **Causa.** A Etapa 3 havia fechado apenas o contrato preparatório de Study V3;
+   a migração transacional, o store append-only e a integração da evidência
+   dependiam do Perfil Operacional concreto da MOT-66.
+3. **O que foi feito.** A branch `codex/frontend-etapa-3` sobe IndexedDB e marcador
+   lógico para 2, cria `profile_versions`, migra atomicamente estudos, execuções e
+   payloads de operações para Study V3/PREVIEW, adiciona o port único de perfis e
+   permite anexar cópia validada e imutável do perfil ao estudo. A fixture física
+   real da Etapa 2 cobre replay, reabertura idempotente e rollback integral.
+4. **O que isso invalida.** Deixa de valer que o banco `motor-fluxo:app:v2:*` tenha
+   oito stores/schema 1, que `StudyDocument` corrente seja 2.0.0 e que
+   `evidenceSnapshots` aceite somente a coleção vazia. DIAGNOSTIC, uma quarta origem
+   de portfólio, contratos HTTP, motor e números publicados continuam inalterados.
+
 ## 2026-09-20 — Prazo assinado no schema do Perfil Operacional (MOT-66)
 
 1. **Sintoma.** Um Caso Observado válido com `deadlineDate` anterior a `knownDate`

@@ -1,6 +1,7 @@
 import type { components } from '../api/generated';
 import type { FieldProvenance, ObservedOutcome } from '../cases/domain';
 import type { ObservedComparison } from '../cases/observedComparison';
+import type { OperationalProfileVersion } from '../profiles/domain';
 
 export type DeepReadonly<T> = T extends (...args: never[]) => unknown
   ? T
@@ -175,8 +176,6 @@ export type StudyDocumentV2 = Readonly<{
   deletedAt: string | null;
 }>;
 
-export type StudyDocument = StudyDocumentV2;
-
 export type PreviewExecutionRecord = Readonly<ExecutionRecord & {
   kind: 'PREVIEW';
 }>;
@@ -185,8 +184,11 @@ export type PreviewExecutionRecord = Readonly<ExecutionRecord & {
 // introduced by its owning task.
 export type ExecutionRecordV3 = PreviewExecutionRecord;
 
-// T0 accepts no evidence payload until OperationalProfileVersion exists.
-export type StudyEvidenceSnapshot = never;
+export type StudyEvidenceSnapshot = DeepReadonly<{
+  kind: 'OPERATIONAL_PROFILE';
+  capturedAt: string;
+  profile: OperationalProfileVersion;
+}>;
 
 export type StudyDocumentV3 = Readonly<
   Omit<StudyDocumentV2, 'schemaVersion' | 'executions'> & {
@@ -195,6 +197,8 @@ export type StudyDocumentV3 = Readonly<
     executions: readonly ExecutionRecordV3[];
   }
 >;
+
+export type StudyDocument = StudyDocumentV3;
 
 export function migrateStudyDocumentV2(document: StudyDocumentV2): StudyDocumentV3 {
   const { schemaVersion: _schemaVersion, executions, ...study } = structuredClone(document);

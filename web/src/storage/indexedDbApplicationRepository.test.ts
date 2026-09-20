@@ -3,6 +3,8 @@ import 'fake-indexeddb/auto';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import type { CompanyRecord, ObservedCase } from '../cases/domain';
+import { calculateOperationalProfile } from '../profiles/calculateOperationalProfile';
+import type { OperationalProfileVersion } from '../profiles/domain';
 import {
   appendExecution,
   createStudy,
@@ -19,6 +21,7 @@ import {
 import type { DeepMutable, ExecutionRecord, StudyDocument } from '../study/model';
 import {
   BinaryDataNotAllowedError,
+  InvalidDocumentError,
   OperationConflictError,
   OwnerMismatchError,
   RevisionConflictError,
@@ -68,6 +71,23 @@ async function study(
     name: 'Estudo A',
     baseScenario: makeScenarioDraft(),
     now: FIXTURE_NOW,
+  });
+}
+
+async function profile(
+  version = 1,
+  id = `profile-${version}`,
+  ownerSub = OWNER_SUB,
+  companyId = 'company-1',
+): Promise<OperationalProfileVersion> {
+  const source = { ...makeObservedCase(), ownerSub, companyId };
+  return calculateOperationalProfile({
+    id,
+    ownerSub,
+    companyId,
+    version,
+    createdAt: `2026-09-20T1${version}:00:00Z`,
+    cases: [source],
   });
 }
 
@@ -148,14 +168,21 @@ afterEach(async () => {
 });
 
 describe('IndexedDbApplicationRepository schema', () => {
-  it('opens the scoped v2 database with the eight stores and listing indexes', async () => {
+  it('opens the scoped v2 database with the nine schema-2 stores and listing indexes', async () => {
     await repository().listCompanies();
 
     const databases = await indexedDB.databases();
     expect(databases.map((database) => database.name)).toContain(DATABASE_NAME);
 
     const database = await openDatabase(DATABASE_NAME);
-    expect([...database.objectStoreNames]).toEqual([
+    const storeNames = [...database.objectStoreNames];
+    const initialTransaction = database.transaction(storeNames, 'readonly');
+    const profileIndexes = [...initialTransaction.objectStore('profile_versions').indexNames];
+    const meta = await requestResult<{ value: number }>(
+      initialTransaction.objectStore('meta').get('schema_version'),
+    );
+    database.close();
+    expect(storeNames).toEqual([
       'companies',
       'executions',
       'import_batches',
@@ -163,9 +190,11 @@ describe('IndexedDbApplicationRepository schema', () => {
       'meta',
       'observed_cases',
       'operations',
+      'profile_versions',
       'studies',
     ]);
-    const transaction = database.transaction([...database.objectStoreNames], 'readonly');
+    const databaseForIndexes = await openDatabase(DATABASE_NAME);
+    const transaction = databaseForIndexes.transaction(storeNames, 'readonly');
     expect([...transaction.objectStore('companies').indexNames]).toEqual([
       'by_owner',
       'by_owner_display_name',
@@ -196,10 +225,13 @@ describe('IndexedDbApplicationRepository schema', () => {
       'by_owner',
       'by_owner_entity',
     ]);
-    expect(await requestResult<{ value: number }>(
-      transaction.objectStore('meta').get('schema_version'),
-    )).toEqual({ key: 'schema_version', value: 1 });
-    database.close();
+    expect(profileIndexes).toEqual([
+      'by_owner',
+      'by_owner_company',
+      'by_owner_company_version',
+    ]);
+    expect(meta).toEqual({ key: 'schema_version', value: 2 });
+    databaseForIndexes.close();
   });
 
   it('encodes delimiters so distinct project and owner pairs never share a database', async () => {
@@ -213,6 +245,75 @@ describe('IndexedDbApplicationRepository schema', () => {
     expect(databaseNames).toContain('motor-fluxo:app:v2:alpha%3Abeta:gamma');
     expect(databaseNames).toContain('motor-fluxo:app:v2:alpha:beta%3Agamma');
     expect(new Set(databaseNames).size).toBe(databaseNames.length);
+  });
+});
+
+describe('operational profile versions', () => {
+  it('appends sequential immutable versions and returns detached filtered reads', async () => {
+    const target = repository();
+    const first = await profile();
+    const second = await profile(2);
+    const otherCompany = await profile(1, 'other-profile-1', OWNER_SUB, 'company-2');
+
+    expect(await target.appendOperationalProfileVersion({ operationId: OPERATION_A, document: first }))
+      .toEqual(first);
+    await target.appendOperationalProfileVersion({ operationId: OPERATION_B, document: second });
+    await target.appendOperationalProfileVersion({ operationId: OPERATION_C, document: otherCompany });
+
+    const listed = await target.listOperationalProfileVersions('company-1');
+    expect(listed.map((item) => [item.id, item.version])).toEqual([
+      ['profile-1', 1],
+      ['profile-2', 2],
+    ]);
+    expect(await target.getOperationalProfileVersion(first.id)).toEqual(first);
+    expect(listed[0]).not.toBe(first);
+    expect(await target.listOperationalProfileVersions()).toHaveLength(3);
+  });
+
+  it('rejects version gaps, changed duplicate identities and invalid fingerprints', async () => {
+    const target = repository();
+    const gap = await profile(2);
+    await expect(target.appendOperationalProfileVersion({ operationId: OPERATION_A, document: gap }))
+      .rejects.toBeInstanceOf(InvalidDocumentError);
+
+    const first = await profile();
+    await target.appendOperationalProfileVersion({ operationId: OPERATION_B, document: first });
+    const changed = await calculateOperationalProfile({
+      id: first.id,
+      ownerSub: first.ownerSub,
+      companyId: first.companyId,
+      version: first.version,
+      createdAt: '2026-09-20T19:00:00Z',
+      cases: [{ ...makeObservedCase(), ownerSub: OWNER_SUB }],
+    });
+    await expect(target.appendOperationalProfileVersion({ operationId: OPERATION_C, document: changed }))
+      .rejects.toBeInstanceOf(OperationConflictError);
+
+    const corrupt = structuredClone(await profile(2)) as DeepMutable<OperationalProfileVersion>;
+    corrupt.documentFingerprint = '0'.repeat(64);
+    await expect(target.appendOperationalProfileVersion({ operationId: OPERATION_D, document: corrupt }))
+      .rejects.toBeInstanceOf(InvalidDocumentError);
+  });
+
+  it('replays only the identical canonical operation and isolates owners', async () => {
+    const target = repository();
+    const first = await profile();
+    const mutation = { operationId: OPERATION_A, document: first };
+    const stored = await target.appendOperationalProfileVersion(mutation);
+    expect(await target.appendOperationalProfileVersion(structuredClone(mutation))).toEqual(stored);
+
+    await expect(target.appendOperationalProfileVersion({
+      operationId: OPERATION_A,
+      document: await profile(2),
+    })).rejects.toBeInstanceOf(OperationConflictError);
+    await expect(target.appendOperationalProfileVersion({
+      operationId: OPERATION_B,
+      document: await profile(1, 'foreign-profile', 'owner-b'),
+    })).rejects.toBeInstanceOf(OwnerMismatchError);
+
+    const foreign = repository(PROJECT_REF, 'owner-b');
+    expect(await foreign.listOperationalProfileVersions()).toEqual([]);
+    expect(await foreign.getOperationalProfileVersion(first.id)).toBeNull();
   });
 });
 
@@ -495,7 +596,7 @@ describe('studies', () => {
         .getAll([OWNER_SUB, original.id]),
     );
     expect((studyRow.document as Record<string, unknown>).executions).toBeUndefined();
-    expect(executionRows.map((row) => row.document)).toEqual([execution]);
+    expect(executionRows.map((row) => row.document)).toEqual([{ ...execution, kind: 'PREVIEW' }]);
     database.close();
 
     const changed = structuredClone(withExecution) as DeepMutable<StudyDocument>;
@@ -586,7 +687,7 @@ describe('lifecycle', () => {
   it('closes the repository connection on versionchange', async () => {
     const target = repository();
     await target.listCompanies();
-    const upgrade = indexedDB.open(DATABASE_NAME, 2);
+    const upgrade = indexedDB.open(DATABASE_NAME, 3);
     const upgraded = await new Promise<IDBDatabase>((resolve, reject) => {
       upgrade.onerror = () => reject(upgrade.error);
       upgrade.onsuccess = () => resolve(upgrade.result);

@@ -353,6 +353,16 @@
         }
       ]
     },
+    "StudyEvidenceSnapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "OPERATIONAL_PROFILE" },
+        "capturedAt": { "$ref": "#/$defs/UtcInstant" },
+        "profile": { "$ref": "https://motor-de-fluxo.local/profiles/operationalProfile.schema.json" }
+      },
+      "required": ["kind", "capturedAt", "profile"]
+    },
     "StudyDocumentV3": {
       "type": "object",
       "additionalProperties": false,
@@ -368,7 +378,10 @@
           "minItems": 1,
           "items": { "$ref": "#/$defs/ScenarioDocument" }
         },
-        "evidenceSnapshots": { "type": "array", "maxItems": 0 },
+        "evidenceSnapshots": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/StudyEvidenceSnapshot" }
+        },
         "executions": {
           "type": "array",
           "items": { "$ref": "#/$defs/PreviewExecutionRecord" }
