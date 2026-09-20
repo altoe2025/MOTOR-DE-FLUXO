@@ -53,7 +53,10 @@ test('confirmed observed case becomes an immutable study snapshot and survives r
   await page.getByRole('button', { name: 'Converter para autoria manual' }).click();
   await expect.poll(() => page.evaluate((id) => window.__MOTOR_E2E__!.studySource(id), studyId))
     .toBe('AUTHORED');
-  await expect(page.getByRole('button', { name: /Abrir execução/ })).toHaveCount(1);
+  await expect.poll(() => page.evaluate((id) => window.__MOTOR_E2E__!.studyExecutionStatuses(id), studyId))
+    .toEqual(['INTERRUPTED', 'SUCCEEDED']);
+  await expect(page.getByRole('button', { name: /Abrir execução/ })).toHaveCount(2);
+  await expect(page.getByText('Interrompida', { exact: true })).toBeVisible();
   await expect(page.getByText('Concluída', { exact: true })).toBeVisible();
 
   await page.evaluate(() => { document.documentElement.style.zoom = '200%'; });
