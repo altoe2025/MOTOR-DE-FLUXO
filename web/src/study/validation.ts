@@ -5,6 +5,7 @@ import httpSchemas from '../api/schemas.json';
 import observedCaseSchema from '../cases/observedCase.schema.json';
 import operationalProfileSchema from '../profiles/operationalProfile.schema.json';
 import { validateOperationalProfile } from '../profiles/validation';
+import { validateDiagnosticEnvelope, validateDiagnosticRequest } from '../api/validators';
 import {
   canonical,
   canonicalInputSnapshot,
@@ -14,6 +15,8 @@ import {
 import { migrateStudyDocumentV2 } from './model';
 import type {
   ExecutionRecord,
+  ExecutionRecordV3,
+  DiagnosticExecutionRecord,
   PreviewExecutionRecord,
   StudyDocument,
   StudyDocumentV2,
@@ -34,6 +37,9 @@ const validateExecutionSchema: ValidateFunction<ExecutionRecord> = ajv.compile({
 });
 const validatePreviewExecutionSchema = ajv.compile({
   $ref: `${studySchema.$id}#/$defs/PreviewExecutionRecord`,
+});
+const validateDiagnosticExecutionSchema = ajv.compile({
+  $ref: `${studySchema.$id}#/$defs/DiagnosticExecutionRecord`,
 });
 const validateStudyV3Schema: ValidateFunction<StudyDocumentV3> = ajv.compile({
   $ref: `${studySchema.$id}#/$defs/StudyDocumentV3`,
@@ -80,6 +86,34 @@ function envelopeIsCompatible(
     });
 }
 
+function diagnosticEnvelopeIsCompatible(
+  execution: DiagnosticExecutionRecord,
+  study: Pick<StudyDocument, 'id'>,
+): boolean {
+  const request = execution.requestSnapshot;
+  if (!validateDiagnosticRequest(request)
+    || request.study_id !== study.id
+    || request.scenario_id !== execution.scenarioId
+    || request.scenario_revision !== execution.scenarioRevision
+    || request.input_fingerprint !== execution.inputFingerprint
+    || execution.jobId !== request.idempotency_key) return false;
+  if (execution.status !== 'SUCCEEDED') return execution.envelope === null;
+  const envelope = execution.envelope;
+  return envelope !== null
+    && validateDiagnosticEnvelope(envelope)
+    && envelope.job_id === execution.jobId
+    && envelope.request_fingerprint === request.input_fingerprint
+    && envelope.selected_execution.study_id === request.study_id
+    && envelope.selected_execution.scenario_id === request.scenario_id
+    && envelope.selected_execution.scenario_revision === request.scenario_revision;
+}
+
+function isTerminal(execution: ExecutionRecordV3): boolean {
+  return execution.kind === 'DIAGNOSTIC'
+    ? !['QUEUED', 'RUNNING'].includes(execution.status)
+    : execution.status !== 'PREPARING' && execution.status !== 'RUNNING';
+}
+
 export function parseStudyV3(value: unknown): StudyDocumentV3 {
   let candidate: unknown = value;
   if (value !== null && typeof value === 'object' && 'schemaVersion' in value
@@ -92,18 +126,21 @@ export function parseStudyV3(value: unknown): StudyDocumentV3 {
   const terminalRequests = new Set<string>();
   const terminalAttempts = new Set<string>();
   for (const execution of candidate.executions) {
-    if (!envelopeIsCompatible(execution, candidate)) {
-      throw new Error('Envelope PREVIEW incompatível com a execução.');
+    const compatible = execution.kind === 'DIAGNOSTIC'
+      ? diagnosticEnvelopeIsCompatible(execution, candidate)
+      : envelopeIsCompatible(execution, candidate);
+    if (!compatible) {
+      throw new Error('Envelope incompatível com a execução.');
     }
-    if (execution.status === 'PREPARING' || execution.status === 'RUNNING') continue;
+    if (!isTerminal(execution)) continue;
     const requestId = execution.requestSnapshot.request_id;
-    const duplicateRequest = terminalRequests.has(requestId);
+    const duplicateRequest = execution.kind === 'PREVIEW' && terminalRequests.has(requestId);
     const duplicateAttempt = execution.attemptId !== undefined
       && terminalAttempts.has(execution.attemptId);
     if (duplicateRequest || duplicateAttempt) {
       throw new Error('Tentativa possui mais de um terminal persistido.');
     }
-    terminalRequests.add(requestId);
+    if (execution.kind === 'PREVIEW') terminalRequests.add(requestId);
     if (execution.attemptId !== undefined) terminalAttempts.add(execution.attemptId);
   }
   return structuredClone(candidate);
@@ -130,24 +167,50 @@ function executionSnapshotIsCompatible(execution: ExecutionRecord): boolean {
     && horizon === execution.requestSnapshot.cenario.horizonte_dias;
 }
 
+function diagnosticSnapshotIsCompatible(execution: DiagnosticExecutionRecord): boolean {
+  const request = execution.requestSnapshot;
+  if (request.input_fingerprint !== execution.inputFingerprint) return false;
+  if (request.sampling.kind === 'FIXED_INPUT') {
+    const preview = request.sampling.preview_request;
+    return canonical(preview.cenario.ordens) === canonical(execution.sourceSnapshot.orders)
+      && canonical(preview.cenario.custo) === canonical(execution.premisesSnapshot.costs)
+      && preview.cenario.janela_dias === execution.premisesSnapshot.windowDays
+      && canonical(preview.periodo) === canonical(execution.periodSnapshot.httpPeriod);
+  }
+  return execution.sourceSnapshot.generationInputSnapshot !== undefined
+    && canonical(request.sampling.preparation_input)
+      === canonical(execution.sourceSnapshot.generationInputSnapshot);
+}
+
 export function validateExecutionRecord(
   value: unknown,
   study: StudyDocument,
-): StudyValidation<ExecutionRecord> {
-  const validator = value !== null && typeof value === 'object' && 'kind' in value
-    ? validatePreviewExecutionSchema
-    : validateExecutionSchema;
+): StudyValidation<ExecutionRecordV3 | ExecutionRecord> {
+  const kind = value !== null && typeof value === 'object' && 'kind' in value
+    ? (value as { kind?: unknown }).kind
+    : undefined;
+  const validator = kind === 'DIAGNOSTIC'
+    ? validateDiagnosticExecutionSchema
+    : kind === 'PREVIEW'
+      ? validatePreviewExecutionSchema
+      : validateExecutionSchema;
   if (!validator(value)) {
     return { ok: false, issues: (validator.errors ?? []).map(structuralIssue) };
   }
-  const execution = value as ExecutionRecord;
-  if (!envelopeIsCompatible(execution, study)) {
+  const execution = value as ExecutionRecordV3 | ExecutionRecord;
+  const envelopeCompatible = kind === 'DIAGNOSTIC'
+    ? diagnosticEnvelopeIsCompatible(execution as DiagnosticExecutionRecord, study)
+    : envelopeIsCompatible(execution as ExecutionRecord, study);
+  if (!envelopeCompatible) {
     return {
       ok: false,
       issues: [issue('/envelope', 'INCOMPATIBLE_ENVELOPE', 'Envelope incompatível com a execução.')],
     };
   }
-  if (!executionSnapshotIsCompatible(execution)) {
+  const snapshotCompatible = kind === 'DIAGNOSTIC'
+    ? diagnosticSnapshotIsCompatible(execution as DiagnosticExecutionRecord)
+    : executionSnapshotIsCompatible(execution as ExecutionRecord);
+  if (!snapshotCompatible) {
     return {
       ok: false,
       issues: [issue(
@@ -242,9 +305,9 @@ export async function validateStudyDocument(
   const terminalRequests = new Set<string>();
   const terminalAttempts = new Set<string>();
   for (const execution of value.executions) {
-    if (execution.status === 'PREPARING' || execution.status === 'RUNNING') continue;
+    if (!isTerminal(execution)) continue;
     const requestId = execution.requestSnapshot.request_id;
-    const duplicateRequest = terminalRequests.has(requestId);
+    const duplicateRequest = execution.kind === 'PREVIEW' && terminalRequests.has(requestId);
     const duplicateAttempt = execution.attemptId !== undefined
       && terminalAttempts.has(execution.attemptId);
     if (duplicateRequest || duplicateAttempt) {
@@ -255,7 +318,7 @@ export async function validateStudyDocument(
       ));
       break;
     }
-    terminalRequests.add(requestId);
+    if (execution.kind === 'PREVIEW') terminalRequests.add(requestId);
     if (execution.attemptId !== undefined) terminalAttempts.add(execution.attemptId);
   }
   for (const [index, execution] of value.executions.entries()) {

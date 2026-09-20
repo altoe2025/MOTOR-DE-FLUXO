@@ -86,6 +86,11 @@ function renderAppAt(
   const apiClient: ApiClient = {
     getReferenceExample: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
     runPreview: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
+    submitDiagnostic: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
+    getDiagnosticJob: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
+    getDiagnosticResult: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
+    cancelDiagnostic: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
+    retryDiagnostic: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
   };
   return render(
     <AuthProvider client={authClient}>

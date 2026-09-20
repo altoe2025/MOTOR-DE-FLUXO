@@ -3,7 +3,7 @@ import { validateObservedCase } from '../cases/validation';
 import type { OperationalProfileVersion } from '../profiles/domain';
 import { validateOperationalProfile } from '../profiles/validation';
 import { canonical } from '../study/fingerprints';
-import type { ExecutionRecord, PreviewExecutionRecord, StudyDocument } from '../study/model';
+import type { ExecutionRecordV3, StudyDocument } from '../study/model';
 import { parseStudyV3, validateStudyDocument } from '../study/validation';
 import type {
   ApplicationRepository,
@@ -134,7 +134,7 @@ type ExecutionRow = Readonly<{
   execution_id: string;
   owner_sub: string;
   sequence: number;
-  document: PreviewExecutionRecord;
+  document: ExecutionRecordV3;
 }>;
 
 function requestResult<T>(request: IDBRequest<T>): Promise<T> {
@@ -204,9 +204,10 @@ function sameDocument(left: unknown, right: unknown): boolean {
 }
 
 function isInterruptionTransition(
-  previous: ExecutionRecord,
-  candidate: ExecutionRecord,
+  previous: ExecutionRecordV3,
+  candidate: ExecutionRecordV3,
 ): boolean {
+  if (previous.kind !== 'PREVIEW' || candidate.kind !== 'PREVIEW') return false;
   if ((previous.status !== 'PREPARING' && previous.status !== 'RUNNING')
     || candidate.status !== 'INTERRUPTED'
     || previous.finishedAt !== null

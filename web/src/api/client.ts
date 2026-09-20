@@ -3,6 +3,9 @@ import { ApiError, type ApiErrorField } from './errors';
 import {
   validatePreparationRequest,
   validatePreparationResponse,
+  validateDiagnosticEnvelope,
+  validateDiagnosticRequest,
+  validateJobSnapshot,
   validatePreviaRequest,
   validatePreviewEnvelope,
   validateReferenceExample,
@@ -13,6 +16,9 @@ export type PreviewEnvelope = components['schemas']['PreviewEnvelope'];
 export type ReferenceExample = components['schemas']['ReferenceExample'];
 export type PreparationRequest = components['schemas']['PreparationRequest'];
 export type PreparationResponse = components['schemas']['PreparationResponse'];
+export type DiagnosticRequest = components['schemas']['DiagnosticRequest'];
+export type DiagnosticEnvelope = components['schemas']['DiagnosticEnvelope'];
+export type JobSnapshot = components['schemas']['JobSnapshot'];
 
 type FetchLike = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
@@ -20,6 +26,11 @@ export type ApiClient = {
   getReferenceExample(signal?: AbortSignal): Promise<ReferenceExample>;
   preparePortfolio?(input: PreparationRequest, signal?: AbortSignal): Promise<PreparationResponse>;
   runPreview(input: PreviaRequest, signal?: AbortSignal): Promise<PreviewEnvelope>;
+  submitDiagnostic(input: DiagnosticRequest, signal?: AbortSignal): Promise<JobSnapshot>;
+  getDiagnosticJob(jobId: string, signal?: AbortSignal): Promise<JobSnapshot>;
+  getDiagnosticResult(jobId: string, signal?: AbortSignal): Promise<DiagnosticEnvelope>;
+  cancelDiagnostic(jobId: string, signal?: AbortSignal): Promise<JobSnapshot>;
+  retryDiagnostic(jobId: string, idempotencyKey: string, signal?: AbortSignal): Promise<JobSnapshot>;
 };
 
 type ErrorDocument = {
@@ -196,6 +207,57 @@ export function createApiClient({
       }
       if (!validatePreviewEnvelope(document)) throw invalidResponse(200);
       return deepFreeze(document as PreviewEnvelope);
+    },
+
+    async submitDiagnostic(input, signal) {
+      if (!validateDiagnosticRequest(input)) {
+        throw new ApiError({ status: 0, code: 'ENTRADA_CLIENTE_INVALIDA', message: 'A entrada local não passou pela validação.' });
+      }
+      const document = await request('/api/v1/diagnosticos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(input),
+      }, signal);
+      if (!validateJobSnapshot(document)) throw invalidResponse(202);
+      return deepFreeze(document as JobSnapshot);
+    },
+
+    async getDiagnosticJob(jobId, signal) {
+      const document = await request(`/api/v1/diagnosticos/${encodeURIComponent(jobId)}`, {
+        method: 'GET',
+      }, signal);
+      if (!validateJobSnapshot(document)) throw invalidResponse(200);
+      return deepFreeze(document as JobSnapshot);
+    },
+
+    async getDiagnosticResult(jobId, signal) {
+      const document = await request(`/api/v1/diagnosticos/${encodeURIComponent(jobId)}/resultado`, {
+        method: 'GET',
+      }, signal);
+      if (!validateDiagnosticEnvelope(document)) throw invalidResponse(200);
+      return deepFreeze(document as DiagnosticEnvelope);
+    },
+
+    async cancelDiagnostic(jobId, signal) {
+      const document = await request(`/api/v1/diagnosticos/${encodeURIComponent(jobId)}/cancelamentos`, {
+        method: 'POST',
+      }, signal);
+      if (!validateJobSnapshot(document)) throw invalidResponse(202);
+      return deepFreeze(document as JobSnapshot);
+    },
+
+    async retryDiagnostic(jobId, idempotencyKey, signal) {
+      const document = await request(`/api/v1/diagnosticos/${encodeURIComponent(jobId)}/retries`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          api_version: '1.0.0',
+          request_id: idempotencyKey,
+          idempotency_key: idempotencyKey,
+        }),
+      }, signal);
+      if (!validateJobSnapshot(document)) throw invalidResponse(202);
+      return deepFreeze(document as JobSnapshot);
     },
   };
 }

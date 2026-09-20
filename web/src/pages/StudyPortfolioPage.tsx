@@ -9,7 +9,7 @@ import { StudyEditor } from '../study/components/StudyEditor';
 import type { PortfolioSourceDraft } from '../study/components/PortfolioSourceSelector';
 import { duplicateStudy, renameStudy, updateScenario } from '../study/domain';
 import { executeStudyScenario } from '../study/executionService';
-import type { ExecutionRecord, ScenarioDocument, StudyDocument } from '../study/model';
+import type { ExecutionRecord, PreviewExecutionRecord, ScenarioDocument, StudyDocument } from '../study/model';
 import type { StudyControllerStatus } from '../study/studyController';
 import { Button } from '../ui/Button';
 import { StudyResultPage } from './StudyResultPage';
@@ -49,7 +49,7 @@ export function StudyPortfolioPage() {
     void Promise.all([controller.loadStudy(id), controller.listObservedCases(), controller.listCompanies()])
       .then(([loaded, observed, companyRecords]) => {
         setStudy(loaded); setCases(observed); setCompanies(companyRecords); setError(null);
-        setSelectedExecution(loaded === null ? null : [...loaded.executions].reverse().find((item) => item.status === 'SUCCEEDED') ?? null);
+        setSelectedExecution(loaded === null ? null : [...loaded.executions].reverse().find((item): item is PreviewExecutionRecord => item.kind === 'PREVIEW' && item.status === 'SUCCEEDED') ?? null);
       })
       .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : 'Não foi possível abrir o estudo.'));
     return controller.subscribe(() => {
@@ -63,7 +63,7 @@ export function StudyPortfolioPage() {
   if (scenario === undefined) throw new Error('Estudo sem cenário base.');
   const save = (next: StudyDocument) => { controller.edit(next); setStudy(next); };
   const displayedExecution = selectedExecution
-    ?? [...study.executions].reverse().find((item) => item.status === 'SUCCEEDED')
+    ?? [...study.executions].reverse().find((item): item is PreviewExecutionRecord => item.kind === 'PREVIEW' && item.status === 'SUCCEEDED')
     ?? null;
   const applySource = async (source: PortfolioSourceDraft) => {
     try {
@@ -112,7 +112,7 @@ export function StudyPortfolioPage() {
       if (current !== null) setStudy(current);
       const terminal = current === null
         ? null
-        : [...current.executions].reverse().find((item) => item.status === 'SUCCEEDED') ?? null;
+        : [...current.executions].reverse().find((item): item is PreviewExecutionRecord => item.kind === 'PREVIEW' && item.status === 'SUCCEEDED') ?? null;
       if (terminal !== null) setSelectedExecution(terminal);
       if (result.persistenceError instanceof Error) {
         setError(result.persistenceError.message);

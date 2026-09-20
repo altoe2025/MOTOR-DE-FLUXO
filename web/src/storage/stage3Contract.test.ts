@@ -54,9 +54,9 @@ describe('contrato persistido da Etapa 3', () => {
     expect('generationInputSnapshot' in migrated.scenarios[0]!.sourceSnapshot).toBe(false);
   });
 
-  it.each(['UNKNOWN', 'DIAGNOSTIC'])('rejeita kind de execução ainda não suportado: %s', (kind) => {
+  it('rejeita kind de execução desconhecido', () => {
     const candidate = mutableV3();
-    candidate.executions[0]!.kind = kind as 'PREVIEW';
+    candidate.executions[0]!.kind = 'UNKNOWN' as 'PREVIEW';
 
     expect(() => parseStudyV3(candidate)).toThrow('Documento de estudo V3 inválido.');
   });
@@ -64,6 +64,7 @@ describe('contrato persistido da Etapa 3', () => {
   it('rejeita segundo terminal PREVIEW para o mesmo attemptId', () => {
     const candidate = mutableV3();
     const terminal = candidate.executions[1]!;
+    if (terminal.kind !== 'PREVIEW') throw new Error('execução preview esperada');
     const duplicate = structuredClone(terminal);
     duplicate.id = '00000000-0000-4000-8000-000000000412';
     duplicate.requestSnapshot.request_id = '00000000-0000-4000-8000-000000000402';

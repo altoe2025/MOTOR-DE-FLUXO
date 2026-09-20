@@ -22,6 +22,11 @@ import { createUserQueryClient, disposeUserQueryClient } from './queryClient';
 
 const StudyControllerContext = createContext<StudyController | null>(null);
 const ApiClientContext = createContext<ApiClient | null>(null);
+const DiagnosticRuntimeContext = createContext<Readonly<{
+  ownerSub: string | null;
+  controller: StudyController;
+  client: ApiClient;
+}> | null>(null);
 
 type ApplicationProvidersProps = Readonly<{
   children: ReactNode;
@@ -112,7 +117,9 @@ export function ApplicationProviders({
     <QueryClientProvider client={queryClient}>
       <ApiClientContext.Provider value={apiClient}>
         <StudyControllerContext.Provider value={controller}>
-          <PreviewProvider client={apiClient} ownerId={userId}>{children}</PreviewProvider>
+          <DiagnosticRuntimeContext.Provider value={{ ownerSub: userId, controller, client: apiClient }}>
+            <PreviewProvider client={apiClient} ownerId={userId}>{children}</PreviewProvider>
+          </DiagnosticRuntimeContext.Provider>
         </StudyControllerContext.Provider>
       </ApiClientContext.Provider>
     </QueryClientProvider>
@@ -131,4 +138,12 @@ export function useApiClient(): ApiClient {
   const client = useContext(ApiClientContext);
   if (client === null) throw new Error('useApiClient deve ser usado dentro de ApplicationProviders');
   return client;
+}
+
+export function useDiagnosticRuntime() {
+  const runtime = useContext(DiagnosticRuntimeContext);
+  if (runtime === null) {
+    throw new Error('useDiagnosticRuntime deve ser usado dentro de ApplicationProviders');
+  }
+  return runtime;
 }

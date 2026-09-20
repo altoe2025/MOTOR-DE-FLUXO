@@ -464,6 +464,7 @@ describe('executeStudyScenario', () => {
 
     const afterExecution = subject.controller.snapshot.document!;
     const succeeded = afterExecution.executions.at(-1)!;
+    if (succeeded.kind !== 'PREVIEW') throw new Error('execução preview esperada');
     const changed = await updateScenario(
       afterExecution,
       afterExecution.baseScenarioId,

@@ -32,7 +32,10 @@ export type PeriodDocument =
   | Readonly<{ httpPeriod: DeepReadonly<components['schemas']['PeriodoNatural']> }>;
 export type PreviaRequest = DeepReadonly<components['schemas']['PreviaRequest']>;
 export type PreviewEnvelope = DeepReadonly<components['schemas']['PreviewEnvelope']>;
+export type DiagnosticRequest = DeepReadonly<components['schemas']['DiagnosticRequest']>;
+export type DiagnosticEnvelope = DeepReadonly<components['schemas']['DiagnosticEnvelope']>;
 export type PreparationResponse = DeepReadonly<components['schemas']['PreparationResponse']>;
+export type EffectiveInput = DeepReadonly<components['schemas']['EffectiveInput']>;
 export type SeedText = components['schemas']['EffectiveParticipant']['seed'];
 
 export type OrderFieldProvenance = Readonly<{
@@ -104,6 +107,7 @@ export type PortfolioSourceSnapshot = Readonly<{
   provenance: readonly FieldProvenance[];
   provenanceByOrder?: Readonly<Record<string, OrderFieldProvenance>>;
   observedOutcome: ObservedOutcome | null;
+  generationInputSnapshot?: EffectiveInput;
   sourceFingerprint: string;
 }>;
 
@@ -180,9 +184,39 @@ export type PreviewExecutionRecord = Readonly<ExecutionRecord & {
   kind: 'PREVIEW';
 }>;
 
-// T0 deliberately keeps this union closed until the diagnostic contract is
-// introduced by its owning task.
-export type ExecutionRecordV3 = PreviewExecutionRecord;
+export type PersistedExecutionError = Readonly<{
+  code: string;
+  message: string;
+}>;
+
+export type DiagnosticExecutionStatus =
+  | 'QUEUED'
+  | 'RUNNING'
+  | 'SUCCEEDED'
+  | 'FAILED'
+  | 'CANCELLED'
+  | 'INTERRUPTED';
+
+export type DiagnosticExecutionRecord = DeepReadonly<{
+  kind: 'DIAGNOSTIC';
+  id: string;
+  attemptId: string;
+  scenarioId: string;
+  scenarioRevision: number;
+  inputFingerprint: string;
+  requestSnapshot: DiagnosticRequest;
+  sourceSnapshot: PortfolioSourceSnapshot;
+  premisesSnapshot: PremisesDocument;
+  periodSnapshot: PeriodDocument;
+  status: DiagnosticExecutionStatus;
+  jobId: string | null;
+  envelope: DiagnosticEnvelope | null;
+  error: PersistedExecutionError | null;
+  createdAt: string;
+  finishedAt: string | null;
+}>;
+
+export type ExecutionRecordV3 = PreviewExecutionRecord | DiagnosticExecutionRecord;
 
 export type StudyEvidenceSnapshot = DeepReadonly<{
   kind: 'OPERATIONAL_PROFILE';

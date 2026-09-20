@@ -209,6 +209,7 @@ export async function resolvePortfolioSource(
       capturedAt: dependencies.now(),
       orders: cloneAndOrderOrders(source.preparation.orders),
       provenance: preparationProvenance(source.preparation),
+      generationInputSnapshot: structuredClone(source.preparation.input_snapshot),
       observedOutcome: null,
     });
   }
@@ -223,6 +224,7 @@ export async function resolvePortfolioSource(
     capturedAt: dependencies.now(),
     orders: cloneAndOrderOrders(prepared.orders),
     provenance: preparationProvenance(prepared),
+    generationInputSnapshot: structuredClone(prepared.input_snapshot),
     observedOutcome: null,
   });
 }

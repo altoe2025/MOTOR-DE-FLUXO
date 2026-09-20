@@ -62,8 +62,13 @@ function api(overrides: Partial<ApiClient> = {}): ApiClient {
   return {
     getReferenceExample: vi.fn(async () => structuredClone(referenceFixture)),
     runPreview: vi.fn(async (input) => matchingEnvelope(input)),
+    submitDiagnostic: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
+    getDiagnosticJob: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
+    getDiagnosticResult: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
+    cancelDiagnostic: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
+    retryDiagnostic: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
     ...overrides,
-  };
+  } as ApiClient;
 }
 
 describe('PreviewProvider', () => {

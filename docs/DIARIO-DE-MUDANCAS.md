@@ -70,6 +70,27 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 
 ---
 
+## 2026-09-20 — Orquestração e histórico imutável de diagnósticos (MOT-73)
+
+1. **Sintoma.** O cliente web conhecia os contratos gerados do diagnóstico, mas não
+   conseguia montar planos determinísticos, reservar uma tentativa antes do POST,
+   retomar jobs após reload nem preservar um resultado terminal sem transformar
+   progresso transitório em autoridade local.
+2. **Causa.** Faltavam o cliente dos cinco endpoints, o builder canônico, as queries
+   owner-scoped e um modelo V3 que distinguisse execuções `PREVIEW` de reservas e
+   terminais `DIAGNOSTIC`. O storage conhecia apenas o histórico da Etapa 2.
+3. **O que foi feito.** Na branch `codex/frontend-etapa-3`, o web client passou a
+   construir requests fixos ou gerados com IDs/seeds determinísticos, reservar
+   `jobId = idempotency_key` por CAS antes do POST, retomar polling sem novo POST e
+   anexar no máximo um terminal por `attemptId`. Cancelamento, retry, 404 após
+   restart, troca de conta, troca de estudo e respostas tardias preservam a
+   autoridade owner/epoch. Schema, validação e IndexedDB aceitam o histórico misto
+   de forma append-only e rejeitam mutação, duplicidade e envelopes divergentes.
+4. **O que isso invalida.** Invalida consumidores que tratavam `executions` de V3
+   como uma lista exclusivamente `PREVIEW` e a hipótese de que retries diagnósticos
+   teriam `request_id` novo. Progresso de job continua deliberadamente transitório;
+   não há mudança no motor, no servidor MOT-72 nem na UI de diagnóstico MOT-74.
+
 ## 2026-09-20 — ID público previsível e registry por owner (MOT-72)
 
 1. **Sintoma.** O cliente conhecia a chave idempotente antes do POST, mas o

@@ -2,9 +2,12 @@ import 'fake-indexeddb/auto';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
+import type { PreviaRequest } from '../api/client';
 import type { CompanyRecord, ObservedCase } from '../cases/domain';
 import { calculateOperationalProfile } from '../profiles/calculateOperationalProfile';
 import type { OperationalProfileVersion } from '../profiles/domain';
+import { buildDiagnosticRequest } from '../diagnostics/buildDiagnosticRequest';
+import { appendDiagnosticExecution } from '../diagnostics/domain';
 import {
   appendExecution,
   createStudy,
@@ -18,7 +21,7 @@ import {
   makeObservedCase,
   makeScenarioDraft,
 } from '../study/fixtures';
-import type { DeepMutable, ExecutionRecord, StudyDocument } from '../study/model';
+import type { DeepMutable, DiagnosticExecutionRecord, ExecutionRecord, StudyDocument } from '../study/model';
 import {
   BinaryDataNotAllowedError,
   InvalidDocumentError,
@@ -108,7 +111,7 @@ function executionFor(document: StudyDocument): ExecutionRecord {
         ordens: structuredClone(scenario.sourceSnapshot.orders),
         horizonte_dias: 30,
         janela_dias: scenario.premises.windowDays,
-        custo: structuredClone(scenario.premises.costs),
+        custo: structuredClone(scenario.premises.costs) as ExecutionRecord['requestSnapshot']['cenario']['custo'],
       },
       periodo: structuredClone(scenario.period.httpPeriod),
       proveniencia: {},
@@ -118,6 +121,53 @@ function executionFor(document: StudyDocument): ExecutionRecord {
     status: 'RUNNING',
     envelope: null,
     observedComparison: null,
+    createdAt: '2026-09-19T12:01:00Z',
+    finishedAt: null,
+  };
+}
+
+async function diagnosticReservationFor(document: StudyDocument): Promise<DiagnosticExecutionRecord> {
+  const scenario = document.scenarios[0]!;
+  const jobId = '00000000-0000-4000-8000-000000000041';
+  const previewRequest = {
+    api_version: '1.0.0' as const,
+    request_id: '00000000-0000-4000-8000-000000000042',
+    study_id: document.id,
+    scenario_id: scenario.id,
+    scenario_revision: scenario.revision,
+    cenario: {
+      ordens: structuredClone(scenario.sourceSnapshot.orders),
+      horizonte_dias: 30,
+      janela_dias: scenario.premises.windowDays,
+      custo: structuredClone(scenario.premises.costs) as ExecutionRecord['requestSnapshot']['cenario']['custo'],
+    },
+    periodo: structuredClone(scenario.period.httpPeriod),
+    proveniencia: {},
+  } as unknown as PreviaRequest;
+  const request = await buildDiagnosticRequest({
+    requestId: '00000000-0000-4000-8000-000000000043',
+    idempotencyKey: jobId,
+    studyId: document.id,
+    scenario,
+    count: 1,
+    baseSeed: 'storage',
+    previewRequest,
+  });
+  return {
+    kind: 'DIAGNOSTIC',
+    id: '00000000-0000-4000-8000-000000000044',
+    attemptId: '00000000-0000-4000-8000-000000000045',
+    scenarioId: scenario.id,
+    scenarioRevision: scenario.revision,
+    inputFingerprint: scenario.inputFingerprint,
+    requestSnapshot: request,
+    sourceSnapshot: structuredClone(scenario.sourceSnapshot),
+    premisesSnapshot: structuredClone(scenario.premises),
+    periodSnapshot: structuredClone(scenario.period),
+    status: 'QUEUED',
+    jobId,
+    envelope: null,
+    error: null,
     createdAt: '2026-09-19T12:01:00Z',
     finishedAt: null,
   };
@@ -609,6 +659,40 @@ describe('studies', () => {
       document: changed,
     })).rejects.toBeInstanceOf(OperationConflictError);
     expect(await target.getStudy(original.id)).toEqual(withExecution);
+  });
+
+  it('preserva reserva e terminal diagnósticos e rejeita reescrita ou terminal duplicado', async () => {
+    const target = repository();
+    const original = await study();
+    await target.saveStudy({ expectedRevision: 0, operationId: OPERATION_A, document: original });
+    const reservation = await diagnosticReservationFor(original);
+    const reserved = await appendDiagnosticExecution(original, reservation, reservation.createdAt);
+    await target.saveStudy({ expectedRevision: 1, operationId: OPERATION_B, document: reserved });
+
+    const changed = structuredClone(reserved) as DeepMutable<StudyDocument>;
+    changed.revision += 1;
+    changed.updatedAt = '2026-09-19T12:02:00Z';
+    if (changed.executions[0]?.kind !== 'DIAGNOSTIC') throw new Error('fixture');
+    changed.executions[0].status = 'RUNNING';
+    await expect(target.saveStudy({
+      expectedRevision: 2, operationId: OPERATION_C, document: changed,
+    })).rejects.toBeInstanceOf(OperationConflictError);
+
+    const terminal: DiagnosticExecutionRecord = {
+      ...structuredClone(reservation),
+      id: '00000000-0000-4000-8000-000000000046',
+      status: 'FAILED',
+      error: { code: 'DIAGNOSTICO_INVALIDO', message: 'Falha controlada.' },
+      finishedAt: '2026-09-19T12:03:00Z',
+    };
+    const completed = await appendDiagnosticExecution(reserved, terminal, terminal.finishedAt!);
+    await expect(target.saveStudy({
+      expectedRevision: 2, operationId: OPERATION_D, document: completed,
+    })).resolves.toEqual(completed);
+
+    await expect(appendDiagnosticExecution(completed, {
+      ...terminal, id: '00000000-0000-4000-8000-000000000047',
+    }, '2026-09-19T12:04:00Z')).rejects.toThrow('terminal');
   });
 
   it('has one winner in a real CAS race between repository instances', async () => {
