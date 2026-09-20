@@ -11,11 +11,53 @@ const ajv = new Ajv2020({
 addFormats(ajv);
 ajv.addSchema(schemas);
 
+type JsonObject = Record<string, unknown>;
+
+function isJsonObject(value: unknown): value is JsonObject {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+const UUID_KEY = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const SEED_TEXT = /^(0|[1-9][0-9]*)$/;
+const MAX_SEED = 9223372036854775807n;
+
+function hasValidGeneratedSampling(data: unknown): boolean {
+  if (!isJsonObject(data) || !isJsonObject(data.sampling)) return false;
+  const sampling = data.sampling;
+  if (sampling.kind !== 'GENERATED_INPUT') return true;
+  if (!Array.isArray(sampling.repetitions)) return false;
+  if (sampling.count !== sampling.repetitions.length) return false;
+  for (const repetition of sampling.repetitions) {
+    if (!isJsonObject(repetition) || !isJsonObject(repetition.participant_seeds)) {
+      return false;
+    }
+    for (const [participantId, seed] of Object.entries(repetition.participant_seeds)) {
+      if (!UUID_KEY.test(participantId) || typeof seed !== 'string' || !SEED_TEXT.test(seed)) {
+        return false;
+      }
+      if (BigInt(seed) > MAX_SEED) return false;
+    }
+  }
+  return true;
+}
+
+ajv.addKeyword({
+  keyword: 'validGeneratedSampling',
+  schemaType: 'boolean',
+  errors: false,
+  validate: (enabled: boolean, data: unknown) => !enabled || hasValidGeneratedSampling(data),
+});
+
 export const validatePreviaRequest = ajv.compile({ $ref: 'https://motor-de-fluxo.local/contracts/schemas.json#/$defs/PreviaRequest' });
 export const validatePreviewEnvelope = ajv.compile({ $ref: 'https://motor-de-fluxo.local/contracts/schemas.json#/$defs/PreviewEnvelope' });
 export const validateReferenceExample = ajv.compile({ $ref: 'https://motor-de-fluxo.local/contracts/schemas.json#/$defs/ReferenceExample' });
 export const validatePreparationRequest = ajv.compile({ $ref: 'https://motor-de-fluxo.local/contracts/schemas.json#/$defs/PreparationRequest' });
 export const validatePreparationResponse = ajv.compile({ $ref: 'https://motor-de-fluxo.local/contracts/schemas.json#/$defs/PreparationResponse' });
-export const validateDiagnosticRequest = ajv.compile({ $ref: 'https://motor-de-fluxo.local/contracts/schemas.json#/$defs/DiagnosticRequest' });
+export const validateDiagnosticRequest = ajv.compile({
+  allOf: [
+    { $ref: 'https://motor-de-fluxo.local/contracts/schemas.json#/$defs/DiagnosticRequest' },
+    { validGeneratedSampling: true },
+  ],
+});
 export const validateJobSnapshot = ajv.compile({ $ref: 'https://motor-de-fluxo.local/contracts/schemas.json#/$defs/JobSnapshot' });
 export const validateDiagnosticEnvelope = ajv.compile({ $ref: 'https://motor-de-fluxo.local/contracts/schemas.json#/$defs/DiagnosticEnvelope' });

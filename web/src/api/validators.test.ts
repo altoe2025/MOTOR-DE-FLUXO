@@ -111,6 +111,24 @@ function diagnosticRequest() {
   };
 }
 
+function generatedDiagnosticRequest() {
+  const request = diagnosticRequest();
+  const repetitions = Array.from({ length: 10 }, (_, index) => ({
+    repetition_id: `00000000-0000-4000-8000-${String(index + 100).padStart(12, '0')}`,
+    participant_seeds: {},
+  }));
+  return {
+    ...request,
+    sampling: {
+      kind: 'GENERATED_INPUT',
+      count: 10,
+      preparation_input: preparationRequest().input,
+      repetitions,
+    },
+    selected_repetition_id: repetitions[0]?.repetition_id,
+  };
+}
+
 function jobSnapshot() {
   return {
     api_version: '1.0.0',
@@ -166,6 +184,29 @@ describe('generated runtime validation', () => {
     const wrongCount = diagnosticRequest();
     wrongCount.sampling.count = 2;
     expect(validateDiagnosticRequest(wrongCount)).toBe(false);
+  });
+
+  it('rejects a generated request when count differs from explicit repetitions', () => {
+    const request = generatedDiagnosticRequest();
+    expect(validateDiagnosticRequest(request)).toBe(true);
+    request.sampling.repetitions.push({
+      repetition_id: '00000000-0000-4000-8000-000000000110',
+      participant_seeds: {},
+    });
+
+    expect(validateDiagnosticRequest(request)).toBe(false);
+  });
+
+  it('rejects invalid participant seed keys and seeds above the canonical maximum', () => {
+    const invalidKey = generatedDiagnosticRequest();
+    invalidKey.sampling.repetitions[0]!.participant_seeds = { 'not-a-uuid': '1' };
+    expect(validateDiagnosticRequest(invalidKey)).toBe(false);
+
+    const oversizedSeed = generatedDiagnosticRequest();
+    oversizedSeed.sampling.repetitions[0]!.participant_seeds = {
+      '00000000-0000-4000-8000-000000000200': '9223372036854775808',
+    };
+    expect(validateDiagnosticRequest(oversizedSeed)).toBe(false);
   });
 
   it('validates job progress and exposes the diagnostic envelope validator', () => {

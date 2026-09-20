@@ -70,6 +70,20 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 
 ---
 
+## 2026-09-20 — Validação semântica do plano diagnóstico no cliente (MOT-70)
+
+1. **Sintoma.** O validador AJV aceitava plano `GENERATED_INPUT` com `count`
+   diferente do número de repetições, chave de participante que não era UUID e seed
+   acima do limite canônico, embora a fronteira Pydantic rejeitasse esses payloads.
+2. **Causa.** Essas relações vivem em `model_validator` e não são representáveis
+   integralmente pelo JSON Schema gerado apenas com as palavras-chave usadas.
+3. **O que foi feito.** O gerador oficial agora compõe a validação estrutural AJV
+   com uma checagem semântica determinística para contagem, chaves UUID e teto de
+   seed; testes de regressão cobrem os três desvios sem editar artefatos gerados.
+4. **O que isso invalida.** A conclusão anterior de que a validação estrutural AJV
+   bastava para esses invariantes específicos. Requests válidos e resultados do
+   motor não mudam.
+
 ## 2026-09-20 — Contratos públicos do diagnóstico robusto (MOT-70)
 
 1. **Sintoma.** A API não possuía contratos versionados para solicitar, acompanhar
