@@ -71,3 +71,23 @@ Dois findings adicionais foram reproduzidos em RED e corrigidos:
 
 Gate final do Round 2: 112 testes focados/adicionais verdes, `typecheck`, `lint` e
 `build` verdes; permaneceu apenas o warning conhecido de chunk maior que 500 kB.
+
+## Fix Round 3 — regressão de integração encontrada pelo consumidor
+
+O request de prévia fixa é canônico e ordena `cenario.ordens` por `id`, enquanto o
+snapshot de origem pode preservar legitimamente outra sequência física. O ramo
+`diagnosticSnapshotIsCompatible` comparava os arrays crus e rejeitava conteúdo
+semanticamente idêntico; o validador genérico de `PREVIEW` já normalizava essa
+diferença corretamente.
+
+A comparação de ordens foi centralizada na mesma projeção canônica ordenada por
+`id`, aplicada aos dois ramos. O RED reproduziu duas rejeições: domínio/validação
+com `INCOMPATIBLE_EXECUTION_SNAPSHOT` e `saveStudy` com `InvalidDocumentError` para
+snapshot `b,a` e request `a,b`. No GREEN, ambos são aceitos e recuperados do
+IndexedDB. Um teste negativo altera `valor_brl` após ordenar e continua recebendo
+`INCOMPATIBLE_EXECUTION_SNAPSHOT`, comprovando que somente a posição foi retirada
+da identidade — não o conteúdo.
+
+Gate final do Round 3: 139 testes T8 focados/storage/validation verdes,
+`typecheck`, `lint` e `build` verdes; permaneceu apenas o warning conhecido de
+chunk maior que 500 kB.

@@ -70,6 +70,25 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 
 ---
 
+## 2026-09-20 — Ordem semântica no snapshot diagnóstico fixo (MOT-73)
+
+1. **Sintoma.** Uma reserva diagnóstica fixa válida era rejeitada com
+   `INCOMPATIBLE_EXECUTION_SNAPSHOT` quando o snapshot preservava as ordens em
+   sequência física `b,a`, mas o request de prévia as enviava na sequência
+   canônica `a,b`.
+2. **Causa.** A validação de snapshots `PREVIEW` já comparava ordens normalizadas
+   por `id`, enquanto o ramo `FIXED_INPUT` de `DIAGNOSTIC` comparava diretamente os
+   arrays e tratava posição como parte do conteúdo.
+3. **O que foi feito.** A validação de ambos os tipos de execução passou a usar a
+   mesma projeção ordenada por `id` antes da comparação canônica. Regressões no
+   domínio e no IndexedDB cobrem snapshot físico não ordenado com request canônico;
+   um controle negativo confirma que alteração real em `valor_brl` continua sendo
+   rejeitada.
+4. **O que isso invalida.** Invalida a interpretação de que a posição no array de
+   ordens faz parte da identidade analítica. IDs e todos os valores das ordens
+   continuam comparados integralmente; não muda contratos, persistência, motor,
+   números ou UI T9.
+
 ## 2026-09-20 — Cancelamento acionável e decimais lossless na UI (MOT-74)
 
 1. **Sintoma.** Durante polling, o botão de cancelamento era exibido, mas a mesma

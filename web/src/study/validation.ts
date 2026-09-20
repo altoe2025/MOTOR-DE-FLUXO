@@ -165,6 +165,14 @@ export function parseStudyV3(value: unknown): StudyDocumentV3 {
   return structuredClone(candidate);
 }
 
+function orderedOrders(
+  orders: readonly DiagnosticExecutionRecord['sourceSnapshot']['orders'][number][],
+) {
+  return [...orders]
+    .map((order) => structuredClone(order))
+    .sort((left, right) => left.id.localeCompare(right.id));
+}
+
 function executionSnapshotIsCompatible(execution: ExecutionRecord): boolean {
   const { sourceSnapshot, premisesSnapshot, periodSnapshot } = execution;
   if (sourceSnapshot === undefined && premisesSnapshot === undefined && periodSnapshot === undefined) {
@@ -173,13 +181,10 @@ function executionSnapshotIsCompatible(execution: ExecutionRecord): boolean {
   if (sourceSnapshot === undefined || premisesSnapshot === undefined || periodSnapshot === undefined) {
     return false;
   }
-  const ordered = (orders: typeof sourceSnapshot.orders) => [...orders]
-    .map((order) => structuredClone(order))
-    .sort((left, right) => left.id.localeCompare(right.id));
   const horizon = 'executableHorizonDays' in periodSnapshot
     ? periodSnapshot.executableHorizonDays
     : periodSnapshot.httpPeriod.dias_aquecimento + periodSnapshot.httpPeriod.periodo_medicao_dias;
-  return canonical(ordered(sourceSnapshot.orders)) === canonical(ordered(execution.requestSnapshot.cenario.ordens))
+  return canonical(orderedOrders(sourceSnapshot.orders)) === canonical(orderedOrders(execution.requestSnapshot.cenario.ordens))
     && canonical(premisesSnapshot.costs) === canonical(execution.requestSnapshot.cenario.custo)
     && premisesSnapshot.windowDays === execution.requestSnapshot.cenario.janela_dias
     && canonical(periodSnapshot.httpPeriod) === canonical(execution.requestSnapshot.periodo)
@@ -191,7 +196,8 @@ function diagnosticSnapshotIsCompatible(execution: DiagnosticExecutionRecord): b
   if (request.input_fingerprint !== execution.inputFingerprint) return false;
   if (request.sampling.kind === 'FIXED_INPUT') {
     const preview = request.sampling.preview_request;
-    return canonical(preview.cenario.ordens) === canonical(execution.sourceSnapshot.orders)
+    return canonical(orderedOrders(preview.cenario.ordens))
+      === canonical(orderedOrders(execution.sourceSnapshot.orders))
       && canonical(preview.cenario.custo) === canonical(execution.premisesSnapshot.costs)
       && preview.cenario.janela_dias === execution.premisesSnapshot.windowDays
       && canonical(preview.periodo) === canonical(execution.periodSnapshot.httpPeriod);

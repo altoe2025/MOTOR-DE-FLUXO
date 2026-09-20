@@ -2,12 +2,12 @@ import 'fake-indexeddb/auto';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import type { PreviaRequest } from '../api/client';
 import type { CompanyRecord, ObservedCase } from '../cases/domain';
 import { calculateOperationalProfile } from '../profiles/calculateOperationalProfile';
 import type { OperationalProfileVersion } from '../profiles/domain';
 import { buildDiagnosticRequest } from '../diagnostics/buildDiagnosticRequest';
 import { appendDiagnosticExecution } from '../diagnostics/domain';
+import { buildPreviewRequest, type PreviewRequestProvenance } from '../preparation/buildPreviewRequest';
 import {
   appendExecution,
   createStudy,
@@ -40,6 +40,23 @@ const OPERATION_B = 'operation-b';
 const OPERATION_C = 'operation-c';
 const OPERATION_D = 'operation-d';
 const OPERATION_E = 'operation-e';
+
+const syntheticProvenance = {
+  kind: 'SYNTHETIC_DEFAULT' as const,
+  source: 'fixture', version: '1', recordedAt: FIXTURE_NOW, rule: 'fixture',
+};
+const previewProvenance: PreviewRequestProvenance = {
+  premises: {
+    windowDays: syntheticProvenance,
+    costs: {
+      iof_out: syntheticProvenance, iof_in: syntheticProvenance,
+      carry_cnr: syntheticProvenance, custo_fixo_remessa: syntheticProvenance,
+      custo_oportunidade_aa: syntheticProvenance, spread_rail_bps: syntheticProvenance,
+      ptax: syntheticProvenance,
+    },
+  },
+  period: { horizonDays: syntheticProvenance },
+};
 
 function company(ownerSub = OWNER_SUB): CompanyRecord {
   return {
@@ -129,21 +146,18 @@ function executionFor(document: StudyDocument): ExecutionRecord {
 async function diagnosticReservationFor(document: StudyDocument): Promise<DiagnosticExecutionRecord> {
   const scenario = document.scenarios[0]!;
   const jobId = '00000000-0000-4000-8000-000000000041';
-  const previewRequest = {
-    api_version: '1.0.0' as const,
-    request_id: '00000000-0000-4000-8000-000000000042',
-    study_id: document.id,
-    scenario_id: scenario.id,
-    scenario_revision: scenario.revision,
-    cenario: {
-      ordens: structuredClone(scenario.sourceSnapshot.orders),
-      horizonte_dias: 30,
-      janela_dias: scenario.premises.windowDays,
-      custo: structuredClone(scenario.premises.costs) as ExecutionRecord['requestSnapshot']['cenario']['custo'],
+  const previewRequest = buildPreviewRequest(
+    scenario.sourceSnapshot,
+    scenario.premises,
+    scenario.period,
+    {
+      requestId: '00000000-0000-4000-8000-000000000042',
+      studyId: document.id,
+      scenarioId: scenario.id,
+      scenarioRevision: scenario.revision,
     },
-    periodo: structuredClone(scenario.period.httpPeriod),
-    proveniencia: {},
-  } as unknown as PreviaRequest;
+    previewProvenance,
+  );
   const request = await buildDiagnosticRequest({
     requestId: '00000000-0000-4000-8000-000000000043',
     idempotencyKey: jobId,
@@ -693,6 +707,30 @@ describe('studies', () => {
     await expect(appendDiagnosticExecution(completed, {
       ...terminal, id: '00000000-0000-4000-8000-000000000047',
     }, '2026-09-19T12:04:00Z')).rejects.toThrow('terminal');
+  });
+
+  it('persiste reserva fixa canônica sem exigir a ordem física do sourceSnapshot', async () => {
+    const target = repository();
+    const original = await study();
+    await target.saveStudy({ expectedRevision: 0, operationId: OPERATION_A, document: original });
+    const reservation = await diagnosticReservationFor(original);
+    if (reservation.requestSnapshot.sampling.kind !== 'FIXED_INPUT') throw new Error('fixture');
+    expect(reservation.sourceSnapshot.orders.map((order) => order.id)).toEqual(['order-b', 'order-a']);
+    expect(reservation.requestSnapshot.sampling.preview_request.cenario.ordens
+      .map((order) => order.id)).toEqual(['order-a', 'order-b']);
+    const candidate: StudyDocument = {
+      ...structuredClone(original),
+      revision: original.revision + 1,
+      updatedAt: reservation.createdAt,
+      executions: [reservation],
+    };
+
+    await expect(target.saveStudy({
+      expectedRevision: original.revision,
+      operationId: OPERATION_B,
+      document: candidate,
+    })).resolves.toEqual(candidate);
+    await expect(target.getStudy(original.id)).resolves.toEqual(candidate);
   });
 
   it('rejeita documento artesanal cujo terminal diverge da reserva diagnóstica', async () => {
