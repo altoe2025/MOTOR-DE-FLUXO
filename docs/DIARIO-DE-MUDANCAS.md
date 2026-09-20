@@ -70,6 +70,22 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 
 ---
 
+## 2026-09-20 — Paridade integral do plano gerado no cliente (MOT-70)
+
+1. **Sintoma.** O boundary AJV ainda aceitava mapas de seed que não correspondiam
+   aos participantes da preparação, IDs de repetição duplicados, a mesma seed para
+   um participante em repetições diferentes e seleção fora do plano explícito.
+2. **Causa.** A primeira checagem semântica validava contagem e entradas isoladas,
+   mas não reconstruía as relações globais que o `GeneratedInputPlan` do servidor
+   já impunha.
+3. **O que foi feito.** O gerador oficial passou a comparar exatamente o conjunto
+   de participantes em cada repetição, rastrear IDs e seeds já usados e exigir que
+   `selected_repetition_id` pertença ao plano. Entradas estruturalmente inválidas
+   continuam retornando `false` sem lançar exceção.
+4. **O que isso invalida.** A afirmação de paridade semântica completa feita após a
+   primeira correção do boundary cliente. Requests válidos e resultados do motor
+   permanecem inalterados.
+
 ## 2026-09-20 — Validação semântica do plano diagnóstico no cliente (MOT-70)
 
 1. **Sintoma.** O validador AJV aceitava plano `GENERATED_INPUT` com `count`

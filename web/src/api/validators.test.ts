@@ -20,6 +20,7 @@ const source = {
   source: 'Fixture validators MOT-25',
   recorded_at: '2026-09-19T00:00:00Z',
 };
+const generatedParticipantId = '00000000-0000-4000-8000-000000000200';
 
 function preparationRequest() {
   const paths = [
@@ -113,16 +114,49 @@ function diagnosticRequest() {
 
 function generatedDiagnosticRequest() {
   const request = diagnosticRequest();
+  const baseInput = preparationRequest().input;
+  const participantPaths = [
+    'profile',
+    'seed',
+    'monthly_volume_brl',
+    'ticket_median_brl',
+    'out_fraction',
+    'deadline/mode',
+    'eh_efx',
+    'purpose_out',
+    'purpose_in',
+  ].map((field) => `/participants/${generatedParticipantId}/${field}`);
+  const preparationInput = {
+    ...baseInput,
+    participants: [{
+      id: generatedParticipantId,
+      profile: 'tesouraria_corporativa',
+      seed: '1',
+      monthly_volume_brl: '1000000',
+      ticket_median_brl: '100000',
+      out_fraction: '0.5',
+      deadline: { mode: 'PROFILE' },
+      eh_efx: false,
+      purpose_out: 'DISPONIBILIDADE',
+      purpose_in: 'EXPORTACAO',
+    }],
+    sources: {
+      ...baseInput.sources,
+      ...Object.fromEntries(participantPaths.map((path) => [path, source])),
+    },
+  };
   const repetitions = Array.from({ length: 10 }, (_, index) => ({
     repetition_id: `00000000-0000-4000-8000-${String(index + 100).padStart(12, '0')}`,
-    participant_seeds: {},
+    participant_seeds: {
+      [generatedParticipantId]: String(index + 100),
+    } as Record<string, string>,
   }));
   return {
     ...request,
     sampling: {
       kind: 'GENERATED_INPUT',
       count: 10,
-      preparation_input: preparationRequest().input,
+      preparation_input: preparationInput,
       repetitions,
     },
     selected_repetition_id: repetitions[0]?.repetition_id,
@@ -204,9 +238,64 @@ describe('generated runtime validation', () => {
 
     const oversizedSeed = generatedDiagnosticRequest();
     oversizedSeed.sampling.repetitions[0]!.participant_seeds = {
-      '00000000-0000-4000-8000-000000000200': '9223372036854775808',
+      [generatedParticipantId]: '9223372036854775808',
     };
     expect(validateDiagnosticRequest(oversizedSeed)).toBe(false);
+  });
+
+  it('requires every repetition seed map to match the preparation participants', () => {
+    const empty = generatedDiagnosticRequest();
+    empty.sampling.repetitions[0]!.participant_seeds = {};
+    expect(validateDiagnosticRequest(empty)).toBe(false);
+
+    const extra = generatedDiagnosticRequest();
+    extra.sampling.repetitions[0]!.participant_seeds = {
+      [generatedParticipantId]: '100',
+      '00000000-0000-4000-8000-000000000201': '101',
+    };
+    expect(validateDiagnosticRequest(extra)).toBe(false);
+
+    const missing = generatedDiagnosticRequest();
+    delete (missing.sampling.repetitions[0] as {
+      participant_seeds?: Record<string, string>;
+    }).participant_seeds;
+    expect(validateDiagnosticRequest(missing)).toBe(false);
+  });
+
+  it('rejects duplicate repetition ids', () => {
+    const request = generatedDiagnosticRequest();
+    request.sampling.repetitions[1]!.repetition_id =
+      request.sampling.repetitions[0]!.repetition_id;
+
+    expect(validateDiagnosticRequest(request)).toBe(false);
+  });
+
+  it('rejects a duplicate seed for the same participant across repetitions', () => {
+    const request = generatedDiagnosticRequest();
+    request.sampling.repetitions[1]!.participant_seeds[generatedParticipantId] =
+      request.sampling.repetitions[0]!.participant_seeds[generatedParticipantId]!;
+
+    expect(validateDiagnosticRequest(request)).toBe(false);
+  });
+
+  it('requires selected_repetition_id to exist in the explicit plan', () => {
+    const request = generatedDiagnosticRequest();
+    request.selected_repetition_id = '00000000-0000-4000-8000-000000000999';
+
+    expect(validateDiagnosticRequest(request)).toBe(false);
+  });
+
+  it('returns false without throwing for malformed generated input', () => {
+    const malformed = {
+      sampling: {
+        kind: 'GENERATED_INPUT',
+        count: 10,
+        repetitions: [{ participant_seeds: { [generatedParticipantId]: {} } }],
+      },
+    };
+
+    expect(() => validateDiagnosticRequest(malformed)).not.toThrow();
+    expect(validateDiagnosticRequest(malformed)).toBe(false);
   });
 
   it('validates job progress and exposes the diagnostic envelope validator', () => {
