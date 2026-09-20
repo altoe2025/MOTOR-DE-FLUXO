@@ -13,6 +13,7 @@ from servidor.contracts.diagnostics import (
     DiagnosticRequest,
     EvidenceMetric,
     JobSnapshot,
+    ParticipantShare,
 )
 
 
@@ -215,6 +216,28 @@ def test_evidence_metric_discriminates_available_from_absent_states():
     with pytest.raises(ValidationError):
         adapter.validate_python(
             {"state": "AVAILABLE", "reason": "missing", "evidence": []}
+        )
+
+
+def test_participant_share_uses_strict_public_client_identifier():
+    share = ParticipantShare.model_validate(
+        {"participant_id": "astropay", "volume_brl": "100", "share": "1"}
+    )
+    assert share.participant_id == "astropay"
+
+    for invalid_id in (" astropay", "astropay ", "x" * 129):
+        with pytest.raises(ValidationError):
+            ParticipantShare.model_validate(
+                {"participant_id": invalid_id, "volume_brl": "100", "share": "1"}
+            )
+    with pytest.raises(ValidationError):
+        ParticipantShare.model_validate(
+            {
+                "participant_id": "astropay",
+                "volume_brl": "100",
+                "share": "1",
+                "extra": "forbidden",
+            }
         )
 
 

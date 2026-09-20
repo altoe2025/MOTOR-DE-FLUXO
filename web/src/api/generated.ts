@@ -850,10 +850,7 @@ export interface components {
         };
         /** ParticipantShare */
         ParticipantShare: {
-            /**
-             * Participant Id
-             * Format: uuid
-             */
+            /** Participant Id */
             participant_id: string;
             /** Share */
             share: string;

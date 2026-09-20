@@ -14,9 +14,11 @@ from servidor.contracts.preview import Fingerprint, PreviewEnvelope
 from servidor.contracts.primitives import (
     DateTimeValue,
     DecimalText,
+    Identificador,
     OrigemValor,
     StrictModel,
     UUIDValue,
+    validate_identifier,
 )
 
 AxisCode = Literal[
@@ -314,9 +316,14 @@ class CrossBorderResidualAxis(StrictModel):
 
 
 class ParticipantShare(StrictModel):
-    participant_id: UUIDValue
+    participant_id: Identificador
     volume_brl: DecimalText
     share: DecimalText
+
+    @field_validator("participant_id")
+    @classmethod
+    def participant_id_is_exact(cls, value: str) -> str:
+        return validate_identifier(value)
 
 
 class CompositionDependencyAxis(StrictModel):

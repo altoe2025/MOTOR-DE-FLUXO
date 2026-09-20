@@ -70,6 +70,26 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 
 ---
 
+## 2026-09-20 — Sete eixos puros do diagnóstico robusto (MOT-71)
+
+1. **Sintoma.** O contrato do diagnóstico já publicava os sete eixos, mas ainda não
+   existia cálculo auditável para preenchê-los. Além disso, a participação por
+   cliente exigia UUID embora entradas fixas válidas usem identificadores como
+   `astropay`, `nomad` e `wise`.
+2. **Causa.** A MOT-70 fechou a forma pública antes dos agregadores. Nesse corte,
+   `ParticipantShare` herdou por engano a identidade UUID da receita geradora, mesmo
+   representando o `cliente_id` textual das operações explícitas.
+3. **O que foi feito.** A branch `codex/frontend-etapa-3` adiciona análise pura com
+   `Decimal` para potencial, captura, tempo, resíduo, composição, robustez econômica
+   e perfil operacional; separa execução selecionada da distribuição; deriva
+   consequências versionadas e limitações com referências verificadas. O contrato
+   de participação passa a usar o `Identificador` estrito de `OrdemEntrada`, com
+   OpenAPI e tipos gerados novamente pelos comandos oficiais.
+4. **O que isso invalida.** Invalida somente o formato UUID antes publicado para
+   `ParticipantShare.participant_id`. Requests, receitas geradoras, resultados do
+   motor e contratos UUID das seeds permanecem iguais; a análise não cria HTTP,
+   fila, persistência ou interface.
+
 ## 2026-09-20 — UUID URN na validação diagnóstica do cliente (MOT-70)
 
 1. **Sintoma.** `ajv-formats` e Pydantic aceitavam `urn:uuid:<UUID>`, mas a

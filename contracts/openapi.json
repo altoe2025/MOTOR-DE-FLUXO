@@ -2117,7 +2117,8 @@
         "additionalProperties": false,
         "properties": {
           "participant_id": {
-            "format": "uuid",
+            "maxLength": 128,
+            "minLength": 1,
             "title": "Participant Id",
             "type": "string"
           },
