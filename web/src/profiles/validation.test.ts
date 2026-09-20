@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { ObservedCase } from '../cases/domain';
 import { calculateOperationalProfile } from './calculateOperationalProfile';
+import type { OperationalProfileVersion } from './domain';
+import { fingerprintOperationalProfile } from './fingerprints';
 import { validateOperationalProfile } from './validation';
 
 const provenance = { kind: 'OBSERVED', source: 'fixture.xlsx', version: 'layout-1', recordedAt: '2026-09-20T12:00:00Z' } as const;
@@ -42,6 +44,42 @@ describe('validateOperationalProfile', () => {
     const tampered = structuredClone(await profile()) as unknown as Record<string, unknown>;
     const metrics = tampered.metrics as { purposes: { missing: Record<string, unknown> } };
     metrics.purposes.missing.value = '0';
+    const validation = await validateOperationalProfile(tampered);
+    expect(validation.ok).toBe(false);
+    if (!validation.ok) {
+      expect(validation.issues.some((item) => item.code === 'INVALID_STRUCTURE')).toBe(true);
+    }
+  });
+
+  // Production break caught: recomputing the fingerprint lets a document omit a required volume metric.
+  it('rejects a profile missing a required metric key even with a fresh fingerprint', async () => {
+    const tampered = structuredClone(await profile()) as unknown as {
+      metrics: { volume: Record<string, unknown> };
+      documentFingerprint: string;
+    };
+    Reflect.deleteProperty(tampered.metrics.volume, 'totalBrl');
+    tampered.documentFingerprint = await fingerprintOperationalProfile(
+      tampered as unknown as OperationalProfileVersion,
+    );
+
+    const validation = await validateOperationalProfile(tampered);
+    expect(validation.ok).toBe(false);
+    if (!validation.ok) {
+      expect(validation.issues.some((item) => item.code === 'INVALID_STRUCTURE')).toBe(true);
+    }
+  });
+
+  // Production break caught: recomputing the fingerprint lets arbitrary objects masquerade as FieldProvenance.
+  it('rejects arbitrary provenance fields even with a fresh fingerprint', async () => {
+    const tampered = structuredClone(await profile()) as unknown as {
+      provenance: { fields: unknown[] };
+      documentFingerprint: string;
+    };
+    tampered.provenance.fields = [{ arbitrary: true }];
+    tampered.documentFingerprint = await fingerprintOperationalProfile(
+      tampered as unknown as OperationalProfileVersion,
+    );
+
     const validation = await validateOperationalProfile(tampered);
     expect(validation.ok).toBe(false);
     if (!validation.ok) {

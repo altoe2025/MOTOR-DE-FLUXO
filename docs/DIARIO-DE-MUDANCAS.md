@@ -70,6 +70,22 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 
 ---
 
+## 2026-09-20 — Validação fechada do Perfil Operacional (MOT-66)
+
+1. **Sintoma.** Um perfil com fingerprint recalculado ainda podia omitir uma métrica
+   obrigatória ou substituir `provenance.fields` por objetos arbitrários e atravessar
+   a validação de leitura.
+2. **Causa.** O schema `1.0.0` usava um mapa genérico de evidências para quatro
+   famílias métricas e tipava a proveniência apenas como `object`.
+3. **O que foi feito.** O schema agora enumera e exige todas as chaves e formas de
+   valor de volume, frequência, tickets, direção, prazo, finalidade, janelas e
+   sazonalidade. A validação registra e referencia a união discriminada oficial de
+   `FieldProvenance` do contrato de Caso Observado. Duas regressões recalculam o
+   fingerprint após adulterar o documento e provam a rejeição estrutural.
+4. **O que isso invalida.** Nada em perfis gerados corretamente, IndexedDB, estudos,
+   APIs, motor ou números publicados. Fica inválida a suposição de que um fingerprint
+   íntegro sozinho compensaria lacunas estruturais no documento lido.
+
 ## 2026-09-20 — Perfil Operacional puro e versionado (MOT-66)
 
 1. **Sintoma.** Casos Observados confirmados ainda não podiam ser combinados em um

@@ -4,171 +4,164 @@
   "type": "object",
   "additionalProperties": false,
   "$defs": {
-    "Evidence": {
+    "Decimal": { "type": "string", "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$" },
+    "EvidenceStrings": { "type": "array", "items": { "type": "string" } },
+    "UnavailableEvidence": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "state": { "enum": ["NOT_COLLECTED", "INSUFFICIENT_COVERAGE", "INCOMPATIBLE"] },
+        "reason": { "type": "string", "minLength": 1 },
+        "evidence": { "$ref": "#/$defs/EvidenceStrings" }
+      },
+      "required": ["state", "reason", "evidence"]
+    },
+    "DecimalEvidence": {
       "oneOf": [
-        {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "state": { "const": "AVAILABLE" },
-            "value": {},
-            "evidence": { "type": "array", "items": { "type": "string" } }
-          },
-          "required": ["state", "value", "evidence"]
-        },
-        {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "state": { "enum": ["NOT_COLLECTED", "INSUFFICIENT_COVERAGE", "INCOMPATIBLE"] },
-            "reason": { "type": "string", "minLength": 1 },
-            "evidence": { "type": "array", "items": { "type": "string" } }
-          },
-          "required": ["state", "reason", "evidence"]
-        }
+        { "type": "object", "additionalProperties": false, "properties": { "state": { "const": "AVAILABLE" }, "value": { "$ref": "#/$defs/Decimal" }, "evidence": { "$ref": "#/$defs/EvidenceStrings" } }, "required": ["state", "value", "evidence"] },
+        { "$ref": "#/$defs/UnavailableEvidence" }
+      ]
+    },
+    "IntegerEvidence": {
+      "oneOf": [
+        { "type": "object", "additionalProperties": false, "properties": { "state": { "const": "AVAILABLE" }, "value": { "type": "integer", "minimum": 0 }, "evidence": { "$ref": "#/$defs/EvidenceStrings" } }, "required": ["state", "value", "evidence"] },
+        { "$ref": "#/$defs/UnavailableEvidence" }
       ]
     },
     "Window": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "startDate": { "type": "string", "format": "date" },
-        "endDate": { "type": "string", "format": "date" },
-        "closingDate": { "type": "string", "format": "date" }
-      },
+      "type": "object", "additionalProperties": false,
+      "properties": { "startDate": { "type": "string", "format": "date" }, "endDate": { "type": "string", "format": "date" }, "closingDate": { "type": "string", "format": "date" } },
       "required": ["startDate", "endDate", "closingDate"]
     },
     "Coverage": {
-      "type": "object",
-      "additionalProperties": false,
+      "type": "object", "additionalProperties": false,
       "properties": {
-        "caseCount": { "type": "integer", "minimum": 1 },
-        "firstDate": { "type": "string", "format": "date" },
-        "lastDate": { "type": "string", "format": "date" },
-        "totalWindowDays": { "type": "integer", "minimum": 1 },
-        "coveredDays": { "type": "integer", "minimum": 1 },
-        "overlapDays": { "type": "integer", "minimum": 0 },
-        "gapDays": { "type": "integer", "minimum": 0 },
+        "caseCount": { "type": "integer", "minimum": 1 }, "firstDate": { "type": "string", "format": "date" }, "lastDate": { "type": "string", "format": "date" },
+        "totalWindowDays": { "type": "integer", "minimum": 1 }, "coveredDays": { "type": "integer", "minimum": 1 }, "overlapDays": { "type": "integer", "minimum": 0 }, "gapDays": { "type": "integer", "minimum": 0 },
         "windows": {
-          "type": "array",
-          "minItems": 1,
+          "type": "array", "minItems": 1,
           "items": {
-            "type": "object",
-            "additionalProperties": false,
-            "properties": {
-              "caseId": { "type": "string", "minLength": 1 },
-              "caseRevision": { "type": "integer", "minimum": 1 },
-              "startDate": { "type": "string", "format": "date" },
-              "endDate": { "type": "string", "format": "date" },
-              "durationDays": { "type": "integer", "minimum": 1 }
-            },
+            "type": "object", "additionalProperties": false,
+            "properties": { "caseId": { "type": "string", "minLength": 1 }, "caseRevision": { "type": "integer", "minimum": 1 }, "startDate": { "type": "string", "format": "date" }, "endDate": { "type": "string", "format": "date" }, "durationDays": { "type": "integer", "minimum": 1 } },
             "required": ["caseId", "caseRevision", "startDate", "endDate", "durationDays"]
           }
         }
       },
       "required": ["caseCount", "firstDate", "lastDate", "totalWindowDays", "coveredDays", "overlapDays", "gapDays", "windows"]
     },
-    "Issue": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "code": { "type": "string", "minLength": 1 },
-        "message": { "type": "string", "minLength": 1 },
-        "caseIds": { "type": "array", "items": { "type": "string" } }
-      },
-      "required": ["code", "message", "caseIds"]
+    "CoverageEvidence": {
+      "oneOf": [
+        { "type": "object", "additionalProperties": false, "properties": { "state": { "const": "AVAILABLE" }, "value": { "$ref": "#/$defs/Coverage" }, "evidence": { "$ref": "#/$defs/EvidenceStrings" } }, "required": ["state", "value", "evidence"] },
+        { "$ref": "#/$defs/UnavailableEvidence" }
+      ]
     },
-    "EvidenceMap": {
-      "type": "object",
-      "minProperties": 1,
-      "additionalProperties": { "$ref": "#/$defs/Evidence" }
+    "DirectionSide": {
+      "type": "object", "additionalProperties": false,
+      "properties": { "volumeBrl": { "$ref": "#/$defs/Decimal" }, "fraction": { "$ref": "#/$defs/Decimal" } },
+      "required": ["volumeBrl", "fraction"]
+    },
+    "DirectionEvidence": {
+      "oneOf": [
+        {
+          "type": "object", "additionalProperties": false,
+          "properties": {
+            "state": { "const": "AVAILABLE" },
+            "value": { "type": "object", "additionalProperties": false, "properties": { "out": { "$ref": "#/$defs/DirectionSide" }, "in": { "$ref": "#/$defs/DirectionSide" } }, "required": ["out", "in"] },
+            "evidence": { "$ref": "#/$defs/EvidenceStrings" }
+          },
+          "required": ["state", "value", "evidence"]
+        },
+        { "$ref": "#/$defs/UnavailableEvidence" }
+      ]
+    },
+    "PurposeMetric": {
+      "type": "object", "additionalProperties": false,
+      "properties": { "code": { "type": "string", "minLength": 1 }, "volumeBrl": { "$ref": "#/$defs/Decimal" }, "orderCount": { "type": "integer", "minimum": 1 }, "volumeFraction": { "$ref": "#/$defs/Decimal" }, "orderFraction": { "$ref": "#/$defs/Decimal" } },
+      "required": ["code", "volumeBrl", "orderCount", "volumeFraction", "orderFraction"]
+    },
+    "PurposeListEvidence": {
+      "oneOf": [
+        { "type": "object", "additionalProperties": false, "properties": { "state": { "const": "AVAILABLE" }, "value": { "type": "array", "items": { "$ref": "#/$defs/PurposeMetric" } }, "evidence": { "$ref": "#/$defs/EvidenceStrings" } }, "required": ["state", "value", "evidence"] },
+        { "$ref": "#/$defs/UnavailableEvidence" }
+      ]
+    },
+    "PurposeCoverageEvidence": {
+      "oneOf": [
+        {
+          "type": "object", "additionalProperties": false,
+          "properties": { "state": { "const": "AVAILABLE" }, "value": { "type": "object", "additionalProperties": false, "properties": { "volumeFraction": { "$ref": "#/$defs/Decimal" }, "orderFraction": { "$ref": "#/$defs/Decimal" } }, "required": ["volumeFraction", "orderFraction"] }, "evidence": { "$ref": "#/$defs/EvidenceStrings" } },
+          "required": ["state", "value", "evidence"]
+        },
+        { "$ref": "#/$defs/UnavailableEvidence" }
+      ]
+    },
+    "MissingPurposeEvidence": {
+      "oneOf": [
+        {
+          "type": "object", "additionalProperties": false,
+          "properties": { "state": { "const": "AVAILABLE" }, "value": { "type": "object", "additionalProperties": false, "properties": { "volumeBrl": { "$ref": "#/$defs/Decimal" }, "orderCount": { "type": "integer", "minimum": 0 } }, "required": ["volumeBrl", "orderCount"] }, "evidence": { "$ref": "#/$defs/EvidenceStrings" } },
+          "required": ["state", "value", "evidence"]
+        },
+        { "$ref": "#/$defs/UnavailableEvidence" }
+      ]
+    },
+    "CivilMonthObservation": {
+      "type": "object", "additionalProperties": false,
+      "properties": { "month": { "type": "string", "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])$" }, "volumeBrl": { "$ref": "#/$defs/Decimal" }, "orderCount": { "type": "integer", "minimum": 0 }, "coveredDays": { "type": "integer", "minimum": 1 }, "averageVolumePerCoveredDay": { "$ref": "#/$defs/Decimal" }, "averageOrdersPerCoveredDay": { "$ref": "#/$defs/Decimal" } },
+      "required": ["month", "volumeBrl", "orderCount", "coveredDays", "averageVolumePerCoveredDay", "averageOrdersPerCoveredDay"]
+    },
+    "SeasonalityObservationsEvidence": {
+      "oneOf": [
+        { "type": "object", "additionalProperties": false, "properties": { "state": { "const": "AVAILABLE" }, "value": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/CivilMonthObservation" } }, "evidence": { "$ref": "#/$defs/EvidenceStrings" } }, "required": ["state", "value", "evidence"] },
+        { "$ref": "#/$defs/UnavailableEvidence" }
+      ]
+    },
+    "SeasonalityComparisonEvidence": {
+      "oneOf": [
+        {
+          "type": "object", "additionalProperties": false,
+          "properties": { "state": { "const": "AVAILABLE" }, "value": { "type": "object", "additionalProperties": false, "properties": { "coveredMonthCount": { "type": "integer", "minimum": 2 } }, "required": ["coveredMonthCount"] }, "evidence": { "$ref": "#/$defs/EvidenceStrings" } },
+          "required": ["state", "value", "evidence"]
+        },
+        { "$ref": "#/$defs/UnavailableEvidence" }
+      ]
+    },
+    "Issue": {
+      "type": "object", "additionalProperties": false,
+      "properties": { "code": { "type": "string", "minLength": 1 }, "message": { "type": "string", "minLength": 1 }, "caseIds": { "type": "array", "items": { "type": "string" } } },
+      "required": ["code", "message", "caseIds"]
     }
   },
   "properties": {
-    "schemaVersion": { "const": "1.0.0" },
-    "id": { "type": "string", "minLength": 1 },
-    "ownerSub": { "type": "string", "minLength": 1 },
-    "companyId": { "type": "string", "minLength": 1 },
-    "version": { "type": "integer", "minimum": 1 },
-    "createdAt": { "type": "string", "format": "date-time" },
-    "method": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "id": { "const": "operational-profile-v1" },
-        "version": { "const": "1.0.0" },
-        "percentileMethod": { "const": "NEAREST_RANK" }
-      },
-      "required": ["id", "version", "percentileMethod"]
-    },
+    "schemaVersion": { "const": "1.0.0" }, "id": { "type": "string", "minLength": 1 }, "ownerSub": { "type": "string", "minLength": 1 }, "companyId": { "type": "string", "minLength": 1 }, "version": { "type": "integer", "minimum": 1 }, "createdAt": { "type": "string", "format": "date-time" },
+    "method": { "type": "object", "additionalProperties": false, "properties": { "id": { "const": "operational-profile-v1" }, "version": { "const": "1.0.0" }, "percentileMethod": { "const": "NEAREST_RANK" } }, "required": ["id", "version", "percentileMethod"] },
     "selectedCases": {
-      "type": "array",
-      "minItems": 1,
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "caseId": { "type": "string", "minLength": 1 },
-          "caseRevision": { "type": "integer", "minimum": 1 },
-          "caseFingerprint": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
-          "window": { "$ref": "#/$defs/Window" }
-        },
-        "required": ["caseId", "caseRevision", "caseFingerprint", "window"]
-      }
+      "type": "array", "minItems": 1,
+      "items": { "type": "object", "additionalProperties": false, "properties": { "caseId": { "type": "string", "minLength": 1 }, "caseRevision": { "type": "integer", "minimum": 1 }, "caseFingerprint": { "type": "string", "pattern": "^[0-9a-f]{64}$" }, "window": { "$ref": "#/$defs/Window" } }, "required": ["caseId", "caseRevision", "caseFingerprint", "window"] }
     },
-    "selectionFingerprint": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
-    "documentFingerprint": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
-    "compatibility": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "compatible": { "const": true },
-        "blockers": { "type": "array", "maxItems": 0, "items": { "$ref": "#/$defs/Issue" } },
-        "warnings": { "type": "array", "items": { "$ref": "#/$defs/Issue" } }
-      },
-      "required": ["compatible", "blockers", "warnings"]
-    },
+    "selectionFingerprint": { "type": "string", "pattern": "^[0-9a-f]{64}$" }, "documentFingerprint": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "compatibility": { "type": "object", "additionalProperties": false, "properties": { "compatible": { "const": true }, "blockers": { "type": "array", "maxItems": 0, "items": { "$ref": "#/$defs/Issue" } }, "warnings": { "type": "array", "items": { "$ref": "#/$defs/Issue" } } }, "required": ["compatible", "blockers", "warnings"] },
     "coverage": { "$ref": "#/$defs/Coverage" },
     "metrics": {
-      "type": "object",
-      "additionalProperties": false,
+      "type": "object", "additionalProperties": false,
       "properties": {
-        "volume": { "$ref": "#/$defs/EvidenceMap" },
-        "frequency": { "$ref": "#/$defs/EvidenceMap" },
-        "ticketsBrl": { "$ref": "#/$defs/EvidenceMap" },
-        "direction": { "$ref": "#/$defs/Evidence" },
-        "deadlineDays": { "$ref": "#/$defs/EvidenceMap" },
-        "purposes": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "byCode": { "$ref": "#/$defs/Evidence" },
-            "knownCoverage": { "$ref": "#/$defs/Evidence" },
-            "missing": { "$ref": "#/$defs/Evidence" }
-          },
-          "required": ["byCode", "knownCoverage", "missing"]
-        },
-        "windows": { "$ref": "#/$defs/Evidence" },
-        "seasonality": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "observations": { "$ref": "#/$defs/Evidence" },
-            "comparison": { "$ref": "#/$defs/Evidence" }
-          },
-          "required": ["observations", "comparison"]
-        }
+        "volume": { "type": "object", "additionalProperties": false, "properties": { "outBrl": { "$ref": "#/$defs/DecimalEvidence" }, "inBrl": { "$ref": "#/$defs/DecimalEvidence" }, "totalBrl": { "$ref": "#/$defs/DecimalEvidence" } }, "required": ["outBrl", "inBrl", "totalBrl"] },
+        "frequency": { "type": "object", "additionalProperties": false, "properties": { "orderCount": { "$ref": "#/$defs/IntegerEvidence" }, "ordersPerCoveredDay": { "$ref": "#/$defs/DecimalEvidence" }, "ordersPer30Days": { "$ref": "#/$defs/DecimalEvidence" } }, "required": ["orderCount", "ordersPerCoveredDay", "ordersPer30Days"] },
+        "ticketsBrl": { "type": "object", "additionalProperties": false, "properties": { "min": { "$ref": "#/$defs/DecimalEvidence" }, "p25": { "$ref": "#/$defs/DecimalEvidence" }, "p50": { "$ref": "#/$defs/DecimalEvidence" }, "p75": { "$ref": "#/$defs/DecimalEvidence" }, "max": { "$ref": "#/$defs/DecimalEvidence" } }, "required": ["min", "p25", "p50", "p75", "max"] },
+        "direction": { "$ref": "#/$defs/DirectionEvidence" },
+        "deadlineDays": { "type": "object", "additionalProperties": false, "properties": { "p50ByCount": { "$ref": "#/$defs/DecimalEvidence" }, "p90ByCount": { "$ref": "#/$defs/DecimalEvidence" }, "p50ByVolume": { "$ref": "#/$defs/DecimalEvidence" }, "p90ByVolume": { "$ref": "#/$defs/DecimalEvidence" } }, "required": ["p50ByCount", "p90ByCount", "p50ByVolume", "p90ByVolume"] },
+        "purposes": { "type": "object", "additionalProperties": false, "properties": { "byCode": { "$ref": "#/$defs/PurposeListEvidence" }, "knownCoverage": { "$ref": "#/$defs/PurposeCoverageEvidence" }, "missing": { "$ref": "#/$defs/MissingPurposeEvidence" } }, "required": ["byCode", "knownCoverage", "missing"] },
+        "windows": { "$ref": "#/$defs/CoverageEvidence" },
+        "seasonality": { "type": "object", "additionalProperties": false, "properties": { "observations": { "$ref": "#/$defs/SeasonalityObservationsEvidence" }, "comparison": { "$ref": "#/$defs/SeasonalityComparisonEvidence" } }, "required": ["observations", "comparison"] }
       },
       "required": ["volume", "frequency", "ticketsBrl", "direction", "deadlineDays", "purposes", "windows", "seasonality"]
     },
     "provenance": {
-      "type": "object",
-      "additionalProperties": false,
+      "type": "object", "additionalProperties": false,
       "properties": {
         "caseEvidence": { "type": "array", "items": { "type": "string" } },
         "sourceFiles": { "type": "array", "items": { "type": "string", "pattern": "^[0-9a-f]{64}$" } },
         "normalizationVersions": { "type": "array", "items": { "type": "string" } },
-        "fields": { "type": "array", "items": { "type": "object" } }
+        "fields": { "type": "array", "items": { "$ref": "https://motor-de-fluxo.local/cases/observedCase.schema.json#/$defs/FieldProvenance" } }
       },
       "required": ["caseEvidence", "sourceFiles", "normalizationVersions", "fields"]
     }
