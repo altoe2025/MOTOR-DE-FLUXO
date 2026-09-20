@@ -4,6 +4,7 @@ import type { PreviaRequest } from '../api/client';
 import { createStudy } from '../study/domain';
 import { makeScenarioDraft } from '../study/fixtures';
 import type { DiagnosticExecutionRecord } from '../study/model';
+import { validateStudyDocument } from '../study/validation';
 import { buildDiagnosticRequest } from './buildDiagnosticRequest';
 import { appendDiagnosticExecution } from './domain';
 
@@ -99,5 +100,140 @@ describe('appendDiagnosticExecution', () => {
       ...terminal,
       id: '00000000-0000-4000-8000-000000000309',
     }, '2026-09-20T12:02:00Z')).rejects.toThrow('terminal');
+  });
+
+  it.each([
+    ['job/idempotency', (terminal: DiagnosticExecutionRecord) => ({
+      ...terminal,
+      jobId: '00000000-0000-4000-8000-000000000399',
+      requestSnapshot: {
+        ...terminal.requestSnapshot,
+        idempotency_key: '00000000-0000-4000-8000-000000000399',
+      },
+    })],
+    ['request', (terminal: DiagnosticExecutionRecord) => ({
+      ...terminal,
+      requestSnapshot: {
+        ...terminal.requestSnapshot,
+        request_id: '00000000-0000-4000-8000-000000000398',
+      },
+    })],
+    ['cenário', (terminal: DiagnosticExecutionRecord) => ({
+      ...terminal,
+      scenarioId: '00000000-0000-4000-8000-000000000397',
+      requestSnapshot: {
+        ...terminal.requestSnapshot,
+        scenario_id: '00000000-0000-4000-8000-000000000397',
+      },
+    })],
+    ['fingerprint', (terminal: DiagnosticExecutionRecord) => ({
+      ...terminal,
+      inputFingerprint: 'b'.repeat(64),
+      requestSnapshot: { ...terminal.requestSnapshot, input_fingerprint: 'b'.repeat(64) },
+    })],
+    ['origem', (terminal: DiagnosticExecutionRecord) => ({
+      ...terminal,
+      sourceSnapshot: { ...terminal.sourceSnapshot, capturedAt: '2026-09-20T12:00:01Z' },
+    })],
+    ['premissas', (terminal: DiagnosticExecutionRecord) => ({
+      ...terminal,
+      premisesSnapshot: { ...terminal.premisesSnapshot, windowDays: terminal.premisesSnapshot.windowDays + 1 },
+    })],
+    ['período', (terminal: DiagnosticExecutionRecord) => ({
+      ...terminal,
+      periodSnapshot: 'executableHorizonDays' in terminal.periodSnapshot
+        ? {
+            ...terminal.periodSnapshot,
+            executableHorizonDays: terminal.periodSnapshot.executableHorizonDays + 1,
+          }
+        : {
+            ...terminal.periodSnapshot,
+            httpPeriod: {
+              ...terminal.periodSnapshot.httpPeriod,
+              periodo_medicao_dias: terminal.periodSnapshot.httpPeriod.periodo_medicao_dias + 1,
+            },
+          },
+    })],
+  ] as const)('rejeita terminal cuja identidade %s diverge da reserva', async (_label, mutate) => {
+    const { study, reservation } = await fixture();
+    const reserved = await appendDiagnosticExecution(study, reservation, CREATED_AT);
+    const terminal = mutate({
+      ...structuredClone(reservation),
+      id: '00000000-0000-4000-8000-000000000308',
+      status: 'FAILED',
+      error: { code: 'DIAGNOSTICO_INVALIDO', message: 'A execução falhou.' },
+      finishedAt: '2026-09-20T12:01:00Z',
+    });
+
+    await expect(appendDiagnosticExecution(
+      reserved,
+      terminal as DiagnosticExecutionRecord,
+      terminal.finishedAt!,
+    )).rejects.toThrow('reserva');
+  });
+
+  it('validação integral rejeita terminal artesanal sem reserva correspondente', async () => {
+    const { study, reservation } = await fixture();
+    const terminal: DiagnosticExecutionRecord = {
+      ...structuredClone(reservation),
+      id: '00000000-0000-4000-8000-000000000308',
+      status: 'FAILED',
+      error: { code: 'DIAGNOSTICO_INVALIDO', message: 'A execução falhou.' },
+      finishedAt: '2026-09-20T12:01:00Z',
+    };
+
+    const result = await validateStudyDocument({ ...study, executions: [terminal] });
+
+    expect(result).toEqual({
+      ok: false,
+      issues: [expect.objectContaining({ code: 'INCOMPATIBLE_DIAGNOSTIC_ATTEMPT' })],
+    });
+  });
+
+  it('validação integral rejeita terminal artesanal divergente da reserva', async () => {
+    const { study, reservation } = await fixture();
+    const terminal: DiagnosticExecutionRecord = {
+      ...structuredClone(reservation),
+      id: '00000000-0000-4000-8000-000000000308',
+      requestSnapshot: {
+        ...structuredClone(reservation.requestSnapshot),
+        request_id: '00000000-0000-4000-8000-000000000398',
+      },
+      status: 'FAILED',
+      error: { code: 'DIAGNOSTICO_INVALIDO', message: 'A execução falhou.' },
+      finishedAt: '2026-09-20T12:01:00Z',
+    };
+
+    const result = await validateStudyDocument({ ...study, executions: [reservation, terminal] });
+
+    expect(result).toEqual({
+      ok: false,
+      issues: [expect.objectContaining({ code: 'INCOMPATIBLE_DIAGNOSTIC_ATTEMPT' })],
+    });
+  });
+
+  it('validação integral exige exatamente uma reserva QUEUED por terminal', async () => {
+    const { study, reservation } = await fixture();
+    const secondReservation: DiagnosticExecutionRecord = {
+      ...structuredClone(reservation),
+      id: '00000000-0000-4000-8000-000000000309',
+    };
+    const terminal: DiagnosticExecutionRecord = {
+      ...structuredClone(reservation),
+      id: '00000000-0000-4000-8000-000000000308',
+      status: 'FAILED',
+      error: { code: 'DIAGNOSTICO_INVALIDO', message: 'A execução falhou.' },
+      finishedAt: '2026-09-20T12:01:00Z',
+    };
+
+    const result = await validateStudyDocument({
+      ...study,
+      executions: [reservation, secondReservation, terminal],
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      issues: [expect.objectContaining({ code: 'INCOMPATIBLE_DIAGNOSTIC_ATTEMPT' })],
+    });
   });
 });

@@ -695,6 +695,38 @@ describe('studies', () => {
     }, '2026-09-19T12:04:00Z')).rejects.toThrow('terminal');
   });
 
+  it('rejeita documento artesanal cujo terminal diverge da reserva diagnóstica', async () => {
+    const target = repository();
+    const original = await study();
+    await target.saveStudy({ expectedRevision: 0, operationId: OPERATION_A, document: original });
+    const reservation = await diagnosticReservationFor(original);
+    const reserved = await appendDiagnosticExecution(original, reservation, reservation.createdAt);
+    await target.saveStudy({ expectedRevision: 1, operationId: OPERATION_B, document: reserved });
+    const terminal: DiagnosticExecutionRecord = {
+      ...structuredClone(reservation),
+      id: '00000000-0000-4000-8000-000000000046',
+      requestSnapshot: {
+        ...structuredClone(reservation.requestSnapshot),
+        request_id: '00000000-0000-4000-8000-000000000049',
+      },
+      status: 'FAILED',
+      error: { code: 'DIAGNOSTICO_INVALIDO', message: 'Falha controlada.' },
+      finishedAt: '2026-09-19T12:03:00Z',
+    };
+    const handcrafted: StudyDocument = {
+      ...structuredClone(reserved),
+      revision: reserved.revision + 1,
+      updatedAt: terminal.finishedAt!,
+      executions: [...reserved.executions, terminal],
+    };
+
+    await expect(target.saveStudy({
+      expectedRevision: reserved.revision,
+      operationId: OPERATION_C,
+      document: handcrafted,
+    })).rejects.toBeInstanceOf(InvalidDocumentError);
+  });
+
   it('has one winner in a real CAS race between repository instances', async () => {
     const first = repository();
     const second = repository();

@@ -15,7 +15,7 @@ export function diagnosticJobKey(
 
 export function shouldPollDiagnostic(snapshot: JobSnapshot | undefined): boolean {
   return snapshot === undefined
-    || ['QUEUED', 'RUNNING', 'CANCEL_REQUESTED'].includes(snapshot.status);
+    || ['QUEUED', 'RUNNING', 'AGGREGATING', 'CANCEL_REQUESTED'].includes(snapshot.status);
 }
 
 export function diagnosticJobQueryOptions(input: Readonly<{

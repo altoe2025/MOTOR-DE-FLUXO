@@ -6,6 +6,7 @@ import observedCaseSchema from '../cases/observedCase.schema.json';
 import operationalProfileSchema from '../profiles/operationalProfile.schema.json';
 import { validateOperationalProfile } from '../profiles/validation';
 import { validateDiagnosticEnvelope, validateDiagnosticRequest } from '../api/validators';
+import { diagnosticAttemptIdentityMatches } from '../diagnostics/attemptIdentity';
 import {
   canonical,
   canonicalInputSnapshot,
@@ -142,6 +143,17 @@ export function parseStudyV3(value: unknown): StudyDocumentV3 {
     }
     if (execution.kind === 'PREVIEW') terminalRequests.add(requestId);
     if (execution.attemptId !== undefined) terminalAttempts.add(execution.attemptId);
+  }
+  for (const execution of candidate.executions) {
+    if (execution.kind !== 'DIAGNOSTIC' || !isTerminal(execution)) continue;
+    const reservations = candidate.executions.filter((candidateExecution): candidateExecution is DiagnosticExecutionRecord =>
+      candidateExecution.kind === 'DIAGNOSTIC'
+      && candidateExecution.status === 'QUEUED'
+      && candidateExecution.attemptId === execution.attemptId);
+    if (reservations.length !== 1
+      || !diagnosticAttemptIdentityMatches(reservations[0]!, execution)) {
+      throw new Error('Terminal diagnóstico não corresponde exatamente à reserva QUEUED.');
+    }
   }
   return structuredClone(candidate);
 }
@@ -333,6 +345,21 @@ export async function validateStudyDocument(
     }
     const executionValidation = validateExecutionRecord(execution, value);
     if (!executionValidation.ok) issues.push(...executionValidation.issues);
+  }
+  for (const [index, execution] of value.executions.entries()) {
+    if (execution.kind !== 'DIAGNOSTIC' || !isTerminal(execution)) continue;
+    const reservations = value.executions.filter((candidate): candidate is DiagnosticExecutionRecord =>
+      candidate.kind === 'DIAGNOSTIC'
+      && candidate.status === 'QUEUED'
+      && candidate.attemptId === execution.attemptId);
+    if (reservations.length !== 1
+      || !diagnosticAttemptIdentityMatches(reservations[0]!, execution)) {
+      issues.push(issue(
+        `/executions/${index}`,
+        'INCOMPATIBLE_DIAGNOSTIC_ATTEMPT',
+        'Terminal diagnóstico não corresponde exatamente a uma reserva QUEUED.',
+      ));
+    }
   }
   return issues.length === 0 ? { ok: true, value } : { ok: false, issues };
 }

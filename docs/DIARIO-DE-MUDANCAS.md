@@ -70,6 +70,27 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 
 ---
 
+## 2026-09-20 — Hardening de polling, sessão e correlação diagnóstica (MOT-73)
+
+1. **Sintoma.** A auditoria independente do T8 encontrou três brechas: polling
+   parava em `AGGREGATING`; uma troca de sessão durante um `flush` terminal podia
+   permitir escrita tardia; e um terminal artesanal podia reutilizar `attemptId`
+   sem preservar integralmente a identidade da reserva.
+2. **Causa.** A lista de estados ativos omitia uma fase do contrato T7, a guarda de
+   owner/epoch/signal era feita antes — mas não depois — de awaits que cediam
+   controle, e validação/append correlacionavam terminais apenas pela presença do
+   `attemptId`, sem comparar todos os campos imutáveis.
+3. **O que foi feito.** `AGGREGATING` agora mantém polling. O fluxo revalida
+   owner, epoch e `AbortSignal` após cada await relevante e imediatamente antes de
+   `edit`/`saveDetachedStudy`. Cada terminal exige exatamente uma reserva `QUEUED`
+   do mesmo attempt e identidade canônica idêntica (job/request/sampling, cenário,
+   fingerprint, snapshots e demais campos invariantes), no domínio, na validação
+   integral e, por consequência, na fronteira IndexedDB. Regressões cobrem races de
+   owner, mesmo owner com novo epoch, abort, documento artesanal e retry válido.
+4. **O que isso invalida.** Invalida a suposição de que checar sessão somente antes
+   de `flush` bastava e qualquer documento diagnóstico que correlacionasse terminal
+   apenas por `attemptId`. Não muda contratos HTTP, motor, números ou UI T9.
+
 ## 2026-09-20 — Orquestração e histórico imutável de diagnósticos (MOT-73)
 
 1. **Sintoma.** O cliente web conhecia os contratos gerados do diagnóstico, mas não

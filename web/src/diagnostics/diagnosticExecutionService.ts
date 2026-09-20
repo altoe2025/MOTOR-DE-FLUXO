@@ -80,6 +80,7 @@ export async function executeStudyDiagnostic(
   let fallbackAttemptId: string | null = null;
   const result = await options.authority.runForCurrentSession(async ({ ownerSub, epoch, signal }) => {
     await options.authority.flush();
+    if (!sessionIsCurrent(options.authority, ownerSub, epoch, signal)) return null;
     const study = options.authority.snapshot.document;
     if (study === null) throw new Error('Nenhum estudo selecionado para diagnóstico.');
     const scenario = study.scenarios.find((item) => item.id === options.scenarioId);
@@ -94,6 +95,7 @@ export async function executeStudyDiagnostic(
         scenario,
         attemptId: fallbackAttemptId,
       });
+      if (!sessionIsCurrent(options.authority, ownerSub, epoch, signal)) return null;
       assertRequestIdentity(request, study, scenario);
       const createdAt = now();
       reservation = {
@@ -115,11 +117,19 @@ export async function executeStudyDiagnostic(
         finishedAt: null,
       };
       const withReservation = await appendDiagnosticExecution(study, reservation, createdAt);
+      if (!sessionIsCurrent(options.authority, ownerSub, epoch, signal)) {
+        return interrupted(reservation, null);
+      }
       options.authority.edit(withReservation);
       const stored = await options.authority.flush();
-      if (stored === null || signal.aborted) return interrupted(reservation, null);
+      if (stored === null || !sessionIsCurrent(options.authority, ownerSub, epoch, signal)) {
+        return interrupted(reservation, null);
+      }
       reservedStudy = stored;
       const submitted = await options.api.submitDiagnostic(request, signal);
+      if (!sessionIsCurrent(options.authority, ownerSub, epoch, signal)) {
+        return interrupted(reservation, null);
+      }
       assertJobIdentity(submitted, reservation);
     }
 
@@ -127,10 +137,15 @@ export async function executeStudyDiagnostic(
     try {
       for (;;) {
         terminalSnapshot = await options.api.getDiagnosticJob(reservation.jobId!, signal);
+        if (!sessionIsCurrent(options.authority, ownerSub, epoch, signal)) {
+          return interrupted(reservation, null);
+        }
         assertJobIdentity(terminalSnapshot, reservation);
         if (['SUCCEEDED', 'FAILED', 'CANCELLED'].includes(terminalSnapshot.status)) break;
         await waitForNextPoll(signal);
-        if (signal.aborted) return interrupted(reservation, null);
+        if (!sessionIsCurrent(options.authority, ownerSub, epoch, signal)) {
+          return interrupted(reservation, null);
+        }
       }
     } catch (error) {
       if (!(error instanceof ApiError) || error.status !== 404) throw error;
@@ -140,12 +155,16 @@ export async function executeStudyDiagnostic(
           code: 'SERVER_RESTART_OR_JOB_EXPIRED',
           message: 'O job não está mais disponível no servidor.',
         }),
+        signal,
       );
     }
 
     let envelope: DiagnosticEnvelope | null = null;
     if (terminalSnapshot.status === 'SUCCEEDED') {
       envelope = await options.api.getDiagnosticResult(reservation.jobId!, signal);
+      if (!sessionIsCurrent(options.authority, ownerSub, epoch, signal)) {
+        return interrupted(reservation, null);
+      }
       assertEnvelopeIdentity(envelope, reservation);
     }
     const status = terminalSnapshot.status as 'SUCCEEDED' | 'FAILED' | 'CANCELLED';
@@ -164,6 +183,7 @@ export async function executeStudyDiagnostic(
       reservedStudy,
       reservation,
       terminalRecord(reservation, nextId(), status, now(), envelope, error),
+      signal,
     );
   });
   return result ?? {
@@ -179,8 +199,9 @@ export async function executeStudyDiagnostic(
 export async function cancelStudyDiagnostic(
   options: ResumeOptions & Readonly<{ api: DiagnosticCancellationApi }>,
 ): Promise<DiagnosticExecutionAttempt> {
-  const cancelled = await options.authority.runForCurrentSession(async ({ signal }) => {
+  const cancelled = await options.authority.runForCurrentSession(async ({ ownerSub, epoch, signal }) => {
     await options.authority.flush();
+    if (!sessionIsCurrent(options.authority, ownerSub, epoch, signal)) return null;
     const study = options.authority.snapshot.document;
     if (study === null) throw new Error('Nenhum estudo selecionado para cancelamento.');
     const reservation = activeReservation(study, options.scenarioId);
@@ -188,6 +209,7 @@ export async function cancelStudyDiagnostic(
       throw new Error('Nenhum diagnóstico ativo para cancelamento.');
     }
     const snapshot = await options.api.cancelDiagnostic(reservation.jobId, signal);
+    if (!sessionIsCurrent(options.authority, ownerSub, epoch, signal)) return null;
     assertJobIdentity(snapshot, reservation);
     return reservation;
   });
@@ -214,8 +236,9 @@ export async function retryStudyDiagnostic(
 ): Promise<DiagnosticExecutionAttempt> {
   const nextId = options.nextId ?? (() => crypto.randomUUID());
   const now = options.now ?? (() => new Date().toISOString());
-  const reserved = await options.authority.runForCurrentSession(async ({ signal }) => {
+  const reserved = await options.authority.runForCurrentSession(async ({ ownerSub, epoch, signal }) => {
     await options.authority.flush();
+    if (!sessionIsCurrent(options.authority, ownerSub, epoch, signal)) return null;
     const study = options.authority.snapshot.document;
     if (study === null) throw new Error('Nenhum estudo selecionado para retry.');
     const original = study.executions.find((item): item is DiagnosticExecutionRecord =>
@@ -242,10 +265,12 @@ export async function retryStudyDiagnostic(
       finishedAt: null,
     };
     const withReservation = await appendDiagnosticExecution(study, reservation, reservation.createdAt);
+    if (!sessionIsCurrent(options.authority, ownerSub, epoch, signal)) return null;
     options.authority.edit(withReservation);
     const stored = await options.authority.flush();
-    if (stored === null || signal.aborted) return null;
+    if (stored === null || !sessionIsCurrent(options.authority, ownerSub, epoch, signal)) return null;
     const snapshot = await options.api.retryDiagnostic(original.jobId, options.idempotencyKey, signal);
+    if (!sessionIsCurrent(options.authority, ownerSub, epoch, signal)) return null;
     assertJobIdentity(snapshot, reservation);
     return reservation;
   });
@@ -346,6 +371,17 @@ function interrupted(
   };
 }
 
+function sessionIsCurrent(
+  authority: DiagnosticStudyAuthority,
+  ownerSub: string,
+  epoch: number,
+  signal: AbortSignal,
+): boolean {
+  return !signal.aborted
+    && authority.snapshot.ownerSub === ownerSub
+    && authority.snapshot.sessionEpoch === epoch;
+}
+
 async function persistTerminal(
   authority: DiagnosticStudyAuthority,
   ownerSub: string,
@@ -353,11 +389,15 @@ async function persistTerminal(
   reservedStudy: StudyDocument,
   reservation: DiagnosticExecutionRecord,
   terminal: DiagnosticExecutionRecord,
+  signal: AbortSignal,
 ): Promise<DiagnosticExecutionAttempt> {
-  if (authority.snapshot.ownerSub !== ownerSub || authority.snapshot.sessionEpoch !== epoch) {
+  if (!sessionIsCurrent(authority, ownerSub, epoch, signal)) {
     return interrupted(reservation, terminal.error);
   }
   await authority.flush();
+  if (!sessionIsCurrent(authority, ownerSub, epoch, signal)) {
+    return interrupted(reservation, terminal.error);
+  }
   const currentStudy = authority.snapshot.document;
   const current = currentStudy?.scenarios.find((item) => item.id === reservation.scenarioId)
     ?.inputFingerprint === reservation.inputFingerprint;
@@ -365,12 +405,25 @@ async function persistTerminal(
     if (!currentStudy.executions.some((item) => item.kind === 'DIAGNOSTIC'
       && item.attemptId === reservation.attemptId
       && ['SUCCEEDED', 'FAILED', 'CANCELLED', 'INTERRUPTED'].includes(item.status))) {
-      authority.edit(await appendDiagnosticExecution(currentStudy, terminal, terminal.finishedAt!));
+      const completed = await appendDiagnosticExecution(currentStudy, terminal, terminal.finishedAt!);
+      if (!sessionIsCurrent(authority, ownerSub, epoch, signal)) {
+        return interrupted(reservation, terminal.error);
+      }
+      authority.edit(completed);
       await authority.flush();
+      if (!sessionIsCurrent(authority, ownerSub, epoch, signal)) {
+        return interrupted(reservation, terminal.error);
+      }
     }
   } else {
     const detached = await appendDiagnosticExecution(reservedStudy, terminal, terminal.finishedAt!);
+    if (!sessionIsCurrent(authority, ownerSub, epoch, signal)) {
+      return interrupted(reservation, terminal.error);
+    }
     await authority.saveDetachedStudy(detached, reservedStudy.revision);
+    if (!sessionIsCurrent(authority, ownerSub, epoch, signal)) {
+      return interrupted(reservation, terminal.error);
+    }
   }
   return {
     attemptId: reservation.attemptId,

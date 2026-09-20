@@ -35,6 +35,7 @@ describe('queries de diagnóstico', () => {
 
   it('mantém polling apenas para estados ativos', () => {
     expect(shouldPollDiagnostic(ACTIVE_JOB)).toBe(true);
+    expect(shouldPollDiagnostic({ ...ACTIVE_JOB, status: 'AGGREGATING' })).toBe(true);
     expect(shouldPollDiagnostic({ ...ACTIVE_JOB, status: 'CANCEL_REQUESTED' })).toBe(true);
     expect(shouldPollDiagnostic({ ...ACTIVE_JOB, status: 'SUCCEEDED' })).toBe(false);
     expect(shouldPollDiagnostic(undefined)).toBe(true);
@@ -53,6 +54,9 @@ describe('queries de diagnóstico', () => {
     const interval = options.refetchInterval;
     if (typeof interval !== 'function') throw new Error('intervalo deve ser dinâmico');
     expect(interval({ state: { data: ACTIVE_JOB } } as never)).toBe(500);
+    expect(interval({
+      state: { data: { ...ACTIVE_JOB, status: 'AGGREGATING' } },
+    } as never)).toBe(500);
     expect(interval({ state: { data: { ...ACTIVE_JOB, status: 'FAILED' } } } as never)).toBe(false);
   });
 });

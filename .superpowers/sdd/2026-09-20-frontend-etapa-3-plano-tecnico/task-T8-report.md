@@ -41,3 +41,13 @@
 - A regra antiga de terminal único por `request_id` precisou permanecer apenas para `PREVIEW`: retry T7 preserva `request_id` e é identificado por novo `attemptId`/`jobId`.
 - `generationInputSnapshot` é opcional para compatibilidade com snapshots legados; diagnóstico distribuído recusa explicitamente snapshots sem receita, em vez de tentar reconstruí-la.
 - `ApplicationRepository`/`StudyController` continuam sendo a única fronteira de persistência; progresso transitório nunca entra em `DiagnosticExecutionRecord`.
+
+## Fix Round 1 — auditoria independente
+
+Três findings confirmados foram reproduzidos em RED e corrigidos:
+
+1. `AGGREGATING` passou a ser estado ativo de polling, com regressão explícita no helper e no intervalo dinâmico.
+2. Owner, epoch e `AbortSignal` são revalidados após cada await que pode ceder controle e imediatamente antes de `edit` ou `saveDetachedStudy`. Testes com flush terminal deferido comprovam que troca de owner, login do mesmo owner em novo epoch e abort não escrevem terminal tardio. A troca de estudo no mesmo epoch permanece válida e grava por CAS no estudo de origem.
+3. Um terminal `DIAGNOSTIC` agora exige exatamente uma reserva `QUEUED` do mesmo `attemptId` e identidade imutável canonicamente idêntica. A comparação inclui `jobId`, request completo (IDs, idempotência e sampling), cenário/revisão, fingerprint, snapshots de origem/premissas/período, `createdAt` e qualquer outro campo não terminal. A regra existe no append, na validação integral/parser e chega ao storage; regressões negativas cobrem cada dimensão e documento artesanal, enquanto retry válido permanece uma nova tentativa independente.
+
+Gate final do Round 1: 106 testes focados/adicionais verdes, `typecheck`, `lint` e `build` verdes; permaneceu apenas o warning conhecido de chunk maior que 500 kB.

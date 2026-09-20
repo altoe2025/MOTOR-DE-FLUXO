@@ -117,6 +117,36 @@ function idFactory(...values: string[]): () => string {
   return () => ids.shift()!;
 }
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((complete) => { resolve = complete; });
+  return { promise, resolve };
+}
+
+async function reservedFixture() {
+  const { study, request } = await studyFixture();
+  const preparingAuthority = new AuthorityDouble(study);
+  const pending = deferred<JobSnapshot>();
+  const preparing = executeStudyDiagnostic({
+    authority: preparingAuthority,
+    scenarioId: SCENARIO_ID,
+    buildRequest: async () => request,
+    api: {
+      submitDiagnostic: vi.fn().mockResolvedValue(snapshot('QUEUED', request)),
+      getDiagnosticJob: vi.fn().mockReturnValue(pending.promise),
+      getDiagnosticResult: vi.fn(),
+    },
+    nextId: idFactory(ATTEMPT_ID, RESERVATION_ID),
+    now: () => NOW,
+    waitForNextPoll: async () => undefined,
+  });
+  await vi.waitFor(() => expect(preparingAuthority.edits).toHaveLength(1));
+  preparingAuthority.abort.abort();
+  pending.resolve(snapshot('RUNNING', request));
+  await preparing;
+  return { request, reserved: preparingAuthority.edits[0]! };
+}
+
 describe('executeStudyDiagnostic', () => {
   it('persiste somente reserva e terminal, sem snapshots de progresso', async () => {
     const { study, request } = await studyFixture();
@@ -217,6 +247,49 @@ describe('executeStudyDiagnostic', () => {
     expect(authority.edits).toHaveLength(1);
     expect(api).not.toHaveProperty('cancelDiagnostic');
   });
+
+  it.each(['owner', 'epoch', 'abort'] as const)(
+    'não grava terminal se autoridade %s muda enquanto flush terminal aguarda',
+    async (change) => {
+      const { request, reserved } = await reservedFixture();
+      const authority = new AuthorityDouble(reserved);
+      const terminalFlush = deferred<StudyDocument | null>();
+      let flushCount = 0;
+      authority.flush = vi.fn(async () => {
+        flushCount += 1;
+        if (flushCount === 2) return terminalFlush.promise;
+        return authority.snapshot.document;
+      });
+      const execution = executeStudyDiagnostic({
+        authority,
+        scenarioId: SCENARIO_ID,
+        buildRequest: async () => request,
+        api: {
+          submitDiagnostic: vi.fn(),
+          getDiagnosticJob: vi.fn().mockResolvedValue(snapshot('FAILED', request)),
+          getDiagnosticResult: vi.fn(),
+        },
+        nextId: () => TERMINAL_ID,
+        now: () => NOW,
+        waitForNextPoll: async () => undefined,
+      });
+      await vi.waitFor(() => expect(flushCount).toBe(2));
+      if (change === 'owner') {
+        authority.snapshot = { ownerSub: 'owner-b', sessionEpoch: 2, document: null };
+      } else if (change === 'epoch') {
+        authority.snapshot = { ...authority.snapshot, sessionEpoch: 2 };
+      } else {
+        authority.abort.abort();
+      }
+      terminalFlush.resolve(authority.snapshot.document);
+
+      const result = await execution;
+
+      expect(result).toMatchObject({ status: 'INTERRUPTED', current: false });
+      expect(authority.edits).toHaveLength(0);
+      expect(authority.detached).toHaveLength(0);
+    },
+  );
 
   it('persiste terminal por CAS no estudo de origem depois da troca de estudo', async () => {
     const { study, request } = await studyFixture();
