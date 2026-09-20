@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 
 from servidor.auth import AuthenticatedUser, SessionInvalid
 from servidor.config import Settings
-from servidor.contracts.diagnostics import JobProgress, JobSnapshot
+from servidor.contracts.diagnostics import DiagnosticRequest, JobProgress, JobSnapshot
 from servidor.generate_reference_fixture import build_reference_request
 
 USER_A = UUID("00000000-0000-4000-8000-000000000101")
@@ -99,8 +99,11 @@ class FakeExecutor:
         self.result_value: object = None
         self.calls: list[tuple[object, ...]] = []
 
-    def submit(self, owner: str, request: object) -> JobSnapshot:
+    def submit(self, owner: str, request: DiagnosticRequest) -> JobSnapshot:
         self.calls.append(("submit", owner, request))
+        self.snapshot = self.snapshot.model_copy(
+            update={"job_id": request.idempotency_key}
+        )
         return self.snapshot
 
     def get(self, owner: str, job_id: UUID) -> JobSnapshot:
@@ -126,6 +129,9 @@ class FakeExecutor:
 
     def retry(self, owner: str, job_id: UUID, key: UUID) -> JobSnapshot:
         self.calls.append(("retry", owner, job_id, key))
+        self.snapshot = self.snapshot.model_copy(
+            update={"job_id": key, "retry_of_job_id": job_id}
+        )
         return self.snapshot
 
     def close(self) -> None:
@@ -152,8 +158,9 @@ def _auth(token: str = "token-a") -> dict[str, str]:
 def test_cinco_operacoes_sao_autenticadas_isoladas_e_no_store(client_parts):
     """Pega rota sem auth, owner derivado do payload ou cacheável."""
     client, executor = client_parts
-    unauthorized = client.post("/api/v1/diagnosticos", json=_payload())
-    created = client.post("/api/v1/diagnosticos", json=_payload(), headers=_auth())
+    payload = _payload()
+    unauthorized = client.post("/api/v1/diagnosticos", json=payload)
+    created = client.post("/api/v1/diagnosticos", json=payload, headers=_auth())
     progress = client.get(f"/api/v1/diagnosticos/{JOB_ID}", headers=_auth())
     hidden = client.get(f"/api/v1/diagnosticos/{JOB_ID}", headers=_auth("token-b"))
     cancelled = client.post(
@@ -171,10 +178,13 @@ def test_cinco_operacoes_sao_autenticadas_isoladas_e_no_store(client_parts):
 
     assert unauthorized.status_code == 401
     assert created.status_code == 202
+    assert created.json()["job_id"] == payload["idempotency_key"]
     assert progress.status_code == 200
     assert hidden.status_code == 404
     assert cancelled.status_code == 202
     assert retried.status_code == 202
+    assert retried.json()["job_id"] == "00000000-0000-4000-8000-000000000812"
+    assert retried.json()["retry_of_job_id"] == str(JOB_ID)
     assert all(
         response.headers["cache-control"] == "no-store"
         for response in (unauthorized, created, progress, hidden, cancelled, retried)

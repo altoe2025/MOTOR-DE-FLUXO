@@ -250,6 +250,7 @@ def test_idempotencia_conflito_retry_e_retencao(executor_parts):
     executor, pool, now = executor_parts
     request = _request(1)
     original = executor.submit(OWNER_A, request)
+    assert original.job_id == request.idempotency_key
     assert executor.submit(OWNER_A, request).job_id == original.job_id
 
     conflicting = request.model_copy(update={"input_fingerprint": "b" * 64})
@@ -277,6 +278,7 @@ def test_idempotencia_conflito_retry_e_retencao(executor_parts):
     with pytest.raises(DiagnosticExecutorError, match="IDEMPOTENCIA_CONFLITANTE"):
         executor.retry(OWNER_A, original.job_id, unrelated_key)
     retried = executor.retry(OWNER_A, original.job_id, UUID(int=99))
+    assert retried.job_id == UUID(int=99)
     assert retried.retry_of_job_id == original.job_id
     assert retried.job_id != original.job_id
     repeated = executor.retry(OWNER_A, original.job_id, UUID(int=99))
@@ -286,6 +288,52 @@ def test_idempotencia_conflito_retry_e_retencao(executor_parts):
     now[0] += timedelta(days=2)
     with pytest.raises(DiagnosticExecutorError, match="JOB_NAO_ENCONTRADO"):
         executor.get(OWNER_A, original.job_id)
+
+
+def test_mesmo_job_id_em_owners_distintos_mantem_registry_e_operacoes_isolados():
+    """Pega registry global por UUID que sobrescreva ou vaze job entre owners."""
+    from servidor.diagnostics.executor import (
+        DiagnosticExecutor,
+        DiagnosticExecutorError,
+    )
+
+    pool = ControlledPool()
+    executor = DiagnosticExecutor(
+        build_sha="a" * 40,
+        worker_pool=pool,
+        relogio=lambda: NOW,
+        max_workers=2,
+    )
+    request = _request(1)
+    try:
+        job_a = executor.submit(OWNER_A, request)
+        job_b = executor.submit(OWNER_B, request)
+        assert job_a.job_id == request.idempotency_key
+        assert job_b.job_id == request.idempotency_key
+        pool.wait_for_submissions(2)
+
+        pool.submissions[0][1].set_exception(RuntimeError("falha A"))
+        pool.submissions[1][1].set_exception(RuntimeError("falha B"))
+        assert executor.get(OWNER_A, job_a.job_id).status == "FAILED"
+        assert executor.get(OWNER_B, job_b.job_id).status == "FAILED"
+        with pytest.raises(DiagnosticExecutorError, match="JOB_NAO_TERMINAL"):
+            executor.result(OWNER_A, job_a.job_id)
+        with pytest.raises(DiagnosticExecutorError, match="CANCELAMENTO_TARDIO"):
+            executor.cancel(OWNER_B, job_b.job_id)
+
+        retry_key = UUID(int=999)
+        retry_a = executor.retry(OWNER_A, job_a.job_id, retry_key)
+        retry_b = executor.retry(OWNER_B, job_b.job_id, retry_key)
+        assert retry_a.job_id == retry_key
+        assert retry_b.job_id == retry_key
+        assert retry_a.retry_of_job_id == job_a.job_id
+        assert retry_b.retry_of_job_id == job_b.job_id
+
+        cancelled_a = executor.cancel(OWNER_A, retry_key)
+        assert cancelled_a.status in {"CANCEL_REQUESTED", "CANCELLED"}
+        assert executor.get(OWNER_B, retry_key).status in {"QUEUED", "RUNNING"}
+    finally:
+        executor.close()
 
 
 def test_resultado_antes_do_sucesso_e_cancelamento_terminal_sao_rejeitados(
@@ -380,14 +428,14 @@ def test_dispatcher_expira_terminal_sem_trafego_e_preserva_ativo():
         clock.advance_and_wake(timedelta(seconds=61))
         waiting = clock.wait_until_waiting(after=waiting)
 
-        assert terminal.job_id not in executor._jobs
+        assert (OWNER_A, terminal.job_id) not in executor._jobs
 
         active = executor.submit(OWNER_B, _request(2))
         pool.wait_for_submissions(2)
         waiting = clock.wait_until_waiting(after=waiting)
         clock.advance_and_wake(timedelta(days=2))
         clock.wait_until_waiting(after=waiting)
-        assert active.job_id in executor._jobs
+        assert (OWNER_B, active.job_id) in executor._jobs
     finally:
         executor.close()
 

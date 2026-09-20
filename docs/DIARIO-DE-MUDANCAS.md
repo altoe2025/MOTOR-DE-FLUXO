@@ -70,6 +70,26 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 
 ---
 
+## 2026-09-20 — ID público previsível e registry por owner (MOT-72)
+
+1. **Sintoma.** O cliente conhecia a chave idempotente antes do POST, mas o
+   servidor criava outro UUID para o job. Além disso, o registry indexava apenas
+   esse UUID global, impedindo que dois owners reutilizassem legalmente a mesma
+   chave sem colisão ou risco de sobrescrita.
+2. **Causa.** A chave idempotente identificava somente o binding do comando; uma
+   fábrica aleatória separada criava o identificador público, e jobs/fila/callbacks
+   não carregavam o owner na coordenada interna.
+3. **O que foi feito.** `job_id` agora é exatamente `idempotency_key` tanto no
+   submit quanto no retry. Registry, fila, callbacks, cancelamento e retenção usam
+   internamente `(owner_sub, job_id)`. A identidade canônica completa do comando,
+   o tipo submit/retry e o alvo original continuam definindo conflitos dentro de
+   cada owner. Testes cobrem ID conhecido antes do POST/retry, dois owners com o
+   mesmo UUID e isolamento de lookup, resultado, cancelamento e retry.
+4. **O que isso invalida.** Invalida consumidores que aguardavam o POST para
+   descobrir um UUID aleatório e qualquer hipótese de unicidade global de
+   `job_id`; a identidade pública é owner-scoped. DTOs/OpenAPI, motor, UI,
+   persistência e prévia síncrona não mudam.
+
 ## 2026-09-20 — Correção de estado, identidade e retenção da fila (MOT-72)
 
 1. **Sintoma.** Um job gerado cedido entre repetições podia produzir snapshot
