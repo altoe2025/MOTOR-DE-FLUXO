@@ -17,6 +17,12 @@ const company: CompanyRecord = {
   createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', revision: 1,
 };
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((resolvePromise) => { resolve = resolvePromise; });
+  return { promise, resolve };
+}
+
 function observedCase(input: {
   id: string;
   revision?: number;
@@ -150,5 +156,26 @@ describe('ProfileVersionList', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Revisão esperada 1, revisão atual 2.');
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+  });
+
+  it('aceita somente uma ativação enquanto o vínculo está em andamento', async () => {
+    const user = userEvent.setup();
+    const pending = deferred<void>();
+    const profile = await calculateOperationalProfile({
+      id: 'profile-pending', ownerSub: company.ownerSub, companyId: company.id, version: 1,
+      createdAt: '2026-09-20T12:00:00Z', cases: [observedCase({ id: 'case-a', start: '2026-01-01', end: '2026-01-31' })],
+    });
+    const onAttach = vi.fn(() => pending.promise);
+    render(<ProfileVersionList profiles={[profile]} attachDisabled={false} onAttach={onAttach} />);
+    const action = screen.getByRole('button', { name: 'Usar como evidência em estudo' });
+
+    await user.dblClick(action);
+
+    expect(onAttach).toHaveBeenCalledOnce();
+    expect(action).toBeDisabled();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    pending.resolve();
+    await waitFor(() => expect(action).toBeEnabled());
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });

@@ -70,6 +70,19 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 
 ---
 
+## 2026-09-20 — Vínculo único de perfil enquanto CAS está pendente (MOT-69)
+
+1. **Sintoma.** Duas ativações rápidas de “Usar como evidência em estudo” podiam
+   iniciar vínculos simultâneos e produzir conflito ou mensagem enganosa de estudo
+   não encontrado.
+2. **Causa.** A lista não mantinha estado compartilhado de anexação; cada botão podia
+   disparar uma nova sequência `loadStudy` + CAS enquanto a anterior estava pendente.
+3. **O que foi feito.** `ProfileVersionList` agora aplica lock síncrono e desabilita
+   todas as ações de vínculo até a promessa terminar. Um teste com promessa deferida
+   cobre dupla ativação e ausência de alerta falso.
+4. **O que isso invalida.** Somente a possibilidade de vínculos concorrentes
+   iniciados pela própria lista. Perfil, estudo, carteira e resultados não mudam.
+
 ## 2026-09-20 — Confirmação e vínculo do Perfil Operacional (MOT-69)
 
 1. **Sintoma.** A área de Perfis apenas listava versões já persistidas; não havia
