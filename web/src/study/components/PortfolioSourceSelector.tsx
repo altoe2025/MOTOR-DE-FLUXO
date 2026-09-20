@@ -2,7 +2,7 @@ import Decimal from 'decimal.js';
 import { useMemo, useState } from 'react';
 
 import type { PreparationRequest } from '../../api/client';
-import type { CompanyRecord, ObservedCase } from '../../cases/domain';
+import type { CompanyRecord, FieldProvenance, ObservedCase } from '../../cases/domain';
 import { Button } from '../../ui/Button';
 import { TextField } from '../../ui/TextField';
 import { authoredDefinitionFromObservedCase } from '../../preparation/resolvePortfolioSource';
@@ -190,13 +190,28 @@ function ExplicitOrdersForm({
   };
   const submit = () => {
     try {
+      const actionId = uuid();
+      const recordedAt = new Date().toISOString();
+      const corrected = (): FieldProvenance => ({
+        kind: 'USER_CORRECTED', source: 'autoria manual', version: '1.0.0',
+        actionId, recordedAt,
+      });
       const provenanceByOrder = Object.fromEntries(orders.map((order, index) => {
         const original = definition.orders[index];
         const provenance = original === undefined
           ? undefined
           : definition.provenanceByOrder[original.id];
         if (provenance === undefined) throw new Error(`Proveniência ausente para ${order.id}.`);
-        return [order.id, structuredClone(provenance)];
+        const next = structuredClone(provenance);
+        if (order.id !== original.id) next.id = corrected();
+        if (order.cliente_id !== original.cliente_id) next.cliente_id = corrected();
+        if (order.direcao !== original.direcao) next.direcao = corrected();
+        if (order.dia_conhecida !== original.dia_conhecida) next.dia_conhecida = corrected();
+        if (order.dia_limite !== original.dia_limite) next.dia_limite = corrected();
+        if (order.eh_efx !== original.eh_efx) next.eh_efx = corrected();
+        if (order.finalidade !== original.finalidade) next.finalidade = corrected();
+        if (order.valor_brl !== original.valor_brl) next.valor_brl = corrected();
+        return [order.id, next];
       }));
       orders.forEach((order) => {
         decimal(order.valor_brl, `Valor BRL da operação ${order.id}`);
@@ -223,7 +238,7 @@ function ExplicitOrdersForm({
   return <section className="source-panel">
     <h2>Operações explícitas</h2>
     {error ? <p role="alert" className="field-error">{error}</p> : null}
-    {orders.map((order, index) => <fieldset key={`${index}-${order.id}`} className="authoring-participant">
+    {orders.map((order, index) => <fieldset key={`${index}-${definition.orders[index]!.id}`} className="authoring-participant">
       <legend>Operação {index + 1}</legend>
       <TextField id={`explicit-id-${index}`} label={`ID da operação ${definition.orders[index]!.id}`} value={order.id} onChange={(event) => change(index, { id: event.currentTarget.value })} />
       <TextField id={`explicit-client-${index}`} label={`Cliente da operação ${definition.orders[index]!.id}`} value={order.cliente_id} onChange={(event) => change(index, { cliente_id: event.currentTarget.value })} />

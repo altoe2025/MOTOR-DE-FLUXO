@@ -97,7 +97,7 @@ function requestProvenance(
     if (fields === undefined && fallback === null) {
       throw new Error(`Proveniência ausente para a ordem ${order.id}.`);
     }
-    const value = (field: keyof OrderFieldProvenance) => fields === undefined
+    const value = (field: 'dia_conhecida' | 'dia_limite' | 'eh_efx' | 'finalidade' | 'valor_brl') => fields === undefined
       ? fallback!
       : projectProvenance(fields[field]);
     Object.assign(provenance, {
@@ -107,6 +107,9 @@ function requestProvenance(
       [`/ordens/${index}/finalidade`]: value('finalidade'),
       [`/ordens/${index}/valor_brl`]: value('valor_brl'),
     });
+    if (fields?.id !== undefined) provenance[`/ordens/${index}/id`] = projectProvenance(fields.id);
+    if (fields?.cliente_id !== undefined) provenance[`/ordens/${index}/cliente_id`] = projectProvenance(fields.cliente_id);
+    if (fields?.direcao !== undefined) provenance[`/ordens/${index}/direcao`] = projectProvenance(fields.direcao);
   }
   return provenance;
 }

@@ -13,6 +13,8 @@ import {
   makeScenarioDraft,
 } from '../fixtures';
 import { requiredBuildSha } from '../sourceConfiguration';
+import { buildPreviewRequest, type PreviewRequestProvenance } from '../../preparation/buildPreviewRequest';
+import { resolvePortfolioSource } from '../../preparation/resolvePortfolioSource';
 import { StudyEditor } from './StudyEditor';
 import { StudyList } from './StudyList';
 
@@ -217,6 +219,71 @@ describe('StudyEditor', () => {
       }),
     }));
     expect(JSON.stringify(observedCase)).toBe(originalJson);
+  });
+
+  it('marca somente campos explícitos alterados e nunca envia valor corrigido como observado', async () => {
+    const { onSourceChange, observedCase } = await subject(); const user = userEvent.setup();
+    await user.click(screen.getByLabelText('Caso observado'));
+    await user.selectOptions(screen.getByLabelText('Caso confirmado'), observedCase.id);
+    await user.click(screen.getByRole('button', { name: 'Converter para autoria manual' }));
+    await user.clear(screen.getByLabelText('ID da operação observed-order-1'));
+    await user.type(screen.getByLabelText('ID da operação observed-order-1'), 'edited-order');
+    await user.clear(screen.getByLabelText('Cliente da operação observed-order-1'));
+    await user.type(screen.getByLabelText('Cliente da operação observed-order-1'), 'edited-client');
+    await user.selectOptions(screen.getByLabelText('Direção da operação observed-order-1'), 'IN');
+    await user.clear(screen.getByLabelText('Dia conhecido da operação observed-order-1'));
+    await user.type(screen.getByLabelText('Dia conhecido da operação observed-order-1'), '1');
+    await user.clear(screen.getByLabelText('Valor BRL da operação observed-order-1'));
+    await user.type(screen.getByLabelText('Valor BRL da operação observed-order-1'), '125.50');
+    await user.clear(screen.getByLabelText('Finalidade da operação observed-order-1'));
+    await user.type(screen.getByLabelText('Finalidade da operação observed-order-1'), 'FINALIDADE_CORRIGIDA');
+    await user.click(screen.getByLabelText('EFX da operação observed-order-1'));
+    await user.click(screen.getByRole('button', { name: 'Salvar operações explícitas' }));
+
+    const source = onSourceChange.mock.calls.at(-1)![0];
+    const snapshot = await resolvePortfolioSource(source, {
+      getObservedCase: async () => null,
+      preparePortfolio: async () => { throw new Error('não deve preparar'); },
+      now: () => '2026-09-19T13:00:00Z',
+    });
+    const scenario = (await study()).scenarios[0]!;
+    const observed = observedCase.orders[0]!.provenance[0]!;
+    const provenance: PreviewRequestProvenance = {
+      premises: {
+        windowDays: observed,
+        costs: {
+          iof_out: observed, iof_in: observed, carry_cnr: observed,
+          custo_fixo_remessa: observed, custo_oportunidade_aa: observed,
+          spread_rail_bps: observed, ptax: observed,
+        },
+      },
+      period: { horizonDays: observed },
+    };
+    const request = buildPreviewRequest(snapshot, scenario.premises, scenario.period, {
+      requestId: '00000000-0000-4000-8000-000000000031',
+      studyId: '00000000-0000-4000-8000-000000000032',
+      scenarioId: '00000000-0000-4000-8000-000000000033',
+      scenarioRevision: 1,
+    }, provenance);
+
+    const fields = snapshot.provenanceByOrder?.['edited-order'];
+    expect(fields?.valor_brl).toMatchObject({
+      kind: 'USER_CORRECTED', actionId: expect.any(String), recordedAt: expect.any(String),
+    });
+    expect(fields).toMatchObject({
+      id: { kind: 'USER_CORRECTED' },
+      cliente_id: { kind: 'USER_CORRECTED' },
+      direcao: { kind: 'USER_CORRECTED' },
+      dia_conhecida: { kind: 'USER_CORRECTED' },
+      finalidade: { kind: 'USER_CORRECTED' },
+      eh_efx: { kind: 'USER_CORRECTED' },
+      dia_limite: observed,
+    });
+    expect(request.proveniencia['/ordens/0/valor_brl']?.tipo).toBe('ESTIMATIVA_USUARIO');
+    expect(request.proveniencia['/ordens/0/dia_limite']?.tipo).toBe('DADO_OBSERVADO');
+    expect(request.proveniencia['/ordens/0/id']?.tipo).toBe('ESTIMATIVA_USUARIO');
+    expect(request.proveniencia['/ordens/0/cliente_id']?.tipo).toBe('ESTIMATIVA_USUARIO');
+    expect(request.proveniencia['/ordens/0/direcao']?.tipo).toBe('ESTIMATIVA_USUARIO');
   });
 });
 

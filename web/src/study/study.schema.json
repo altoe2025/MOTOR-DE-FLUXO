@@ -54,6 +54,9 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
+        "id": { "$ref": "https://motor-de-fluxo.local/cases/observedCase.schema.json#/$defs/FieldProvenance" },
+        "cliente_id": { "$ref": "https://motor-de-fluxo.local/cases/observedCase.schema.json#/$defs/FieldProvenance" },
+        "direcao": { "$ref": "https://motor-de-fluxo.local/cases/observedCase.schema.json#/$defs/FieldProvenance" },
         "dia_conhecida": { "$ref": "https://motor-de-fluxo.local/cases/observedCase.schema.json#/$defs/FieldProvenance" },
         "dia_limite": { "$ref": "https://motor-de-fluxo.local/cases/observedCase.schema.json#/$defs/FieldProvenance" },
         "eh_efx": { "$ref": "https://motor-de-fluxo.local/cases/observedCase.schema.json#/$defs/FieldProvenance" },

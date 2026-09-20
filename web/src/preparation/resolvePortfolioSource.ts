@@ -82,6 +82,11 @@ function provenanceForObservedOrders(caseRecord: ObservedCase): Record<string, O
       throw new Error(`Ordem observada ${order.id} possui proveniência heterogênea sem associação por campo.`);
     }
     return [order.id, {
+      ...(uniform === undefined ? {} : {
+        id: structuredClone(uniform),
+        cliente_id: structuredClone(uniform),
+        direcao: structuredClone(uniform),
+      }),
       dia_conhecida: structuredClone(associated?.knownDate ?? uniform!),
       dia_limite: structuredClone(associated?.deadlineDate ?? uniform!),
       eh_efx: structuredClone(associated?.efxStatus ?? uniform!),

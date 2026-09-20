@@ -35,6 +35,9 @@ export type PreparationResponse = DeepReadonly<components['schemas']['Preparatio
 export type SeedText = components['schemas']['EffectiveParticipant']['seed'];
 
 export type OrderFieldProvenance = Readonly<{
+  id?: FieldProvenance;
+  cliente_id?: FieldProvenance;
+  direcao?: FieldProvenance;
   dia_conhecida: FieldProvenance;
   dia_limite: FieldProvenance;
   eh_efx: FieldProvenance;
