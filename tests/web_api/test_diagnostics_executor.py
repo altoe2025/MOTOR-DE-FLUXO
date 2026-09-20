@@ -6,6 +6,7 @@ import multiprocessing
 from concurrent.futures import Future, ProcessPoolExecutor
 from datetime import UTC, datetime, timedelta
 from threading import Condition
+from typing import Any
 from uuid import UUID
 
 import pytest
@@ -16,6 +17,44 @@ from servidor.generate_reference_fixture import build_reference_request
 NOW = datetime(2026, 9, 20, 12, tzinfo=UTC)
 OWNER_A = "00000000-0000-4000-8000-000000000101"
 OWNER_B = "00000000-0000-4000-8000-000000000102"
+
+
+def _spawn_execute_after_release(task: object, started: Any, release: Any) -> object:
+    """Worker top-level bloqueado por eventos compartilhados e compatível com spawn."""
+    from servidor.diagnostics.service import execute_repetition
+
+    started.set()
+    if not release.wait(timeout=30):
+        raise RuntimeError("worker spawn não foi liberado")
+    return execute_repetition(task)
+
+
+class SpawnEventPool:
+    """Pool de processo real que expõe somente eventos de coordenação do teste."""
+
+    def __init__(self, started: Any, release: Any) -> None:
+        self._started = started
+        self._release = release
+        self._executor = ProcessPoolExecutor(
+            max_workers=1,
+            mp_context=multiprocessing.get_context("spawn"),
+        )
+        self.futures: list[Future[object]] = []
+        self.workers: tuple[multiprocessing.Process, ...] = ()
+
+    def submit(self, task: object) -> Future[object]:
+        future = self._executor.submit(
+            _spawn_execute_after_release, task, self._started, self._release
+        )
+        self.futures.append(future)
+        return future
+
+    def capture_workers(self) -> None:
+        processes = self._executor._processes
+        self.workers = tuple(processes.values()) if processes is not None else ()
+
+    def shutdown(self, *, wait: bool, cancel_futures: bool) -> None:
+        self._executor.shutdown(wait=wait, cancel_futures=cancel_futures)
 
 
 def _request(index: int = 1, *, fingerprint: str = "a" * 64) -> DiagnosticRequest:
@@ -362,6 +401,43 @@ def test_close_fecha_pool_e_rejeita_novas_submissoes(executor_parts):
     assert pool.closed is True
     with pytest.raises(DiagnosticExecutorError, match="EXECUTOR_FECHADO"):
         executor.submit(OWNER_A, _request(1))
+
+
+def test_cancelamento_e_shutdown_reais_com_spawn_nao_deixam_worker_ou_future():
+    """Prova o close real no Windows sem usar o double ControlledPool."""
+    from servidor.diagnostics.executor import DiagnosticExecutor
+
+    context = multiprocessing.get_context("spawn")
+    with context.Manager() as manager:
+        started = manager.Event()
+        release = manager.Event()
+        pool = SpawnEventPool(started, release)
+        executor = DiagnosticExecutor(
+            build_sha="a" * 40,
+            worker_pool=pool,
+            relogio=lambda: NOW,
+            max_workers=1,
+        )
+        running = executor.submit(OWNER_A, _request(81))
+        queued = executor.submit(OWNER_B, _request(82))
+        try:
+            assert started.wait(timeout=30)
+            pool.capture_workers()
+            assert len(pool.workers) == 1
+            assert all(worker.is_alive() for worker in pool.workers)
+
+            cancelled = executor.cancel(OWNER_A, running.job_id)
+            assert cancelled.status == "CANCEL_REQUESTED"
+        finally:
+            release.set()
+            executor.close()
+
+        assert executor.get(OWNER_A, running.job_id).status == "CANCELLED"
+        assert executor.get(OWNER_B, queued.job_id).status == "CANCELLED"
+        assert len(pool.futures) == 1
+        assert all(future.done() for future in pool.futures)
+        assert all(not worker.is_alive() for worker in pool.workers)
+        assert not executor._dispatcher.is_alive()
 
 
 def test_job_gerado_cedido_permanece_snapshot_valido_e_cancela_entre_repeticoes():

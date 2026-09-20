@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import re
 import subprocess
 from collections.abc import Mapping
@@ -35,6 +36,8 @@ SENSITIVE_LOG_PATTERNS = {
         re.IGNORECASE,
     ),
 }
+_LOG_METHODS = {"debug", "info", "warning", "error", "exception"}
+_LOGGER_NAMES = {"logger", "logging", "_LOGGER"}
 
 
 @dataclass(frozen=True)
@@ -54,18 +57,92 @@ def find_secret_findings(files: Mapping[str, str]) -> list[SecretFinding]:
 
 
 def find_binary_secret_findings(files: Mapping[str, bytes]) -> list[SecretFinding]:
-    """Inspeciona shapes ASCII mesmo quando o arquivo nao e texto UTF-8."""
-    decoded = {path: content.decode("latin-1") for path, content in files.items()}
-    return find_secret_findings(decoded)
+    """Normaliza ASCII binário e UTF-16 explícito antes de procurar segredos."""
+    findings: set[SecretFinding] = set()
+    for path, content in files.items():
+        views = {content.decode("latin-1")}
+        if content.startswith((b"\xff\xfe", b"\xfe\xff")):
+            try:
+                views.add(content.decode("utf-16"))
+            except UnicodeDecodeError:
+                pass
+        elif len(content) >= 4 and len(content) % 2 == 0:
+            even_nulls = content[0::2].count(0)
+            odd_nulls = content[1::2].count(0)
+            threshold = len(content) // 8
+            encoding = (
+                "utf-16le"
+                if odd_nulls > threshold and even_nulls == 0
+                else "utf-16be"
+                if even_nulls > threshold and odd_nulls == 0
+                else None
+            )
+            if encoding is not None:
+                try:
+                    views.add(content.decode(encoding))
+                except UnicodeDecodeError:
+                    pass
+        for view in views:
+            findings.update(find_secret_findings({path: view}))
+    return sorted(findings, key=lambda item: (item.path, item.kind))
+
+
+def _attribute_path(node: ast.AST) -> str | None:
+    if isinstance(node, ast.Name):
+        return node.id
+    if isinstance(node, ast.Attribute):
+        parent = _attribute_path(node.value)
+        return f"{parent}.{node.attr}" if parent is not None else None
+    return None
+
+
+def _sensitive_references(node: ast.AST) -> set[str]:
+    path = _attribute_path(node)
+    if path == "request.url.path" or (
+        path is not None and path.startswith("request.url.path.")
+    ):
+        return set()
+    if path in {"request.url", "originalUrl", "full_url"}:
+        return {"sensitive-log-url"}
+    if path in {"request.json", "request.body", "payload", "cenario", "ordens"}:
+        return {"sensitive-log-payload"}
+    findings: set[str] = set()
+    for child in ast.iter_child_nodes(node):
+        findings.update(_sensitive_references(child))
+    return findings
+
+
+def _python_sensitive_log_kinds(content: str) -> set[str]:
+    try:
+        tree = ast.parse(content)
+    except SyntaxError:
+        return set()
+    findings: set[str] = set()
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Attribute):
+            continue
+        logger_name = _attribute_path(node.func.value)
+        if logger_name not in _LOGGER_NAMES or node.func.attr not in _LOG_METHODS:
+            continue
+        for argument in [*node.args, *(keyword.value for keyword in node.keywords)]:
+            findings.update(_sensitive_references(argument))
+    return findings
 
 
 def find_sensitive_log_findings(files: Mapping[str, str]) -> list[SecretFinding]:
-    findings = {
-        SecretFinding(path, kind)
-        for path, content in files.items()
-        for kind, pattern in SENSITIVE_LOG_PATTERNS.items()
-        if pattern.search(content)
-    }
+    findings: set[SecretFinding] = set()
+    for path, content in files.items():
+        if Path(path).suffix == ".py":
+            findings.update(
+                SecretFinding(path, kind)
+                for kind in _python_sensitive_log_kinds(content)
+            )
+            continue
+        findings.update(
+            SecretFinding(path, kind)
+            for kind, pattern in SENSITIVE_LOG_PATTERNS.items()
+            if pattern.search(content)
+        )
     return sorted(findings, key=lambda item: (item.path, item.kind))
 
 

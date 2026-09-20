@@ -182,10 +182,19 @@ somente dois trabalhos são submetidos até a liberação de um slot; `max_activ
 permanece 2. Cancelamento de enfileirado não cria trabalho e o fechamento espera o
 pool, cancela pendências e termina com zero ativos. O runner E2E usa um worker para
 manter fila e cancelamento determinísticos; o teste Python separado prova o teto 2.
+Uma segunda prova usa o `DiagnosticExecutor` real com `ProcessPoolExecutor` e
+contexto Windows `spawn`: eventos compartilhados bloqueiam/liberam o worker sem
+sleep, o cancelamento ocorre enquanto a repetição está ativa e, após `close`, ambos
+os jobs estão `CANCELLED`, o future terminou, o processo não está vivo e o dispatcher
+foi encerrado.
 
 O scanner de credenciais agora lê também arquivos binários e rejeita chamadas de
 log que serializem URL completa/query, corpo, payload, cenário ou ordens. Tokens e
 IDs financeiros usados na aceitação são sintéticos e não são impressos.
+Chamadas Python são analisadas por AST, inclusive quando ocupam várias linhas, sem
+confundir `request.url.path` com URL completa. Binários ASCII/Latin-1 e UTF-16 com
+BOM ou distribuição de NUL compatível com UTF-16LE/BE são normalizados antes da
+busca por formatos de segredo.
 
 ### Medição sintética 10/30/100
 

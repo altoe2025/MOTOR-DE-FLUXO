@@ -16,7 +16,6 @@ from servidor.contracts.diagnostics import (
     ParticipantShare,
 )
 
-
 FIXTURES = Path(__file__).parents[2] / "contracts" / "fixtures"
 UUIDS = [f"00000000-0000-4000-8000-{index:012d}" for index in range(1, 180)]
 FINGERPRINT = "a" * 64

@@ -174,16 +174,17 @@ def test_http_logs_exclude_query_tokens_and_order_payloads(caplog):
 
 
 def test_scanner_detects_secrets_in_binary_and_sensitive_logger_arguments():
-    """Pega scanner que ignore binarios ou logging de query/body."""
+    """Pega scanner que ignore UTF-16LE ou logging Python multiline."""
+    secret = "OPENAI_API_KEY=sk-" + "proj-abcdefghijklmnopqrstuvwx123456"
     binary_findings = find_binary_secret_findings(
         {
             "safe.png": b"\x89PNG\x00publishable",
-            "leak.bin": (
-                b"\x00OPENAI_API_KEY=sk-" + b"proj-abcdefghijklmnopqrstuvwx123456\x00"
-            ),
+            "leak.bin": ("\x00" + secret + "\x00").encode("latin-1"),
+            "leak-utf16.bin": secret.encode("utf-16le"),
         }
     )
     assert [(item.path, item.kind) for item in binary_findings] == [
+        ("leak-utf16.bin", "openai-key"),
         ("leak.bin", "openai-key")
     ]
 
@@ -192,10 +193,17 @@ def test_scanner_detects_secrets_in_binary_and_sensitive_logger_arguments():
             "safe.py": 'logger.info("path=%s", request.url.path)',
             "query.py": "log" + 'ger.info("url=%s", request.url)',
             "body.py": "log" + 'ger.debug("payload=%s", request.json())',
+            "multiline.py": (
+                "log" + 'ger.warning(\n    "request=%s",\n    request.url,\n)'
+            ),
+            "safe-multiline.py": (
+                "log" + 'ger.info(\n    "path=%s",\n    request.url.path,\n)'
+            ),
         }
     )
     assert [(item.path, item.kind) for item in log_findings] == [
         ("body.py", "sensitive-log-payload"),
+        ("multiline.py", "sensitive-log-url"),
         ("query.py", "sensitive-log-url"),
     ]
 

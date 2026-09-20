@@ -71,6 +71,29 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 
 ---
 
+## 2026-09-20 — Fix Round 1 do fechamento integrado da Etapa 3 (MOT-76)
+
+1. **Sintoma.** A primeira rodada global da T11 terminou condicional: Ruff encontrou
+   dois I001 mecânicos; dois testes Playwright ainda esperavam a navegação/erro do
+   storage anteriores; o scanner não via logs Python multiline nem segredos UTF-16;
+   e a prova de shutdown usava apenas o pool controlado em processo.
+2. **Causa.** As expectativas E2E ainda dependiam do link removido `Carteira`, de
+   uma rota transitória `/estudos/:uuid` e do código `DOCUMENT_CORRUPT` anterior ao
+   schema V3. O scanner era regex por linha/Latin-1, e o double do executor não
+   exercitava o lifecycle real de processos `spawn`.
+3. **O que foi feito.** Os dois imports receberam somente a formatação I001. Os
+   testes browser passaram a validar `Empresas`/`Estudos`, acessar diretamente a
+   rota pública `/carteira`, esperar a rota estável `/carteira/:uuid` e reconhecer
+   `SCHEMA_UNSUPPORTED` para documento V2 no storage V3. Logs Python são analisados
+   por AST e binários UTF-16LE/BE são normalizados explicitamente. Um teste
+   event-driven bloqueia um `ProcessPoolExecutor` real sob `spawn`, cancela o job e
+   prova que close não deixa future, worker ou dispatcher pendente.
+4. **O que isso invalida.** Invalida o gate condicional registrado para o SHA
+   `404533e`: seus dois I001 e dois failures Playwright deixam de representar o
+   candidato corrigido. Não altera regras do motor, contratos financeiros,
+   semântica de storage ou produto; apenas alinha evidência, scanner e lifecycle ao
+   estado já vigente. Medições 10/30/100 continuam técnicas, não comerciais.
+
 ## 2026-09-20 — Aceitação integrada e regressão da Etapa 3 (MOT-76)
 
 1. **Sintoma.** Os fluxos Empresa→Perfil→Estudo e diagnóstico robusto tinham testes

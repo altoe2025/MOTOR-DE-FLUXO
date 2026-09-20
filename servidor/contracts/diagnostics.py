@@ -9,7 +9,7 @@ from uuid import UUID
 from pydantic import Field, StrictInt, field_validator, model_validator
 
 from servidor.contracts.input import PreviaRequest
-from servidor.contracts.preparation import EffectiveInput, MAX_SEED, SeedText
+from servidor.contracts.preparation import MAX_SEED, EffectiveInput, SeedText
 from servidor.contracts.preview import Fingerprint, PreviewEnvelope
 from servidor.contracts.primitives import (
     DateTimeValue,
