@@ -199,8 +199,10 @@ def execute_repetition(task: RepetitionTask) -> RepetitionResult:
     )
 
 
-def _summary(result: RepetitionResult) -> RepetitionSummary:
+def _summary(result: RepetitionResult, *, generated_input: bool) -> RepetitionSummary:
     fixed = summarize_repetition(result.request, result.envelope, result.duration_ms)
+    if not generated_input:
+        return fixed
     return fixed.model_copy(
         update={
             "participant_seeds": result.participant_seeds,
@@ -266,7 +268,10 @@ def aggregate_diagnostic(
         request_fingerprint=request.input_fingerprint,
         statistics=statistics,
         axes=axes,
-        repetitions=[_summary(result) for result in results],
+        repetitions=[
+            _summary(result, generated_input=isinstance(sampling, GeneratedInputPlan))
+            for result in results
+        ],
         selected_execution=selected.envelope,
         consequences=list(derive_consequences(axes)),
         limitations=list(limitations),

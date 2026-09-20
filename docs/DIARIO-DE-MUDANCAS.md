@@ -70,6 +70,28 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 
 ---
 
+## 2026-09-20 — Correção de estado, identidade e retenção da fila (MOT-72)
+
+1. **Sintoma.** Um job gerado cedido entre repetições podia produzir snapshot
+   `QUEUED` incompatível com progresso já iniciado; a idempotência confiava apenas
+   no fingerprint declarado; retry podia colidir com comando alheio; entrada fixa
+   sobrescrevia o fingerprint calculado pela T6; e terminais só expiravam quando
+   outro endpoint tocava o registry.
+2. **Causa.** A fila interna e o estado público compartilhavam o mesmo marcador, o
+   binding idempotente não armazenava a identidade do comando completo, a agregação
+   aplicava o handoff de metadados gerados a ambos os tipos de entrada e a limpeza
+   de retenção vivia apenas nos métodos públicos.
+3. **O que foi feito.** Jobs cedidos permanecem logicamente `RUNNING/EXECUTING` e
+   podem ser cancelados imediatamente entre repetições. O binding agora combina
+   owner/chave com hash canônico de todo o request exceto a própria chave, tipo do
+   comando e alvo de retry. `FIXED_INPUT` preserva o resumo T6; somente
+   `GENERATED_INPUT` recebe fingerprint e seeds autoritativos do plano. O próprio
+   dispatcher acorda no próximo deadline e remove terminais sem tráfego posterior.
+4. **O que isso invalida.** Invalida snapshots intermediários `QUEUED` de jobs já
+   iniciados, reaproveitamento de chave com payload/comando diferente, fingerprint
+   declarado no resumo de entrada fixa e a expectativa de limpeza somente lazy.
+   DTOs públicos, motor, UI, persistência e prévia síncrona não mudam.
+
 ## 2026-09-20 — Diagnósticos em fila limitada e isolada (MOT-72)
 
 1. **Sintoma.** Os cinco contratos diagnósticos já estavam publicados, mas a API

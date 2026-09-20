@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import multiprocessing
 from collections import deque
 from collections.abc import Callable
@@ -29,6 +31,8 @@ from servidor.diagnostics.service import (
 )
 
 _ACTIVE = {"QUEUED", "RUNNING", "AGGREGATING", "CANCEL_REQUESTED"}
+CommandKind = Literal["SUBMIT", "RETRY"]
+MaintenanceWaiter = Callable[[Condition, float | None], None]
 
 
 class DiagnosticExecutorError(RuntimeError):
@@ -80,6 +84,32 @@ class _Job:
         return self.request.sampling.count
 
 
+@dataclass(frozen=True)
+class _IdempotencyBinding:
+    command_kind: CommandKind
+    command_identity: str
+    declared_fingerprint: str
+    retry_of_job_id: UUID | None
+    job_id: UUID
+
+
+def _canonical_command_identity(request: DiagnosticRequest) -> str:
+    """Hash de todo o comando, exceto a chave que seleciona este binding."""
+    document = request.model_dump(mode="json", exclude={"idempotency_key"})
+    encoded = json.dumps(
+        document,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+        allow_nan=False,
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _condition_wait(condition: Condition, timeout: float | None) -> None:
+    condition.wait(timeout)
+
+
 class DiagnosticExecutor:
     def __init__(
         self,
@@ -88,6 +118,7 @@ class DiagnosticExecutor:
         worker_pool: WorkerPool | None = None,
         relogio: Callable[[], datetime] | None = None,
         id_factory: Callable[[], UUID] | None = None,
+        maintenance_waiter: MaintenanceWaiter | None = None,
         max_workers: int = 2,
         max_jobs_per_owner: int = 3,
         max_jobs_global: int = 32,
@@ -100,6 +131,7 @@ class DiagnosticExecutor:
         self._build_sha = build_sha
         self._clock = relogio or (lambda: datetime.now(UTC))
         self._id_factory = id_factory or uuid4
+        self._maintenance_waiter = maintenance_waiter or _condition_wait
         self._max_workers = max_workers
         self._max_jobs_per_owner = max_jobs_per_owner
         self._max_jobs_global = max_jobs_global
@@ -108,7 +140,7 @@ class DiagnosticExecutor:
         self._lock = Lock()
         self._condition = Condition(self._lock)
         self._jobs: dict[UUID, _Job] = {}
-        self._idempotency: dict[tuple[str, UUID], tuple[str, UUID]] = {}
+        self._idempotency: dict[tuple[str, UUID], _IdempotencyBinding] = {}
         self._queue: deque[UUID] = deque()
         self._running = 0
         self._closed = False
@@ -141,10 +173,20 @@ class DiagnosticExecutor:
             del self._jobs[job_id]
         if expired:
             self._idempotency = {
-                key: value
-                for key, value in self._idempotency.items()
-                if value[1] not in expired
+                key: binding
+                for key, binding in self._idempotency.items()
+                if binding.job_id not in expired
             }
+
+    def _next_expiry_timeout_locked(self) -> float | None:
+        deadlines = [
+            job.finished_at + self._retention
+            for job in self._jobs.values()
+            if job.status not in _ACTIVE and job.finished_at is not None
+        ]
+        if not deadlines:
+            return None
+        return max(0.0, (min(deadlines) - self._clock_value()).total_seconds())
 
     def _snapshot(self, job: _Job) -> JobSnapshot:
         phase = cast(
@@ -191,17 +233,23 @@ class DiagnosticExecutor:
         self,
         owner_sub: str,
         request: DiagnosticRequest,
+        command_kind: CommandKind,
         retry_of_job_id: UUID | None,
     ) -> JobSnapshot:
         if self._closed:
             raise DiagnosticExecutorError("EXECUTOR_FECHADO")
         key = (owner_sub, request.idempotency_key)
-        existing = self._idempotency.get(key)
-        if existing is not None:
-            fingerprint, job_id = existing
-            if fingerprint != request.input_fingerprint:
+        identity = _canonical_command_identity(request)
+        binding = self._idempotency.get(key)
+        if binding is not None:
+            if (
+                binding.command_kind != command_kind
+                or binding.command_identity != identity
+                or binding.declared_fingerprint != request.input_fingerprint
+                or binding.retry_of_job_id != retry_of_job_id
+            ):
                 raise DiagnosticExecutorError("IDEMPOTENCIA_CONFLITANTE")
-            job = self._jobs.get(job_id)
+            job = self._jobs.get(binding.job_id)
             if job is not None:
                 return self._snapshot(job)
             del self._idempotency[key]
@@ -223,7 +271,13 @@ class DiagnosticExecutor:
             updated_at=now,
         )
         self._jobs[job.job_id] = job
-        self._idempotency[key] = (request.input_fingerprint, job.job_id)
+        self._idempotency[key] = _IdempotencyBinding(
+            command_kind=command_kind,
+            command_identity=identity,
+            declared_fingerprint=request.input_fingerprint,
+            retry_of_job_id=retry_of_job_id,
+            job_id=job.job_id,
+        )
         self._queue.append(job.job_id)
         snapshot = self._snapshot(job)
         self._condition.notify_all()
@@ -232,7 +286,7 @@ class DiagnosticExecutor:
     def submit(self, owner_sub: str, request: DiagnosticRequest) -> JobSnapshot:
         with self._condition:
             self._expire_locked()
-            return self._submit_locked(owner_sub, request, None)
+            return self._submit_locked(owner_sub, request, "SUBMIT", None)
 
     def get(self, owner_sub: str, job_id: UUID) -> JobSnapshot:
         with self._lock:
@@ -262,6 +316,14 @@ class DiagnosticExecutor:
                     job.status = "CANCEL_REQUESTED"
                 else:
                     self._finish_cancelled_locked(job)
+            elif job.status == "RUNNING" and job.current_repetition_id is None:
+                try:
+                    self._queue.remove(job.job_id)
+                except ValueError:
+                    job.status = "CANCEL_REQUESTED"
+                    job.updated_at = self._now_for(job)
+                else:
+                    self._finish_cancelled_locked(job)
             elif job.status in {"RUNNING", "AGGREGATING"}:
                 job.status = "CANCEL_REQUESTED"
                 job.updated_at = self._now_for(job)
@@ -274,10 +336,8 @@ class DiagnosticExecutor:
             original = self._owned_locked(owner_sub, job_id)
             if original.status not in {"FAILED", "CANCELLED"}:
                 raise DiagnosticExecutorError("JOB_NAO_REPETIVEL")
-            if key == original.request.idempotency_key:
-                raise DiagnosticExecutorError("IDEMPOTENCIA_CONFLITANTE")
             request = original.request.model_copy(update={"idempotency_key": key})
-            return self._submit_locked(owner_sub, request, original.job_id)
+            return self._submit_locked(owner_sub, request, "RETRY", original.job_id)
 
     def close(self) -> None:
         with self._condition:
@@ -285,7 +345,11 @@ class DiagnosticExecutor:
                 return
             self._closed = True
             for job in self._jobs.values():
-                if job.status == "QUEUED":
+                if (
+                    job.status == "QUEUED"
+                    or job.status == "RUNNING"
+                    and job.current_repetition_id is None
+                ):
                     self._finish_cancelled_locked(job)
                 elif job.status in {"RUNNING", "AGGREGATING"}:
                     job.status = "CANCEL_REQUESTED"
@@ -298,17 +362,19 @@ class DiagnosticExecutor:
     def _dispatch_loop(self) -> None:
         while True:
             with self._condition:
-                self._condition.wait_for(
-                    lambda: (
-                        self._closed
-                        or (self._queue and self._running < self._max_workers)
-                    )
-                )
+                self._expire_locked()
                 if self._closed:
                     return
+                if not self._queue or self._running >= self._max_workers:
+                    self._maintenance_waiter(
+                        self._condition, self._next_expiry_timeout_locked()
+                    )
+                    continue
                 job_id = self._queue.popleft()
                 job = self._jobs.get(job_id)
-                if job is None or job.status != "QUEUED":
+                if job is None or job.status not in {"QUEUED", "RUNNING"}:
+                    continue
+                if job.current_repetition_id is not None:
                     continue
                 index = job.completed
                 repetition_id = (
@@ -375,7 +441,7 @@ class DiagnosticExecutor:
                     job.updated_at = self._now_for(job)
                     aggregate = (job.request, tuple(job.results))
                 else:
-                    job.status = "QUEUED"
+                    job.status = "RUNNING"
                     self._queue.append(job.job_id)
             self._condition.notify_all()
         if aggregate is not None:
