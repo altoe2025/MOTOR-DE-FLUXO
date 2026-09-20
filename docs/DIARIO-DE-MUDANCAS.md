@@ -70,6 +70,28 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 
 ---
 
+## 2026-09-20 — Apresentação acessível do diagnóstico robusto (MOT-74)
+
+1. **Sintoma.** O diagnóstico robusto possuía contratos, executor e histórico
+   imutável, mas não havia página para configurar a amostragem, acompanhar o job e
+   ler distribuição, execução selecionada, sete eixos e proveniência sem confundir
+   ausência com zero.
+2. **Causa.** A Etapa 3 tinha encerrado T8 na fronteira de serviço; faltavam a
+   adaptação exclusivamente apresentacional dos envelopes validados, a rota do
+   estudo e uma visualização acessível reconciliada com tabelas.
+3. **O que foi feito.** Na branch `codex/frontend-etapa-3`, a rota
+   `/estudos/:studyId/diagnostico` passou a consumir o serviço T8, restaurar
+   reservas/terminais e expor 10/30/100 apenas para origem gerável. ECharts 6.1.0
+   foi integrado por módulos, sem wrapper, com SVG, descrição, `ResizeObserver`,
+   movimento reduzido e descarte. Distribuição e execução selecionada usam props
+   distintas; os sete eixos exibem métricas canônicas, gráfico/tabela da mesma
+   série, consequências, limitações e referências. O fluxo legado `/diagnostico`
+   continua disponível e a navegação volta a expor “Diagnóstico”.
+4. **O que isso invalida.** Invalida a suposição de que os envelopes do T8 só eram
+   inspecionáveis por testes ou payload bruto. Não altera contratos HTTP, motor,
+   storage/CAS, números, regras de simulação nem a comparação temporal T10; a UI
+   não recalcula métricas e estados indisponíveis continuam sem fabricar zeros.
+
 ## 2026-09-20 — Forma persistida fechada e expiração tardia de resultado (MOT-73)
 
 1. **Sintoma.** A segunda rodada de auditoria do T8 encontrou duas brechas: um

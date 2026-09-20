@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest';
 
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, useLocation } from 'react-router-dom';
-import { StrictMode } from 'react';
+import { MemoryRouter, useLocation, useNavigate } from 'react-router-dom';
+import { StrictMode, type ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { AuthProvider } from '../auth/AuthProvider';
@@ -49,6 +49,11 @@ function LocationProbe() {
   return <output data-testid="location">{location.pathname}{location.search}</output>;
 }
 
+function RouteSwitch({ to }: Readonly<{ to: string }>) {
+  const navigate = useNavigate();
+  return <button type="button" onClick={() => navigate(to)}>Trocar rota de teste</button>;
+}
+
 class RepositoryDouble implements ApplicationRepository {
   constructor(
     readonly companies: CompanyRecord[] = [],
@@ -82,6 +87,7 @@ function renderAppAt(
   path: string,
   authClient: AuthClient = client(session()),
   repository: ApplicationRepository | null = null,
+  extra: ReactNode = null,
 ) {
   const apiClient: ApiClient = {
     getReferenceExample: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
@@ -95,7 +101,7 @@ function renderAppAt(
   return render(
     <AuthProvider client={authClient}>
       <ApplicationProviders client={apiClient} {...(repository === null ? {} : { repositoryFactory: () => repository })}>
-        <MemoryRouter initialEntries={[path]}><AppRoutes /><LocationProbe /></MemoryRouter>
+        <MemoryRouter initialEntries={[path]}><AppRoutes /><LocationProbe />{extra}</MemoryRouter>
       </ApplicationProviders>
     </AuthProvider>,
   );
@@ -197,7 +203,7 @@ describe('application routes', () => {
   });
 
   it.each([
-    ['/carteira', 'Carteira'], ['/diagnostico', 'Diagnóstico'], ['/comparar', 'Comparar cenários'],
+    ['/carteira', 'Carteira'], ['/comparar', 'Comparar cenários'],
     ['/replay', 'Replay'], ['/premissas', 'Dados e premissas'],
   ])('preserva a rota protegida %s fora da navegação global', async (path, heading) => {
     renderAppAt(path);
@@ -205,13 +211,47 @@ describe('application routes', () => {
     expect(screen.queryByRole('link', { name: heading })).not.toBeInTheDocument();
   });
 
-  it('expõe somente Empresas e Estudos na navegação global', async () => {
+  it('expõe Empresas, Estudos e Diagnóstico na navegação global', async () => {
     renderAppAt('/empresas', client(session('user-a')), new RepositoryDouble());
     const navigation = await screen.findByRole('navigation', { name: 'Navegação principal' });
     expect(navigation).toHaveTextContent('Empresas');
     expect(navigation).toHaveTextContent('Estudos');
-    expect(navigation.querySelectorAll('a')).toHaveLength(2);
+    expect(navigation).toHaveTextContent('Diagnóstico');
+    expect(navigation.querySelectorAll('a')).toHaveLength(3);
     expect(screen.getByRole('link', { name: 'Empresas' })).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('abre o diagnóstico robusto no contexto do estudo sem substituir a prévia legada', async () => {
+    const draft = makeScenarioDraft();
+    const { generationInputSnapshot: _generationInputSnapshot, ...fixedSource } = draft.sourceSnapshot;
+    const study = await createStudy({
+      id: 'study-diagnostic', ownerSub: 'user-a', name: 'Estudo diagnóstico',
+      baseScenario: { ...draft, sourceSnapshot: fixedSource }, now: '2026-01-01T00:00:00Z',
+    });
+    void _generationInputSnapshot;
+    renderAppAt('/estudos/study-diagnostic/diagnostico', client(session('user-a')), new RepositoryDouble([], [], [], [study]));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Diagnóstico robusto' }, { timeout: 5000 })).toBeVisible();
+    expect(await screen.findByText(/entrada fixa.*uma execução individual/i)).toBeVisible();
+    expect(screen.getByTestId('location')).toHaveTextContent('/estudos/study-diagnostic/diagnostico');
+  });
+
+  it('descarta load tardio do estudo anterior ao trocar a rota diagnóstica', async () => {
+    const first = await createStudy({ id: 'study-first', ownerSub: 'user-a', name: 'Estudo anterior', baseScenario: makeScenarioDraft(), now: '2026-01-01T00:00:00Z' });
+    const second = await createStudy({ id: 'study-second', ownerSub: 'user-a', name: 'Estudo vigente', baseScenario: makeScenarioDraft(), now: '2026-01-01T00:00:00Z' });
+    const pending = new Map<string, (study: StudyDocument | null) => void>();
+    class DelayedRepository extends RepositoryDouble {
+      override async getStudy(id: string) { return new Promise<StudyDocument | null>((resolve) => pending.set(id, resolve)); }
+    }
+    const user = userEvent.setup();
+    renderAppAt('/estudos/study-first/diagnostico', client(session('user-a')), new DelayedRepository([], [], [], [first, second]), <RouteSwitch to="/estudos/study-second/diagnostico" />);
+    await waitFor(() => expect(pending.has('study-first')).toBe(true), { timeout: 5000 });
+    await user.click(screen.getByRole('button', { name: 'Trocar rota de teste' }));
+    await waitFor(() => expect(pending.has('study-second')).toBe(true), { timeout: 5000 });
+    await act(async () => pending.get('study-second')?.(second));
+    expect(await screen.findByText('Estudo Estudo vigente')).toBeVisible();
+    await act(async () => pending.get('study-first')?.(first));
+    expect(screen.getByText('Estudo Estudo vigente')).toBeVisible();
+    expect(screen.queryByText('Estudo Estudo anterior')).not.toBeInTheDocument();
   });
 
   it('navega pelo catálogo e pelas quatro áreas da empresa com foco no título', async () => {

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { lazy, Suspense, useEffect, useRef } from 'react';
 import { Navigate, Route, Routes, useParams } from 'react-router-dom';
 
 import { useAuth } from '../auth/AuthProvider';
@@ -14,6 +14,15 @@ import { StudiesPage } from '../pages/StudiesPage';
 import { StudyPortfolioPage } from '../pages/StudyPortfolioPage';
 import { EmptyState } from '../ui/EmptyState';
 import { AppShell } from './AppShell';
+
+const StudyDiagnosticPage = lazy(async () => {
+  const module = await import('../pages/StudyDiagnosticPage');
+  return { default: module.StudyDiagnosticPage };
+});
+
+function DiagnosticRoute() {
+  return <Suspense fallback={<p role="status">Carregando diagnóstico…</p>}><StudyDiagnosticPage /></Suspense>;
+}
 
 type DestinationProps = { title: string; description: string; emptyTitle: string; emptyDescription: string };
 
@@ -65,6 +74,7 @@ export function AppRoutes() {
         <Route path="/carteira/:id" element={<StudyPortfolioPage />} />
         <Route path="/estudos" element={<StudiesPage />} />
         <Route path="/estudos/:studyId" element={<LegacyStudyRedirect />} />
+        <Route path="/estudos/:studyId/diagnostico" element={<DiagnosticRoute />} />
         <Route path="/diagnostico" element={<PreviewPage />} />
         <Route path="/comparar" element={<Destination title="Comparar cenários" description="Variantes compatíveis serão comparadas com a mesma base de evidência." emptyTitle="Nenhum cenário para comparar" emptyDescription="Crie variantes compatíveis a partir de uma carteira." />} />
         <Route path="/replay" element={<Destination title="Replay" description="Uma repetição específica poderá ser inspecionada dia a dia." emptyTitle="Nenhum replay disponível" emptyDescription="O replay depende de uma execução reproduzível." />} />
