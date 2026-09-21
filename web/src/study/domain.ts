@@ -185,6 +185,54 @@ export async function appendScenario(
   });
 }
 
+export async function appendCompositionHypothesis(
+  study: StudyDocumentV3,
+  input: Readonly<{
+    scenario: ScenarioDraft;
+    profiles: readonly OperationalProfileVersion[];
+    recordedAt: string;
+  }>,
+): Promise<StudyDocumentV3> {
+  if (study.scenarios.some((scenario) => scenario.id === input.scenario.id)) {
+    throw new Error('ID de cenário já existe no estudo.');
+  }
+  const scenarioLineage = new Set(profileLineageFromScenario(input.scenario)
+    .map((item) => `${item.profileId}\0${item.profileFingerprint}`));
+  if (input.profiles.some((profile) =>
+    !scenarioLineage.has(`${profile.id}\0${profile.documentFingerprint}`))) {
+    throw new Error('Evidência de Perfil não participa do cenário da hipótese.');
+  }
+  const evidenceSnapshots = study.evidenceSnapshots.map(clone);
+  for (const profile of input.profiles) {
+    const validation = await validateOperationalProfile(profile);
+    if (!validation.ok) throw new Error('Perfil Operacional inválido.');
+    if (profile.ownerSub !== study.ownerSub) {
+      throw new Error('Owner do Perfil Operacional diverge do estudo.');
+    }
+    const existing = evidenceSnapshots.find((snapshot) =>
+      snapshot.kind === 'OPERATIONAL_PROFILE' && snapshot.profile.id === profile.id);
+    if (existing !== undefined) {
+      if (existing.profile.documentFingerprint !== profile.documentFingerprint) {
+        throw new Error('Perfil Operacional já anexado com outro fingerprint.');
+      }
+      continue;
+    }
+    evidenceSnapshots.push({
+      kind: 'OPERATIONAL_PROFILE',
+      capturedAt: checkedInstant(input.recordedAt),
+      profile: clone(profile),
+    });
+  }
+  const scenario = await materializeScenario({ ...clone(input.scenario), revision: 1 });
+  return finalize({
+    ...clone(study),
+    evidenceSnapshots,
+    scenarios: [...study.scenarios.map(clone), scenario],
+    revision: study.revision + 1,
+    updatedAt: checkedInstant(input.recordedAt),
+  }) as Promise<StudyDocumentV3>;
+}
+
 export async function renameStudy(
   study: StudyDocument,
   name: string,

@@ -222,7 +222,7 @@ function fallbackProvenance(): ScenarioInputProvenance {
   };
 }
 
-function mergeScenarioInputProvenance(
+export function mergeScenarioInputProvenance(
   base: ScenarioDocument,
   next: Readonly<{ windowDays: number; costs: CostPremises }>,
   recordedAt: string,

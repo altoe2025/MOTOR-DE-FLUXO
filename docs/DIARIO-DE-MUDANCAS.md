@@ -64,13 +64,29 @@ decimal vigente para iniciar a Evolução B.
 | `codex/mot62-planejamento-etapa2-v2` | documentação da MOT-62; IDs, dependências e auditoria da Etapa 2 v2, sem código de produto | Codex |
 | `codex/mot63-observed-contracts` | implementação e documentação da Etapa 2 v2; aceite **CONDITIONAL**, sem push/PR/merge e sem início da Etapa 3 | Codex |
 | `codex/frontend-etapa-3` | T0–T12 concluídos localmente; gate global verde em `57be689`; aceite técnico **PASS**; sem push/PR/merge | Codex |
-| `codex/etapa-4-mvp` | MOT-78–MOT-81 implementadas localmente sobre `a9a633c`; aceite técnico para testes internos, sem push/PR/merge/deploy | Codex |
+| `codex/etapa-4-mvp` | MVP aceito; `origin/main` integrado e domínio da Evolução B iniciado na MOT-82, ainda sem push/PR/merge/deploy | Codex |
 | `codex/fix-reconciliacao-decimal` | correção da aritmética exata dos mecanismos da análise, pronta para merge na `main` | Codex |
 
 Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+---
+
+## 2026-09-21 — Domínio de composição da Evolução B (MOT-82)
+
+1. **Sintoma.** O MVP só aplicava volume, mix, ticket e prazo globalmente e rejeitava
+   qualquer comparação que alterasse a composição de participantes.
+2. **Causa.** Não existia um delta tipado por participante nem uma transição única
+   capaz de anexar evidência de Perfil e cenário sob a mesma revisão do Estudo.
+3. **O que foi feito.** A branch `codex/etapa-4-mvp` integrou a correção decimal da
+   `origin/main` e passou a materializar adição, remoção e atualização individual,
+   com sources exatas, IOF canônico, preservação de identidade e persistência
+   atômica de evidência mais cenário. A origem permanece V3 e por Perfil.
+4. **O que isso invalida.** Invalida a limitação técnica de composição imutável no
+   domínio. A interface e a comparação estrutural ainda dependem de MOT-83 e MOT-84;
+   nada aqui constitui forecast, causalidade, V4, push, PR, merge ou deploy.
 
 ---
 
