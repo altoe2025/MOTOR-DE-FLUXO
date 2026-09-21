@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 from enum import Enum
 
+from motor.analise.aritmetica import somar_exato, subtrair_exato
 from motor.custo import Custos
 from motor.dominio import OrigemCasamento, ParametrosCusto
 from motor.simulacao import Resultado
@@ -150,7 +151,9 @@ class ResultadoMecanismo:
     economia_brl: Decimal
 
     def __post_init__(self) -> None:
-        if self.economia_brl != self.baseline_atribuido_brl - self.custo_netado_brl:
+        if self.economia_brl != subtrair_exato(
+            self.baseline_atribuido_brl, self.custo_netado_brl,
+        ):
             raise ValueError("economia do mecanismo deve ser baseline menos custo netado")
 
 
@@ -198,15 +201,15 @@ class AgregadoCanonico:
             != self.volume_remetido_periodo_brl
         ):
             raise ValueError("volumes dos mecanismos não reconciliam com o agregado")
-        if sum((m.baseline_atribuido_brl for m in self.mecanismos), Decimal(0)) != (
+        if somar_exato(m.baseline_atribuido_brl for m in self.mecanismos) != (
             self.baseline_periodo.total
         ):
             raise ValueError("baseline dos mecanismos não reconcilia com o agregado")
-        if sum((m.custo_netado_brl for m in self.mecanismos), Decimal(0)) != (
+        if somar_exato(m.custo_netado_brl for m in self.mecanismos) != (
             self.netado_periodo.total
         ):
             raise ValueError("custo dos mecanismos não reconcilia com o agregado")
-        if sum((m.economia_brl for m in self.mecanismos), Decimal(0)) != (
+        if somar_exato(m.economia_brl for m in self.mecanismos) != (
             self.economia_periodo_brl
         ):
             raise ValueError("economia dos mecanismos não reconcilia com o agregado")

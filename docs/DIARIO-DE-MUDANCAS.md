@@ -33,7 +33,8 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-09-21, durante o fechamento local do MVP da Etapa 4.
+Atualizada em 2026-09-21, durante a integração do MVP da Etapa 4 com a correção
+decimal vigente para iniciar a Evolução B.
 
 | Branch | Situação | Dono |
 |---|---|---|
@@ -64,6 +65,7 @@ Atualizada em 2026-09-21, durante o fechamento local do MVP da Etapa 4.
 | `codex/mot63-observed-contracts` | implementação e documentação da Etapa 2 v2; aceite **CONDITIONAL**, sem push/PR/merge e sem início da Etapa 3 | Codex |
 | `codex/frontend-etapa-3` | T0–T12 concluídos localmente; gate global verde em `57be689`; aceite técnico **PASS**; sem push/PR/merge | Codex |
 | `codex/etapa-4-mvp` | MOT-78–MOT-81 implementadas localmente sobre `a9a633c`; aceite técnico para testes internos, sem push/PR/merge/deploy | Codex |
+| `codex/fix-reconciliacao-decimal` | correção da aritmética exata dos mecanismos da análise, pronta para merge na `main` | Codex |
 
 Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
@@ -90,6 +92,29 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
    uma carteira estática. Não transforma simulação em forecast, diferença em
    causalidade ou aceite local em prontidão para produção. Não autoriza push, PR,
    merge nem deploy.
+
+---
+
+## 2026-09-21 — Reconciliação decimal exata por mecanismo (MOT-81)
+
+**Sintoma.** Algumas carteiras válidas da análise falhavam ao construir o agregado
+canônico, embora baseline, custo netado e economia representassem o mesmo valor
+matemático. A diferença observada era residual, na ordem de `1E-25`.
+
+**Causa.** A economia de cada mecanismo e as somas do contrato canônico usavam o
+contexto global de `Decimal`, cuja precisão finita arredondava resultados
+intermediários antes da comparação estrita.
+
+**O que foi feito.** A branch `codex/fix-reconciliacao-decimal` centralizou soma e
+subtração exatas em `motor/analise/aritmetica.py` e passou a usá-las no cálculo,
+nos invariantes dos mecanismos e no DTO do JSON público. Foram incluídos testes
+de regressão que reproduzem o arredondamento sem alterar regras de negócio,
+rateios ou tolerâncias. Dois E2E ainda presos à rota legada `/estudos/{id}` foram
+alinhados à rota canônica `/carteira/{id}` já usada pela aplicação.
+
+**O que isso invalida.** Apenas a conclusão de que a falha indicava inconsistência
+na alocação ou no netting. Números de simulação, critérios econômicos e resultados
+históricos permanecem válidos.
 
 ---
 

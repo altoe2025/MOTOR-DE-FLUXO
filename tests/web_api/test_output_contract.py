@@ -16,7 +16,11 @@ from motor.analise import (
     resultado_para_json,
 )
 from motor.dominio import carregar_cenario
-from servidor.contracts.output import DecimalSaida, ResultadoCanonicoDTO
+from servidor.contracts.output import (
+    DecimalSaida,
+    ResultadoCanonicoDTO,
+    ResultadoMecanismoDTO,
+)
 
 
 def canonical_payload():
@@ -60,6 +64,16 @@ def test_output_decimal_schema_matches_transport_grammar():
     assert schema["type"] == "string"
     assert schema["maxLength"] == 80
     assert schema["pattern"] == r"^-?(0|[1-9][0-9]*)(\.[0-9]+)?$"
+
+
+def test_output_mechanism_reconciles_decimal_without_rounding():
+    ResultadoMecanismoDTO.model_validate({
+        "destino": "REMETIDO",
+        "volume_brl": "1",
+        "baseline_atribuido_brl": "1234567890123456789012345678",
+        "custo_netado_brl": "0.1",
+        "economia_brl": "1234567890123456789012345677.9",
+    })
 
 
 @pytest.mark.parametrize(

@@ -15,9 +15,10 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import replace
-from decimal import Decimal, localcontext
+from decimal import Decimal
 from typing import Iterable
 
+from motor.analise.aritmetica import somar_exato, subtrair_exato
 from motor.analise.modelo import (
     DestinoContabil,
     EventoCliente,
@@ -33,22 +34,7 @@ _ZERO = Decimal(0)
 _COMPONENTES = ("iof", "carry", "spread", "espera", "fixo")
 
 
-def _somar_exato(valores: Iterable[Decimal]) -> Decimal:
-    """Soma coeficientes finitos sem depender da ordem ou da precisão global.
-
-    A maior posição inteira, a menor casa decimal e os dígitos da contagem
-    limitam o tamanho do coeficiente resultante, inclusive com cancelamentos.
-    """
-    itens = tuple(valores)
-    if not itens:
-        return _ZERO
-    menor_expoente = min(v.as_tuple().exponent for v in itens)
-    maior_posicao = max(v.adjusted() for v in itens)
-    with localcontext() as contexto:
-        contexto.prec = max(
-            contexto.prec, maior_posicao - menor_expoente + len(str(len(itens))) + 2,
-        )
-        return sum(itens, _ZERO)
+_somar_exato = somar_exato
 
 
 def _custos(**parcelas: Decimal) -> Custos:
@@ -239,7 +225,7 @@ def resultados_por_mecanismo(
                 volume_brl=_somar_exato(evento.valor_brl for evento in itens),
                 baseline_atribuido_brl=baseline.total,
                 custo_netado_brl=netado.total,
-                economia_brl=baseline.total - netado.total,
+                economia_brl=subtrair_exato(baseline.total, netado.total),
             )
         )
     return tuple(mecanismos)
