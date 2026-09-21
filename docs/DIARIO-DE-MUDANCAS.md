@@ -33,7 +33,7 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-09-20, durante o fechamento integrado local da Etapa 3.
+Atualizada em 2026-09-21, durante a correção da reconciliação decimal da Etapa 4.
 
 | Branch | Situação | Dono |
 |---|---|---|
@@ -63,6 +63,7 @@ Atualizada em 2026-09-20, durante o fechamento integrado local da Etapa 3.
 | `codex/mot62-planejamento-etapa2-v2` | documentação da MOT-62; IDs, dependências e auditoria da Etapa 2 v2, sem código de produto | Codex |
 | `codex/mot63-observed-contracts` | implementação e documentação da Etapa 2 v2; aceite **CONDITIONAL**, sem push/PR/merge e sem início da Etapa 3 | Codex |
 | `codex/frontend-etapa-3` | T0–T12 concluídos localmente; gate global verde em `57be689`; aceite técnico **PASS**; sem push/PR/merge | Codex |
+| `codex/fix-reconciliacao-decimal` | correção da aritmética exata dos mecanismos da análise, pronta para merge na `main` | Codex |
 
 Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
@@ -70,6 +71,25 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
 ---
+
+## 2026-09-21 — Reconciliação decimal exata por mecanismo (MOT-81)
+
+**Sintoma.** Algumas carteiras válidas da análise falhavam ao construir o agregado
+canônico, embora baseline, custo netado e economia representassem o mesmo valor
+matemático. A diferença observada era residual, na ordem de `1E-25`.
+
+**Causa.** A economia de cada mecanismo e as somas do contrato canônico usavam o
+contexto global de `Decimal`, cuja precisão finita arredondava resultados
+intermediários antes da comparação estrita.
+
+**O que foi feito.** A branch `codex/fix-reconciliacao-decimal` centralizou soma e
+subtração exatas em `motor/analise/aritmetica.py` e passou a usá-las no cálculo e
+nos invariantes dos mecanismos. Foi incluído um teste de regressão que reproduz o
+arredondamento sem alterar regras de negócio, rateios ou tolerâncias.
+
+**O que isso invalida.** Apenas a conclusão de que a falha indicava inconsistência
+na alocação ou no netting. Números de simulação, critérios econômicos e resultados
+históricos permanecem válidos.
 
 ## 2026-09-20 — Aceite integral de acessibilidade da Etapa 3 (MOT-77)
 
