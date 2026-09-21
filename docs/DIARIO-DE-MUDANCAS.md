@@ -33,7 +33,7 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-09-20, durante o fechamento integrado local da Etapa 3.
+Atualizada em 2026-09-21, durante o fechamento local do MVP da Etapa 4.
 
 | Branch | Situação | Dono |
 |---|---|---|
@@ -63,11 +63,33 @@ Atualizada em 2026-09-20, durante o fechamento integrado local da Etapa 3.
 | `codex/mot62-planejamento-etapa2-v2` | documentação da MOT-62; IDs, dependências e auditoria da Etapa 2 v2, sem código de produto | Codex |
 | `codex/mot63-observed-contracts` | implementação e documentação da Etapa 2 v2; aceite **CONDITIONAL**, sem push/PR/merge e sem início da Etapa 3 | Codex |
 | `codex/frontend-etapa-3` | T0–T12 concluídos localmente; gate global verde em `57be689`; aceite técnico **PASS**; sem push/PR/merge | Codex |
+| `codex/etapa-4-mvp` | MOT-78–MOT-81 implementadas localmente sobre `a9a633c`; aceite técnico para testes internos, sem push/PR/merge/deploy | Codex |
 
 Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+---
+
+## 2026-09-21 — MVP de hipóteses e comparação da Etapa 4 (MOT-78–MOT-81)
+
+1. **Sintoma.** A Etapa 3 diagnosticava uma carteira, mas ainda não permitia criar
+   cenários explícitos, simular a partir de Perfis nem comparar base e hipótese sem
+   interpretação manual.
+2. **Causa.** Faltavam contratos versionados para derivação por Perfil, transformação
+   controlada de premissas, proveniência por cenário e compatibilidade entre
+   execuções diagnósticas.
+3. **O que foi feito.** Na branch local `codex/etapa-4-mvp`, sobre `a9a633c`, foram
+   implementadas MOT-78–MOT-81: snapshot por Perfil, cenários imutáveis, hipóteses
+   restritas pela autoridade da fonte, novo Estudo sintético para Perfis, diagnóstico
+   por cenário, comparação dos sete eixos e dois percursos E2E. A operação e a
+   evolução A/B/C ficaram documentadas. Dois E2E legados passaram a conferir a rota
+   canônica `/carteira/:studyId` em vez da rota transitória já redirecionada.
+4. **O que isso invalida.** Invalida a afirmação de que o front-end só diagnostica
+   uma carteira estática. Não transforma simulação em forecast, diferença em
+   causalidade ou aceite local em prontidão para produção. Não autoriza push, PR,
+   merge nem deploy.
 
 ---
 

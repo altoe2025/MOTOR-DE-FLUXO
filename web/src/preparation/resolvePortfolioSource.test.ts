@@ -223,10 +223,21 @@ describe('resolvePortfolioSource', () => {
       purpose_out: 'ANEXO_V_REMESSA_TERCEIRO', purpose_in: 'ANEXO_V_DISPONIBILIDADE',
       eh_efx: false, deadline: { mode: 'PROFILE' }, seed: '9223372036854775807',
     }];
-    request.input.sources = {
-      '/orders': { kind: 'PADRAO_SINTETICO', source: 'catálogo oficial', recorded_at: NOW },
-    };
+    const participantPrefix = `/participants/${request.input.participants[0]!.id}`;
+    request.input.sources = Object.fromEntries([
+      `${participantPrefix}/profile`, `${participantPrefix}/seed`,
+      `${participantPrefix}/monthly_volume_brl`, `${participantPrefix}/ticket_median_brl`,
+      `${participantPrefix}/out_fraction`, `${participantPrefix}/deadline/mode`,
+      `${participantPrefix}/eh_efx`, `${participantPrefix}/purpose_out`,
+      `${participantPrefix}/purpose_in`,
+    ].map((path) => [path, {
+      kind: 'PADRAO_SINTETICO' as const, source: 'catálogo oficial', recorded_at: NOW,
+    }]));
     const response = preparationResponse(request);
+    response.orders = response.orders.map((order) => ({
+      ...order,
+      cliente_id: request.input.participants[0]!.id,
+    }));
     const preparePortfolio = vi.fn(async () => response);
 
     const snapshot = await resolvePortfolioSource(
@@ -246,9 +257,61 @@ describe('resolvePortfolioSource', () => {
       },
       generationInputSnapshot: response.input_snapshot,
       observedOutcome: null,
-      provenance: [{ kind: 'SYNTHETIC_DEFAULT', source: 'catálogo oficial', recordedAt: NOW }],
     });
+    expect(snapshot.provenance).toHaveLength(9);
+    expect(snapshot.provenance.every((item) =>
+      item.kind === 'SYNTHETIC_DEFAULT'
+      && item.source === 'catálogo oficial'
+      && item.recordedAt === NOW)).toBe(true);
     expect(snapshot.orders.map((order) => order.id)).toEqual(['order-a', 'order-b']);
     expect(snapshot.sourceFingerprint).toBe(await fingerprintPortfolioSource(snapshot));
+  });
+
+  it('associa proveniência sintética a cada ordem pelo participante responsável', async () => {
+    const request = preparationRequest();
+    const participantA = '00000000-0000-4000-8000-000000000015';
+    const participantB = '00000000-0000-4000-8000-000000000016';
+    request.input.participants = [participantA, participantB].map((id, index) => ({
+      id,
+      profile: index === 0 ? 'exportador' : 'tesouraria_corporativa',
+      monthly_volume_brl: '1000', ticket_median_brl: '100', out_fraction: '0.5',
+      purpose_out: 'ANEXO_V_REMESSA_TERCEIRO', purpose_in: 'ANEXO_V_DISPONIBILIDADE',
+      eh_efx: false, deadline: { mode: 'PROFILE' as const }, seed: String(index + 1),
+    }));
+    request.input.sources = Object.fromEntries(request.input.participants.flatMap((participant) => {
+      const prefix = `/participants/${participant.id}`;
+      return [
+        `${prefix}/profile`, `${prefix}/seed`, `${prefix}/monthly_volume_brl`,
+        `${prefix}/ticket_median_brl`, `${prefix}/out_fraction`, `${prefix}/deadline/mode`,
+        `${prefix}/eh_efx`, `${prefix}/purpose_out`, `${prefix}/purpose_in`,
+      ].map((path) => [path, {
+        kind: 'ESTIMATIVA_USUARIO' as const,
+        source: `profile-mvp:profile-${participant.id.slice(-3)}@${participant.id === participantA ? 'a' : 'b'.repeat(64)}:derived`,
+        recorded_at: NOW,
+      }]);
+    }));
+    const response = preparationResponse(request);
+    response.orders = response.orders.map((order, index) => ({
+      ...order,
+      cliente_id: index === 0 ? participantA : participantB,
+    }));
+
+    const snapshot = await resolvePortfolioSource(
+      { kind: 'SYNTHETIC', exampleId: 'perfil-operacional-mvp', preparation: request },
+      dependencies({ preparePortfolio: async () => response }),
+    );
+
+    expect(Object.keys(snapshot.provenanceByOrder ?? {})).toEqual(['order-a', 'order-b']);
+    expect(snapshot.provenanceByOrder?.['order-a']?.cliente_id).toMatchObject({
+      kind: 'DERIVED',
+      source: request.input.sources[`/participants/${participantB}/profile`]!.source,
+      inputs: [`/participants/${participantB}/profile`],
+    });
+    expect(snapshot.provenanceByOrder?.['order-b']?.finalidade).toEqual({
+      kind: 'USER_ESTIMATE',
+      source: request.input.sources[`/participants/${participantA}/purpose_in`]!.source,
+      version: '1.0.0',
+      recordedAt: NOW,
+    });
   });
 });

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 
 import type { JobSnapshot } from '../api/client';
 import { useDiagnosticRuntime } from '../app/providers';
@@ -64,12 +64,31 @@ function persistedState(execution: DiagnosticExecutionRecord | null): Diagnostic
   return { kind: 'SUCCEEDED', attemptId: execution.attemptId };
 }
 
-function latestDiagnostic(study: StudyDocument): DiagnosticExecutionRecord | null {
-  return [...study.executions].reverse().find((item): item is DiagnosticExecutionRecord => item.kind === 'DIAGNOSTIC') ?? null;
+export function diagnosticsForScenario(
+  study: StudyDocument,
+  scenario: ScenarioDocument,
+): readonly DiagnosticExecutionRecord[] {
+  return study.executions.filter((item): item is DiagnosticExecutionRecord =>
+    item.kind === 'DIAGNOSTIC' && item.scenarioId === scenario.id);
+}
+
+export function isCurrentForScenario(execution: DiagnosticExecutionRecord, scenario: ScenarioDocument): boolean {
+  return execution.scenarioRevision === scenario.revision
+    && execution.inputFingerprint === scenario.inputFingerprint;
+}
+
+export function latestDiagnostic(
+  study: StudyDocument,
+  scenario: ScenarioDocument,
+): DiagnosticExecutionRecord | null {
+  return [...diagnosticsForScenario(study, scenario)].reverse()[0] ?? null;
 }
 
 export function StudyDiagnosticPage() {
   const { studyId } = useParams();
+  const [searchParams] = useSearchParams();
+  const requestedScenarioId = searchParams.get('scenarioId');
+  const screenIdentity = `${studyId ?? ''}:${requestedScenarioId ?? ''}`;
   const { controller, client } = useDiagnosticRuntime();
   const heading = useRef<HTMLHeadingElement>(null);
   const resumedAttempts = useRef(new Set<string>());
@@ -80,21 +99,38 @@ export function StudyDiagnosticPage() {
   const [runInProgress, setRunInProgress] = useState(false);
   const [cancelInFlight, setCancelInFlight] = useState(false);
   const cancelInFlightRef = useRef(false);
+  const identityToken = useRef(0);
+  const activeIdentity = useRef(screenIdentity);
 
   useEffect(() => {
     let active = true;
+    const token = ++identityToken.current;
+    activeIdentity.current = screenIdentity;
     mounted.current = true;
+    resumedAttempts.current = new Set();
+    setViewState(null);
+    setRunInProgress(false);
+    setCancelInFlight(false);
     heading.current?.focus();
     if (studyId === undefined) return () => { mounted.current = false; };
     void controller.loadStudy(studyId).then((loaded) => {
       if (!active || !mounted.current) return;
+      if (token !== identityToken.current) return;
       setStudy(loaded);
-      setViewState(loaded === null ? { kind: 'UNAVAILABLE', reason: 'O estudo não existe ou pertence a outra conta.' } : persistedState(latestDiagnostic(loaded)));
+      if (loaded === null) {
+        setViewState({ kind: 'UNAVAILABLE', reason: 'O estudo não existe ou pertence a outra conta.' });
+        return;
+      }
+      const selectedId = requestedScenarioId ?? loaded.baseScenarioId;
+      const selected = loaded.scenarios.find((item) => item.id === selectedId);
+      setViewState(selected === undefined
+        ? { kind: 'UNAVAILABLE', reason: 'O cenário solicitado não existe neste estudo.' }
+        : persistedState(latestDiagnostic(loaded, selected)));
     }).catch(() => {
       if (active && mounted.current) setViewState({ kind: 'UNAVAILABLE', reason: 'Não foi possível abrir o estudo.' });
     });
     const unsubscribe = controller.subscribe(() => {
-      if (!mounted.current) return;
+      if (!mounted.current || token !== identityToken.current) return;
       const current = controller.snapshot.document;
       if (current?.id !== studyId) return;
       setStudy(current);
@@ -103,29 +139,30 @@ export function StudyDiagnosticPage() {
       }
     });
     return () => { active = false; mounted.current = false; unsubscribe(); };
-  }, [controller, studyId]);
+  }, [controller, requestedScenarioId, screenIdentity, studyId]);
 
-  const scenario = study?.scenarios.find((item) => item.id === study.baseScenarioId) ?? null;
+  const selectedScenarioId = requestedScenarioId ?? study?.baseScenarioId;
+  const scenario = study?.scenarios.find((item) => item.id === selectedScenarioId) ?? null;
   const generated = scenario?.sourceSnapshot.generationInputSnapshot !== undefined;
   const effectiveCount = generated ? count : 1;
 
   const trackedApi = useCallback(() => ({
     submitDiagnostic: async (...args: Parameters<typeof client.submitDiagnostic>) => {
-      const result = await client.submitDiagnostic(...args); if (mounted.current) setViewState(transientState(result)); return result;
+      const result = await client.submitDiagnostic(...args); if (mounted.current && activeIdentity.current === screenIdentity) setViewState(transientState(result)); return result;
     },
     getDiagnosticJob: async (...args: Parameters<typeof client.getDiagnosticJob>) => {
-      const result = await client.getDiagnosticJob(...args); if (mounted.current) setViewState(transientState(result)); return result;
+      const result = await client.getDiagnosticJob(...args); if (mounted.current && activeIdentity.current === screenIdentity) setViewState(transientState(result)); return result;
     },
     getDiagnosticResult: client.getDiagnosticResult,
-  }), [client]);
+  }), [client, screenIdentity]);
 
   const complete = useCallback((attempt: Awaited<ReturnType<typeof executeStudyDiagnostic>>) => {
-    if (!mounted.current) return;
+    if (!mounted.current || activeIdentity.current !== screenIdentity) return;
     const current = controller.snapshot.document;
     if (current !== null) setStudy(current);
     if (attempt.status === 'FAILED') setViewState({ kind: 'FAILED', attemptId: attempt.attemptId, publicMessage: 'Não foi possível concluir o diagnóstico. A tentativa anterior foi preservada no histórico.' });
     else setViewState({ kind: attempt.status, attemptId: attempt.attemptId });
-  }, [controller]);
+  }, [controller, screenIdentity]);
 
   const run = useCallback(async () => {
     if (study === null || scenario === null || runInProgress) return;
@@ -157,7 +194,7 @@ export function StudyDiagnosticPage() {
 
   useEffect(() => {
     if (study === null || scenario === null || runInProgress) return;
-    const latest = latestDiagnostic(study);
+    const latest = latestDiagnostic(study, scenario);
     if (latest?.status !== 'QUEUED' || resumedAttempts.current.has(latest.attemptId)) return;
     resumedAttempts.current.add(latest.attemptId);
     void run();
@@ -179,8 +216,8 @@ export function StudyDiagnosticPage() {
   };
 
   const retry = async (attemptId: string) => {
-    if (study === null || runInProgress || cancelInFlightRef.current) return;
-    const terminal = [...study.executions].reverse().find((item): item is DiagnosticExecutionRecord => item.kind === 'DIAGNOSTIC' && item.attemptId === attemptId);
+    if (study === null || scenario === null || runInProgress || cancelInFlightRef.current) return;
+    const terminal = [...diagnosticsForScenario(study, scenario)].reverse().find((item) => item.attemptId === attemptId);
     if (terminal === undefined) return;
     setRunInProgress(true);
     try {
@@ -190,7 +227,9 @@ export function StudyDiagnosticPage() {
     } finally { if (mounted.current) setRunInProgress(false); }
   };
 
-  const terminal = study === null ? null : [...study.executions].reverse().find((item): item is DiagnosticExecutionRecord => item.kind === 'DIAGNOSTIC' && item.status === 'SUCCEEDED' && item.envelope !== null) ?? null;
+  const scenarioDiagnostics = study === null || scenario === null ? [] : diagnosticsForScenario(study, scenario);
+  const terminal = scenario === null ? null : [...scenarioDiagnostics].reverse().find((item) =>
+    item.status === 'SUCCEEDED' && item.envelope !== null && isCurrentForScenario(item, scenario)) ?? null;
   const envelope = terminal?.envelope ?? null;
   return <article className="diagnostic-page">
     <p className="eyebrow">Estudo {study?.name ?? ''}</p>
@@ -199,7 +238,7 @@ export function StudyDiagnosticPage() {
     {study === null || scenario === null ? <DiagnosticStatus state={viewState ?? { kind: 'UNAVAILABLE', reason: 'Carregando estudo…' }} /> : <>
       <DiagnosticControls generated={generated} count={effectiveCount} onCountChange={setCount} onRun={() => void run()} disabled={runInProgress || controller.snapshot.status === 'STORAGE_FAILURE'} />
       {viewState === null ? null : <DiagnosticStatus state={viewState} {...(cancelInFlight ? {} : { onCancel: () => void cancel() })} onRetry={(attemptId) => void retry(attemptId)} />}
-      <DiagnosticHistory executions={study.executions.filter((item): item is DiagnosticExecutionRecord => item.kind === 'DIAGNOSTIC')} />
+      <DiagnosticHistory executions={scenarioDiagnostics} />
       {envelope === null ? null : <>
         <DiagnosticDistribution statistics={envelope.statistics} repetitions={envelope.repetitions} economics={envelope.axes.economic_robustness} />
         <SelectedExecution selectedExecution={envelope.selected_execution} />

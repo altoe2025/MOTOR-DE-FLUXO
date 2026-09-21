@@ -150,5 +150,9 @@ describe('buildPreviewRequest', () => {
     expect(request.proveniencia['/ordens/0/finalidade']?.tipo).toBe('ESTIMATIVA_USUARIO');
     expect(request.proveniencia['/ordens/0/dia_limite']?.fonte).toBe('normalizador');
     expect(request.proveniencia['/ordens/1/valor_brl']?.tipo).toBe('PADRAO_SINTETICO');
+
+    delete snapshot.provenanceByOrder['order-b'];
+    expect(() => buildPreviewRequest(snapshot, premises, naturalPeriod, identity, provenance))
+      .toThrow('Proveniência ausente para a ordem order-b.');
   });
 });

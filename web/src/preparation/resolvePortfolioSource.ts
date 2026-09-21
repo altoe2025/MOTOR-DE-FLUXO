@@ -130,6 +130,67 @@ function preparationProvenance(response: PreparationResponse): FieldProvenance[]
   return orderProvenance(provenance);
 }
 
+function projectedPreparationSource(
+  response: PreparationResponse,
+  path: string,
+): FieldProvenance {
+  const source = response.input_snapshot.sources[path];
+  if (source === undefined) throw new Error(`Preparação sem proveniência em ${path}.`);
+  return source.kind === 'PADRAO_SINTETICO'
+    ? {
+        kind: 'SYNTHETIC_DEFAULT', source: source.source,
+        version: response.preparation_version, recordedAt: source.recorded_at,
+        rule: response.generator_version,
+      }
+    : {
+        kind: 'USER_ESTIMATE', source: source.source,
+        version: response.preparation_version, recordedAt: source.recorded_at,
+      };
+}
+
+function syntheticProvenanceByOrder(
+  response: PreparationResponse,
+): Record<string, OrderFieldProvenance> {
+  const participants = new Map<string, PreparationResponse['input_snapshot']['participants'][number]>();
+  for (const participant of response.input_snapshot.participants) {
+    if (participants.has(participant.id)) {
+      throw new Error(`Participante sintético duplicado: ${participant.id}.`);
+    }
+    participants.set(participant.id, participant);
+  }
+  return Object.fromEntries(cloneAndOrderOrders(response.orders).map((order) => {
+    const participant = participants.get(order.cliente_id);
+    if (participant === undefined) {
+      throw new Error(`Ordem sintética ${order.id} referencia participante ausente.`);
+    }
+    const prefix = `/participants/${participant.id}`;
+    const primaryPath = `${prefix}/profile`;
+    const primary = projectedPreparationSource(response, primaryPath);
+    const derived = (inputs: readonly string[]): FieldProvenance => ({
+      kind: 'DERIVED',
+      source: primary.source,
+      version: response.preparation_version,
+      recordedAt: primary.recordedAt,
+      rule: response.generator_version,
+      inputs,
+    });
+    const purposePath = `${prefix}/${order.direcao === 'OUT' ? 'purpose_out' : 'purpose_in'}`;
+    const deadlineInputs = participant.deadline.mode === 'FIXED'
+      ? [`${prefix}/deadline/mode`, `${prefix}/deadline/days`]
+      : [`${prefix}/deadline/mode`, `${prefix}/profile`, `${prefix}/seed`];
+    return [order.id, {
+      id: derived([`${prefix}/profile`, `${prefix}/seed`]),
+      cliente_id: derived([primaryPath]),
+      direcao: derived([`${prefix}/out_fraction`, `${prefix}/seed`]),
+      dia_conhecida: derived([`${prefix}/monthly_volume_brl`, `${prefix}/ticket_median_brl`, `${prefix}/seed`]),
+      dia_limite: derived(deadlineInputs),
+      eh_efx: projectedPreparationSource(response, `${prefix}/eh_efx`),
+      finalidade: projectedPreparationSource(response, purposePath),
+      valor_brl: derived([`${prefix}/monthly_volume_brl`, `${prefix}/ticket_median_brl`, `${prefix}/seed`]),
+    }];
+  }));
+}
+
 function assertPreparationResponse(value: unknown): asserts value is PreparationResponse {
   if (!validatePreparationResponse(value)) {
     throw new Error('Preparação inválida para resolver a origem da carteira.');
@@ -224,6 +285,7 @@ export async function resolvePortfolioSource(
     capturedAt: dependencies.now(),
     orders: cloneAndOrderOrders(prepared.orders),
     provenance: preparationProvenance(prepared),
+    provenanceByOrder: syntheticProvenanceByOrder(prepared),
     generationInputSnapshot: structuredClone(prepared.input_snapshot),
     observedOutcome: null,
   });

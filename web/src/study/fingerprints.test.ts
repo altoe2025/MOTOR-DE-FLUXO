@@ -9,6 +9,15 @@ import {
 } from './fixtures';
 import type { DeepMutable } from './model';
 
+const syntheticField = (source: string) => ({
+  kind: 'DERIVED' as const,
+  source,
+  version: '1.0.0',
+  recordedAt: '2026-09-19T12:00:00Z',
+  rule: 'dimensionamento-v1',
+  inputs: ['/participants/example/profile'],
+});
+
 describe('fingerprintScenarioInput', () => {
   it('ignora nome e timestamps de UI, mas inclui premissas', async () => {
     const scenario = makeScenarioDraft();
@@ -83,5 +92,31 @@ describe('fingerprintScenarioInput', () => {
     snapshot.source.caseRevision -= 1;
     snapshot.orders[0]!.valor_brl = '71';
     expect(await fingerprintPortfolioSource(snapshot)).not.toBe(initial);
+  });
+
+  it('inclui proveniência por ordem em snapshots sintéticos novos', async () => {
+    const snapshot = makeSyntheticSnapshot();
+    snapshot.provenanceByOrder = {
+      'order-a': {
+        dia_conhecida: syntheticField('perfil-a'), dia_limite: syntheticField('perfil-a'),
+        eh_efx: syntheticField('perfil-a'), finalidade: syntheticField('perfil-a'),
+        valor_brl: syntheticField('perfil-a'),
+      },
+      'order-b': {
+        dia_conhecida: syntheticField('perfil-b'), dia_limite: syntheticField('perfil-b'),
+        eh_efx: syntheticField('perfil-b'), finalidade: syntheticField('perfil-b'),
+        valor_brl: syntheticField('perfil-b'),
+      },
+    };
+    const initial = await fingerprintPortfolioSource(snapshot);
+    const swapped = structuredClone(snapshot);
+    swapped.provenanceByOrder = {
+      'order-a': structuredClone(snapshot.provenanceByOrder['order-b']!),
+      'order-b': structuredClone(snapshot.provenanceByOrder['order-a']!),
+    };
+
+    expect(await fingerprintPortfolioSource(swapped)).not.toBe(initial);
+    expect(await fingerprintScenarioInput(makeScenarioDraft({ sourceSnapshot: swapped })))
+      .not.toBe(await fingerprintScenarioInput(makeScenarioDraft({ sourceSnapshot: snapshot })));
   });
 });

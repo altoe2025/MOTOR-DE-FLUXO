@@ -29,7 +29,7 @@ test('confirmed observed case becomes an immutable study snapshot and survives r
   }, { owner: OWNER, now: NOW });
   await page.reload();
   await page.getByRole('button', { name: 'Novo estudo' }).click();
-  await expect(page).toHaveURL(/\/estudos\/[0-9a-f-]+$/);
+  await expect(page).toHaveURL(/\/carteira\/[0-9a-f-]+$/);
   await page.getByRole('radio', { name: 'Caso observado' }).check();
   await page.getByLabel('Caso confirmado').selectOption('case-e2e');
   await expect(page.getByRole('heading', { name: 'Empresa anonimizada' })).toBeVisible();

@@ -15,6 +15,8 @@ import type {
 } from './model';
 import { assertValidStudy } from './validation';
 
+export const PROFILE_MVP_EXAMPLE_ID = 'perfil-operacional-mvp';
+
 function clone<T>(value: T): T {
   return structuredClone(value);
 }
@@ -81,6 +83,105 @@ export async function createStudy(input: CreateStudyInput): Promise<StudyDocumen
     createdAt: now,
     updatedAt: now,
     deletedAt: null,
+  });
+}
+
+export type CreateProfileStudyInput = Readonly<{
+  id: string;
+  ownerSub: string;
+  name: string;
+  baseScenario: ScenarioDraft;
+  profiles: readonly OperationalProfileVersion[];
+  now: string;
+}>;
+
+function profileLineageFromScenario(
+  scenario: ScenarioDraft,
+): readonly Readonly<{ profileId: string; profileFingerprint: string; participantId: string }>[] {
+  if (scenario.sourceSnapshot.source.kind !== 'SYNTHETIC'
+      || scenario.sourceSnapshot.source.recipe.exampleId !== PROFILE_MVP_EXAMPLE_ID
+      || scenario.sourceSnapshot.generationInputSnapshot === undefined) {
+    throw new Error('Cenário-base não é uma simulação por Perfil do MVP.');
+  }
+  return scenario.sourceSnapshot.generationInputSnapshot.participants.map((participant) => {
+    const path = `/participants/${participant.id}/profile`;
+    const source = scenario.sourceSnapshot.generationInputSnapshot?.sources[path]?.source;
+    const match = source?.match(/^profile-mvp:(.+)@([0-9a-f]{64}):(?:derived|hypothesis)$/);
+    if (match === undefined || match === null) {
+      throw new Error(`Linhagem de Perfil ausente para o participante ${participant.id}.`);
+    }
+    return {
+      profileId: match[1]!,
+      profileFingerprint: match[2]!,
+      participantId: participant.id,
+    };
+  });
+}
+
+export async function createProfileStudy(
+  input: CreateProfileStudyInput,
+): Promise<StudyDocument> {
+  const now = checkedInstant(input.now);
+  if (input.profiles.length === 0 || input.profiles.length > 100) {
+    throw new Error('Selecione entre um e 100 Perfis para criar o estudo.');
+  }
+  const profileIds = new Set<string>();
+  const companyIds = new Set<string>();
+  for (const profile of input.profiles) {
+    const validation = await validateOperationalProfile(profile);
+    if (!validation.ok) throw new Error('Perfil Operacional inválido.');
+    if (profile.ownerSub !== input.ownerSub) {
+      throw new Error('Owner do Perfil Operacional diverge do estudo.');
+    }
+    if (profileIds.has(profile.id) || companyIds.has(profile.companyId)) {
+      throw new Error('Perfis repetidos por ID ou empresa.');
+    }
+    profileIds.add(profile.id);
+    companyIds.add(profile.companyId);
+  }
+  const lineage = profileLineageFromScenario(input.baseScenario);
+  const lineageKeys = new Set(lineage.map((item) => `${item.profileId}\0${item.profileFingerprint}`));
+  if (lineage.length !== input.profiles.length
+      || lineageKeys.size !== lineage.length
+      || input.profiles.some((profile) =>
+        !lineageKeys.has(`${profile.id}\0${profile.documentFingerprint}`))) {
+    throw new Error('Linhagem Perfil-participante diverge das evidências selecionadas.');
+  }
+  const baseScenario = await materializeScenario(input.baseScenario);
+  return finalize({
+    schemaVersion: '3.0.0',
+    id: input.id,
+    ownerSub: input.ownerSub,
+    name: checkedName(input.name),
+    revision: 1,
+    baseScenarioId: baseScenario.id,
+    scenarios: [baseScenario],
+    evidenceSnapshots: input.profiles.map((profile) => ({
+      kind: 'OPERATIONAL_PROFILE' as const,
+      capturedAt: now,
+      profile: clone(profile),
+    })),
+    executions: [],
+    createdAt: now,
+    updatedAt: now,
+    deletedAt: null,
+  });
+}
+
+export async function appendScenario(
+  study: StudyDocument,
+  draft: ScenarioDraft,
+  now: string,
+): Promise<StudyDocument> {
+  if (study.scenarios.some((scenario) => scenario.id === draft.id)) {
+    throw new Error('ID de cenário já existe no estudo.');
+  }
+  const scenario = await materializeScenario({ ...clone(draft), revision: 1 });
+  return finalize({
+    ...clone(study),
+    scenarios: [...study.scenarios.map(clone), scenario],
+    revision: study.revision + 1,
+    updatedAt: checkedInstant(now),
   });
 }
 

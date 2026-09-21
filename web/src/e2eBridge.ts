@@ -2,8 +2,26 @@ import { IndexedDbApplicationRepository } from './storage/indexedDbApplicationRe
 import type { CompanyRecord, ObservedCase } from './cases/domain';
 import { recoverInterruptedExecution, readRecoveredDraft } from './storage/migrations';
 import type { DeepMutable, PreviewExecutionRecord, StudyDocument } from './study/model';
+import { calculateOperationalProfile } from './profiles/calculateOperationalProfile';
+import { createStudy } from './study/domain';
+import { resolvePortfolioSource } from './preparation/resolvePortfolioSource';
 
 const E2E_OWNER_SUB = '00000000-0000-4000-8000-000000000021';
+const STAGE4_OBSERVED_ID = '00000000-0000-4000-8000-000000000901';
+const STAGE4_PROFILE_ID = '00000000-0000-4000-8000-000000000902';
+
+export type Stage4Fixture = 'OBSERVED_HYPOTHESIS' | 'PROFILE_HYPOTHESIS';
+export type Stage4Snapshot = Readonly<{
+  studyId: string;
+  baseScenarioId: string;
+  scenarios: readonly Readonly<{
+    id: string; revision: number; inputFingerprint: string;
+    orderFingerprint: string; provenanceFingerprint: string;
+  }>[];
+  profileLineage: readonly Readonly<{ profileId: string; participantId: string; seed: string }>[];
+  diagnosticExecutionIds: readonly string[];
+  sourceLabels: readonly string[];
+}>;
 
 export type MotorE2EBridge = Readonly<{
   migrateLegacyStudy(raw: string): Promise<readonly string[]>;
@@ -23,7 +41,41 @@ export type MotorE2EBridge = Readonly<{
     | Readonly<{ stage: 'write'; event: 'complete'; requestEvent: 'success' }>
     | Readonly<{ stage: 'write'; event: 'abort'; requestEvent: 'success' | 'error'; errorName: string }>
   >;
+  seedStage4(fixture: Stage4Fixture): Promise<void>;
+  stage4Snapshot(studyId: string): Promise<Stage4Snapshot>;
 }>;
+
+function stage4Case(companyId: string, suffix: string): ObservedCase {
+  const recordedAt = '2026-09-20T12:00:00Z';
+  const provenance = { kind: 'OBSERVED' as const, source: `stage4-${suffix}`, version: '1', recordedAt };
+  return {
+    schemaVersion: '2.0.0', id: `stage4-case-${suffix}`, ownerSub: E2E_OWNER_SUB,
+    companyId, status: 'CONFIRMED', revision: 1,
+    window: { startDate: '2026-01-01', endDate: '2026-01-31', closingDate: '2026-01-31' },
+    orders: Array.from({ length: 10 }, (_, index) => {
+      const day = String(index + 2).padStart(2, '0');
+      const deadline = String(index + 9).padStart(2, '0');
+      return [
+        { id: `stage4-${suffix}-out-${index}`, clientId: `client-${suffix}`, direction: 'OUT' as const, knownDate: `2026-01-${day}`, deadlineDate: `2026-01-${deadline}`, valueBrl: suffix === 'a' ? '60' : '40', purposeCode: 'ANEXO_V_REMESSA_TERCEIRO', efxStatus: 'NO' as const, provenance: [provenance] },
+        { id: `stage4-${suffix}-in-${index}`, clientId: `client-${suffix}`, direction: 'IN' as const, knownDate: `2026-01-${day}`, deadlineDate: `2026-01-${deadline}`, valueBrl: suffix === 'a' ? '40' : '60', purposeCode: 'ANEXO_V_DISPONIBILIDADE', efxStatus: 'NO' as const, provenance: [provenance] },
+      ];
+    }).flat(),
+    controlTotals: [
+      { code: 'GROSS_OUT_BRL', valueBrl: suffix === 'a' ? '600' : '400', provenance },
+      { code: 'GROSS_IN_BRL', valueBrl: suffix === 'a' ? '400' : '600', provenance },
+    ],
+    sourceManifest: { adapterId: 'stage4-e2e', adapterVersion: '1', sourceKind: 'XLSX', files: [{ name: `stage4-${suffix}.xlsx`, sizeBytes: 10, sha256: suffix.repeat(64) }] },
+    normalization: { rulesetId: 'stage4-e2e', rulesetVersion: '1', normalizedAt: recordedAt },
+    quality: { blockers: [], warnings: [] }, corrections: [], observedOutcome: null,
+    confirmedAt: recordedAt,
+  };
+}
+
+async function fingerprint(value: unknown): Promise<string> {
+  const bytes = new TextEncoder().encode(JSON.stringify(value));
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return [...new Uint8Array(digest)].map((item) => item.toString(16).padStart(2, '0')).join('');
+}
 
 declare global {
   interface Window {
@@ -33,6 +85,68 @@ declare global {
 
 export function installE2EBridge(): void {
   window.__MOTOR_E2E__ = Object.freeze({
+    async seedStage4(fixture: Stage4Fixture) {
+      const repository = new IndexedDbApplicationRepository({ projectRef: 'local', ownerSub: E2E_OWNER_SUB });
+      const now = '2026-09-20T12:00:00Z';
+      try {
+        const companyA: CompanyRecord = { id: 'stage4-company-a', ownerSub: E2E_OWNER_SUB, displayName: 'Empresa A', aliases: [], createdAt: now, updatedAt: now, revision: 1 };
+        const companyB: CompanyRecord = { id: 'stage4-company-b', ownerSub: E2E_OWNER_SUB, displayName: 'Empresa B', aliases: [], createdAt: now, updatedAt: now, revision: 1 };
+        const caseA = stage4Case(companyA.id, 'a'); const caseB = stage4Case(companyB.id, 'b');
+        for (const [company, observedCase] of [[companyA, caseA], [companyB, caseB]] as const) {
+          if (await repository.getObservedCase(observedCase.id) === null) await repository.confirmObservedCase({ expectedRevision: 0, operationId: crypto.randomUUID(), company, observedCase, batches: [], events: [] });
+        }
+        const profileA = await calculateOperationalProfile({ id: 'stage4-profile-a', ownerSub: E2E_OWNER_SUB, companyId: companyA.id, version: 1, createdAt: now, cases: [caseA], company: companyA });
+        const profileB = await calculateOperationalProfile({ id: 'stage4-profile-b', ownerSub: E2E_OWNER_SUB, companyId: companyB.id, version: 1, createdAt: now, cases: [caseB], company: companyB });
+        for (const profile of [profileA, profileB]) if (await repository.getOperationalProfileVersion(profile.id) === null) await repository.appendOperationalProfileVersion({ operationId: crypto.randomUUID(), document: profile });
+        const snapshot = await resolvePortfolioSource({ kind: 'OBSERVED_CASE', caseId: caseA.id, caseRevision: 1 }, {
+          getObservedCase: (id) => repository.getObservedCase(id),
+          preparePortfolio: async () => { throw new Error('Preparação não esperada ao semear observado.'); },
+          now: () => now,
+        });
+        const id = fixture === 'OBSERVED_HYPOTHESIS' ? STAGE4_OBSERVED_ID : STAGE4_PROFILE_ID;
+        if (await repository.getStudy(id) !== null) return;
+        const created = await createStudy({ id, ownerSub: E2E_OWNER_SUB,
+          name: fixture === 'OBSERVED_HYPOTHESIS' ? 'Etapa 4 observada' : 'Etapa 4 Perfis', now,
+          baseScenario: { id: fixture === 'OBSERVED_HYPOTHESIS' ? '00000000-0000-4000-8000-000000000911' : '00000000-0000-4000-8000-000000000912', revision: 1, name: 'Cenário base', sourceSnapshot: snapshot,
+            premises: { windowDays: 7, costs: { iof_out: '0', iof_in: '0', carry_cnr: '0', spread_rail_bps: '0', custo_fixo_remessa: '0', custo_oportunidade_aa: '0', ptax: '5.4', iof_por_finalidade: [] } },
+            period: { httpPeriod: { modo: 'NATURAL', dias_aquecimento: 0, periodo_medicao_dias: 30 } } },
+        });
+        const document = structuredClone(created) as DeepMutable<StudyDocument>;
+        if (fixture === 'PROFILE_HYPOTHESIS') document.evidenceSnapshots.push(
+          { kind: 'OPERATIONAL_PROFILE', capturedAt: now, profile: structuredClone(profileA) as DeepMutable<typeof profileA> },
+          { kind: 'OPERATIONAL_PROFILE', capturedAt: now, profile: structuredClone(profileB) as DeepMutable<typeof profileB> },
+        );
+        await repository.saveStudy({ expectedRevision: 0, operationId: crypto.randomUUID(), document });
+      } finally { repository.close(); }
+    },
+    async stage4Snapshot(studyId: string) {
+      const repository = new IndexedDbApplicationRepository({ projectRef: 'local', ownerSub: E2E_OWNER_SUB });
+      try {
+        const study = await repository.getStudy(studyId);
+        if (study === null) throw new Error('Estudo da Etapa 4 não encontrado.');
+        const lineageRows = study.scenarios.flatMap((scenario) => {
+          const input = scenario.sourceSnapshot.generationInputSnapshot;
+          if (input === undefined) return [];
+          return input.participants.map((participant) => {
+            const source = input.sources[`/participants/${participant.id}/profile`]?.source ?? '';
+            return { profileId: /^profile-mvp:(.+)@/.exec(source)?.[1] ?? 'INVALID', participantId: participant.id, seed: participant.seed };
+          });
+        });
+        const profileLineage = [...new Map(lineageRows.map((item) => [
+          `${item.profileId}\0${item.participantId}\0${item.seed}`, item,
+        ])).values()];
+        return {
+          studyId: study.id, baseScenarioId: study.baseScenarioId,
+          scenarios: await Promise.all(study.scenarios.map(async (scenario) => ({
+            id: scenario.id, revision: scenario.revision, inputFingerprint: scenario.inputFingerprint,
+            orderFingerprint: await fingerprint(scenario.sourceSnapshot.orders),
+            provenanceFingerprint: await fingerprint(scenario.sourceSnapshot.provenanceByOrder ?? scenario.sourceSnapshot.provenance),
+          }))),
+          profileLineage, diagnosticExecutionIds: study.executions.filter((item) => item.kind === 'DIAGNOSTIC').map((item) => item.id),
+          sourceLabels: study.scenarios.map((scenario) => scenario.sourceSnapshot.source.kind === 'OBSERVED_CASE' ? 'Dados observados' : scenario.sourceSnapshot.source.kind === 'SYNTHETIC' && scenario.sourceSnapshot.source.recipe.exampleId === 'perfil-operacional-mvp' ? 'Simulação baseada em Perfil' : 'Origem legada'),
+        };
+      } finally { repository.close(); }
+    },
     async freezeStudyInput(studyId: string) {
       const repository = new IndexedDbApplicationRepository({ projectRef: 'local', ownerSub: E2E_OWNER_SUB });
       try {
