@@ -13,6 +13,7 @@ from pydantic import (
     model_validator,
 )
 
+from motor.analise.aritmetica import somar_exato, subtrair_exato
 from servidor.contracts.input import CustoEntrada
 from servidor.contracts.primitives import DECIMAL_PATTERN, StrictModel, decimal_value
 
@@ -92,7 +93,9 @@ class ResultadoMecanismoDTO(StrictModel):
 
     @model_validator(mode="after")
     def validar_economia(self):
-        if self.economia_brl != self.baseline_atribuido_brl - self.custo_netado_brl:
+        if self.economia_brl != subtrair_exato(
+            self.baseline_atribuido_brl, self.custo_netado_brl,
+        ):
             raise ValueError("economia do mecanismo não reconcilia")
         return self
 
@@ -143,15 +146,15 @@ class AgregadoDTO(StrictModel):
             != self.volume_remetido_periodo_brl
         ):
             raise ValueError("volumes dos mecanismos não reconciliam")
-        if sum((m.baseline_atribuido_brl for m in self.mecanismos), Decimal(0)) != (
+        if somar_exato(m.baseline_atribuido_brl for m in self.mecanismos) != (
             self.baseline_periodo.total
         ):
             raise ValueError("baseline dos mecanismos não reconcilia")
-        if sum((m.custo_netado_brl for m in self.mecanismos), Decimal(0)) != (
+        if somar_exato(m.custo_netado_brl for m in self.mecanismos) != (
             self.netado_periodo.total
         ):
             raise ValueError("custo dos mecanismos não reconcilia")
-        if sum((m.economia_brl for m in self.mecanismos), Decimal(0)) != (
+        if somar_exato(m.economia_brl for m in self.mecanismos) != (
             self.economia_periodo_brl
         ):
             raise ValueError("economia dos mecanismos não reconcilia")

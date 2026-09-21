@@ -8,7 +8,7 @@ test('synthetic and manual portfolios use the preparation service and persist af
 
   await page.goto('/estudos');
   await page.getByRole('button', { name: 'Novo estudo' }).click();
-  await expect(page).toHaveURL(/\/estudos\/[0-9a-f-]+$/);
+  await expect(page).toHaveURL(/\/carteira\/[0-9a-f-]+$/);
 
   await page.getByLabel('Escolha do exemplo sintético').selectOption('exportadores');
   await page.getByRole('button', { name: 'Preparar exemplo' }).click();

@@ -241,6 +241,16 @@ def test_mecanismo_rejeita_economia_que_nao_reconcilia(resultado):
         replace(mecanismo, economia_brl=Decimal("1"))
 
 
+def test_mecanismo_reconcilia_subtracao_decimal_sem_arredondar():
+    ResultadoMecanismo(
+        DestinoContabil.REMETIDO,
+        Decimal("1"),
+        Decimal("1234567890123456789012345678"),
+        Decimal("0.1"),
+        Decimal("1234567890123456789012345677.9"),
+    )
+
+
 @pytest.mark.parametrize("modo", ["AGREGADO", "INVALIDO", None])
 def test_manifesto_rejeita_modo_que_burlaria_restricoes_de_secoes(resultado, modo):
     with pytest.raises(ValueError, match="modo_analise"):
