@@ -83,9 +83,11 @@ contexto global de `Decimal`, cuja precisão finita arredondava resultados
 intermediários antes da comparação estrita.
 
 **O que foi feito.** A branch `codex/fix-reconciliacao-decimal` centralizou soma e
-subtração exatas em `motor/analise/aritmetica.py` e passou a usá-las no cálculo e
-nos invariantes dos mecanismos. Foi incluído um teste de regressão que reproduz o
-arredondamento sem alterar regras de negócio, rateios ou tolerâncias.
+subtração exatas em `motor/analise/aritmetica.py` e passou a usá-las no cálculo,
+nos invariantes dos mecanismos e no DTO do JSON público. Foram incluídos testes
+de regressão que reproduzem o arredondamento sem alterar regras de negócio,
+rateios ou tolerâncias. Dois E2E ainda presos à rota legada `/estudos/{id}` foram
+alinhados à rota canônica `/carteira/{id}` já usada pela aplicação.
 
 **O que isso invalida.** Apenas a conclusão de que a falha indicava inconsistência
 na alocação ou no netting. Números de simulação, critérios econômicos e resultados
