@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import type { DiagnosticEnvelope } from '../api/client';
-import { makeObservedSnapshot, makeScenarioDraft } from '../study/fixtures';
-import type { DiagnosticExecutionRecord } from '../study/model';
-import { compareMvpDiagnostics } from './comparison';
+import { makeObservedSnapshot, makeScenarioDraft, makeSyntheticSnapshot } from '../study/fixtures';
+import type { DeepMutable, DiagnosticExecutionRecord, EffectiveInput } from '../study/model';
+import { compareCompositionInputs, compareMvpDiagnostics } from './comparison';
 
 const available = (value: string) => ({ state: 'AVAILABLE' as const, value, evidence: ['fixture'] });
 const distribution = (p50: string) => ({ state: 'AVAILABLE' as const, value: {
@@ -79,4 +79,106 @@ describe('compareMvpDiagnostics', () => {
       execution({ id: 'hypothesis', scenarioId: 'scenario-hypothesis', gross: '100', window: 7, motor: 'e'.repeat(40) }),
     )).toMatchObject({ ok: false, code: 'INCOMPATIBLE_EXECUTIONS' });
   });
+});
+
+function compositionInput(participants: EffectiveInput['participants']): EffectiveInput {
+  const sources: Record<string, EffectiveInput['sources'][string]> = {};
+  for (const participant of participants) sources[`/participants/${participant.id}/profile`] = {
+    kind: 'ESTIMATIVA_USUARIO',
+    source: `profile-mvp:profile-${participant.id}@${(participant.id === 'a' ? 'a' : participant.id === 'b' ? 'b' : 'c').repeat(64)}:derived`,
+    recorded_at: '2026-09-21T12:00:00Z',
+  };
+  return {
+    participants, warmup_days: 0, measurement_days: 365, window_days: 7,
+    costs: makeScenarioDraft().premises.costs, sources,
+  };
+}
+
+const participant = (id: string, volume = '100'): EffectiveInput['participants'][number] => ({
+  id, profile: 'tesouraria_corporativa', seed: id === 'a' ? '1' : id === 'b' ? '2' : '3',
+  monthly_volume_brl: volume, ticket_median_brl: '10', out_fraction: '0.5',
+  deadline: { mode: 'FIXED', days: 7 }, eh_efx: false,
+  purpose_out: 'SERVICES', purpose_in: 'SERVICES',
+});
+
+describe('compareCompositionInputs', () => {
+  it('classifica mantidos, adicionados, removidos e modificados em ordem estável', () => {
+    const result = compareCompositionInputs(
+      compositionInput([participant('a'), participant('b')]),
+      compositionInput([participant('c'), participant('a', '125')]),
+    );
+    expect(result).toMatchObject({
+      status: 'COMPARABLE',
+      maintained: [{ participantId: 'a' }],
+      modified: [{ participantId: 'a', fields: ['monthly_volume_brl'] }],
+      removed: [{ participantId: 'b' }],
+      added: [{ participantId: 'c' }],
+      blockers: [],
+    });
+  });
+
+  it('bloqueia reuso de identidade com outro Perfil e seed divergente', () => {
+    const base = compositionInput([participant('a')]);
+    const changed = structuredClone(base) as DeepMutable<EffectiveInput>;
+    (changed.sources as Record<string, EffectiveInput['sources'][string]>)[
+      '/participants/a/profile'
+    ] = { kind: 'ESTIMATIVA_USUARIO', source: `profile-mvp:outro@${'f'.repeat(64)}:derived`, recorded_at: '2026-09-21T12:00:00Z' };
+    changed.participants[0]!.seed = '99';
+    expect(compareCompositionInputs(base, changed)).toMatchObject({
+      status: 'INCOMPATIBLE',
+      blockers: expect.arrayContaining([
+        expect.objectContaining({ code: 'PROFILE_IDENTITY_MISMATCH', participantId: 'a' }),
+        expect.objectContaining({ code: 'SEED_MISMATCH', participantId: 'a' }),
+      ]),
+    });
+  });
+
+  it('bloqueia mudança de participante cuja source não foi atualizada', () => {
+    const base = structuredClone(compositionInput([participant('a')])) as DeepMutable<EffectiveInput>;
+    base.sources['/participants/a/monthly_volume_brl'] = {
+      kind: 'ESTIMATIVA_USUARIO', source: 'profile-mvp:profile-a@fixture:derived', recorded_at: '2026-09-21T12:00:00Z',
+    };
+    const changed = structuredClone(base) as DeepMutable<EffectiveInput>;
+    changed.participants[0]!.monthly_volume_brl = '125';
+    expect(compareCompositionInputs(base, changed)).toMatchObject({
+      status: 'INCOMPATIBLE',
+      blockers: [expect.objectContaining({ code: 'UNDECLARED_CHANGE', participantId: 'a' })],
+    });
+  });
+});
+
+function syntheticExecution(
+  id: string,
+  scenarioId: string,
+  input: EffectiveInput,
+): DiagnosticExecutionRecord {
+  const base = execution({ id, scenarioId, gross: '100', window: input.window_days });
+  const sourceSnapshot = makeSyntheticSnapshot();
+  sourceSnapshot.generationInputSnapshot = structuredClone(input) as DeepMutable<EffectiveInput>;
+  return { ...base, sourceSnapshot } as DiagnosticExecutionRecord;
+}
+
+it('compara diagnósticos com composição diferente e declara a limitação', () => {
+  const result = compareMvpDiagnostics(
+    syntheticExecution('base-profile', 'scenario-base-profile', compositionInput([participant('a'), participant('b')])),
+    syntheticExecution('hypothesis-profile', 'scenario-hypothesis-profile', compositionInput([participant('a', '125'), participant('c')])),
+  );
+  if (!result.ok) throw new Error(result.reason);
+  expect(result.value.compatibility).toMatchObject({
+    status: 'COMPARABLE', added: [{ participantId: 'c' }], removed: [{ participantId: 'b' }],
+    modified: [{ participantId: 'a' }],
+  });
+  expect(result.value.limitations).toEqual(['COMPOSITION_CHANGED', 'UNPAIRED_DIAGNOSTICS']);
+  expect(result.value.inputChanges.map((item) => item.code)).toEqual(expect.arrayContaining([
+    'PARTICIPANT_ADDED', 'PARTICIPANT_REMOVED', 'PARTICIPANT_UPDATED',
+  ]));
+});
+
+it('declara alteração de regra de IOF separadamente dos custos escalares', () => {
+  const base = execution({ id: 'base-iof', scenarioId: 'scenario-base-iof', gross: '100', window: 7 });
+  const hypothesis = structuredClone(execution({ id: 'hypothesis-iof', scenarioId: 'scenario-hypothesis-iof', gross: '100', window: 7 })) as DeepMutable<DiagnosticExecutionRecord>;
+  hypothesis.premisesSnapshot.costs.iof_por_finalidade = [{ finalidade: 'SERVICES', direcao: 'OUT', aliquota: '0.02' }];
+  const result = compareMvpDiagnostics(base, hypothesis);
+  if (!result.ok) throw new Error(result.reason);
+  expect(result.value.inputChanges.map((item) => item.code)).toEqual(['IOF_RULE']);
 });

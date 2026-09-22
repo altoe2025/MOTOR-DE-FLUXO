@@ -15,16 +15,52 @@ export type MvpComparisonMetric = Readonly<{
 }>;
 
 export type MvpInputChange = Readonly<{
-  code: 'VOLUME' | 'MIX' | 'TICKET' | 'DEADLINE' | 'WINDOW' | 'COST';
+  code: 'VOLUME' | 'MIX' | 'TICKET' | 'DEADLINE' | 'WINDOW' | 'COST'
+    | 'PARTICIPANT_ADDED' | 'PARTICIPANT_REMOVED' | 'PARTICIPANT_UPDATED' | 'IOF_RULE';
   label: string;
   before: string;
   after: string;
 }>;
 
 export type MvpComparison = Readonly<{
+  compatibility: CompositionCompatibilityReport;
   axes: readonly MvpComparisonMetric[];
   inputChanges: readonly MvpInputChange[];
   limitations: readonly string[];
+}>;
+
+export type ParticipantSnapshot = Readonly<{
+  participantId: string;
+  profileId: string | null;
+  profileFingerprint: string | null;
+  seed: string;
+}>;
+
+export type ParticipantPair = Readonly<{
+  participantId: string;
+  profileId: string;
+  profileFingerprint: string;
+}>;
+
+export type ParticipantDifference = Readonly<{
+  participantId: string;
+  fields: readonly string[];
+}>;
+
+export type CompositionCompatibilityBlocker = Readonly<{
+  code: 'PROFILE_LINEAGE_MISSING' | 'PROFILE_IDENTITY_MISMATCH'
+    | 'PROFILE_FINGERPRINT_MISMATCH' | 'SEED_MISMATCH' | 'UNDECLARED_CHANGE';
+  participantId: string;
+  message: string;
+}>;
+
+export type CompositionCompatibilityReport = Readonly<{
+  status: 'COMPARABLE' | 'INCOMPATIBLE';
+  maintained: readonly ParticipantPair[];
+  added: readonly ParticipantSnapshot[];
+  removed: readonly ParticipantSnapshot[];
+  modified: readonly ParticipantDifference[];
+  blockers: readonly CompositionCompatibilityBlocker[];
 }>;
 
 export type MvpComparisonResult =
@@ -117,6 +153,105 @@ function lineage(input: EffectiveInput): readonly string[] | null {
   return result.sort();
 }
 
+function profileLineage(input: EffectiveInput, participantId: string): Readonly<{
+  profileId: string;
+  profileFingerprint: string;
+}> | null {
+  const source = input.sources[`/participants/${participantId}/profile`]?.source;
+  const match = source?.match(/^profile-mvp:(.+)@([0-9a-f]{64}):(?:derived|hypothesis)$/);
+  return match === undefined || match === null
+    ? null : { profileId: match[1]!, profileFingerprint: match[2]! };
+}
+
+function participantSnapshot(input: EffectiveInput, participant: EffectiveInput['participants'][number]): ParticipantSnapshot {
+  const profile = profileLineage(input, participant.id);
+  return {
+    participantId: participant.id,
+    profileId: profile?.profileId ?? null,
+    profileFingerprint: profile?.profileFingerprint ?? null,
+    seed: participant.seed,
+  };
+}
+
+const MUTABLE_PARTICIPANT_FIELDS = [
+  'profile', 'monthly_volume_brl', 'ticket_median_brl', 'out_fraction',
+  'deadline', 'eh_efx', 'purpose_out', 'purpose_in',
+] as const;
+
+export function compareCompositionInputs(
+  base: EffectiveInput,
+  hypothesis: EffectiveInput,
+): CompositionCompatibilityReport {
+  const left = new Map(base.participants.map((participant) => [participant.id, participant]));
+  const right = new Map(hypothesis.participants.map((participant) => [participant.id, participant]));
+  const maintained: ParticipantPair[] = [];
+  const added: ParticipantSnapshot[] = [];
+  const removed: ParticipantSnapshot[] = [];
+  const modified: ParticipantDifference[] = [];
+  const blockers: CompositionCompatibilityBlocker[] = [];
+  const ids = [...new Set([...left.keys(), ...right.keys()])].sort();
+  for (const participantId of ids) {
+    const before = left.get(participantId); const after = right.get(participantId);
+    if (before === undefined && after !== undefined) {
+      const snapshot = participantSnapshot(hypothesis, after);
+      added.push(snapshot);
+      if (snapshot.profileId === null) blockers.push({
+        code: 'PROFILE_LINEAGE_MISSING', participantId, message: 'Linhagem do Perfil adicionado ausente.',
+      });
+      continue;
+    }
+    if (after === undefined && before !== undefined) {
+      const snapshot = participantSnapshot(base, before);
+      removed.push(snapshot);
+      if (snapshot.profileId === null) blockers.push({
+        code: 'PROFILE_LINEAGE_MISSING', participantId, message: 'Linhagem do Perfil removido ausente.',
+      });
+      continue;
+    }
+    if (before === undefined || after === undefined) continue;
+    const beforeProfile = profileLineage(base, participantId);
+    const afterProfile = profileLineage(hypothesis, participantId);
+    if (beforeProfile === null || afterProfile === null) {
+      blockers.push({ code: 'PROFILE_LINEAGE_MISSING', participantId, message: 'Linhagem de Perfil ausente.' });
+    } else {
+      if (beforeProfile.profileId !== afterProfile.profileId) blockers.push({
+        code: 'PROFILE_IDENTITY_MISMATCH', participantId,
+        message: 'A identidade do participante foi reutilizada por outro Perfil.',
+      });
+      if (beforeProfile.profileFingerprint !== afterProfile.profileFingerprint) blockers.push({
+        code: 'PROFILE_FINGERPRINT_MISMATCH', participantId,
+        message: 'O fingerprint do Perfil comum diverge.',
+      });
+      maintained.push({ participantId, profileId: beforeProfile.profileId, profileFingerprint: beforeProfile.profileFingerprint });
+    }
+    if (before.seed !== after.seed) blockers.push({
+      code: 'SEED_MISMATCH', participantId, message: 'A seed de participante mantido diverge.',
+    });
+    const fields = MUTABLE_PARTICIPANT_FIELDS
+      .filter((field) => canonical(before[field]) !== canonical(after[field]));
+    if (fields.length > 0) {
+      modified.push({ participantId, fields });
+      const sourcePaths = fields.flatMap((field) => field === 'deadline'
+        ? [`/participants/${participantId}/deadline/mode`, `/participants/${participantId}/deadline/days`]
+        : [`/participants/${participantId}/${field}`]);
+      const hasTrackedSource = sourcePaths.some((path) => base.sources[path] !== undefined || hypothesis.sources[path] !== undefined);
+      const hasDeclaredSource = sourcePaths.some((path) => {
+        const next = hypothesis.sources[path];
+        return next !== undefined && canonical(next) !== canonical(base.sources[path])
+          && next.kind === 'ESTIMATIVA_USUARIO';
+      });
+      if (hasTrackedSource && !hasDeclaredSource) blockers.push({
+        code: 'UNDECLARED_CHANGE', participantId,
+        message: 'A alteração do participante não possui source atualizada.',
+      });
+    }
+  }
+  return {
+    status: blockers.length === 0 ? 'COMPARABLE' : 'INCOMPATIBLE',
+    maintained, added, removed, modified, blockers,
+  };
+}
+
 function compatibleSources(left: PortfolioSourceSnapshot, right: PortfolioSourceSnapshot): string | null {
   if (left.source.kind !== right.source.kind) return 'Famílias de origem diferentes.';
   if (left.source.kind === 'OBSERVED_CASE' && right.source.kind === 'OBSERVED_CASE') {
@@ -127,16 +262,12 @@ function compatibleSources(left: PortfolioSourceSnapshot, right: PortfolioSource
   if (left.source.kind === 'SYNTHETIC' && right.source.kind === 'SYNTHETIC') {
     const a = left.generationInputSnapshot; const b = right.generationInputSnapshot;
     if (a === undefined || b === undefined) return 'Entrada de geração ausente.';
-    const frozenParticipant = (input: EffectiveInput) => input.participants.map((p) => ({
-      id: p.id, profile: p.profile, seed: p.seed, eh_efx: p.eh_efx,
-      purpose_out: p.purpose_out, purpose_in: p.purpose_in,
-    }));
+    const composition = compareCompositionInputs(a, b);
     const compatible = left.source.recipe.preparationVersion === right.source.recipe.preparationVersion
       && left.source.recipe.generatorVersion === right.source.recipe.generatorVersion
-      && canonical(lineage(a)) === canonical(lineage(b))
+      && left.source.recipe.motorBuildSha === right.source.recipe.motorBuildSha
       && lineage(a) !== null && lineage(b) !== null
-      && canonical(frozenParticipant(a)) === canonical(frozenParticipant(b))
-      && canonical(a.costs.iof_por_finalidade) === canonical(b.costs.iof_por_finalidade);
+      && composition.status === 'COMPARABLE';
     return compatible ? null : 'Recipes, participantes ou linhagem de Perfil incompatíveis.';
   }
   return left.source.kind === 'AUTHORED' && right.source.kind === 'AUTHORED'
@@ -187,6 +318,10 @@ function inputChanges(base: DiagnosticExecutionRecord, hypothesis: DiagnosticExe
   const a = base.sourceSnapshot.generationInputSnapshot;
   const b = hypothesis.sourceSnapshot.generationInputSnapshot;
   if (a !== undefined && b !== undefined) {
+    const composition = compareCompositionInputs(a, b);
+    for (const item of composition.added) changes.push({ code: 'PARTICIPANT_ADDED', label: `Participante adicionado: ${item.participantId}`, before: 'Ausente', after: item.profileId ?? 'Perfil indisponível' });
+    for (const item of composition.removed) changes.push({ code: 'PARTICIPANT_REMOVED', label: `Participante removido: ${item.participantId}`, before: item.profileId ?? 'Perfil indisponível', after: 'Ausente' });
+    for (const item of composition.modified) changes.push({ code: 'PARTICIPANT_UPDATED', label: `Participante alterado: ${item.participantId}`, before: 'Valores base', after: item.fields.join(', ') });
     add('VOLUME', 'Volume', a.participants.map((p) => p.monthly_volume_brl), b.participants.map((p) => p.monthly_volume_brl));
     add('MIX', 'Mix OUT/IN', a.participants.map((p) => p.out_fraction), b.participants.map((p) => p.out_fraction));
     add('TICKET', 'Ticket', a.participants.map((p) => p.ticket_median_brl), b.participants.map((p) => p.ticket_median_brl));
@@ -198,6 +333,7 @@ function inputChanges(base: DiagnosticExecutionRecord, hypothesis: DiagnosticExe
     void _frozen; return costs;
   };
   add('COST', 'Custos escalares', scalarCosts(base), scalarCosts(hypothesis));
+  add('IOF_RULE', 'Regras de IOF por finalidade', base.premisesSnapshot.costs.iof_por_finalidade, hypothesis.premisesSnapshot.costs.iof_por_finalidade);
   return changes;
 }
 
@@ -218,10 +354,19 @@ export function compareMvpDiagnostics(
   }
   const sourceReason = compatibleSources(base.sourceSnapshot, hypothesis.sourceSnapshot);
   if (sourceReason !== null) return incompatible(sourceReason);
+  const baseInput = base.sourceSnapshot.generationInputSnapshot;
+  const hypothesisInput = hypothesis.sourceSnapshot.generationInputSnapshot;
+  const compatibility = baseInput !== undefined && hypothesisInput !== undefined
+    ? compareCompositionInputs(baseInput, hypothesisInput)
+    : { status: 'COMPARABLE' as const, maintained: [], added: [], removed: [], modified: [], blockers: [] };
   const axes = [
     ...SCALARS.slice(0, 20).map((item) => metricRow(item, a.axes, b.axes)),
     ...DISTRIBUTIONS.map((item) => distributionRow(item, a.axes, b.axes)),
     ...SCALARS.slice(20).map((item) => metricRow(item, a.axes, b.axes)),
   ];
-  return { ok: true, value: { axes, inputChanges: inputChanges(base, hypothesis), limitations: ['UNPAIRED_DIAGNOSTICS'] } };
+  const limitations = [
+    ...(compatibility.added.length > 0 || compatibility.removed.length > 0 ? ['COMPOSITION_CHANGED'] : []),
+    'UNPAIRED_DIAGNOSTICS',
+  ];
+  return { ok: true, value: { compatibility, axes, inputChanges: inputChanges(base, hypothesis), limitations } };
 }

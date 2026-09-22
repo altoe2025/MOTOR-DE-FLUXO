@@ -64,13 +64,31 @@ decimal vigente para iniciar a Evolução B.
 | `codex/mot62-planejamento-etapa2-v2` | documentação da MOT-62; IDs, dependências e auditoria da Etapa 2 v2, sem código de produto | Codex |
 | `codex/mot63-observed-contracts` | implementação e documentação da Etapa 2 v2; aceite **CONDITIONAL**, sem push/PR/merge e sem início da Etapa 3 | Codex |
 | `codex/frontend-etapa-3` | T0–T12 concluídos localmente; gate global verde em `57be689`; aceite técnico **PASS**; sem push/PR/merge | Codex |
-| `codex/etapa-4-mvp` | MVP aceito; Evolução B com domínio MOT-82 e construtor MOT-83 locais, ainda sem push/PR/merge/deploy | Codex |
+| `codex/etapa-4-mvp` | MVP aceito; Evolução B implementada localmente até a comparação estrutural MOT-84, ainda sem push/PR/merge/deploy | Codex |
 | `codex/fix-reconciliacao-decimal` | correção da aritmética exata dos mecanismos da análise, pronta para merge na `main` | Codex |
 
 Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+---
+
+## 2026-09-21 — Comparação estrutural da Evolução B (MOT-84)
+
+1. **Sintoma.** A comparação do MVP rejeitava qualquer adição ou remoção de
+   participante, mesmo quando as duas execuções eram diagnósticos válidos do mesmo
+   Estudo e usavam versões compatíveis.
+2. **Causa.** A compatibilidade exigia igualdade integral da composição e não havia
+   relatório tipado para separar mudanças válidas de conflitos de identidade,
+   fingerprint, seed ou proveniência.
+3. **O que foi feito.** A branch `codex/etapa-4-mvp` passou a classificar
+   participantes mantidos, adicionados, removidos e alterados, bloquear conflitos e
+   sources não atualizadas, distinguir regras de IOF e renderizar o diff estrutural
+   antes dos sete eixos agregados. Indisponibilidade continua sem virar zero.
+4. **O que isso invalida.** Invalida a conclusão de que composições diferentes são
+   sempre incomparáveis. A comparação continua não pareada e não atribui resultado
+   individual; integração E2E e aceite final permanecem na MOT-85.
 
 ---
 
