@@ -2,13 +2,17 @@ import { describe, expect, it } from 'vitest';
 
 import {
   attachOperationalProfileEvidence,
+  appendScenario,
   appendExecution,
+  createProfileStudy,
   createStudy,
   duplicateStudy,
   moveStudyToTrash,
   renameStudy,
   updateScenario,
 } from './domain';
+import { buildProfileMvpPreparationRequest } from '../hypotheses/profileMvp';
+import { PROFILE_MVP_EXAMPLE_ID } from '../hypotheses/hypothesis';
 import { calculateOperationalProfile } from '../profiles/calculateOperationalProfile';
 import { fingerprintPortfolioSource } from './fingerprints';
 import {
@@ -20,7 +24,13 @@ import {
   makeScenarioDraft,
   makeSyntheticSnapshot,
 } from './fixtures';
-import type { DeepMutable, ExecutionRecord, PreviewExecutionRecord, StudyDocument } from './model';
+import type {
+  DeepMutable,
+  ExecutionRecord,
+  PortfolioSourceSnapshot,
+  PreviewExecutionRecord,
+  StudyDocument,
+} from './model';
 import type { OperationalProfileVersion } from '../profiles/domain';
 
 const NEXT = '2026-09-19T13:00:00Z';
@@ -294,5 +304,89 @@ describe('evidência de Perfil Operacional no Study V3', () => {
     corrupt.documentFingerprint = '0'.repeat(64);
     await expect(attachOperationalProfileEvidence(original, corrupt, NEXT))
       .rejects.toThrow('Perfil Operacional');
+  });
+
+  it('cria outro Estudo V3 por Perfil sem tocar o estudo de origem', async () => {
+    const observedStudy = await studyWith(makeObservedSnapshot());
+    const before = structuredClone(observedStudy);
+    const profile = await operationalProfile();
+    const sourceScenario = (await studyWith()).scenarios[0]!;
+    const participantId = '00000000-0000-4000-8000-000000000101';
+    const request = buildProfileMvpPreparationRequest({
+      identity: {
+        studyId: '00000000-0000-4000-8000-000000000201',
+        scenarioId: '00000000-0000-4000-8000-000000000202',
+        scenarioRevision: 1,
+      },
+      scenario: sourceScenario,
+      participants: [{
+        profileId: profile.id,
+        companyId: profile.companyId,
+        profileFingerprint: profile.documentFingerprint,
+        participantId,
+        monthlyVolumeBrl: '1000', ticketMedianBrl: '100', outFraction: '0.5',
+        generatorProfile: 'tesouraria_corporativa', seed: '42',
+        deadline: { mode: 'FIXED', days: 7 }, efx: false,
+        purposeOut: 'SERVICES', purposeIn: 'GOODS',
+      }],
+      requestId: '00000000-0000-4000-8000-000000000203',
+      expectedBuildSha: 'a'.repeat(40),
+      recordedAt: NEXT,
+    });
+    const snapshot = makeSyntheticSnapshot();
+    if (snapshot.source.kind !== 'SYNTHETIC') throw new Error('fixture');
+    snapshot.source.recipe.exampleId = PROFILE_MVP_EXAMPLE_ID;
+    snapshot.source.recipe.seeds = ['42'];
+    snapshot.generationInputSnapshot = request.input;
+    const baseScenario = makeScenarioDraft({
+      id: request.scenario_id,
+      sourceSnapshot: snapshot,
+    });
+
+    const created = await createProfileStudy({
+      id: request.study_id,
+      ownerSub: FIXTURE_OWNER,
+      name: 'Simulação por Perfil',
+      baseScenario,
+      profiles: [profile],
+      now: NEXT,
+    });
+
+    expect(observedStudy).toEqual(before);
+    expect(created).toMatchObject({
+      schemaVersion: '3.0.0', id: request.study_id, revision: 1,
+      baseScenarioId: request.scenario_id, executions: [],
+    });
+    expect(created.evidenceSnapshots.map((item) => item.profile.id)).toEqual([profile.id]);
+
+    const mismatched = structuredClone(baseScenario);
+    const profilePath = `/participants/${participantId}/profile`;
+    mismatched.sourceSnapshot.generationInputSnapshot!.sources[profilePath]!.source =
+      `profile-mvp:${profile.id}@${'f'.repeat(64)}:derived`;
+    await expect(createProfileStudy({
+      id: request.study_id,
+      ownerSub: FIXTURE_OWNER,
+      name: 'Simulação divergente',
+      baseScenario: mismatched,
+      profiles: [profile],
+      now: NEXT,
+    })).rejects.toThrow('Linhagem Perfil-participante diverge');
+  });
+
+  it('acrescenta cenário revisão 1 sem alterar base nem execuções', async () => {
+    const study = await studyWith();
+    const hypothesis = makeScenarioDraft({
+      id: '00000000-0000-4000-8000-000000000099',
+      revision: 9,
+      name: 'Hipótese',
+      sourceSnapshot: structuredClone(study.scenarios[0]!.sourceSnapshot) as DeepMutable<PortfolioSourceSnapshot>,
+    });
+    const next = await appendScenario(study, hypothesis, NEXT);
+
+    expect(next.scenarios).toHaveLength(study.scenarios.length + 1);
+    expect(next.scenarios[0]).toEqual(study.scenarios[0]);
+    expect(next.scenarios[1]?.revision).toBe(1);
+    expect(next.executions).toEqual(study.executions);
+    expect(next.revision).toBe(study.revision + 1);
   });
 });

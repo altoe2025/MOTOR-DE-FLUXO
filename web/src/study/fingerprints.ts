@@ -80,6 +80,9 @@ function normalizeSnapshot(
     source,
     orders,
     provenance,
+    ...(snapshot.source.kind === 'SYNTHETIC' && snapshot.provenanceByOrder !== undefined
+      ? { provenanceByOrder: structuredClone(snapshot.provenanceByOrder) }
+      : {}),
   };
 }
 

@@ -33,7 +33,8 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-09-21, durante a correção da reconciliação decimal da Etapa 4.
+Atualizada em 2026-09-21, durante a integração do MVP da Etapa 4 com a correção
+decimal vigente para iniciar a Evolução B.
 
 | Branch | Situação | Dono |
 |---|---|---|
@@ -63,12 +64,117 @@ Atualizada em 2026-09-21, durante a correção da reconciliação decimal da Eta
 | `codex/mot62-planejamento-etapa2-v2` | documentação da MOT-62; IDs, dependências e auditoria da Etapa 2 v2, sem código de produto | Codex |
 | `codex/mot63-observed-contracts` | implementação e documentação da Etapa 2 v2; aceite **CONDITIONAL**, sem push/PR/merge e sem início da Etapa 3 | Codex |
 | `codex/frontend-etapa-3` | T0–T12 concluídos localmente; gate global verde em `57be689`; aceite técnico **PASS**; sem push/PR/merge | Codex |
+| `codex/etapa-4-mvp` | MVP e Evolução B aceitos localmente até MOT-85; sem push/PR/merge/deploy | Codex |
 | `codex/fix-reconciliacao-decimal` | correção da aritmética exata dos mecanismos da análise, pronta para merge na `main` | Codex |
 
 Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+---
+
+## 2026-09-22 — Corrida eliminada no E2E da Evolução B (MOT-85)
+
+1. **Sintoma.** O check `pytest` do PR #55 falhou no primeiro E2E da Evolução B:
+   havia uma repetição pendente, mas o teste esperava que o contador de submissões
+   já tivesse avançado mais uma vez. Os dois E2E seguintes falharam em cascata.
+2. **Causa.** O helper lia o contador `submitted` depois do clique que iniciava o
+   diagnóstico. Em CI, a primeira repetição podia ser submetida antes dessa leitura,
+   tornando a expectativa deslocada em uma unidade e deixando trabalho pendente.
+3. **O que foi feito.** `stage4-evolution-b.spec.ts` agora captura o contador antes
+   do clique, como o E2E do MVP já fazia, e usa essa base imutável ao liberar as dez
+   repetições controladas.
+4. **O que isso invalida.** Invalida somente a evidência do primeiro check remoto do
+   PR #55. Não altera produto, motor, contratos nem o aceite funcional da Etapa 4.
+
+---
+
+## 2026-09-21 — Aceite da Evolução B da Etapa 4 (MOT-85)
+
+1. **Sintoma.** MOT-82–MOT-84 entregavam o fluxo funcional, mas ainda faltavam
+   evidências de reload, concorrência, integração vertical e regressão do MVP.
+2. **Causa.** O recorte não possuía fixture com terceiro Perfil nem percurso E2E
+   que atravessasse composição, diagnóstico, comparação e persistência.
+3. **O que foi feito.** A branch `codex/etapa-4-mvp` ganhou fixture C, E2E vertical
+   e concorrente, regressão atualizada, diagnóstico com código público de entrada
+   incompatível e documentação de aceite. Suíte web, E2E repetido, preparação
+   Python e cenário Amanda passaram.
+4. **O que isso invalida.** Invalida o estado “B funcional, mas sem aceite”. B está
+   concluída para testes internos. A e C permanecem futuras; nada autoriza push,
+   PR, merge, deploy ou uso em produção.
+
+---
+
+## 2026-09-21 — Comparação estrutural da Evolução B (MOT-84)
+
+1. **Sintoma.** A comparação do MVP rejeitava qualquer adição ou remoção de
+   participante, mesmo quando as duas execuções eram diagnósticos válidos do mesmo
+   Estudo e usavam versões compatíveis.
+2. **Causa.** A compatibilidade exigia igualdade integral da composição e não havia
+   relatório tipado para separar mudanças válidas de conflitos de identidade,
+   fingerprint, seed ou proveniência.
+3. **O que foi feito.** A branch `codex/etapa-4-mvp` passou a classificar
+   participantes mantidos, adicionados, removidos e alterados, bloquear conflitos e
+   sources não atualizadas, distinguir regras de IOF e renderizar o diff estrutural
+   antes dos sete eixos agregados. Indisponibilidade continua sem virar zero.
+4. **O que isso invalida.** Invalida a conclusão de que composições diferentes são
+   sempre incomparáveis. A comparação continua não pareada e não atribui resultado
+   individual; integração E2E e aceite final permanecem na MOT-85.
+
+---
+
+## 2026-09-21 — Construtor de composição da Evolução B (MOT-83)
+
+1. **Sintoma.** O domínio já aceitava composição variável, mas a interface ainda
+   oferecia apenas multiplicadores globais e não permitia adicionar, remover ou
+   editar participantes individualmente.
+2. **Causa.** O formulário do MVP não carregava os Perfis do owner nem orquestrava
+   materialização, preparação e persistência atômica da MOT-82.
+3. **O que foi feito.** A branch `codex/etapa-4-mvp` ganhou um construtor em três
+   áreas, resumo antes/depois, identidade e seed congeladas, edição de custos e IOF,
+   uma única preparação quando a geração muda e reutilização das ordens quando só
+   janela/custos mudam. Falhas preservam o rascunho e oferecem retry após o CAS.
+4. **O que isso invalida.** Invalida a limitação visual do editor global para
+   cenários por Perfil. A comparação estrutural ainda depende da MOT-84; nada aqui
+   constitui causalidade, efeito marginal, V4, push, PR, merge ou deploy.
+
+---
+
+## 2026-09-21 — Domínio de composição da Evolução B (MOT-82)
+
+1. **Sintoma.** O MVP só aplicava volume, mix, ticket e prazo globalmente e rejeitava
+   qualquer comparação que alterasse a composição de participantes.
+2. **Causa.** Não existia um delta tipado por participante nem uma transição única
+   capaz de anexar evidência de Perfil e cenário sob a mesma revisão do Estudo.
+3. **O que foi feito.** A branch `codex/etapa-4-mvp` integrou a correção decimal da
+   `origin/main` e passou a materializar adição, remoção e atualização individual,
+   com sources exatas, IOF canônico, preservação de identidade e persistência
+   atômica de evidência mais cenário. A origem permanece V3 e por Perfil.
+4. **O que isso invalida.** Invalida a limitação técnica de composição imutável no
+   domínio. A interface e a comparação estrutural ainda dependem de MOT-83 e MOT-84;
+   nada aqui constitui forecast, causalidade, V4, push, PR, merge ou deploy.
+
+---
+
+## 2026-09-21 — MVP de hipóteses e comparação da Etapa 4 (MOT-78–MOT-81)
+
+1. **Sintoma.** A Etapa 3 diagnosticava uma carteira, mas ainda não permitia criar
+   cenários explícitos, simular a partir de Perfis nem comparar base e hipótese sem
+   interpretação manual.
+2. **Causa.** Faltavam contratos versionados para derivação por Perfil, transformação
+   controlada de premissas, proveniência por cenário e compatibilidade entre
+   execuções diagnósticas.
+3. **O que foi feito.** Na branch local `codex/etapa-4-mvp`, sobre `a9a633c`, foram
+   implementadas MOT-78–MOT-81: snapshot por Perfil, cenários imutáveis, hipóteses
+   restritas pela autoridade da fonte, novo Estudo sintético para Perfis, diagnóstico
+   por cenário, comparação dos sete eixos e dois percursos E2E. A operação e a
+   evolução A/B/C ficaram documentadas. Dois E2E legados passaram a conferir a rota
+   canônica `/carteira/:studyId` em vez da rota transitória já redirecionada.
+4. **O que isso invalida.** Invalida a afirmação de que o front-end só diagnostica
+   uma carteira estática. Não transforma simulação em forecast, diferença em
+   causalidade ou aceite local em prontidão para produção. Não autoriza push, PR,
+   merge nem deploy.
 
 ---
 
@@ -92,6 +198,8 @@ alinhados à rota canônica `/carteira/{id}` já usada pela aplicação.
 **O que isso invalida.** Apenas a conclusão de que a falha indicava inconsistência
 na alocação ou no netting. Números de simulação, critérios econômicos e resultados
 históricos permanecem válidos.
+
+---
 
 ## 2026-09-20 — Aceite integral de acessibilidade da Etapa 3 (MOT-77)
 

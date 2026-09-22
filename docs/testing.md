@@ -252,3 +252,46 @@ confirma foco visível, distribuição, execução selecionada, os sete eixos e 
 horizontal por teclado nas tabelas nomeadas. A matriz em
 [`docs/frontend/etapa-3-aceitacao.md`](frontend/etapa-3-aceitacao.md) registra o
 aceite técnico local `PASS`.
+
+## Aceitação local do MVP da Etapa 4 — MOT-81
+
+O MVP acrescenta testes unitários dos contratos de Perfil, hipótese, fingerprint,
+persistência, diagnóstico por cenário e comparação. Os percursos Chromium em
+`web/e2e/stage4-mvp.spec.ts` cobrem separadamente uma origem observada e uma
+simulação construída com dois Perfis. Eles verificam que ordens/proveniência reais
+não são regeneradas, que a simulação nasce em outro Estudo e que a linhagem dos dois
+Perfis permanece congelada.
+
+Contagens do candidato local:
+
+| Verificação | Resultado |
+|---|---|
+| `npm --prefix web run test:unit` | 430 aprovados em 59 arquivos |
+| typecheck / lint / build | aprovados; aviso informativo de chunk > 500 kB |
+| `python -m pytest -q` | 772 aprovados, 2 ignorados |
+| `python -O -m pytest -q` | 772 aprovados, 2 ignorados |
+| `npm --prefix web run test:e2e` | 17 aprovados em Chromium local, 1,2 min |
+
+A matriz e os limites de interpretação estão em
+[`docs/frontend/etapa-4-mvp-aceitacao.md`](frontend/etapa-4-mvp-aceitacao.md) e o
+procedimento está em
+[`docs/frontend/etapa-4-mvp-operacao.md`](frontend/etapa-4-mvp-operacao.md).
+
+Os dois percursos novos passaram duas vezes seguidas após sincronizar a navegação
+pela persistência das reservas e terminais, sem sleeps. A fixture por Perfil usa dez
+repetições e custos economicamente neutros porque o backend vigente pode falhar em
+algumas sementes com custos não nulos na reconciliação decimal por mecanismo; essa
+limitação, fora do escopo do front-end, está explicitada no runbook.
+
+## Aceitação local da Evolução B da Etapa 4 — MOT-85
+
+O E2E `web/e2e/stage4-evolution-b.spec.ts` cobre composição variável, duas
+hipóteses nomeadas, execução, comparação estrutural, reload e conflito CAS entre
+abas com preservação do rascunho perdedor. O arquivo passou 2/2 duas vezes; em uma
+das rodadas foi executado junto com `stage4-mvp.spec.ts`, totalizando 4/4.
+
+A suíte unitária passou 454/454 em 61 arquivos. Lint, typecheck e build passaram.
+Os 35 testes Python diretamente ligados à preparação passaram, e o cenário Amanda
+permaneceu em aproximadamente US$439k de baseline, US$249k netado, US$190k de
+economia e 58,82% de netabilidade. A matriz completa está em
+[`docs/frontend/etapa-4-evolucao-b-aceitacao.md`](frontend/etapa-4-evolucao-b-aceitacao.md).
