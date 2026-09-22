@@ -45,7 +45,7 @@ async function compareScenarios(page: Page, studyId: string, expectedInput: stri
   await page.getByRole('button', { name: 'Comparar' }).click();
   await expect(page.getByRole('region', { name: 'Entradas alteradas' })
     .getByText(expectedInput, { exact: true })).toBeVisible();
-  await expect(page.getByText('UNPAIRED_DIAGNOSTICS')).toBeVisible();
+  await expect(page.getByText(/diagnósticos independentes/i)).toBeVisible();
   const headings = await page.locator('.comparison-axis > h2').allTextContents();
   expect(headings).toEqual(AXES);
 }
@@ -94,9 +94,9 @@ test('dois Perfis geram uma simulação separada e uma hipótese de mix', async 
   expect(createdStudy).not.toBe(PROFILE_STUDY);
   await expect(page.getByText('Simulação baseada em Perfil')).toBeVisible();
 
-  const hypothesis = page.getByRole('region', { name: 'Criar hipótese' });
+  const hypothesis = page.getByRole('region', { name: 'Criar hipótese de composição' });
   await hypothesis.getByLabel('Nome da hipótese').fill('Hipótese de mix');
-  await hypothesis.getByLabel('Deslocamento da fração OUT').fill('-0.1');
+  await hypothesis.getByLabel(/Fração OUT — stage4-company-a/).fill('0.5');
   await hypothesis.getByRole('button', { name: 'Criar hipótese' }).click();
   await expect(page).toHaveURL(new RegExp(`/estudos/${createdStudy}/diagnostico\\?scenarioId=`));
 

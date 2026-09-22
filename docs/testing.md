@@ -282,3 +282,16 @@ pela persistência das reservas e terminais, sem sleeps. A fixture por Perfil us
 repetições e custos economicamente neutros porque o backend vigente pode falhar em
 algumas sementes com custos não nulos na reconciliação decimal por mecanismo; essa
 limitação, fora do escopo do front-end, está explicitada no runbook.
+
+## Aceitação local da Evolução B da Etapa 4 — MOT-85
+
+O E2E `web/e2e/stage4-evolution-b.spec.ts` cobre composição variável, duas
+hipóteses nomeadas, execução, comparação estrutural, reload e conflito CAS entre
+abas com preservação do rascunho perdedor. O arquivo passou 2/2 duas vezes; em uma
+das rodadas foi executado junto com `stage4-mvp.spec.ts`, totalizando 4/4.
+
+A suíte unitária passou 454/454 em 61 arquivos. Lint, typecheck e build passaram.
+Os 35 testes Python diretamente ligados à preparação passaram, e o cenário Amanda
+permaneceu em aproximadamente US$439k de baseline, US$249k netado, US$190k de
+economia e 58,82% de netabilidade. A matriz completa está em
+[`docs/frontend/etapa-4-evolucao-b-aceitacao.md`](frontend/etapa-4-evolucao-b-aceitacao.md).

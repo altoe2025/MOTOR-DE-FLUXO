@@ -4,7 +4,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import type { JobSnapshot } from '../api/client';
 import { useDiagnosticRuntime } from '../app/providers';
 import type { FieldProvenance } from '../cases/domain';
-import { buildDiagnosticRequest } from '../diagnostics/buildDiagnosticRequest';
+import { buildDiagnosticRequest, DiagnosticRequestBuildError } from '../diagnostics/buildDiagnosticRequest';
 import { DiagnosticAxesView } from '../diagnostics/components/DiagnosticAxesView';
 import { DiagnosticControls } from '../diagnostics/components/DiagnosticControls';
 import { DiagnosticDistribution } from '../diagnostics/components/DiagnosticDistribution';
@@ -185,10 +185,13 @@ export function StudyDiagnosticPage() {
         },
       });
       complete(result);
-    } catch {
+    } catch (reason) {
+      const publicMessage = reason instanceof DiagnosticRequestBuildError
+        ? `A entrada do diagnóstico é incompatível (${reason.code}).`
+        : 'Não foi possível concluir o diagnóstico.';
       if (mounted.current) setViewState(controller.snapshot.status === 'STORAGE_FAILURE'
         ? { kind: 'STORAGE_FAILURE', message: 'O resultado não pôde ser salvo. Nenhum novo cálculo foi iniciado.' }
-        : { kind: 'FAILED', attemptId: 'não persistida', publicMessage: 'Não foi possível concluir o diagnóstico.' });
+        : { kind: 'FAILED', attemptId: 'não persistida', publicMessage });
     } finally { if (mounted.current) setRunInProgress(false); }
   }, [complete, controller, effectiveCount, runInProgress, scenario, study, trackedApi]);
 

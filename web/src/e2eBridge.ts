@@ -15,10 +15,11 @@ export type Stage4Snapshot = Readonly<{
   studyId: string;
   baseScenarioId: string;
   scenarios: readonly Readonly<{
-    id: string; revision: number; inputFingerprint: string;
+    id: string; name: string; revision: number; inputFingerprint: string;
     orderFingerprint: string; provenanceFingerprint: string;
   }>[];
   profileLineage: readonly Readonly<{ profileId: string; participantId: string; seed: string }>[];
+  evidenceProfileIds: readonly string[];
   diagnosticExecutionIds: readonly string[];
   sourceLabels: readonly string[];
 }>;
@@ -91,13 +92,16 @@ export function installE2EBridge(): void {
       try {
         const companyA: CompanyRecord = { id: 'stage4-company-a', ownerSub: E2E_OWNER_SUB, displayName: 'Empresa A', aliases: [], createdAt: now, updatedAt: now, revision: 1 };
         const companyB: CompanyRecord = { id: 'stage4-company-b', ownerSub: E2E_OWNER_SUB, displayName: 'Empresa B', aliases: [], createdAt: now, updatedAt: now, revision: 1 };
+        const companyC: CompanyRecord = { id: 'stage4-company-c', ownerSub: E2E_OWNER_SUB, displayName: 'Empresa C', aliases: [], createdAt: now, updatedAt: now, revision: 1 };
         const caseA = stage4Case(companyA.id, 'a'); const caseB = stage4Case(companyB.id, 'b');
-        for (const [company, observedCase] of [[companyA, caseA], [companyB, caseB]] as const) {
+        const caseC = stage4Case(companyC.id, 'c');
+        for (const [company, observedCase] of [[companyA, caseA], [companyB, caseB], [companyC, caseC]] as const) {
           if (await repository.getObservedCase(observedCase.id) === null) await repository.confirmObservedCase({ expectedRevision: 0, operationId: crypto.randomUUID(), company, observedCase, batches: [], events: [] });
         }
         const profileA = await calculateOperationalProfile({ id: 'stage4-profile-a', ownerSub: E2E_OWNER_SUB, companyId: companyA.id, version: 1, createdAt: now, cases: [caseA], company: companyA });
         const profileB = await calculateOperationalProfile({ id: 'stage4-profile-b', ownerSub: E2E_OWNER_SUB, companyId: companyB.id, version: 1, createdAt: now, cases: [caseB], company: companyB });
-        for (const profile of [profileA, profileB]) if (await repository.getOperationalProfileVersion(profile.id) === null) await repository.appendOperationalProfileVersion({ operationId: crypto.randomUUID(), document: profile });
+        const profileC = await calculateOperationalProfile({ id: 'stage4-profile-c', ownerSub: E2E_OWNER_SUB, companyId: companyC.id, version: 1, createdAt: now, cases: [caseC], company: companyC });
+        for (const profile of [profileA, profileB, profileC]) if (await repository.getOperationalProfileVersion(profile.id) === null) await repository.appendOperationalProfileVersion({ operationId: crypto.randomUUID(), document: profile });
         const snapshot = await resolvePortfolioSource({ kind: 'OBSERVED_CASE', caseId: caseA.id, caseRevision: 1 }, {
           getObservedCase: (id) => repository.getObservedCase(id),
           preparePortfolio: async () => { throw new Error('Preparação não esperada ao semear observado.'); },
@@ -138,11 +142,13 @@ export function installE2EBridge(): void {
         return {
           studyId: study.id, baseScenarioId: study.baseScenarioId,
           scenarios: await Promise.all(study.scenarios.map(async (scenario) => ({
-            id: scenario.id, revision: scenario.revision, inputFingerprint: scenario.inputFingerprint,
+            id: scenario.id, name: scenario.name, revision: scenario.revision, inputFingerprint: scenario.inputFingerprint,
             orderFingerprint: await fingerprint(scenario.sourceSnapshot.orders),
             provenanceFingerprint: await fingerprint(scenario.sourceSnapshot.provenanceByOrder ?? scenario.sourceSnapshot.provenance),
           }))),
-          profileLineage, diagnosticExecutionIds: study.executions.filter((item) => item.kind === 'DIAGNOSTIC').map((item) => item.id),
+          profileLineage,
+          evidenceProfileIds: study.evidenceSnapshots.map((snapshot) => snapshot.profile.id).sort(),
+          diagnosticExecutionIds: study.executions.filter((item) => item.kind === 'DIAGNOSTIC').map((item) => item.id),
           sourceLabels: study.scenarios.map((scenario) => scenario.sourceSnapshot.source.kind === 'OBSERVED_CASE' ? 'Dados observados' : scenario.sourceSnapshot.source.kind === 'SYNTHETIC' && scenario.sourceSnapshot.source.recipe.exampleId === 'perfil-operacional-mvp' ? 'Simulação baseada em Perfil' : 'Origem legada'),
         };
       } finally { repository.close(); }

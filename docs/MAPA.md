@@ -67,6 +67,8 @@ make test          # a contagem vigente é registrada em docs/testing.md
 | Auditoria de partida e hashes do planejamento da Etapa 4 | `docs/frontend/etapa-4-auditoria-partida.md`, `docs/frontend/etapa-4-planejamento.sha256` |
 | Operar hipóteses e comparação do MVP | `docs/frontend/etapa-4-mvp-operacao.md` |
 | Aceite técnico do MVP da Etapa 4 | `docs/frontend/etapa-4-mvp-aceitacao.md` |
+| Design, plano e auditoria da Evolução B da Etapa 4 | `docs/superpowers/specs/2026-09-21-frontend-etapa-4-evolucao-b-design.md`, `docs/superpowers/plans/2026-09-21-frontend-etapa-4-evolucao-b.md`, `docs/frontend/etapa-4-evolucao-b-auditoria.md` |
+| Aceite técnico da Evolução B da Etapa 4 | `docs/frontend/etapa-4-evolucao-b-aceitacao.md` |
 | IDs T0–T12 e auditoria de `50fc384`/`1270458` | seção "Rastreabilidade aprovada no Linear" e matriz da Task 0 no plano técnico v2 da Etapa 2 |
 | Importação de fontes reais e Caso Observado | `docs/superpowers/specs/2026-09-19-importacao-dados-reais-design-v2.md` |
 | Plano vigente do importador | `docs/superpowers/plans/2026-09-19-importacao-dados-reais-plano-tecnico-v2.md` |
@@ -79,7 +81,7 @@ versões de 2026-09-19.
 Os dois relatórios são **autocontidos**: não pressupõem a conversa que os gerou.
 
 O gate documental da Etapa 2 é MOT-62. A Etapa 3 usa MOT-65–MOT-77 para T0–T12.
-O MVP da Etapa 4 usa MOT-78–MOT-81. Os candidatos e matrizes de evidência não
+O MVP da Etapa 4 usa MOT-78–MOT-81 e a Evolução B usa MOT-82–MOT-85. Os candidatos e matrizes de evidência não
 implicam autorização de publicação, merge ou deploy.
 
 ## Dados

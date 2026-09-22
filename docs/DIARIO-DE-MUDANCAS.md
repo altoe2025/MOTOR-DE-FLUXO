@@ -64,13 +64,29 @@ decimal vigente para iniciar a Evolução B.
 | `codex/mot62-planejamento-etapa2-v2` | documentação da MOT-62; IDs, dependências e auditoria da Etapa 2 v2, sem código de produto | Codex |
 | `codex/mot63-observed-contracts` | implementação e documentação da Etapa 2 v2; aceite **CONDITIONAL**, sem push/PR/merge e sem início da Etapa 3 | Codex |
 | `codex/frontend-etapa-3` | T0–T12 concluídos localmente; gate global verde em `57be689`; aceite técnico **PASS**; sem push/PR/merge | Codex |
-| `codex/etapa-4-mvp` | MVP aceito; Evolução B implementada localmente até a comparação estrutural MOT-84, ainda sem push/PR/merge/deploy | Codex |
+| `codex/etapa-4-mvp` | MVP e Evolução B aceitos localmente até MOT-85; sem push/PR/merge/deploy | Codex |
 | `codex/fix-reconciliacao-decimal` | correção da aritmética exata dos mecanismos da análise, pronta para merge na `main` | Codex |
 
 Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+---
+
+## 2026-09-21 — Aceite da Evolução B da Etapa 4 (MOT-85)
+
+1. **Sintoma.** MOT-82–MOT-84 entregavam o fluxo funcional, mas ainda faltavam
+   evidências de reload, concorrência, integração vertical e regressão do MVP.
+2. **Causa.** O recorte não possuía fixture com terceiro Perfil nem percurso E2E
+   que atravessasse composição, diagnóstico, comparação e persistência.
+3. **O que foi feito.** A branch `codex/etapa-4-mvp` ganhou fixture C, E2E vertical
+   e concorrente, regressão atualizada, diagnóstico com código público de entrada
+   incompatível e documentação de aceite. Suíte web, E2E repetido, preparação
+   Python e cenário Amanda passaram.
+4. **O que isso invalida.** Invalida o estado “B funcional, mas sem aceite”. B está
+   concluída para testes internos. A e C permanecem futuras; nada autoriza push,
+   PR, merge, deploy ou uso em produção.
 
 ---
 
