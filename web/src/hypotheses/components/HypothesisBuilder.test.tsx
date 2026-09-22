@@ -69,4 +69,11 @@ describe('HypothesisBuilder', () => {
     expect(screen.getByText('As ordens serão regeneradas')).toBeVisible();
     expect(screen.getByRole('table', { name: 'Alterações da hipótese' })).toHaveTextContent('1.2');
   });
+
+  it('encaminha a simulação por Perfil para o construtor de composição', () => {
+    render(<HypothesisBuilder baseScenario={scenario('PROFILE')} availableProfiles={[]} onCreate={vi.fn()} />);
+    expect(screen.getByRole('heading', { name: 'Criar hipótese de composição' })).toBeVisible();
+    expect(screen.getByLabelText('Adicionar Perfil')).toBeVisible();
+    expect(screen.queryByLabelText('Multiplicador de volume')).not.toBeInTheDocument();
+  });
 });

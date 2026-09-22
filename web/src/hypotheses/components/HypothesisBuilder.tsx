@@ -1,14 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
 
+import type { OperationalProfileVersion } from '../../profiles/domain';
 import type { ScenarioDocument } from '../../study/model';
 import { Button } from '../../ui/Button';
 import { InlineNotice } from '../../ui/InlineNotice';
+import type { CompositionHypothesisDraft } from '../composition';
 import type { MvpHypothesisDraft, MvpScalarCostDraft } from '../hypothesis';
 import { isProfileMvpScenario } from '../hypothesis';
+import { CompositionHypothesisBuilder } from './CompositionHypothesisBuilder';
 
 type Props = Readonly<{
   baseScenario: ScenarioDocument;
-  onCreate(draft: MvpHypothesisDraft): void | Promise<void>;
+  availableProfiles?: readonly OperationalProfileVersion[];
+  onCreate(draft: MvpHypothesisDraft | CompositionHypothesisDraft): void | Promise<void>;
 }>;
 
 const COSTS: readonly Readonly<{ key: keyof MvpScalarCostDraft; label: string }>[] = [
@@ -25,7 +29,15 @@ function scalarCosts(scenario: ScenarioDocument): MvpScalarCostDraft {
   return costs;
 }
 
-export function HypothesisBuilder({ baseScenario, onCreate }: Props) {
+export function HypothesisBuilder(props: Props) {
+  if (isProfileMvpScenario(props.baseScenario) && props.availableProfiles !== undefined) {
+    return <CompositionHypothesisBuilder baseScenario={props.baseScenario}
+      availableProfiles={props.availableProfiles} onCreate={props.onCreate} />;
+  }
+  return <LegacyHypothesisBuilder {...props} />;
+}
+
+function LegacyHypothesisBuilder({ baseScenario, onCreate }: Props) {
   const profile = isProfileMvpScenario(baseScenario);
   const [name, setName] = useState('Nova hipótese');
   const [windowDays, setWindowDays] = useState(String(baseScenario.premises.windowDays));

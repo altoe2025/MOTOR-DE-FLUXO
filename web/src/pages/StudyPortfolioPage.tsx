@@ -8,6 +8,12 @@ import type { CompanyRecord, FieldProvenance, ObservedCase } from '../cases/doma
 import { HypothesisBuilder } from '../hypotheses/components/HypothesisBuilder';
 import { ProfileScenarioBuilder } from '../hypotheses/components/ProfileScenarioBuilder';
 import {
+  buildCompositionScenarioDraft,
+  buildCompositionSourceSnapshot,
+  materializeCompositionDraft,
+  type CompositionHypothesisDraft,
+} from '../hypotheses/composition';
+import {
   applyProfileHypothesis,
   buildHypothesisScenarioDraft,
   isProfileMvpScenario,
@@ -23,7 +29,7 @@ import { buildPreviewRequest, type PreviewRequestProvenance } from '../preparati
 import { resolvePortfolioSource } from '../preparation/resolvePortfolioSource';
 import { StudyEditor } from '../study/components/StudyEditor';
 import type { PortfolioSourceDraft } from '../study/components/PortfolioSourceSelector';
-import { appendScenario, createProfileStudy, duplicateStudy, renameStudy, updateScenario } from '../study/domain';
+import { appendCompositionHypothesis, appendScenario, createProfileStudy, duplicateStudy, renameStudy, updateScenario } from '../study/domain';
 import { executeStudyScenario } from '../study/executionService';
 import type { DeepMutable, EffectiveInput, ExecutionRecord, PreviewExecutionRecord, ScenarioDocument, ScenarioDraft, StudyDocument } from '../study/model';
 import { requiredBuildSha } from '../study/sourceConfiguration';
@@ -109,6 +115,7 @@ export function StudyPortfolioPage() {
   const [error, setError] = useState<string | null>(null);
   const [cases, setCases] = useState<ObservedCase[]>([]);
   const [companies, setCompanies] = useState<CompanyRecord[]>([]);
+  const [availableProfiles, setAvailableProfiles] = useState<OperationalProfileVersion[]>([]);
   const [status, setStatus] = useState<StudyControllerStatus>(controller.snapshot.status);
   const [selectedExecution, setSelectedExecution] = useState<ExecutionRecord | null>(null);
   const [executing, setExecuting] = useState(false);
@@ -117,9 +124,13 @@ export function StudyPortfolioPage() {
 
   useEffect(() => {
     if (!id) return;
-    void Promise.all([controller.loadStudy(id), controller.listObservedCases(), controller.listCompanies()])
-      .then(([loaded, observed, companyRecords]) => {
+    void Promise.all([
+      controller.loadStudy(id), controller.listObservedCases(), controller.listCompanies(),
+      controller.listOperationalProfileVersions(),
+    ])
+      .then(([loaded, observed, companyRecords, profiles]) => {
         setStudy(loaded); setCases(observed); setCompanies(companyRecords); setError(null);
+        setAvailableProfiles(profiles);
         setSelectedBaseId(loaded?.baseScenarioId ?? null);
         setSelectedExecution(loaded === null ? null : [...loaded.executions].reverse().find((item): item is PreviewExecutionRecord => item.kind === 'PREVIEW' && item.status === 'SUCCEEDED') ?? null);
       })
@@ -236,7 +247,7 @@ export function StudyPortfolioPage() {
     if (JSON.stringify(study) !== before) throw new Error('O estudo observado foi alterado durante a preparação.');
     navigate(`/carteira/${saved.id}`);
   };
-  const createHypothesis = async (draft: MvpHypothesisDraft) => {
+  const createHypothesis = async (draft: MvpHypothesisDraft | CompositionHypothesisDraft) => {
     if (pendingHypothesisId !== null) {
       const retried = await controller.flush();
       if (retried === null || retried.id !== study.id) throw new Error('A sessão mudou antes de salvar a hipótese.');
@@ -247,6 +258,48 @@ export function StudyPortfolioPage() {
     }
     const hypothesisId = crypto.randomUUID();
     const recordedAt = new Date().toISOString();
+    if (draft.kind === 'PROFILE_COMPOSITION') {
+      const materialized = await materializeCompositionDraft({
+        base: selectedBase, evidenceProfiles: availableProfiles, draft, recordedAt,
+      });
+      let compositionSnapshot;
+      if (materialized.requiresPreparation) {
+        if (selectedBase.sourceSnapshot.source.kind !== 'SYNTHETIC') {
+          throw new Error('Hipótese de composição exige origem sintética por Perfil.');
+        }
+        if (selectedBase.sourceSnapshot.source.recipe.preparationVersion !== '1.0.0') {
+          throw new Error('VERSAO_INCOMPATIVEL: versão da preparação não suportada.');
+        }
+        const request: PreparationRequest = {
+          preparation_version: '1.0.0',
+          request_id: crypto.randomUUID(), study_id: study.id, scenario_id: hypothesisId,
+          scenario_revision: 1,
+          expected_build_sha: requiredBuildSha(undefined, selectedBase.sourceSnapshot.source.recipe.motorBuildSha),
+          input: structuredClone(materialized.input) as DeepMutable<EffectiveInput>,
+        };
+        if (!validatePreparationRequest(request)) throw new Error('Request de composição inválido.');
+        compositionSnapshot = await resolvePortfolioSource({
+          kind: 'SYNTHETIC', exampleId: PROFILE_MVP_EXAMPLE_ID, preparation: request,
+        }, prepareDependencies());
+      } else {
+        compositionSnapshot = await buildCompositionSourceSnapshot(
+          selectedBase.sourceSnapshot, materialized, recordedAt,
+        );
+      }
+      const hypothesis = buildCompositionScenarioDraft({
+        base: selectedBase, hypothesis: draft, sourceSnapshot: compositionSnapshot,
+        id: hypothesisId, recordedAt,
+      });
+      const next = await appendCompositionHypothesis(study, {
+        scenario: hypothesis, profiles: materialized.profilesToAttach, recordedAt,
+      });
+      controller.edit(next); setStudy(next); setPendingHypothesisId(hypothesisId);
+      const saved = await controller.flush();
+      if (saved === null || saved.id !== study.id) throw new Error('A sessão mudou antes de salvar a hipótese.');
+      setPendingHypothesisId(null); setStudy(saved);
+      navigate(`/estudos/${saved.id}/diagnostico?scenarioId=${hypothesisId}`);
+      return;
+    }
     let sourceSnapshot = structuredClone(selectedBase.sourceSnapshot);
     if (generationChanged(draft)) {
       if (draft.kind !== 'PROFILE_SIMULATION') throw new Error('Hipótese incompatível com a origem.');
@@ -308,6 +361,7 @@ export function StudyPortfolioPage() {
     </li>)}</ul>
     <Button variant="secondary" onClick={() => void navigateAfterFlush(`/comparar?studyId=${study.id}`)}>Comparar resultados</Button>
   </section>
-  <HypothesisBuilder key={selectedBase.id} baseScenario={selectedBase} onCreate={createHypothesis} />
+  <HypothesisBuilder key={selectedBase.id} baseScenario={selectedBase}
+    availableProfiles={availableProfiles} onCreate={createHypothesis} />
   {displayedExecution === null ? null : <StudyResultPage study={study} execution={displayedExecution} onSelectExecution={setSelectedExecution} />}</>;
 }

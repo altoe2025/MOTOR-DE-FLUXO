@@ -64,13 +64,30 @@ decimal vigente para iniciar a Evolução B.
 | `codex/mot62-planejamento-etapa2-v2` | documentação da MOT-62; IDs, dependências e auditoria da Etapa 2 v2, sem código de produto | Codex |
 | `codex/mot63-observed-contracts` | implementação e documentação da Etapa 2 v2; aceite **CONDITIONAL**, sem push/PR/merge e sem início da Etapa 3 | Codex |
 | `codex/frontend-etapa-3` | T0–T12 concluídos localmente; gate global verde em `57be689`; aceite técnico **PASS**; sem push/PR/merge | Codex |
-| `codex/etapa-4-mvp` | MVP aceito; `origin/main` integrado e domínio da Evolução B iniciado na MOT-82, ainda sem push/PR/merge/deploy | Codex |
+| `codex/etapa-4-mvp` | MVP aceito; Evolução B com domínio MOT-82 e construtor MOT-83 locais, ainda sem push/PR/merge/deploy | Codex |
 | `codex/fix-reconciliacao-decimal` | correção da aritmética exata dos mecanismos da análise, pronta para merge na `main` | Codex |
 
 Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+---
+
+## 2026-09-21 — Construtor de composição da Evolução B (MOT-83)
+
+1. **Sintoma.** O domínio já aceitava composição variável, mas a interface ainda
+   oferecia apenas multiplicadores globais e não permitia adicionar, remover ou
+   editar participantes individualmente.
+2. **Causa.** O formulário do MVP não carregava os Perfis do owner nem orquestrava
+   materialização, preparação e persistência atômica da MOT-82.
+3. **O que foi feito.** A branch `codex/etapa-4-mvp` ganhou um construtor em três
+   áreas, resumo antes/depois, identidade e seed congeladas, edição de custos e IOF,
+   uma única preparação quando a geração muda e reutilização das ordens quando só
+   janela/custos mudam. Falhas preservam o rascunho e oferecem retry após o CAS.
+4. **O que isso invalida.** Invalida a limitação visual do editor global para
+   cenários por Perfil. A comparação estrutural ainda depende da MOT-84; nada aqui
+   constitui causalidade, efeito marginal, V4, push, PR, merge ou deploy.
 
 ---
 
