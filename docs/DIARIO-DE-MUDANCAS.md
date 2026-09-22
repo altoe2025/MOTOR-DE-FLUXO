@@ -74,6 +74,22 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 
 ---
 
+## 2026-09-22 — Corrida eliminada no E2E da Evolução B (MOT-85)
+
+1. **Sintoma.** O check `pytest` do PR #55 falhou no primeiro E2E da Evolução B:
+   havia uma repetição pendente, mas o teste esperava que o contador de submissões
+   já tivesse avançado mais uma vez. Os dois E2E seguintes falharam em cascata.
+2. **Causa.** O helper lia o contador `submitted` depois do clique que iniciava o
+   diagnóstico. Em CI, a primeira repetição podia ser submetida antes dessa leitura,
+   tornando a expectativa deslocada em uma unidade e deixando trabalho pendente.
+3. **O que foi feito.** `stage4-evolution-b.spec.ts` agora captura o contador antes
+   do clique, como o E2E do MVP já fazia, e usa essa base imutável ao liberar as dez
+   repetições controladas.
+4. **O que isso invalida.** Invalida somente a evidência do primeiro check remoto do
+   PR #55. Não altera produto, motor, contratos nem o aceite funcional da Etapa 4.
+
+---
+
 ## 2026-09-21 — Aceite da Evolução B da Etapa 4 (MOT-85)
 
 1. **Sintoma.** MOT-82–MOT-84 entregavam o fluxo funcional, mas ainda faltavam

@@ -20,11 +20,10 @@ async function seedProfileStudy(page: Page): Promise<string> {
   return page.url().split('/').at(-1)!;
 }
 
-async function releaseDiagnostics(page: Page, count: number) {
-  const state = await (await page.request.get('/__e2e__/diagnostics/state')).json() as { submitted: number };
+async function releaseDiagnostics(page: Page, count: number, submittedBefore: number) {
   for (let index = 0; index < count; index += 1) {
     await expect.poll(async () => (await page.request.get('/__e2e__/diagnostics/state')).json())
-      .toMatchObject({ pending: 1, submitted: state.submitted + index + 1 });
+      .toMatchObject({ pending: 1, submitted: submittedBefore + index + 1 });
     await page.request.post('/__e2e__/diagnostics/release', { data: { fail: false } });
   }
 }
@@ -32,8 +31,9 @@ async function releaseDiagnostics(page: Page, count: number) {
 async function runDiagnostic(page: Page, studyId: string, scenarioId: string) {
   await page.goto(`/estudos/${studyId}/diagnostico?scenarioId=${scenarioId}`);
   const before = await page.evaluate((id) => window.__MOTOR_E2E__!.stage4Snapshot(id), studyId);
+  const state = await (await page.request.get('/__e2e__/diagnostics/state')).json() as { submitted: number };
   await page.getByRole('button', { name: 'Executar diagnóstico' }).click();
-  await releaseDiagnostics(page, 10);
+  await releaseDiagnostics(page, 10, state.submitted);
   await expect(page.getByRole('heading', { name: 'Diagnóstico concluído' })).toBeVisible();
   await expect.poll(async () => (await page.evaluate(
     (id) => window.__MOTOR_E2E__!.stage4Snapshot(id), studyId,
