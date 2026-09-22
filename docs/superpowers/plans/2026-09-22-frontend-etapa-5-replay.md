@@ -227,27 +227,27 @@ feat: adiciona estado determinístico e rota do replay (MOT-87)
 - Consumes: `ReplayState`, `ReplayVisualTransition[]`, playback actions.
 - Produces: accessible event-driven React/SVG scene and factual journal.
 
-- [ ] **Step 1: Write failing component and presentation tests**
+- [x] **Step 1: Write failing component and presentation tests**
 
 Assert cards expose ID/client/open value/deadline/cohort; partial allocations retain the exact balance; zero-balance cards remain through the current readable transition then leave; empty days have no operational animation; journal values equal scene values; labels distinguish position from two-sided measured contribution.
 
-- [ ] **Step 2: Run tests and verify RED**
+- [x] **Step 2: Run tests and verify RED**
 
 Run: `npm run test:unit -- src/replay`
 
-- [ ] **Step 3: Implement controls, metrics and journal**
+- [x] **Step 3: Implement controls, metrics and journal**
 
 Follow the approved visual rhythm: kicker/title, compact transport controls, full-width timeline, three headline metrics, ordering toggle, stage and journal. Keep 5A–5C controls absent.
 
-- [ ] **Step 4: Implement the Brazil/CNR/Exterior scene**
+- [x] **Step 4: Implement the Brazil/CNR/Exterior scene**
 
 Render OUT on the Brazil side and IN on the Exterior side; center the CNR/frontier; preserve stable keys and queue order. Use CSS grid/flex for card lanes and one SVG overlay for current closing segments/remittances.
 
-- [ ] **Step 5: Implement anchored geometry and event sequencing**
+- [x] **Step 5: Implement anchored geometry and event sequencing**
 
 `geometry.ts` receives current card/stage rectangles and returns paths. A layout effect measures after cards settle, and `ResizeObserver` recalculates on resize. The transition runner sequences arrivals, closing, phase-aware segments, balance changes, remittances and exits; jumps/back/reload render final state without replaying intermediates. Reduced motion applies final states immediately.
 
-- [ ] **Step 6: Verify accessibility and MOT-88 commit**
+- [x] **Step 6: Verify accessibility and MOT-88 commit**
 
 Run component tests and typecheck; inspect keyboard focus order and 200% layout; update the Diário; commit:
 

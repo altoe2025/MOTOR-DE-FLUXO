@@ -1,0 +1,60 @@
+// @vitest-environment jsdom
+
+import { act, render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import { replayStateAt } from '../state';
+import { replayDocumentFixture, replayDocumentWithBothRemittancesFixture } from '../testFixtures';
+import { ReplayJournal } from './ReplayJournal';
+import { ReplayStage } from './ReplayStage';
+
+describe('cena Fronteira Viva', () => {
+  afterEach(() => vi.useRealTimers());
+  it('posiciona direções, fronteira e cartão parcial com dados completos', () => {
+    const document = replayDocumentWithBothRemittancesFixture();
+    render(<ReplayStage
+      document={document}
+      state={replayStateAt(document, 0)}
+      sort="ARRIVAL"
+      transitionMode="INSTANT"
+      transitionKey={0}
+    />);
+
+    expect(screen.getByRole('region', { name: 'Cena Fronteira Viva' })).toBeInTheDocument();
+    expect(screen.getByText('Brasil')).toBeInTheDocument();
+    expect(screen.getByText('CNR')).toBeInTheDocument();
+    expect(screen.getByText('Exterior')).toBeInTheDocument();
+    expect(screen.getByRole('article', { name: /OUT out-1/i })).toHaveTextContent('cliente-a');
+    expect(screen.getByRole('article', { name: /OUT out-1/i })).toHaveTextContent('R$ 60,00');
+    expect(screen.getByRole('article', { name: /OUT out-1/i })).toHaveTextContent('Prazo D2');
+    expect(screen.queryByRole('article', { name: /IN in-1/i })).not.toBeInTheDocument();
+  });
+
+  it('mantém o diário reconciliado com os valores visíveis do dia', () => {
+    const document = replayDocumentFixture();
+    render(<ReplayJournal document={document} day={0} />);
+
+    expect(screen.getByRole('heading', { name: 'Diário do dia' })).toBeInTheDocument();
+    expect(screen.getByText(/Casado no dia.*R\$ 80,00/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/posição de tesouraria.*R\$ 40,00/i)).toHaveLength(2);
+  });
+
+  it('retira cartão liquidado e camada de conexões no mesmo fim de evento', () => {
+    vi.useFakeTimers();
+    const document = replayDocumentWithBothRemittancesFixture();
+    const { container } = render(<ReplayStage
+      document={document}
+      state={replayStateAt(document, 2)}
+      sort="ARRIVAL"
+      transitionMode="ANIMATE"
+      transitionKey={1}
+    />);
+
+    expect(screen.getByRole('article', { name: /OUT out-1/i })).toHaveTextContent('Liquidada');
+    expect(screen.getByRole('article', { name: /IN in-2/i })).toHaveTextContent('Liquidada');
+    expect(container.querySelector('.replay-connections')).toBeInTheDocument();
+    act(() => vi.advanceTimersByTime(1_300));
+    expect(screen.queryByRole('article', { name: /OUT out-1/i })).not.toBeInTheDocument();
+    expect(container.querySelector('.replay-connections')).not.toBeInTheDocument();
+  });
+});

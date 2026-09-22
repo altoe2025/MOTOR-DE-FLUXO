@@ -11,6 +11,8 @@ export type ReplayPlayback = Readonly<{
   playing: boolean;
   speed: ReplaySpeed;
   replayRevision: number;
+  transitionMode: 'ANIMATE' | 'INSTANT';
+  transitionKey: number;
   primaryAction: ReplayPrimaryAction;
   togglePlaying(): void;
   setSpeed(speed: ReplaySpeed): void;
@@ -32,11 +34,15 @@ export function useReplayPlayback(
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeedState] = useState<ReplaySpeed>(1);
   const [replayRevision, setReplayRevision] = useState(0);
+  const [transitionMode, setTransitionMode] = useState<'ANIMATE' | 'INSTANT'>('INSTANT');
+  const [transitionKey, setTransitionKey] = useState(0);
 
   useEffect(() => {
     setDay(0);
     setPlaying(false);
     setReplayRevision(0);
+    setTransitionMode('INSTANT');
+    setTransitionKey(0);
   }, [identity]);
 
   useEffect(() => {
@@ -46,6 +52,8 @@ export function useReplayPlayback(
       return undefined;
     }
     const timeout = globalThis.setTimeout(() => {
+      setTransitionMode('ANIMATE');
+      setTransitionKey((current) => current + 1);
       setDay((current) => {
         const nextDay = Math.min(lastDay, current + 1);
         if (nextDay === lastDay) setPlaying(false);
@@ -55,8 +63,10 @@ export function useReplayPlayback(
     return () => globalThis.clearTimeout(timeout);
   }, [day, intervalMs, lastDay, playing, speed]);
 
-  const pauseAndMove = useCallback((target: number) => {
+  const pauseAndMove = useCallback((target: number, mode: 'ANIMATE' | 'INSTANT' = 'INSTANT') => {
     setPlaying(false);
+    setTransitionMode(mode);
+    setTransitionKey((current) => current + 1);
     setDay(Math.max(0, Math.min(lastDay, Math.trunc(target))));
   }, [lastDay]);
 
@@ -70,7 +80,7 @@ export function useReplayPlayback(
   }, [day, lastDay, restart]);
   const setSpeed = useCallback((nextSpeed: ReplaySpeed) => setSpeedState(nextSpeed), []);
   const previous = useCallback(() => pauseAndMove(day - 1), [day, pauseAndMove]);
-  const next = useCallback(() => pauseAndMove(day + 1), [day, pauseAndMove]);
+  const next = useCallback(() => pauseAndMove(day + 1, 'ANIMATE'), [day, pauseAndMove]);
   const selectDay = useCallback((selectedDay: number) => pauseAndMove(selectedDay), [pauseAndMove]);
   const nextClosing = useCallback(() => {
     const target = nextClosingDay(document, day);
@@ -79,6 +89,8 @@ export function useReplayPlayback(
   }, [day, document, pauseAndMove]);
   const repeat = useCallback(() => {
     setPlaying(false);
+    setTransitionMode('ANIMATE');
+    setTransitionKey((current) => current + 1);
     setReplayRevision((current) => current + 1);
   }, []);
 
@@ -87,6 +99,8 @@ export function useReplayPlayback(
     playing,
     speed,
     replayRevision,
+    transitionMode,
+    transitionKey,
     primaryAction: day >= lastDay ? 'RESTART' : playing ? 'PAUSE' : 'PLAY',
     togglePlaying,
     setSpeed,
@@ -96,5 +110,5 @@ export function useReplayPlayback(
     nextClosing,
     repeat,
     restart,
-  }), [day, lastDay, next, nextClosing, playing, previous, replayRevision, repeat, restart, selectDay, setSpeed, speed, togglePlaying]);
+  }), [day, lastDay, next, nextClosing, playing, previous, replayRevision, repeat, restart, selectDay, setSpeed, speed, togglePlaying, transitionKey, transitionMode]);
 }

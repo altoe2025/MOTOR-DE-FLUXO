@@ -1,14 +1,16 @@
-import Decimal from 'decimal.js';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 
 import type { ReplayRequest } from '../api/client';
 import { ApiError } from '../api/errors';
 import { useDiagnosticRuntime } from '../app/providers';
-import { formatFraction, formatMoney } from '../presentation/format';
 import type { StudyDocument } from '../study/model';
 import type { ReplayDocument, ReplaySort } from './domain';
-import { replayStateAt, sortOpenOrders } from './state';
+import { ReplayControls } from './components/ReplayControls';
+import { ReplayJournal } from './components/ReplayJournal';
+import { ReplayMetrics } from './components/ReplayMetrics';
+import { ReplayStage } from './components/ReplayStage';
+import { replayStateAt } from './state';
 import { useReplayPlayback } from './useReplayPlayback';
 
 export type ReplayPublicErrorCode =
@@ -153,37 +155,18 @@ function ReplayReady({ document, studyName, studyId, scenarioId }: Readonly<{
   const playback = useReplayPlayback(document);
   const [sort, setSort] = useState<ReplaySort>('ARRIVAL');
   const state = replayStateAt(document, playback.day);
-  const openOrders = sortOpenOrders(state.openOrders, sort);
-  const remitted = new Decimal(state.endState.remitted_out_accumulated_brl).plus(state.endState.remitted_in_accumulated_brl).toFixed();
   const directDay = `Dia ${playback.day} de ${document.period.settlement_end_day}`;
+  const phaseLabel = state.phase === 'WARMUP' ? 'Aquecimento' : state.phase === 'MEASUREMENT' ? 'Medição' : 'Liquidação';
   return <article className="replay-page">
     <header className="replay-titlebar">
       <div><p className="eyebrow">{studyName}</p><h1 tabIndex={-1}>Fronteira Viva</h1>
         <p className="page-introduction">Replay determinístico da repetição selecionada · política {document.policy}</p></div>
       <Link to={`/estudos/${studyId}/diagnostico?scenarioId=${encodeURIComponent(scenarioId)}`}>Voltar ao diagnóstico</Link>
     </header>
-    <section aria-label="Controles do Replay" className="replay-controls">
-      <button type="button" onClick={playback.togglePlaying} aria-pressed={playback.playing}>
-        {playback.primaryAction === 'RESTART' ? 'Recomeçar' : playback.playing ? 'Pausar' : 'Tocar'}
-      </button>
-      {([1, 2, 4] as const).map((speed) => <button type="button" key={speed} aria-pressed={playback.speed === speed} onClick={() => playback.setSpeed(speed)}>{speed}×</button>)}
-      <button type="button" onClick={playback.previous} disabled={playback.day === 0}>Dia anterior</button>
-      <button type="button" onClick={playback.next} disabled={playback.day === document.period.settlement_end_day}>Dia seguinte</button>
-      <button type="button" onClick={playback.nextClosing}>Próximo fechamento</button>
-      <button type="button" onClick={playback.repeat}>Repetir evento</button>
-      <label>Dia <input aria-label="Selecionar dia" type="range" min={0} max={document.period.settlement_end_day} value={playback.day} onChange={(event) => playback.selectDay(Number(event.currentTarget.value))} /></label>
-    </section>
-    <p className="replay-live" aria-live="polite">{directDay} · {state.phase}</p>
-    <section className="replay-metrics" aria-label="Acumulados do Replay">
-      <div><span>Casado</span><strong>{formatMoney(state.endState.measured_matched_contribution_accumulated_brl)}</strong></div>
-      <div><span>Remetido total</span><strong>{formatMoney(remitted)}</strong></div>
-      <div><span>Netabilidade</span><strong>{formatFraction(document.totals.netability_fraction)}</strong></div>
-    </section>
-    <section aria-label="Estado do dia">
-      <h2>{directDay}</h2>
-      <p>{openOrders.length} {openOrders.length === 1 ? 'ordem aberta' : 'ordens abertas'}.</p>
-      <div><button type="button" aria-pressed={sort === 'ARRIVAL'} onClick={() => setSort('ARRIVAL')}>Chegada</button><button type="button" aria-pressed={sort === 'EDF'} onClick={() => setSort('EDF')}>EDF</button></div>
-      <ul>{openOrders.map((order) => <li key={order.orderId}>{order.direction} · {order.orderId} · {formatMoney(order.openValueBrl)} · prazo D{order.deadlineDay}</li>)}</ul>
-    </section>
+    <ReplayControls document={document} playback={playback} sort={sort} onSort={setSort} />
+    <p className="replay-live" aria-live="polite">{directDay} · {phaseLabel}</p>
+    <ReplayMetrics document={document} state={state} />
+    <ReplayStage document={document} state={state} sort={sort} transitionMode={playback.transitionMode} transitionKey={playback.transitionKey} />
+    <ReplayJournal document={document} day={playback.day} />
   </article>;
 }

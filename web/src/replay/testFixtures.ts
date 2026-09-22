@@ -77,3 +77,27 @@ export function replayDocumentFixture(): ReplayDocument {
     },
   };
 }
+
+export function replayDocumentWithBothRemittancesFixture(): ReplayDocument {
+  const replay = replayDocumentFixture();
+  replay.orders.push({
+    id: 'in-2', client_id: 'cliente-c', direction: 'IN', value_brl: '20',
+    known_day: 2, deadline_day: 2, cohort: 'MEASUREMENT',
+  });
+  replay.days[2]!.events = [
+    { kind: 'ORDER_ARRIVED', order_id: 'in-2', sequence: 0 },
+    { ...replay.days[2]!.events[0]!, sequence: 1 },
+    { kind: 'ALLOCATION', order_id: 'in-2', direction: 'IN', value_brl: '20', allocation_type: 'REMETIDO', matching_origin: null, sequence: 2 },
+  ];
+  replay.days[2]!.closing = {
+    ...replay.days[2]!.closing!, gross_in_brl: '20', remitted_in_brl: '20',
+  };
+  replay.days[2]!.end_state = {
+    ...replay.days[2]!.end_state, remitted_in_accumulated_brl: '20',
+  };
+  replay.totals = {
+    ...replay.totals,
+    execution_remitted_in_brl: '20', measured_gross_brl: '160', measured_remitted_brl: '80', netability_fraction: '0.5',
+  };
+  return replay;
+}

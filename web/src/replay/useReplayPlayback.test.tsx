@@ -19,6 +19,7 @@ describe('useReplayPlayback', () => {
     expect(result.current.day).toBe(0);
     act(() => vi.advanceTimersByTime(1));
     expect(result.current.day).toBe(1);
+    expect(result.current.transitionMode).toBe('ANIMATE');
 
     act(() => result.current.setSpeed(2));
     act(() => vi.advanceTimersByTime(500));
@@ -44,6 +45,7 @@ describe('useReplayPlayback', () => {
     act(() => result.current.selectDay(0));
     expect(result.current.day).toBe(0);
     expect(result.current.playing).toBe(false);
+    expect(result.current.transitionMode).toBe('INSTANT');
   });
 
   it('repete o evento sem mudar o estado e recomeça ao fim', () => {
@@ -52,6 +54,7 @@ describe('useReplayPlayback', () => {
     act(() => result.current.repeat());
     expect(result.current.replayRevision).toBe(1);
     expect(result.current.day).toBe(0);
+    expect(result.current.transitionMode).toBe('ANIMATE');
     act(() => result.current.selectDay(2));
     expect(result.current.primaryAction).toBe('RESTART');
     act(() => result.current.togglePlaying());

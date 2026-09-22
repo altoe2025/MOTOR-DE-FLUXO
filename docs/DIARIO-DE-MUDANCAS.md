@@ -66,12 +66,37 @@ decimal vigente para iniciar a Evolução B.
 | `codex/frontend-etapa-3` | T0–T12 concluídos localmente; gate global verde em `57be689`; aceite técnico **PASS**; sem push/PR/merge | Codex |
 | `codex/etapa-4-mvp` | MVP e Evolução B aceitos localmente até MOT-85; sem push/PR/merge/deploy | Codex |
 | `codex/fix-reconciliacao-decimal` | correção da aritmética exata dos mecanismos da análise, pronta para merge na `main` | Codex |
-| `codex/frontend-etapa-5` | MOT-86 e MOT-87 concluídas localmente; contrato, estado determinístico e rota recarregável do Replay; sem push/PR/merge | Codex |
+| `codex/frontend-etapa-5` | MOT-86–MOT-88 concluídas localmente; contrato, estado determinístico, rota e cena Fronteira Viva orientada a eventos; sem push/PR/merge | Codex |
 
 Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+---
+
+## 2026-09-22 — Cena Fronteira Viva orientada a eventos (MOT-88)
+
+1. **Sintoma.** O Replay já reconstruía qualquer dia de forma determinística, mas
+   ainda não oferecia a leitura operacional aprovada: cartões por lado, fronteira
+   central, conexões ancoradas, métricas reconciliadas e diário factual.
+2. **Causa.** A MOT-87 entregou deliberadamente o estado e os controles antes da
+   camada visual. Faltavam apresentação própria, geometria responsiva e um ciclo de
+   transição que animasse somente eventos reais sem contaminar saltos ou recargas.
+3. **O que foi feito.** A branch `codex/frontend-etapa-5` ganhou a cena Brasil/CNR/
+   Exterior, cartões OUT/IN com saldo parcial, controles e linha do tempo, métricas
+   separando posição e contribuição dos dois lados, diário operacional e conexões
+   SVG derivadas da decomposição ilustrativa publicada pelo servidor. Chegadas,
+   fechamentos, casamentos, saldos e remessas usam transições finitas; voltar,
+   saltar, recarregar e dias vazios aplicam o estado final sem movimento decorativo.
+   `ResizeObserver`, preferência de movimento reduzido e saída sincronizada de
+   cartões/conexões completam a implementação. Os testes focados somam 21 casos e
+   passaram junto de typecheck e lint; a inspeção real no navegador cobriu saldo
+   parcial, liquidação, casamento e remessas OUT/IN.
+4. **O que isso invalida.** O placeholder visual e qualquer leitura do protótipo
+   externo como fonte de cálculos ou lógica temporal. A autoridade continua sendo
+   o documento Python reconciliado; conexões continuam ilustrativas, sem afirmar
+   contraparte persistida. Não altera números do motor nem a grade histórica.
 
 ---
 
