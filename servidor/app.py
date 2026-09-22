@@ -31,13 +31,14 @@ from servidor.contracts.diagnostics import (
 from servidor.contracts.input import PreviaRequest
 from servidor.contracts.preparation import PreparationRequest, PreparationResponse
 from servidor.contracts.preview import PreviewEnvelope, ReferenceExample
+from servidor.contracts.replay import ReplayDocumentV1, ReplayRequestV1
 from servidor.contracts.primitives import UUIDValue
 from servidor.contracts.session import HealthResponse, SessionResponse
 from servidor.diagnostics.executor import DiagnosticExecutor
 from servidor.errors import ApiFailure, entrada_invalida, failure_response
 from servidor.generate_reference_fixture import build_reference_request
 from servidor.preparation import preparar_carteira
-from servidor.routes import diagnostics, examples, preparation, preview, session
+from servidor.routes import diagnostics, examples, preparation, preview, replay, session
 from servidor.static import install_static_routes
 
 _LOGGER = logging.getLogger("servidor.http")
@@ -161,6 +162,7 @@ def create_app(
     app.include_router(preparation.router)
     app.include_router(preview.router)
     app.include_router(diagnostics.router)
+    app.include_router(replay.router)
 
     @app.api_route(
         "/api/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"]
@@ -246,5 +248,9 @@ def create_schema_app() -> FastAPI:
         request: DiagnosticRetryRequest,
     ) -> JobSnapshot:
         raise HTTPException(status_code=501, detail="endpoint disponível na T7")
+
+    @app.post("/api/v1/replays", response_model=ReplayDocumentV1)
+    def replay_schema(_: SchemaBearer, request: ReplayRequestV1) -> ReplayDocumentV1:
+        raise HTTPException(status_code=501, detail="endpoint disponível na Etapa 5")
 
     return app

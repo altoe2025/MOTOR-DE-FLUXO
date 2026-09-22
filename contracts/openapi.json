@@ -103,6 +103,73 @@
         "title": "AgregadoDTO",
         "type": "object"
       },
+      "AllocationEventV1": {
+        "additionalProperties": false,
+        "properties": {
+          "allocation_type": {
+            "enum": [
+              "CASADO",
+              "REMETIDO"
+            ],
+            "title": "Allocation Type",
+            "type": "string"
+          },
+          "direction": {
+            "enum": [
+              "OUT",
+              "IN"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "kind": {
+            "const": "ALLOCATION",
+            "title": "Kind",
+            "type": "string"
+          },
+          "matching_origin": {
+            "anyOf": [
+              {
+                "enum": [
+                  "INTRA_CLIENTE",
+                  "INTER_CLIENTE"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Matching Origin"
+          },
+          "order_id": {
+            "title": "Order Id",
+            "type": "string"
+          },
+          "sequence": {
+            "minimum": 0.0,
+            "title": "Sequence",
+            "type": "integer"
+          },
+          "value_brl": {
+            "maxLength": 80,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Value Brl",
+            "type": "string"
+          }
+        },
+        "required": [
+          "sequence",
+          "kind",
+          "order_id",
+          "allocation_type",
+          "value_brl",
+          "direction",
+          "matching_origin"
+        ],
+        "title": "AllocationEventV1",
+        "type": "object"
+      },
       "AlocacaoDTO": {
         "additionalProperties": false,
         "properties": {
@@ -2080,6 +2147,32 @@
         "title": "OrdemEntrada",
         "type": "object"
       },
+      "OrderArrivedEventV1": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "ORDER_ARRIVED",
+            "title": "Kind",
+            "type": "string"
+          },
+          "order_id": {
+            "title": "Order Id",
+            "type": "string"
+          },
+          "sequence": {
+            "minimum": 0.0,
+            "title": "Sequence",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "sequence",
+          "kind",
+          "order_id"
+        ],
+        "title": "OrderArrivedEventV1",
+        "type": "object"
+      },
       "OrigemValor": {
         "additionalProperties": false,
         "properties": {
@@ -2967,6 +3060,556 @@
           "duration_ms"
         ],
         "title": "RepetitionSummary",
+        "type": "object"
+      },
+      "ReplayClosingV1": {
+        "additionalProperties": false,
+        "properties": {
+          "flow_segments": {
+            "items": {
+              "$ref": "#/components/schemas/ReplayFlowSegmentV1"
+            },
+            "maxItems": 2000,
+            "title": "Flow Segments",
+            "type": "array"
+          },
+          "gross_in_brl": {
+            "maxLength": 80,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Gross In Brl",
+            "type": "string"
+          },
+          "gross_out_brl": {
+            "maxLength": 80,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Gross Out Brl",
+            "type": "string"
+          },
+          "inter_client_position_brl": {
+            "maxLength": 80,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Inter Client Position Brl",
+            "type": "string"
+          },
+          "intra_client_position_brl": {
+            "maxLength": 80,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Intra Client Position Brl",
+            "type": "string"
+          },
+          "matched_contribution_brl": {
+            "maxLength": 80,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Matched Contribution Brl",
+            "type": "string"
+          },
+          "matched_position_brl": {
+            "maxLength": 80,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Matched Position Brl",
+            "type": "string"
+          },
+          "remitted_in_brl": {
+            "maxLength": 80,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Remitted In Brl",
+            "type": "string"
+          },
+          "remitted_out_brl": {
+            "maxLength": 80,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Remitted Out Brl",
+            "type": "string"
+          },
+          "triggers": {
+            "items": {
+              "enum": [
+                "WINDOW",
+                "DEADLINE",
+                "HORIZON_END"
+              ],
+              "type": "string"
+            },
+            "maxItems": 3,
+            "minItems": 1,
+            "title": "Triggers",
+            "type": "array"
+          }
+        },
+        "required": [
+          "triggers",
+          "gross_out_brl",
+          "gross_in_brl",
+          "matched_position_brl",
+          "matched_contribution_brl",
+          "intra_client_position_brl",
+          "inter_client_position_brl",
+          "remitted_out_brl",
+          "remitted_in_brl",
+          "flow_segments"
+        ],
+        "title": "ReplayClosingV1",
+        "type": "object"
+      },
+      "ReplayDayV1": {
+        "additionalProperties": false,
+        "properties": {
+          "closing": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReplayClosingV1"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "day": {
+            "maximum": 730.0,
+            "minimum": 0.0,
+            "title": "Day",
+            "type": "integer"
+          },
+          "end_state": {
+            "$ref": "#/components/schemas/ReplayEndStateV1"
+          },
+          "events": {
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "ALLOCATION": "#/components/schemas/AllocationEventV1",
+                  "ORDER_ARRIVED": "#/components/schemas/OrderArrivedEventV1"
+                },
+                "propertyName": "kind"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/OrderArrivedEventV1"
+                },
+                {
+                  "$ref": "#/components/schemas/AllocationEventV1"
+                }
+              ]
+            },
+            "maxItems": 3000,
+            "title": "Events",
+            "type": "array"
+          }
+        },
+        "required": [
+          "day",
+          "events",
+          "closing",
+          "end_state"
+        ],
+        "title": "ReplayDayV1",
+        "type": "object"
+      },
+      "ReplayDocumentV1": {
+        "additionalProperties": false,
+        "properties": {
+          "api_version": {
+            "const": "1.0.0",
+            "title": "Api Version",
+            "type": "string"
+          },
+          "currency": {
+            "const": "BRL",
+            "title": "Currency",
+            "type": "string"
+          },
+          "days": {
+            "items": {
+              "$ref": "#/components/schemas/ReplayDayV1"
+            },
+            "maxItems": 731,
+            "minItems": 1,
+            "title": "Days",
+            "type": "array"
+          },
+          "diagnostic_execution_id": {
+            "format": "uuid",
+            "title": "Diagnostic Execution Id",
+            "type": "string"
+          },
+          "execution_fingerprint": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Execution Fingerprint",
+            "type": "string"
+          },
+          "motor_version": {
+            "title": "Motor Version",
+            "type": "string"
+          },
+          "orders": {
+            "items": {
+              "$ref": "#/components/schemas/ReplayOrderV1"
+            },
+            "maxItems": 1000,
+            "title": "Orders",
+            "type": "array"
+          },
+          "participant_seeds": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "maxProperties": 100,
+            "title": "Participant Seeds",
+            "type": "object"
+          },
+          "period": {
+            "$ref": "#/components/schemas/ReplayPeriodV1"
+          },
+          "policy": {
+            "const": "P0",
+            "title": "Policy",
+            "type": "string"
+          },
+          "repetition_id": {
+            "format": "uuid",
+            "title": "Repetition Id",
+            "type": "string"
+          },
+          "result_fingerprint": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Result Fingerprint",
+            "type": "string"
+          },
+          "scenario_id": {
+            "format": "uuid",
+            "title": "Scenario Id",
+            "type": "string"
+          },
+          "scenario_revision": {
+            "minimum": 1.0,
+            "title": "Scenario Revision",
+            "type": "integer"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/ReplayTotalsV1"
+          }
+        },
+        "required": [
+          "api_version",
+          "diagnostic_execution_id",
+          "scenario_id",
+          "scenario_revision",
+          "repetition_id",
+          "participant_seeds",
+          "period",
+          "policy",
+          "currency",
+          "orders",
+          "days",
+          "totals",
+          "motor_version",
+          "execution_fingerprint",
+          "result_fingerprint"
+        ],
+        "title": "ReplayDocumentV1",
+        "type": "object"
+      },
+      "ReplayEndStateV1": {
+        "additionalProperties": false,
+        "properties": {
+          "matched_position_accumulated_brl": {
+            "maxLength": 80,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Matched Position Accumulated Brl",
+            "type": "string"
+          },
+          "measured_matched_contribution_accumulated_brl": {
+            "maxLength": 80,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Measured Matched Contribution Accumulated Brl",
+            "type": "string"
+          },
+          "open_in_brl": {
+            "maxLength": 80,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Open In Brl",
+            "type": "string"
+          },
+          "open_out_brl": {
+            "maxLength": 80,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Open Out Brl",
+            "type": "string"
+          },
+          "remitted_in_accumulated_brl": {
+            "maxLength": 80,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Remitted In Accumulated Brl",
+            "type": "string"
+          },
+          "remitted_out_accumulated_brl": {
+            "maxLength": 80,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Remitted Out Accumulated Brl",
+            "type": "string"
+          }
+        },
+        "required": [
+          "open_out_brl",
+          "open_in_brl",
+          "matched_position_accumulated_brl",
+          "measured_matched_contribution_accumulated_brl",
+          "remitted_out_accumulated_brl",
+          "remitted_in_accumulated_brl"
+        ],
+        "title": "ReplayEndStateV1",
+        "type": "object"
+      },
+      "ReplayFlowSegmentV1": {
+        "additionalProperties": false,
+        "properties": {
+          "closing_day": {
+            "maximum": 730.0,
+            "minimum": 0.0,
+            "title": "Closing Day",
+            "type": "integer"
+          },
+          "in_order_id": {
+            "title": "In Order Id",
+            "type": "string"
+          },
+          "matching_origin": {
+            "enum": [
+              "INTRA_CLIENTE",
+              "INTER_CLIENTE"
+            ],
+            "title": "Matching Origin",
+            "type": "string"
+          },
+          "meaning": {
+            "const": "ILLUSTRATIVE_AGGREGATE_DECOMPOSITION",
+            "title": "Meaning",
+            "type": "string"
+          },
+          "out_order_id": {
+            "title": "Out Order Id",
+            "type": "string"
+          },
+          "value_brl": {
+            "maxLength": 80,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Value Brl",
+            "type": "string"
+          }
+        },
+        "required": [
+          "closing_day",
+          "out_order_id",
+          "in_order_id",
+          "value_brl",
+          "matching_origin",
+          "meaning"
+        ],
+        "title": "ReplayFlowSegmentV1",
+        "type": "object"
+      },
+      "ReplayOrderV1": {
+        "additionalProperties": false,
+        "properties": {
+          "client_id": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Client Id",
+            "type": "string"
+          },
+          "cohort": {
+            "enum": [
+              "WARMUP",
+              "MEASUREMENT"
+            ],
+            "title": "Cohort",
+            "type": "string"
+          },
+          "deadline_day": {
+            "minimum": 0.0,
+            "title": "Deadline Day",
+            "type": "integer"
+          },
+          "direction": {
+            "enum": [
+              "OUT",
+              "IN"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "id": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "known_day": {
+            "maximum": 730.0,
+            "minimum": 0.0,
+            "title": "Known Day",
+            "type": "integer"
+          },
+          "value_brl": {
+            "maxLength": 80,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Value Brl",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "client_id",
+          "direction",
+          "known_day",
+          "deadline_day",
+          "value_brl",
+          "cohort"
+        ],
+        "title": "ReplayOrderV1",
+        "type": "object"
+      },
+      "ReplayPeriodV1": {
+        "additionalProperties": false,
+        "properties": {
+          "measurement_end_day": {
+            "maximum": 730.0,
+            "minimum": 0.0,
+            "title": "Measurement End Day",
+            "type": "integer"
+          },
+          "measurement_start_day": {
+            "maximum": 730.0,
+            "minimum": 0.0,
+            "title": "Measurement Start Day",
+            "type": "integer"
+          },
+          "mode": {
+            "enum": [
+              "LEGADO",
+              "NATURAL"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "settlement_end_day": {
+            "maximum": 730.0,
+            "minimum": 0.0,
+            "title": "Settlement End Day",
+            "type": "integer"
+          },
+          "warmup_days": {
+            "maximum": 730.0,
+            "minimum": 0.0,
+            "title": "Warmup Days",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "mode",
+          "warmup_days",
+          "measurement_start_day",
+          "measurement_end_day",
+          "settlement_end_day"
+        ],
+        "title": "ReplayPeriodV1",
+        "type": "object"
+      },
+      "ReplayRequestV1": {
+        "additionalProperties": false,
+        "properties": {
+          "api_version": {
+            "const": "1.0.0",
+            "title": "Api Version",
+            "type": "string"
+          },
+          "diagnostic_envelope": {
+            "$ref": "#/components/schemas/DiagnosticEnvelope"
+          },
+          "diagnostic_execution_id": {
+            "format": "uuid",
+            "title": "Diagnostic Execution Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "api_version",
+          "diagnostic_execution_id",
+          "diagnostic_envelope"
+        ],
+        "title": "ReplayRequestV1",
+        "type": "object"
+      },
+      "ReplayTotalsV1": {
+        "additionalProperties": false,
+        "properties": {
+          "execution_matched_position_brl": {
+            "maxLength": 80,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Execution Matched Position Brl",
+            "type": "string"
+          },
+          "execution_remitted_in_brl": {
+            "maxLength": 80,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Execution Remitted In Brl",
+            "type": "string"
+          },
+          "execution_remitted_out_brl": {
+            "maxLength": 80,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Execution Remitted Out Brl",
+            "type": "string"
+          },
+          "measured_autonetting_contribution_brl": {
+            "maxLength": 80,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Measured Autonetting Contribution Brl",
+            "type": "string"
+          },
+          "measured_gross_brl": {
+            "maxLength": 80,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Measured Gross Brl",
+            "type": "string"
+          },
+          "measured_matched_contribution_brl": {
+            "maxLength": 80,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Measured Matched Contribution Brl",
+            "type": "string"
+          },
+          "measured_multilateral_contribution_brl": {
+            "maxLength": 80,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Measured Multilateral Contribution Brl",
+            "type": "string"
+          },
+          "measured_remitted_brl": {
+            "maxLength": 80,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Measured Remitted Brl",
+            "type": "string"
+          },
+          "netability_fraction": {
+            "maxLength": 80,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Netability Fraction",
+            "type": "string"
+          }
+        },
+        "required": [
+          "measured_gross_brl",
+          "measured_matched_contribution_brl",
+          "measured_autonetting_contribution_brl",
+          "measured_multilateral_contribution_brl",
+          "measured_remitted_brl",
+          "netability_fraction",
+          "execution_matched_position_brl",
+          "execution_remitted_out_brl",
+          "execution_remitted_in_brl"
+        ],
+        "title": "ReplayTotalsV1",
         "type": "object"
       },
       "ResidualBreakdown": {
@@ -3897,6 +4540,49 @@
           }
         ],
         "summary": "Preview Schema"
+      }
+    },
+    "/api/v1/replays": {
+      "post": {
+        "operationId": "replay_schema_api_v1_replays_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplayRequestV1"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReplayDocumentV1"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Replay Schema"
       }
     },
     "/api/v1/session": {

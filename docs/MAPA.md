@@ -69,6 +69,7 @@ make test          # a contagem vigente é registrada em docs/testing.md
 | Aceite técnico do MVP da Etapa 4 | `docs/frontend/etapa-4-mvp-aceitacao.md` |
 | Design, plano e auditoria da Evolução B da Etapa 4 | `docs/superpowers/specs/2026-09-21-frontend-etapa-4-evolucao-b-design.md`, `docs/superpowers/plans/2026-09-21-frontend-etapa-4-evolucao-b.md`, `docs/frontend/etapa-4-evolucao-b-auditoria.md` |
 | Aceite técnico da Evolução B da Etapa 4 | `docs/frontend/etapa-4-evolucao-b-aceitacao.md` |
+| Especificação aprovada e plano executável da Etapa 5 — Replay temporal | `docs/superpowers/specs/2026-09-22-frontend-etapa-5-replay-design.md`, `docs/superpowers/plans/2026-09-22-frontend-etapa-5-replay.md` |
 | IDs T0–T12 e auditoria de `50fc384`/`1270458` | seção "Rastreabilidade aprovada no Linear" e matriz da Task 0 no plano técnico v2 da Etapa 2 |
 | Importação de fontes reais e Caso Observado | `docs/superpowers/specs/2026-09-19-importacao-dados-reais-design-v2.md` |
 | Plano vigente do importador | `docs/superpowers/plans/2026-09-19-importacao-dados-reais-plano-tecnico-v2.md` |

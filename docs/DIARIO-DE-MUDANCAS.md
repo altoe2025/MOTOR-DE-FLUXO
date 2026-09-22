@@ -66,11 +66,60 @@ decimal vigente para iniciar a Evolução B.
 | `codex/frontend-etapa-3` | T0–T12 concluídos localmente; gate global verde em `57be689`; aceite técnico **PASS**; sem push/PR/merge | Codex |
 | `codex/etapa-4-mvp` | MVP e Evolução B aceitos localmente até MOT-85; sem push/PR/merge/deploy | Codex |
 | `codex/fix-reconciliacao-decimal` | correção da aritmética exata dos mecanismos da análise, pronta para merge na `main` | Codex |
+| `codex/frontend-etapa-5` | MOT-86 concluída localmente; contrato temporal e endpoint estateless do Replay; sem push/PR/merge | Codex |
 
 Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+---
+
+## 2026-09-22 — Contrato temporal reconciliado do Replay (MOT-86)
+
+1. **Sintoma.** A especificação visual do Replay ainda deixava tipos indefinidos,
+   tratava gatilho de fechamento como valor único, não separava posição casada da
+   contribuição das duas pontas e pressupunha acesso a um resultado por um job que
+   expira no servidor.
+2. **Causa.** O diagnóstico completo é persistido no Estudo local em IndexedDB, mas
+   o executor do backend mantém jobs apenas em memória. A projeção temporal também
+   precisava respeitar aquecimento, coorte medida, liquidação natural e as fases
+   hierárquicas do autonetting preferencial.
+3. **O que foi feito.** A especificação aprovada foi reconciliada e ganhou o plano
+   executável `docs/superpowers/plans/2026-09-22-frontend-etapa-5-replay.md`. Foram
+   criados `servidor/contracts/replay.py`, `servidor/replay.py` e
+   `servidor/routes/replay.py`: `POST /api/v1/replays` recebe o envelope diagnóstico
+   persistido, autentica a sessão, reconcilia conservação/coorte/totais, publica dias
+   vazios, gatilhos simultâneos, posição versus contribuição, remessas por direção e
+   segmentos ilustrativos em fases intracliente e intercliente. OpenAPI, tipos e
+   validators web foram regenerados. O gate focado teve 23 testes passando; a linha
+   de base anterior teve 774 testes Python passando e 2 ignorados.
+4. **O que isso invalida.** Invalida o tipo preliminar com `seed` único,
+   `trigger` singular e `matchedBrl` ambíguo; invalida também qualquer implementação
+   que consulte o job expirado ou faça waterfall global antes do autonetting.
+
+---
+
+## 2026-09-22 — Especificação do Replay temporal da Etapa 5
+
+1. **Sintoma.** A Etapa 5 possuía somente requisitos gerais e uma referência visual
+   aprovada. O protótipo visual demonstrava a direção desejada, mas continha erros de
+   cálculo, estado, ancoragem de linhas e sequência de animações que não podiam virar
+   comportamento de produto.
+2. **Causa.** Ainda não existia um contrato temporal próprio nem uma fronteira clara
+   entre resultado canônico, reconstrução de estado e animação. A especificação global
+   também proibia linhas entre cartões, enquanto a referência aprovada passou a usá-las
+   como explicação visual do agregado.
+3. **O que foi feito.** Foi criada
+   `docs/superpowers/specs/2026-09-22-frontend-etapa-5-replay-design.md`, com o MVP,
+   contrato V1, invariantes, máquina temporal, direção `Fronteira Viva`, critérios de
+   aceite e evoluções 5A–5C. A especificação global foi alinhada para permitir somente
+   uma decomposição ilustrativa, determinística e não persistida do casado. `MAPA.md`
+   passou a indexar a nova especificação. Nenhum código de produto foi alterado.
+4. **O que isso invalida.** Invalida a proibição absoluta de conexões visuais entre
+   cartões no Replay e qualquer expectativa de aproveitar os cálculos do protótipo.
+   Permanecem válidas a posição agregada de tesouraria e a proibição de apresentar
+   essas conexões como contraparte, custódia, pareamento físico ou benefício individual.
 
 ---
 

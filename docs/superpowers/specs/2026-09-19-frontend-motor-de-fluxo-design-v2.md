@@ -485,8 +485,11 @@ O Replay mostra todos os dias do horizonte, inclusive dias sem evento:
 Dois níveis de densidade atendem usos diferentes: **Apresentação** e **Inspeção**.
 Uma faixa sincronizada compara o mesmo dia com e sem agrupamento.
 
-O Replay nunca desenha setas entre empresas ou ordens específicas e nunca sugere
-custódia ou pareamento físico. Ele representa posições agregadas de tesouraria.
+O Replay representa posições agregadas de tesouraria e nunca sugere custódia ou
+pareamento físico. Pode desenhar conexões temporárias entre cartões somente como
+decomposição ilustrativa e determinística do agregado casado, com essa natureza
+visível na própria cena. Essas conexões não são relações de domínio, não são
+persistidas como contraparte e não sustentam benefício individual.
 
 ## 18. Dados e premissas
 

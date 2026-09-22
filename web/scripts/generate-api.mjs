@@ -128,6 +128,8 @@ export const validateDiagnosticRequest = ajv.compile({
 });
 export const validateJobSnapshot = ajv.compile({ $ref: 'https://motor-de-fluxo.local/contracts/schemas.json#/$defs/JobSnapshot' });
 export const validateDiagnosticEnvelope = ajv.compile({ $ref: 'https://motor-de-fluxo.local/contracts/schemas.json#/$defs/DiagnosticEnvelope' });
+export const validateReplayRequest = ajv.compile({ $ref: 'https://motor-de-fluxo.local/contracts/schemas.json#/$defs/ReplayRequestV1' });
+export const validateReplayDocument = ajv.compile({ $ref: 'https://motor-de-fluxo.local/contracts/schemas.json#/$defs/ReplayDocumentV1' });
 `;
 
 await mkdir(apiDirectory, { recursive: true });

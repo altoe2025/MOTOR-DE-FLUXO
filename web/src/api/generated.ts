@@ -152,6 +152,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/replays": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Replay Schema */
+        post: operations["replay_schema_api_v1_replays_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/session": {
         parameters: {
             query?: never;
@@ -200,6 +217,32 @@ export interface components {
             volume_netting_multilateral_periodo_brl: string;
             /** Volume Remetido Periodo Brl */
             volume_remetido_periodo_brl: string;
+        };
+        /** AllocationEventV1 */
+        AllocationEventV1: {
+            /**
+             * Allocation Type
+             * @enum {string}
+             */
+            allocation_type: "CASADO" | "REMETIDO";
+            /**
+             * Direction
+             * @enum {string}
+             */
+            direction: "OUT" | "IN";
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "ALLOCATION";
+            /** Matching Origin */
+            matching_origin: ("INTRA_CLIENTE" | "INTER_CLIENTE") | null;
+            /** Order Id */
+            order_id: string;
+            /** Sequence */
+            sequence: number;
+            /** Value Brl */
+            value_brl: string;
         };
         /** AlocacaoDTO */
         AlocacaoDTO: {
@@ -833,6 +876,18 @@ export interface components {
             /** Valor Brl */
             valor_brl: string;
         };
+        /** OrderArrivedEventV1 */
+        OrderArrivedEventV1: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "ORDER_ARRIVED";
+            /** Order Id */
+            order_id: string;
+            /** Sequence */
+            sequence: number;
+        };
         /** OrigemValor */
         OrigemValor: {
             /** Fonte */
@@ -1183,6 +1238,199 @@ export interface components {
             repetition_id: string;
             /** Savings Brl */
             savings_brl: string;
+        };
+        /** ReplayClosingV1 */
+        ReplayClosingV1: {
+            /** Flow Segments */
+            flow_segments: components["schemas"]["ReplayFlowSegmentV1"][];
+            /** Gross In Brl */
+            gross_in_brl: string;
+            /** Gross Out Brl */
+            gross_out_brl: string;
+            /** Inter Client Position Brl */
+            inter_client_position_brl: string;
+            /** Intra Client Position Brl */
+            intra_client_position_brl: string;
+            /** Matched Contribution Brl */
+            matched_contribution_brl: string;
+            /** Matched Position Brl */
+            matched_position_brl: string;
+            /** Remitted In Brl */
+            remitted_in_brl: string;
+            /** Remitted Out Brl */
+            remitted_out_brl: string;
+            /** Triggers */
+            triggers: ("WINDOW" | "DEADLINE" | "HORIZON_END")[];
+        };
+        /** ReplayDayV1 */
+        ReplayDayV1: {
+            closing: components["schemas"]["ReplayClosingV1"] | null;
+            /** Day */
+            day: number;
+            end_state: components["schemas"]["ReplayEndStateV1"];
+            /** Events */
+            events: (components["schemas"]["OrderArrivedEventV1"] | components["schemas"]["AllocationEventV1"])[];
+        };
+        /** ReplayDocumentV1 */
+        ReplayDocumentV1: {
+            /**
+             * Api Version
+             * @constant
+             */
+            api_version: "1.0.0";
+            /**
+             * Currency
+             * @constant
+             */
+            currency: "BRL";
+            /** Days */
+            days: components["schemas"]["ReplayDayV1"][];
+            /**
+             * Diagnostic Execution Id
+             * Format: uuid
+             */
+            diagnostic_execution_id: string;
+            /** Execution Fingerprint */
+            execution_fingerprint: string;
+            /** Motor Version */
+            motor_version: string;
+            /** Orders */
+            orders: components["schemas"]["ReplayOrderV1"][];
+            /** Participant Seeds */
+            participant_seeds: {
+                [key: string]: string;
+            };
+            period: components["schemas"]["ReplayPeriodV1"];
+            /**
+             * Policy
+             * @constant
+             */
+            policy: "P0";
+            /**
+             * Repetition Id
+             * Format: uuid
+             */
+            repetition_id: string;
+            /** Result Fingerprint */
+            result_fingerprint: string;
+            /**
+             * Scenario Id
+             * Format: uuid
+             */
+            scenario_id: string;
+            /** Scenario Revision */
+            scenario_revision: number;
+            totals: components["schemas"]["ReplayTotalsV1"];
+        };
+        /** ReplayEndStateV1 */
+        ReplayEndStateV1: {
+            /** Matched Position Accumulated Brl */
+            matched_position_accumulated_brl: string;
+            /** Measured Matched Contribution Accumulated Brl */
+            measured_matched_contribution_accumulated_brl: string;
+            /** Open In Brl */
+            open_in_brl: string;
+            /** Open Out Brl */
+            open_out_brl: string;
+            /** Remitted In Accumulated Brl */
+            remitted_in_accumulated_brl: string;
+            /** Remitted Out Accumulated Brl */
+            remitted_out_accumulated_brl: string;
+        };
+        /** ReplayFlowSegmentV1 */
+        ReplayFlowSegmentV1: {
+            /** Closing Day */
+            closing_day: number;
+            /** In Order Id */
+            in_order_id: string;
+            /**
+             * Matching Origin
+             * @enum {string}
+             */
+            matching_origin: "INTRA_CLIENTE" | "INTER_CLIENTE";
+            /**
+             * Meaning
+             * @constant
+             */
+            meaning: "ILLUSTRATIVE_AGGREGATE_DECOMPOSITION";
+            /** Out Order Id */
+            out_order_id: string;
+            /** Value Brl */
+            value_brl: string;
+        };
+        /** ReplayOrderV1 */
+        ReplayOrderV1: {
+            /** Client Id */
+            client_id: string;
+            /**
+             * Cohort
+             * @enum {string}
+             */
+            cohort: "WARMUP" | "MEASUREMENT";
+            /** Deadline Day */
+            deadline_day: number;
+            /**
+             * Direction
+             * @enum {string}
+             */
+            direction: "OUT" | "IN";
+            /** Id */
+            id: string;
+            /** Known Day */
+            known_day: number;
+            /** Value Brl */
+            value_brl: string;
+        };
+        /** ReplayPeriodV1 */
+        ReplayPeriodV1: {
+            /** Measurement End Day */
+            measurement_end_day: number;
+            /** Measurement Start Day */
+            measurement_start_day: number;
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "LEGADO" | "NATURAL";
+            /** Settlement End Day */
+            settlement_end_day: number;
+            /** Warmup Days */
+            warmup_days: number;
+        };
+        /** ReplayRequestV1 */
+        ReplayRequestV1: {
+            /**
+             * Api Version
+             * @constant
+             */
+            api_version: "1.0.0";
+            diagnostic_envelope: components["schemas"]["DiagnosticEnvelope"];
+            /**
+             * Diagnostic Execution Id
+             * Format: uuid
+             */
+            diagnostic_execution_id: string;
+        };
+        /** ReplayTotalsV1 */
+        ReplayTotalsV1: {
+            /** Execution Matched Position Brl */
+            execution_matched_position_brl: string;
+            /** Execution Remitted In Brl */
+            execution_remitted_in_brl: string;
+            /** Execution Remitted Out Brl */
+            execution_remitted_out_brl: string;
+            /** Measured Autonetting Contribution Brl */
+            measured_autonetting_contribution_brl: string;
+            /** Measured Gross Brl */
+            measured_gross_brl: string;
+            /** Measured Matched Contribution Brl */
+            measured_matched_contribution_brl: string;
+            /** Measured Multilateral Contribution Brl */
+            measured_multilateral_contribution_brl: string;
+            /** Measured Remitted Brl */
+            measured_remitted_brl: string;
+            /** Netability Fraction */
+            netability_fraction: string;
         };
         /** ResidualBreakdown */
         ResidualBreakdown: {
@@ -1589,6 +1837,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PreviewEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    replay_schema_api_v1_replays_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReplayRequestV1"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReplayDocumentV1"];
                 };
             };
             /** @description Validation Error */
