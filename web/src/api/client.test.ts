@@ -100,6 +100,18 @@ function jobSnapshotFixture(status: 'QUEUED' | 'RUNNING' | 'CANCEL_REQUESTED' = 
 }
 
 describe('typed API client', () => {
+  it('bloqueia Replay local inválido antes de chamar a API', async () => {
+    const fetch = vi.fn();
+    const client = createApiClient({ getAccessToken: async () => 'token', fetch });
+
+    await expect(client.buildReplay({
+      api_version: '1.0.0',
+      diagnostic_execution_id: '00000000-0000-4000-8000-000000000701',
+      diagnostic_envelope: { file_payload: 'invalid' },
+    } as never)).rejects.toMatchObject({ code: 'ENTRADA_CLIENTE_INVALIDA' });
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it('submete diagnóstico validado uma única vez pela rota oficial', async () => {
     const request = diagnosticRequestFixture();
     const snapshot = jobSnapshotFixture();

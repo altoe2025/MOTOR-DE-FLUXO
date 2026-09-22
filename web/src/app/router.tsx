@@ -21,8 +21,17 @@ const StudyDiagnosticPage = lazy(async () => {
   return { default: module.StudyDiagnosticPage };
 });
 
+const ReplayPage = lazy(async () => {
+  const module = await import('../replay/ReplayPage');
+  return { default: module.ReplayPage };
+});
+
 function DiagnosticRoute() {
   return <Suspense fallback={<p role="status">Carregando diagnóstico…</p>}><StudyDiagnosticPage /></Suspense>;
+}
+
+function ReplayRoute() {
+  return <Suspense fallback={<p role="status">Carregando Replay…</p>}><ReplayPage /></Suspense>;
 }
 
 type DestinationProps = { title: string; description: string; emptyTitle: string; emptyDescription: string };
@@ -76,6 +85,7 @@ export function AppRoutes() {
         <Route path="/estudos" element={<StudiesPage />} />
         <Route path="/estudos/:studyId" element={<LegacyStudyRedirect />} />
         <Route path="/estudos/:studyId/diagnostico" element={<DiagnosticRoute />} />
+        <Route path="/estudos/:studyId/replay" element={<ReplayRoute />} />
         <Route path="/diagnostico" element={<PreviewPage />} />
         <Route path="/comparar" element={<StudyComparisonPage />} />
         <Route path="/replay" element={<Destination title="Replay" description="Uma repetição específica poderá ser inspecionada dia a dia." emptyTitle="Nenhum replay disponível" emptyDescription="O replay depende de uma execução reproduzível." />} />

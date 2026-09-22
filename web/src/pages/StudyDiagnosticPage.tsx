@@ -244,7 +244,7 @@ export function StudyDiagnosticPage() {
       <DiagnosticHistory executions={scenarioDiagnostics} />
       {envelope === null ? null : <>
         <DiagnosticDistribution statistics={envelope.statistics} repetitions={envelope.repetitions} economics={envelope.axes.economic_robustness} />
-        <SelectedExecution selectedExecution={envelope.selected_execution} />
+        <SelectedExecution selectedExecution={envelope.selected_execution} replayHref={`/estudos/${study.id}/replay?executionId=${encodeURIComponent(terminal!.id)}`} />
         <DiagnosticAxesView axes={envelope.axes} consequences={envelope.consequences} limitations={envelope.limitations} />
         <section className="diagnostic-card" aria-labelledby="provenance-heading"><h2 id="provenance-heading">Proveniência</h2>
           <dl className="diagnostic-identity"><div><dt>Job</dt><dd>{envelope.job_id}</dd></div><div><dt>Fingerprint do request</dt><dd>{envelope.request_fingerprint}</dd></div><div><dt>Versão do schema</dt><dd>{envelope.schema_version}</dd></div></dl>

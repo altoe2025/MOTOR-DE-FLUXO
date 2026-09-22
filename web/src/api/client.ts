@@ -9,6 +9,8 @@ import {
   validatePreviaRequest,
   validatePreviewEnvelope,
   validateReferenceExample,
+  validateReplayDocument,
+  validateReplayRequest,
 } from './validators';
 
 export type PreviaRequest = components['schemas']['PreviaRequest'];
@@ -19,6 +21,8 @@ export type PreparationResponse = components['schemas']['PreparationResponse'];
 export type DiagnosticRequest = components['schemas']['DiagnosticRequest'];
 export type DiagnosticEnvelope = components['schemas']['DiagnosticEnvelope'];
 export type JobSnapshot = components['schemas']['JobSnapshot'];
+export type ReplayRequest = components['schemas']['ReplayRequestV1'];
+export type ReplayDocument = components['schemas']['ReplayDocumentV1'];
 
 type FetchLike = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
@@ -31,6 +35,7 @@ export type ApiClient = {
   getDiagnosticResult(jobId: string, signal?: AbortSignal): Promise<DiagnosticEnvelope>;
   cancelDiagnostic(jobId: string, signal?: AbortSignal): Promise<JobSnapshot>;
   retryDiagnostic(jobId: string, idempotencyKey: string, signal?: AbortSignal): Promise<JobSnapshot>;
+  buildReplay(input: ReplayRequest, signal?: AbortSignal): Promise<ReplayDocument>;
 };
 
 type ErrorDocument = {
@@ -82,7 +87,7 @@ function invalidResponse(status: number, code = 'RESPOSTA_INVALIDA'): ApiError {
   return new ApiError({
     status,
     code,
-    message: code === 'VERSAO_INCOMPATIVEL'
+    message: code === 'VERSAO_INCOMPATIVEL' || code === 'VERSAO_REPLAY_NAO_SUPORTADA'
       ? 'A versão da resposta não é compatível com esta aplicação.'
       : 'O servidor devolveu uma resposta que não pôde ser validada.',
   });
@@ -258,6 +263,22 @@ export function createApiClient({
       }, signal);
       if (!validateJobSnapshot(document)) throw invalidResponse(202);
       return deepFreeze(document as JobSnapshot);
+    },
+
+    async buildReplay(input, signal) {
+      if (!validateReplayRequest(input)) {
+        throw new ApiError({ status: 0, code: 'ENTRADA_CLIENTE_INVALIDA', message: 'O resultado persistido não passou pela validação local.' });
+      }
+      const document = await request('/api/v1/replays', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(input),
+      }, signal);
+      if (isRecord(document) && document.api_version !== '1.0.0') {
+        throw invalidResponse(200, 'VERSAO_REPLAY_NAO_SUPORTADA');
+      }
+      if (!validateReplayDocument(document)) throw invalidResponse(200);
+      return deepFreeze(document as ReplayDocument);
     },
   };
 }

@@ -66,12 +66,41 @@ decimal vigente para iniciar a Evolução B.
 | `codex/frontend-etapa-3` | T0–T12 concluídos localmente; gate global verde em `57be689`; aceite técnico **PASS**; sem push/PR/merge | Codex |
 | `codex/etapa-4-mvp` | MVP e Evolução B aceitos localmente até MOT-85; sem push/PR/merge/deploy | Codex |
 | `codex/fix-reconciliacao-decimal` | correção da aritmética exata dos mecanismos da análise, pronta para merge na `main` | Codex |
-| `codex/frontend-etapa-5` | MOT-86 concluída localmente; contrato temporal e endpoint estateless do Replay; sem push/PR/merge | Codex |
+| `codex/frontend-etapa-5` | MOT-86 e MOT-87 concluídas localmente; contrato, estado determinístico e rota recarregável do Replay; sem push/PR/merge | Codex |
 
 Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+---
+
+## 2026-09-22 — Estado determinístico e rota local do Replay (MOT-87)
+
+1. **Sintoma.** O contrato temporal já existia, mas o front ainda não conseguia
+   reabrir uma execução persistida, reconstruir um dia por seleção direta nem
+   controlar a reprodução sem depender do estado anterior da animação.
+2. **Causa.** A rota antiga `/replay` era apenas um placeholder e o cliente HTTP
+   não consumia `POST /api/v1/replays`. Também não havia um redutor puro que
+   reconciliasse saldos publicados, nem ciclo de playback com cancelamento de
+   respostas tardias.
+3. **O que foi feito.** A branch `codex/frontend-etapa-5` ganhou cliente AJV tipado,
+   estado puro com `Decimal`, reconciliação diária, transições descritivas e
+   controles determinísticos de play/pause, 1×/2×/4×, navegação, fechamento,
+   repetição e recomeço. A rota
+   `/estudos/:studyId/replay?executionId=...` resolve o `StudyDocument` do owner,
+   usa o `DiagnosticEnvelope` persistido mesmo após a expiração do job, cancela e
+   ignora respostas tardias e oferece retorno ao diagnóstico. O gate focado teve
+   34 testes passando, o typecheck e o lint passaram; o teste de roteador que
+   atingiu o timeout conhecido sob carga passou isoladamente.
+4. **O que isso invalida.** Invalida qualquer navegação baseada em mutação
+   incremental da cena, qualquer leitura do job efêmero para recarregar a página e
+   qualquer cálculo financeiro novo em JavaScript; o front apenas reduz os eventos
+   explícitos e confere os saldos do documento Python.
+
+```text
+feat: adiciona estado determinístico e rota do replay (MOT-87)
+```
 
 ---
 

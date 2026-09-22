@@ -166,7 +166,7 @@ feat: publica contrato temporal reconciliado do replay (MOT-86)
 - Consumes: generated `ReplayRequestV1`/`ReplayDocumentV1`, local `DiagnosticExecutionRecord`.
 - Produces: `ApiClient.buildReplay`, `replayStateAt`, `replayTransition`, `nextClosingDay`, `useReplayPlayback`, route `/estudos/:studyId/replay?executionId=...`.
 
-- [ ] **Step 1: Write failing API and state tests**
+- [x] **Step 1: Write failing API and state tests**
 
 ```ts
 it('posts the locally persisted diagnostic envelope instead of reading an expired job', async () => {
@@ -181,23 +181,23 @@ it('produces identical state by direct selection and sequential navigation', () 
 });
 ```
 
-- [ ] **Step 2: Run tests and verify RED**
+- [x] **Step 2: Run tests and verify RED**
 
 Run: `npm run test:unit -- src/api/client.test.ts src/replay/state.test.ts`
 
-- [ ] **Step 3: Implement typed client and pure state**
+- [x] **Step 3: Implement typed client and pure state**
 
 Use generated types and AJV. `replayStateAt` validates day bounds, replays explicit arrivals/allocations with `Decimal`, checks its sums against the published `end_state`, and returns immutable visible orders. `replayTransition` emits arrival, closing, segment, balance, remittance and settlement commands without feeding values back into state.
 
-- [ ] **Step 4: Test and implement playback lifecycle**
+- [x] **Step 4: Test and implement playback lifecycle**
 
 Use fake timers to prove play/pause, 1×/2×/4×, previous/next, direct day, next closing, repeat and restart. Each effect owns one timeout and clears it when paused, document identity changes, direct navigation occurs or the component unmounts. Late replay responses are ignored with `AbortController` plus an identity token.
 
-- [ ] **Step 5: Test and implement the route**
+- [x] **Step 5: Test and implement the route**
 
 The page loads the Study from the owner-scoped repository, resolves the local execution, requires `DIAGNOSTIC/SUCCEEDED` with an envelope, posts it to `buildReplay`, and renders explicit unavailable/incompatible/inconsistent states with a return link to the diagnostic. Reload resolves the same URL again. Add an “Abrir Replay” link beside the selected execution.
 
-- [ ] **Step 6: Verify MOT-87 and commit**
+- [x] **Step 6: Verify MOT-87 and commit**
 
 Run focused unit tests, router tests and typecheck; update the Diário; commit:
 
