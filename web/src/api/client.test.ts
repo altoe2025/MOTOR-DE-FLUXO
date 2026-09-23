@@ -129,6 +129,19 @@ describe('typed API client', () => {
     }));
   });
 
+  it('rejeita catálogo inválido pela mesma resposta segura da API', async () => {
+    const fetch = vi.fn().mockResolvedValue(jsonResponse({ schema_version: '1.0.0' }));
+    const client = createApiClient({ getAccessToken: async () => 'token', fetch });
+    const catalogClient = client as ApiClient & {
+      getImportCatalog(signal?: AbortSignal): Promise<unknown>;
+    };
+
+    await expect(catalogClient.getImportCatalog()).rejects.toMatchObject({
+      status: 200,
+      code: 'RESPOSTA_INVALIDA',
+    });
+  });
+
   it('bloqueia Replay local inválido antes de chamar a API', async () => {
     const fetch = vi.fn();
     const client = createApiClient({ getAccessToken: async () => 'token', fetch });
