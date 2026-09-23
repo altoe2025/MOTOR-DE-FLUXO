@@ -73,6 +73,15 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-23 — Cliente do catálogo técnico da importação (MOT-58)
+
+1. **Sintoma.** O front-end não conseguia consultar nem validar pelo caminho comum o estado técnico do catálogo de importação.
+2. **Causa.** O `ApiClient` e seus validators gerados ainda não conheciam o endpoint canônico, e não havia modelo local que distinguisse revisão possível de confirmação de execução.
+3. **O que foi feito.** `ApiClient.getImportCatalog` consulta somente `GET /api/v1/catalogos/importacao`, preservando Bearer, timeout, erro uniforme e validação AJV. `web/src/importer/catalogClient.ts` usa exclusivamente essa porta e expõe que `NAO_CONFIGURADO` mantém a revisão local disponível, mas torna a confirmação de execução indisponível. `contracts/openapi.json`, `web/src/api/generated.ts`, `schemas.json` e `validators.ts` foram atualizados exclusivamente por `python -m servidor.export_openapi` e `npm --prefix web run generate:api`; o script do gerador recebeu o validator do novo schema. A alteração do contrato invalidou o `tsconfig.tsbuildinfo` e expôs duas fixtures de `dates.test.ts` que passavam `string` onde a API exige `ISODate`; elas agora usam o normalizador público, sem alterar produção ou comportamento. Os testes cobrem a rota do cliente e a indisponibilidade de confirmação sem afetar a revisão. Por instrução autorizada do Gabriel, a implementação foi feita em `gpt-5.6-terra/high` em vez de Luna/high; a revisão Sol/medium continua pendente.
+4. **O que isso invalida.** Invalida a ausência de leitura tipada do catálogo no front. Não cria cache TanStack, tela, estado de `ImportStudy`, parâmetros, elegibilidade, execução, persistência, rota adicional, conteúdo regulatório, alteração em `motor/`, push, PR, merge ou deploy.
+
+---
+
 ## 2026-09-23 — Catálogo técnico autenticado da importação (MOT-57)
 
 1. **Sintoma.** A importação não tinha um contrato público versionado para declarar que as finalidades regulatórias e os custos reais ainda não estão configurados.

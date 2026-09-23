@@ -11,6 +11,7 @@ import {
   validateReferenceExample,
   validateReplayDocument,
   validateReplayRequest,
+  validateCatalogoImportacao,
 } from './validators';
 
 export type PreviaRequest = components['schemas']['PreviaRequest'];
@@ -23,11 +24,13 @@ export type DiagnosticEnvelope = components['schemas']['DiagnosticEnvelope'];
 export type JobSnapshot = components['schemas']['JobSnapshot'];
 export type ReplayRequest = components['schemas']['ReplayRequestV1'];
 export type ReplayDocument = components['schemas']['ReplayDocumentV1'];
+export type ImportCatalog = components['schemas']['CatalogoImportacao'];
 
 type FetchLike = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
 export type ApiClient = {
   getReferenceExample(signal?: AbortSignal): Promise<ReferenceExample>;
+  getImportCatalog?(signal?: AbortSignal): Promise<ImportCatalog>;
   preparePortfolio?(input: PreparationRequest, signal?: AbortSignal): Promise<PreparationResponse>;
   runPreview(input: PreviaRequest, signal?: AbortSignal): Promise<PreviewEnvelope>;
   submitDiagnostic(input: DiagnosticRequest, signal?: AbortSignal): Promise<JobSnapshot>;
@@ -183,6 +186,12 @@ export function createApiClient({
       const document = await request('/api/v1/examples/reference', { method: 'GET' }, signal);
       if (!validateReferenceExample(document)) throw invalidResponse(200);
       return deepFreeze(document as ReferenceExample);
+    },
+
+    async getImportCatalog(signal) {
+      const document = await request('/api/v1/catalogos/importacao', { method: 'GET' }, signal);
+      if (!validateCatalogoImportacao(document)) throw invalidResponse(200);
+      return deepFreeze(document as ImportCatalog);
     },
 
     async preparePortfolio(input, signal) {
