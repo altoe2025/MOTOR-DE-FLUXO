@@ -154,6 +154,18 @@ describe('confirmImport', () => {
     await expect(confirmImport({ ...review(), company: { ...company, ownerSub: 'owner-b' } }, repository(), 'mismatch')).rejects.toBeInstanceOf(OwnerMismatchError);
   });
 
+  it.each(['2026-09-23T12:02:00.000Z', '2026-09-23T12:01:00.000Z'])('keeps alias then correction chronology even if timestamps are equal (%s)', async (correctionAt) => {
+    const initial = createImportReview({ parsed: { layout: 'xlsx-operacoes/1.0.0', sha256: 'a'.repeat(64), byteSize: 123, rows: [row, { ...row, operacao_id: 'OP-2', cliente_nome: 'ALIAS' }] }, company, ownerSub: 'owner-a', now, positionIdentified: true });
+    const alias = applyImportCommand(initial, { kind: 'ASSOCIATE_ALIAS', alias: 'ALIAS', canonicalClientId: initial.draft.orders[0]!.clientId, eventId: 'alias-first', at: '2026-09-23T12:01:00.000Z' });
+    const corrected = applyImportCommand(alias, { kind: 'CORRECT_FIELD', versionId: initial.batches[0]!.rows[0]!.versionId,
+      operationId: 'OP-1', field: 'valueBrl', rawValue: '200', actionId: 'correction-second', at: correctionAt });
+    await confirmImport(corrected, repository(), 'chronology');
+    expect((await storedRows()).import_events).toEqual([
+      expect.objectContaining({ document: expect.objectContaining({ id: 'alias-first', eventSequence: 1, kind: 'CLIENT_ALIAS_ASSOCIATED' }) }),
+      expect.objectContaining({ document: expect.objectContaining({ id: 'correction-second', eventSequence: 2, kind: 'OPERATION_CORRECTED' }) }),
+    ]);
+  });
+
   it.each(['blocker', 'invalid-total', 'missing-company'] as const)('rejects %s before opening a database', async (kind) => {
     const source = review();
     const invalid = kind === 'blocker' ? { ...source, blockers: [{ code: 'BLOCKED', message: 'Bloqueado' }] }

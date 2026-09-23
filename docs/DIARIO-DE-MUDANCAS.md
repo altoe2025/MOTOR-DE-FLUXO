@@ -73,6 +73,24 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-23 — Cronologia única dos comandos de revisão da importação (MOT-55)
+
+**Sintoma.** O publisher emitia todos os aliases depois das correções, mesmo quando
+a associação de identidade havia ocorrido primeiro.
+
+**Causa.** Aliases estavam somente no histórico separado de identidade; o publisher
+inventava sua sequência ao final da publicação. Timestamps iguais não resolviam a
+ordem real dos comandos.
+
+**O que foi feito.** `ASSOCIATE_ALIAS` também cria um `ImportEvent` sem texto bruto
+na sequência monotônica comum no momento do comando. O publisher usa esse fluxo
+único ordenado por `eventSequence`. A associação sem mudança permanece um no-op.
+Dois testes RED→GREEN comprovam alias antes da correção com instantes distintos e
+iguais; regressão importer/storage: 183 testes PASS, typecheck e lint PASS.
+
+**O que isso invalida.** A ordem artificial de auditoria do primeiro candidato A3.
+Nada no motor ou em dados já publicados; sem push, PR, merge ou deploy.
+
 ## 2026-09-23 — Publicação atômica da importação no repositório compartilhado (MOT-56)
 
 **Sintoma.** A revisão transitória XLSX ainda não podia publicar um Caso Observado

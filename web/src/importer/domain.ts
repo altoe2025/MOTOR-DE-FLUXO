@@ -112,6 +112,13 @@ export type ImportBatch = Readonly<{
 
 export type ImportEvent =
   | Readonly<{
+    kind: 'CLIENT_ALIAS_ASSOCIATED';
+    id: string;
+    eventSequence: number;
+    occurredAt: string;
+    canonicalClientId: string;
+  }>
+  | Readonly<{
     kind: 'BATCH_IMPORTED' | 'BATCH_REVERTED';
     id: string;
     eventSequence: number;

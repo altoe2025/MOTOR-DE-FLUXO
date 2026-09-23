@@ -42,6 +42,7 @@ function eventPath(event: ImportEvent): string {
     case 'CONFLICT_RESOLVED': return `versions/${event.selectedVersionId}`;
     case 'OPERATION_EXCLUDED': case 'OPERATION_RESTORED': return `orders/${encodeURIComponent(event.operationId)}`;
     case 'OPERATION_CORRECTED': return `versions/${event.versionId}/${event.field}`;
+    case 'CLIENT_ALIAS_ASSOCIATED': return `clients/${event.canonicalClientId}`;
   }
 }
 
@@ -78,7 +79,7 @@ export async function confirmImport(review: ImportReview, repository: Applicatio
       layout: 'xlsx-operacoes/1.0.0', counts: { total: batch.rows.length, valid, invalid: batch.rows.length - valid },
     };
   });
-  const events: ImportEventRecord[] = review.events.map((event) => {
+  const events: ImportEventRecord[] = [...review.events].sort((left, right) => left.eventSequence - right.eventSequence).map((event) => {
     const correction = event.kind === 'OPERATION_CORRECTED' ? corrections.find((value) => value.id === event.id) : undefined;
     if (event.kind === 'OPERATION_CORRECTED' && correction === undefined) throw new InvalidDocumentError('Correção sem auditoria.');
     return {
@@ -90,12 +91,6 @@ export async function confirmImport(review: ImportReview, repository: Applicatio
       },
     };
   });
-  let sequence = events.reduce((max, event) => Math.max(max, event.eventSequence), 0);
-  for (const event of review.clientIdentity.events) {
-    events.push({ id: event.id, caseId: draft.id, eventSequence: ++sequence, ownerSub: draft.ownerSub,
-      companyId: company.id, occurredAt: event.occurredAt, kind: event.kind,
-      path: `clients/${event.canonicalClientId}`, audit: null });
-  }
   const validation = validateObservedCase(observedCase);
   if (!validation.ok) throw new InvalidDocumentError(validation.issues[0]?.message);
   return repository.confirmObservedCase({

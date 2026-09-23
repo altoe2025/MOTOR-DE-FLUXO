@@ -372,7 +372,11 @@ export function applyImportCommand(review: ImportReview, command: ImportCommand)
     case 'RESTORE_OPERATION': return appendOperationEvent(review, 'OPERATION_RESTORED', command);
     case 'ASSOCIATE_ALIAS': {
       const identity = mergeClientAlias(review.clientIdentity, command.alias, command.canonicalClientId, command.at, () => command.eventId);
-      return rebuild(review, review.batches, review.events, identity, review.draft.corrections, command.at);
+      if (identity === review.clientIdentity) return review;
+      const sequence = review.events.reduce((maximum, event) => Math.max(maximum, event.eventSequence), 0) + 1;
+      const event: ImportEvent = { kind: 'CLIENT_ALIAS_ASSOCIATED', id: command.eventId,
+        eventSequence: sequence, occurredAt: command.at, canonicalClientId: command.canonicalClientId };
+      return rebuild(review, review.batches, [...review.events, event], identity, review.draft.corrections, command.at);
     }
     case 'CORRECT_FIELD': {
       const portfolio: ImportPortfolio = { revision: review.draft.revision, batches: review.batches, events: review.events };
