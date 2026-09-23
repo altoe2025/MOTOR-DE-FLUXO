@@ -4,6 +4,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom';
 import type { ReplayRequest } from '../api/client';
 import { ApiError } from '../api/errors';
 import { useDiagnosticRuntime } from '../app/providers';
+import { describeSelectedRepetition } from '../diagnostics/selectedRepetition';
 import type { StudyDocument } from '../study/model';
 import type { ReplayDocument, ReplaySort } from './domain';
 import { ReplayControls } from './components/ReplayControls';
@@ -68,7 +69,8 @@ export function resolveReplayRequest(
 
 type LoadState =
   | Readonly<{ kind: 'LOADING' }>
-  | Readonly<{ kind: 'READY'; document: ReplayDocument; studyName: string; scenarioId: string }>
+  | Readonly<{ kind: 'READY'; document: ReplayDocument; studyName: string; scenarioId: string;
+    selected: ReturnType<typeof describeSelectedRepetition> }>
   | Readonly<{ kind: 'ERROR'; code: ReplayPublicErrorCode; message: string; retryable: boolean }>;
 
 function errorState(reason: unknown): Extract<LoadState, { kind: 'ERROR' }> {
@@ -111,9 +113,15 @@ export function ReplayPage() {
         return;
       }
       try {
+        const selected = describeSelectedRepetition(resolution.request.diagnostic_envelope);
         const document = await client.buildReplay(resolution.request, abort.signal);
         if (active && token === identityToken.current) {
-          setLoadState({ kind: 'READY', document, studyName: study.name, scenarioId: resolution.scenarioId });
+          if (document.repetition_id !== selected.repetitionId) {
+            setLoadState({ kind: 'ERROR', code: 'REPLAY_INCONSISTENTE',
+              message: 'O Replay não corresponde à repetição selecionada no diagnóstico.', retryable: false });
+            return;
+          }
+          setLoadState({ kind: 'READY', document, studyName: study.name, scenarioId: resolution.scenarioId, selected });
         }
       } catch (reason) {
         if (active && token === identityToken.current && !abort.signal.aborted) setLoadState(errorState(reason));
@@ -126,7 +134,7 @@ export function ReplayPage() {
 
   if (loadState.kind === 'LOADING') return <p role="status">Reconstruindo Replay…</p>;
   if (loadState.kind === 'ERROR') return <ReplayError state={loadState} studyId={studyId} onRetry={() => setRetryRevision((value) => value + 1)} />;
-  return <ReplayReady document={loadState.document} studyName={loadState.studyName} studyId={studyId!} scenarioId={loadState.scenarioId} />;
+  return <ReplayReady document={loadState.document} studyName={loadState.studyName} studyId={studyId!} scenarioId={loadState.scenarioId} selected={loadState.selected} />;
 }
 
 function ReplayError({ state, studyId, onRetry }: Readonly<{
@@ -146,11 +154,12 @@ function ReplayError({ state, studyId, onRetry }: Readonly<{
   </article>;
 }
 
-function ReplayReady({ document, studyName, studyId, scenarioId }: Readonly<{
+function ReplayReady({ document, studyName, studyId, scenarioId, selected }: Readonly<{
   document: ReplayDocument;
   studyName: string;
   studyId: string;
   scenarioId: string;
+  selected: ReturnType<typeof describeSelectedRepetition>;
 }>) {
   const playback = useReplayPlayback(document);
   const [sort, setSort] = useState<ReplaySort>('ARRIVAL');
@@ -163,6 +172,12 @@ function ReplayReady({ document, studyName, studyId, scenarioId }: Readonly<{
         <p className="page-introduction">Replay determinístico da repetição selecionada · política {document.policy}</p></div>
       <Link to={`/estudos/${studyId}/diagnostico?scenarioId=${encodeURIComponent(scenarioId)}`}>Voltar ao diagnóstico</Link>
     </header>
+    <section className="replay-selection" aria-label="Repetição exibida">
+      <p>Replay mostra uma repetição específica do cenário, com as seeds planejadas; a distribuição reúne todas as repetições.</p>
+      <dl><div><dt>ID da repetição</dt><dd>{selected.repetitionId}</dd></div>
+        <div><dt>Total executado</dt><dd>{selected.total} {selected.total === 1 ? 'repetição executada' : 'repetições executadas'}</dd></div>
+        <div><dt>Critério de seleção</dt><dd>{selected.criterion}</dd></div></dl>
+    </section>
     <ReplayControls document={document} playback={playback} sort={sort} onSort={setSort} />
     <p className="replay-live" aria-live="polite">{directDay} · {phaseLabel}</p>
     <ReplayMetrics document={document} state={state} />

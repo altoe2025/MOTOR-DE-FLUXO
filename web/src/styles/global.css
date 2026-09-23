@@ -152,6 +152,16 @@ a { color: inherit; }
 .scenario-list { display: grid; gap: var(--space-3); list-style: none; margin: 0 0 var(--space-4); padding: 0; }
 .scenario-list li { align-items: center; border: 1px solid var(--border); border-radius: var(--radius); display: grid; gap: var(--space-2); grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) auto; padding: var(--space-3); }
 .scenario-list span { color: var(--muted); }
+.portfolio-composition-summary { background: var(--canvas); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: var(--space-4); padding: var(--space-4); }
+.portfolio-composition-summary h3 { font-family: var(--font-heading); margin: 0 0 var(--space-2); }
+.portfolio-composition-summary ul { display: grid; gap: var(--space-2); list-style: none; padding: 0; }
+.portfolio-composition-summary li { display: flex; flex-wrap: wrap; gap: var(--space-2); overflow-wrap: anywhere; }
+.portfolio-composition-summary li span { color: var(--muted); }
+.composition-guidance { background: var(--canvas); border-left: 4px solid var(--accent); padding: var(--space-3) var(--space-4); }
+.composition-guidance p { margin: var(--space-2) 0; }
+.replay-selection { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin: var(--space-4) 0; padding: var(--space-4); }
+.replay-selection dl { display: grid; gap: var(--space-3); grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); }
+.replay-selection dd { font-weight: 650; margin: var(--space-1) 0 0; overflow-wrap: anywhere; }
 .comparison-page { max-width: 1100px; }
 .comparison-page > h1 { font-family: var(--font-heading); font-size: clamp(2rem, 3vw, 2.75rem); margin: var(--space-2) 0 var(--space-3); }
 .comparison-page > .inline-notice { margin-top: var(--space-5); }

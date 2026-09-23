@@ -47,7 +47,9 @@ describe('resultado do diagnóstico', () => {
     expect(screen.getByRole('heading', { name: 'Distribuição de repetições' })).toBeVisible();
     expect(screen.getByText(/método EMPIRICAL_NEAREST_RANK/)).toBeVisible();
 
-    rerender(<SelectedExecution selectedExecution={{
+    rerender(<SelectedExecution envelope={{
+      statistics: { kind: 'SINGLE_EXECUTION', count: 1, selected_repetition_id: '00000000-0000-4000-8000-000000000005', percentile_method: null },
+      selected_execution: {
       kind: 'PREVIA', api_version: '1.0.0', request_id: '00000000-0000-4000-8000-000000000001',
       execution_id: '00000000-0000-4000-8000-000000000002', study_id: '00000000-0000-4000-8000-000000000003',
       scenario_id: '00000000-0000-4000-8000-000000000004', scenario_revision: 1,
@@ -55,7 +57,8 @@ describe('resultado do diagnóstico', () => {
       presentation: {} as never, presentation_version: '1.0.0', provenance_fingerprint: 'e'.repeat(64),
       statistics: { kind: 'SINGLE_EXECUTION', count: 1, repetition_id: '00000000-0000-4000-8000-000000000005', percentile_method: null, seed: null },
       result: {} as never,
-    }} />);
+      },
+    } as unknown as DiagnosticEnvelope} />);
     expect(screen.getByRole('heading', { name: 'Execução selecionada' })).toBeVisible();
     expect(screen.getByText('c'.repeat(64))).toBeVisible();
   });

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { useApiClient, useStudyController } from '../app/providers';
@@ -6,6 +6,7 @@ import type { PreparationRequest } from '../api/client';
 import { validatePreparationRequest } from '../api/validators';
 import type { CompanyRecord, FieldProvenance, ObservedCase } from '../cases/domain';
 import { HypothesisBuilder } from '../hypotheses/components/HypothesisBuilder';
+import { PortfolioCompositionSummary } from '../hypotheses/components/PortfolioCompositionSummary';
 import { ProfileScenarioBuilder } from '../hypotheses/components/ProfileScenarioBuilder';
 import {
   buildCompositionScenarioDraft,
@@ -121,6 +122,7 @@ export function StudyPortfolioPage() {
   const [executing, setExecuting] = useState(false);
   const [selectedBaseId, setSelectedBaseId] = useState<string | null>(null);
   const [pendingHypothesisId, setPendingHypothesisId] = useState<string | null>(null);
+  const hypothesisAnchor = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -359,9 +361,15 @@ export function StudyPortfolioPage() {
       <span>{sourceLabel(item)}{item.id === study.baseScenarioId ? ' · base' : ' · hipótese'}</span>
       <Button variant="secondary" onClick={() => void navigateAfterFlush(`/estudos/${study.id}/diagnostico?scenarioId=${item.id}`)}>Executar diagnóstico</Button>
     </li>)}</ul>
+    <PortfolioCompositionSummary scenario={selectedBase} onEdit={() => {
+      hypothesisAnchor.current?.focus();
+      hypothesisAnchor.current?.scrollIntoView?.({ block: 'start', behavior: 'smooth' });
+    }} />
     <Button variant="secondary" onClick={() => void navigateAfterFlush(`/comparar?studyId=${study.id}`)}>Comparar resultados</Button>
   </section>
-  <HypothesisBuilder key={selectedBase.id} baseScenario={selectedBase}
-    availableProfiles={availableProfiles} onCreate={createHypothesis} />
+  <div ref={hypothesisAnchor} id="composition-editor" tabIndex={-1} aria-label="Editor de hipóteses">
+    <HypothesisBuilder key={selectedBase.id} baseScenario={selectedBase}
+      availableProfiles={availableProfiles} onCreate={createHypothesis} />
+  </div>
   {displayedExecution === null ? null : <StudyResultPage study={study} execution={displayedExecution} onSelectExecution={setSelectedExecution} />}</>;
 }
