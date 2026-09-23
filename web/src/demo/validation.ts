@@ -118,8 +118,31 @@ export async function validateDemoStudyPackage(value: unknown): Promise<DemoPack
     fail(sameMoney(replay.totals.measured_gross_brl, aggregate.volume_bruto_periodo_brl)
       && sameMoney(replay.totals.measured_matched_contribution_brl,
         aggregate.volume_casado_periodo_brl)
+      && sameMoney(replay.totals.measured_autonetting_contribution_brl,
+        aggregate.volume_autonetting_periodo_brl)
+      && sameMoney(replay.totals.measured_multilateral_contribution_brl,
+        aggregate.volume_netting_multilateral_periodo_brl)
+      && sameMoney(replay.totals.measured_remitted_brl,
+        aggregate.volume_remetido_periodo_brl)
       && sameMoney(replay.totals.netability_fraction,
         aggregate.taxa_netabilidade_periodo), `REPLAY_TOTALS:${index}`);
+    const selectedSummary = envelope.repetitions.find((item) =>
+      item.repetition_id === envelope.statistics.selected_repetition_id);
+    const plannedRepetition = request.sampling.kind === 'GENERATED_INPUT'
+      ? request.sampling.repetitions.find((item) =>
+        item.repetition_id === request.selected_repetition_id)
+      : undefined;
+    fail(replay.scenario_id === scenario.id
+      && replay.scenario_id === request.scenario_id
+      && replay.scenario_id === envelope.selected_execution.scenario_id
+      && replay.scenario_revision === scenario.revision
+      && replay.scenario_revision === request.scenario_revision
+      && replay.scenario_revision === envelope.selected_execution.scenario_revision
+      && selectedSummary !== undefined && plannedRepetition !== undefined
+      && canonical(replay.participant_seeds) === canonical(selectedSummary?.participant_seeds)
+      && canonical(replay.participant_seeds) === canonical(plannedRepetition?.participant_seeds)
+      && replay.motor_version === envelope.selected_execution.result.manifesto.versao_motor,
+    `REPLAY_IDENTITY:${index}`);
     fail(replay.result_fingerprint === await digest(envelope.selected_execution.result),
       `REPLAY_RESULT_FINGERPRINT:${index}`);
     const allocations = new Map<string, Decimal>();
