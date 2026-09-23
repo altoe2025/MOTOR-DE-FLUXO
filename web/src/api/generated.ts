@@ -319,8 +319,8 @@ export interface components {
              * @constant
              */
             custos_calibrados: false;
-            custos_origem: components["schemas"]["OrigemValor"];
-            custos_padrao: components["schemas"]["CustoEntrada"];
+            custos_origem: components["schemas"]["OrigemCatalogo"];
+            custos_padrao: components["schemas"]["CustoPadraoCatalogo"];
             /** Finalidades */
             finalidades: components["schemas"]["FinalidadeCatalogo"][];
             /**
@@ -408,6 +408,25 @@ export interface components {
             iof_out: string;
             /** Iof Por Finalidade */
             iof_por_finalidade: components["schemas"]["RegraIOF"][];
+            /** Ptax */
+            ptax: string;
+            /** Spread Rail Bps */
+            spread_rail_bps: string;
+        };
+        /** CustoPadraoCatalogo */
+        CustoPadraoCatalogo: {
+            /** Carry Cnr */
+            carry_cnr: string;
+            /** Custo Fixo Remessa */
+            custo_fixo_remessa: string;
+            /** Custo Oportunidade Aa */
+            custo_oportunidade_aa: string;
+            /** Iof In */
+            iof_in: string;
+            /** Iof Out */
+            iof_out: string;
+            /** Iof Por Finalidade */
+            iof_por_finalidade: components["schemas"]["RegraIOFCatalogo"][];
             /** Ptax */
             ptax: string;
             /** Spread Rail Bps */
@@ -953,6 +972,21 @@ export interface components {
             /** Sequence */
             sequence: number;
         };
+        /** OrigemCatalogo */
+        OrigemCatalogo: {
+            /** Fonte */
+            fonte: string;
+            /**
+             * Registrado Em Utc
+             * Format: date-time
+             */
+            registrado_em_utc: string;
+            /**
+             * Tipo
+             * @enum {string}
+             */
+            tipo: "PADRAO_SINTETICO" | "ESTIMATIVA_USUARIO" | "DADO_OBSERVADO" | "NAO_COLETADO";
+        };
         /** OrigemValor */
         OrigemValor: {
             /** Fonte */
@@ -1256,6 +1290,18 @@ export interface components {
         };
         /** RegraIOF */
         RegraIOF: {
+            /** Aliquota */
+            aliquota: string;
+            /**
+             * Direcao
+             * @enum {string}
+             */
+            direcao: "OUT" | "IN";
+            /** Finalidade */
+            finalidade: string;
+        };
+        /** RegraIOFCatalogo */
+        RegraIOFCatalogo: {
             /** Aliquota */
             aliquota: string;
             /**

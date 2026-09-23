@@ -226,6 +226,15 @@ do motor; o contrato será consumido pelos lotes e pela elegibilidade da própri
 2. **Causa.** A validação por campo e a regra de IDs duplicados estavam acopladas ao `ImportBatchDraft` da origem antiga, que não pode atravessar a fronteira de Caso Observado atual.
 3. **O que foi feito.** `web/src/importer/validation.ts` valida cada célula sem descartar as demais, preserva erros estruturados por linha, mantém `PURPOSE_MISSING` como aviso e torna todas as ocorrências de um ID repetido inválidas. O relatório retornado é serializável e não cria lote, repositório, preview ou execução. Testes cobrem linha válida com aviso, acúmulo de falhas e duplicidade. Por instrução autorizada do Gabriel, esta tarefa foi executada por gpt-5.6-terra/high em substituição ao roteamento Luna/high; a revisão independente prevista continua em gpt-6-sol/medium.
 4. **O que isso invalida.** Invalida somente a lacuna de validação local por linha. Não altera contrato HTTP, persistência, Caso/Empresa, motor, resultado financeiro, nem autoriza push, PR, merge ou deploy.
+## 2026-09-23 — Imutabilidade profunda do catálogo de importação (MOT-57)
+
+1. **Sintoma.** Embora o modelo externo do catálogo fosse congelado, uma lista ou modelo aninhado podia ser alterado depois do carregamento e antes de outra resposta reutilizar o estado da aplicação.
+2. **Causa.** `frozen=True` do Pydantic não congela recursivamente coleções e os contratos aninhados de custos/origem herdavam modelos mutáveis.
+3. **O que foi feito.** As camadas publicadas do catálogo agora usam modelos congelados e tuplas para finalidades, alíquotas e regras de IOF; o loader converte somente as coleções do JSON para a representação imutável depois de calcular seu hash canônico. O JSON HTTP permanece array e o endpoint/OpenAPI preserva o formato público. Os testes tentam alterar valores, tuplas e modelos aninhados de um catálogo configurado fictício e exigem falha.
+4. **O que isso invalida.** Invalida a suposição de que `frozen=True` no envelope bastava para proteger o grafo cacheado. Não altera finalidades de produção, valores técnicos, autenticação, revisão local, execução, `motor/`, persistência, push, PR, merge ou deploy.
+
+---
+
 ## 2026-09-23 — Cliente do catálogo técnico da importação (MOT-58)
 
 1. **Sintoma.** O front-end não conseguia consultar nem validar pelo caminho comum o estado técnico do catálogo de importação.
