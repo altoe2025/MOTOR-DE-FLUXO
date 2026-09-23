@@ -231,6 +231,8 @@ a { color: inherit; }
 .replay-legend { display: flex; flex-wrap: wrap; gap: var(--space-3); justify-content: flex-end; }
 .replay-legend span { align-items: center; color: var(--muted); display: flex; font-size: 0.75rem; gap: var(--space-2); }
 .legend-line { border-top: 3px solid var(--accent); display: inline-block; width: 28px; }
+.legend-line--intra { border-color: #267064; }
+.legend-line--inter { border-color: #365f91; }
 .legend-line--remitted { border-color: #8b403c; border-top-style: dashed; }
 .replay-stage { background: linear-gradient(90deg, #dce8df 0 42%, #efe8d9 42% 58%, #dee4eb 58% 100%); border: 1px solid #85908b; border-radius: 10px; display: grid; gap: 0; grid-template-areas: 'brasil cnr exterior' 'out frontier in'; grid-template-columns: minmax(0, 1fr) minmax(120px, 0.34fr) minmax(0, 1fr); grid-template-rows: auto minmax(350px, auto); margin-top: var(--space-4); min-width: 0; overflow: hidden; position: relative; }
 .replay-territory { align-items: center; border-bottom: 1px solid rgb(37 42 40 / 25%); display: flex; gap: var(--space-2); min-width: 0; padding: var(--space-3) var(--space-4); }
@@ -264,18 +266,29 @@ a { color: inherit; }
 .replay-stage--animating .replay-order:not(.replay-order--departing) { animation: replay-card-arrive 320ms ease both; }
 .replay-order--departing { animation: replay-card-depart 900ms ease 350ms both; border-color: #8b403c; }
 .replay-connections { height: 100%; inset: 0; overflow: visible; pointer-events: none; position: absolute; width: 100%; z-index: 4; }
+.replay-connection-labels { height: 100%; inset: 0; overflow: visible; pointer-events: none; position: absolute; width: 100%; z-index: 6; }
 .replay-connection { fill: none; stroke-linecap: round; stroke-width: 4; }
-.replay-connection--matched { animation: replay-line-draw 750ms ease 260ms both; marker-end: url(#replay-arrow-matched); stroke: #267064; stroke-dasharray: 12 7; }
+.replay-connection--matched { animation: replay-line-draw 750ms ease 260ms both; stroke-dasharray: 12 7; }
+.replay-connection--intra-client { stroke: #267064; }
+.replay-connection--inter-client { stroke: #365f91; }
 .replay-connection--remitted { animation: replay-line-draw 750ms ease 600ms both; marker-end: url(#replay-arrow-remitted); stroke: #8b403c; stroke-dasharray: 8 7; }
-.replay-connections #replay-arrow-matched path { fill: #267064; }
+.replay-connections #replay-arrow-intra path { fill: #267064; }
+.replay-connections #replay-arrow-inter path { fill: #365f91; }
 .replay-connections #replay-arrow-remitted path { fill: #8b403c; }
+.replay-connection-label rect { fill: rgb(255 255 255 / 94%); stroke-width: 1.5; }
+.replay-connection-label text { fill: #1d2927; font-size: 11px; font-weight: 750; letter-spacing: 0.01em; }
+.replay-connection-label--intra rect { stroke: #267064; }
+.replay-connection-label--inter rect { stroke: #365f91; }
 .replay-journal__heading > span { background: #364a48; border-radius: 999px; color: white; font-weight: 700; padding: var(--space-1) var(--space-3); }
 .replay-day-values { display: grid; gap: var(--space-3); grid-template-columns: repeat(4, minmax(0, 1fr)); margin: var(--space-4) 0 0; }
 .replay-day-values > div { border-left: 3px solid #97a29d; padding-left: var(--space-3); }
 .replay-day-values dt { color: var(--muted); font-size: 0.75rem; }
 .replay-day-values dd { font-variant-numeric: tabular-nums; font-weight: 750; margin: var(--space-1) 0 0; overflow-wrap: anywhere; }
 .replay-journal__definition { background: var(--canvas); border-left: 4px solid #aa7b34; color: var(--muted); line-height: 1.5; padding: var(--space-3); }
-.replay-journal ol { display: grid; gap: var(--space-2); line-height: 1.5; margin-bottom: 0; padding-left: var(--space-6); }
+.replay-journal__history { display: grid; gap: var(--space-4); }
+.replay-journal__day { border-top: 1px solid var(--border); padding-top: var(--space-3); }
+.replay-journal__day h3 { color: #364a48; font-family: var(--font-heading); font-size: 1rem; margin: 0 0 var(--space-2); }
+.replay-journal ol { display: grid; gap: var(--space-2); line-height: 1.5; margin: 0; padding-left: var(--space-6); }
 .replay-error { max-width: 760px; }
 .replay-error-actions { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-4); }
 @keyframes replay-card-arrive { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }

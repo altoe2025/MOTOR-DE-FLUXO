@@ -36,8 +36,8 @@ type ApplicationProvidersProps = Readonly<{
   channelFactory?: StudyChannelFactory;
 }>;
 
-function configuredProjectRef(): string {
-  const configuredUrl = import.meta.env.VITE_SUPABASE_URL;
+export function resolveStorageProjectRef(mode: string, configuredUrl: unknown): string {
+  if (mode === 'e2e') return 'local';
   if (typeof configuredUrl === 'string') {
     try {
       const firstHostPart = new URL(configuredUrl).hostname.split('.')[0];
@@ -47,6 +47,10 @@ function configuredProjectRef(): string {
     }
   }
   return 'local';
+}
+
+function configuredProjectRef(): string {
+  return resolveStorageProjectRef(import.meta.env.MODE, import.meta.env.VITE_SUPABASE_URL);
 }
 
 export function ApplicationProviders({

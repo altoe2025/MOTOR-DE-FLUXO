@@ -17,6 +17,11 @@ export type ReplayDayPresentation = Readonly<{
   journal: readonly string[];
 }>;
 
+export type ReplayJournalDay = Readonly<{
+  day: number;
+  entries: readonly string[];
+}>;
+
 const triggerLabels = { WINDOW: 'janela', DEADLINE: 'prazo', HORIZON_END: 'fim do horizonte' } as const;
 
 function amount(value: Decimal): string {
@@ -34,7 +39,7 @@ export function presentReplayDay(document: ReplayDocument, day: number): ReplayD
   const openBrl = amount(new Decimal(replayDay.end_state.open_out_brl).plus(replayDay.end_state.open_in_brl));
   const journal: string[] = [];
   const arrivals = replayDay.events.filter((event) => event.kind === 'ORDER_ARRIVED');
-  if (arrivals.length > 0) journal.push(`${arrivals.length} ${arrivals.length === 1 ? 'ordem chegou e entrou' : 'ordens chegaram e entraram'} na fila aberta.`);
+  for (const arrival of arrivals) journal.push(`Ordem ${arrival.order_id} chegou e entrou na fila aberta.`);
   if (closing !== null) {
     journal.push(`Fechamento acionado por ${closing.triggers.map((trigger) => triggerLabels[trigger]).join(' + ')}.`);
     if (!new Decimal(matchedContributionBrl).isZero()) {
@@ -44,8 +49,11 @@ export function presentReplayDay(document: ReplayDocument, day: number): ReplayD
         journal.push(`Decomposição ilustrativa agregada (${phase}): ${segment.out_order_id} ↔ ${segment.in_order_id}, ${formatMoney(segment.value_brl)} de posição.`);
       }
     }
-    if (!new Decimal(remittedOutBrl).isZero()) journal.push(`Remessa OUT no dia: ${formatMoney(remittedOutBrl)} atravessou a fronteira para o Exterior.`);
-    if (!new Decimal(remittedInBrl).isZero()) journal.push(`Remessa IN no dia: ${formatMoney(remittedInBrl)} atravessou a fronteira para o Brasil.`);
+    for (const event of replayDay.events) {
+      if (event.kind !== 'ALLOCATION' || event.allocation_type !== 'REMETIDO') continue;
+      const destination = event.direction === 'OUT' ? 'Exterior' : 'Brasil';
+      journal.push(`Ordem ${event.order_id} remetida ${event.direction} — remessa ${event.direction} de ${formatMoney(event.value_brl)} atravessou a fronteira para o ${destination}.`);
+    }
   }
   if (journal.length === 0) journal.push('Dia sem chegada, fechamento, casamento ou remessa. Saldos permanecem inalterados.');
   return Object.freeze({
@@ -61,4 +69,17 @@ export function presentReplayDay(document: ReplayDocument, day: number): ReplayD
     explanation: 'Casado é a contribuição medida das duas pontas (OUT + IN); a posição de tesouraria é metade desse volume.',
     journal: Object.freeze(journal),
   });
+}
+
+export function presentReplayHistory(document: ReplayDocument, selectedDay: number): readonly ReplayJournalDay[] {
+  if (selectedDay < 0 || selectedDay > document.period.settlement_end_day) {
+    throw new RangeError(`Dia ${selectedDay} fora do Replay.`);
+  }
+  const history: ReplayJournalDay[] = [];
+  for (let day = 0; day <= selectedDay; day += 1) {
+    const view = presentReplayDay(document, day);
+    if (!view.hasOperationalEvent) continue;
+    history.push(Object.freeze({ day, entries: view.journal }));
+  }
+  return Object.freeze(history);
 }

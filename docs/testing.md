@@ -340,3 +340,13 @@ Os 35 testes Python diretamente ligados à preparação passaram, e o cenário A
 permaneceu em aproximadamente US$439k de baseline, US$249k netado, US$190k de
 economia e 58,82% de netabilidade. A matriz completa está em
 [`docs/frontend/etapa-4-evolucao-b-aceitacao.md`](frontend/etapa-4-evolucao-b-aceitacao.md).
+
+## Refinamento de leitura do Replay — MOT-89
+
+O feedback de teste interno ganhou regressões para diário acumulado limitado ao dia
+selecionado, intervalo padrão de 3,2 s, persistência visual do evento por 2,6 s e
+identificação explícita de autonetting intracliente versus netting multilateral. O
+E2E `stage5-replay.spec.ts` também prova que um dia vazio preserva somente o histórico
+anterior e que o namespace controlado funciona mesmo na presença de `.env.local`
+real. As evidências atualizadas estão na matriz da Etapa 5; nenhuma regra do Motor
+foi modificada e a grade de 27.000 simulações não foi repetida.

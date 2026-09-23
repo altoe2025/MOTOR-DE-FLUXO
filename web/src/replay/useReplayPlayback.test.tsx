@@ -10,6 +10,16 @@ describe('useReplayPlayback', () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
+  it('mantém o dia por 3,2 segundos na velocidade padrão', () => {
+    const { result } = renderHook(() => useReplayPlayback(replayDocumentFixture()));
+
+    act(() => result.current.togglePlaying());
+    act(() => vi.advanceTimersByTime(3_199));
+    expect(result.current.day).toBe(0);
+    act(() => vi.advanceTimersByTime(1));
+    expect(result.current.day).toBe(1);
+  });
+
   it('toca, pausa e respeita velocidades 1×/2×/4×', () => {
     const replay = replayDocumentFixture();
     const { result } = renderHook(() => useReplayPlayback(replay, { intervalMs: 1_000 }));

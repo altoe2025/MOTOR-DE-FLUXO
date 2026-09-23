@@ -85,6 +85,9 @@ test('Replay observado reconstrói controles, parcial, gatilhos, vazio, OUT e re
   await expect(dayValue(page, 'Ainda aberto')).not.toContainText('R$ 0,00');
   await page.getByRole('button', { name: 'Repetir evento' }).click();
   await expect.poll(() => page.locator('.replay-connection').count()).toBeGreaterThan(0);
+  await expect(page.locator('.replay-connection-label')).toContainText(['Netting multilateral']);
+  await expect(page.getByLabel('Legenda')).toContainText('Autonetting intracliente');
+  await expect(page.getByLabel('Legenda')).toContainText('Netting multilateral');
   expect(await page.locator('.replay-connection').evaluateAll((paths) => paths.every((path) => {
     const value = path.getAttribute('d') ?? '';
     return value.startsWith('M ') && !value.includes('NaN');
@@ -105,7 +108,9 @@ test('Replay observado reconstrói controles, parcial, gatilhos, vazio, OUT e re
   await page.screenshot({ path: evidencePath('mot89-observado-remessa-out.png'), fullPage: true });
 
   await selectDay(page, emptyDay);
-  await expect(page.getByText(/Dia sem chegada, fechamento, casamento ou remessa/)).toBeVisible();
+  await expect(page.getByRole('heading', { name: `Dia ${arrivalDay}` })).toBeVisible();
+  await expect(page.getByRole('heading', { name: `Dia ${emptyDay}` })).toHaveCount(0);
+  await expect(page.getByText(new RegExp(`Ordem .* chegou e entrou na fila aberta`)).first()).toBeVisible();
   await expect(page.locator('.replay-stage--animating')).toHaveCount(0);
   await page.getByRole('button', { name: 'Próximo fechamento' }).click();
   await expect(page.locator('.replay-frontier__status')).not.toContainText('Sem fechamento');

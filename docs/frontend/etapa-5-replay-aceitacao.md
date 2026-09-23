@@ -30,6 +30,9 @@ front reconstrói e confere o documento publicado sem recalcular netting ou cust
 | Play/pause, velocidades, anterior/seguinte, salto, fechamento, repetição e recomeço | testes de estado, componentes e Chromium | PASS |
 | Voltar, saltar e recarregar reconstruindo o mesmo estado | redutor puro, rota persistida e reload E2E | PASS |
 | Movimento somente em eventos | testes de transição, dia vazio e inspeção visual | PASS |
+| Diário acumulado apenas até o dia selecionado | testes de apresentação/componentes e E2E em dia vazio | PASS |
+| Ritmo legível e setas persistentes | 3,2 s/dia em 1× e evento visível por 2,6 s | PASS |
+| Autonetting distinto do multilateral | cor, rótulo na seta, legenda, unitário e Chromium | PASS |
 | Zoom 200%, viewport estreito e resize | Chromium real, sem overflow global, curvas reancoradas | PASS |
 | Resultado após expiração do job | rota lê `DiagnosticEnvelope` do IndexedDB | PASS |
 
@@ -39,18 +42,18 @@ Arquivos em `docs/frontend/evidencias/`:
 
 | Arquivo | SHA-256 |
 |---|---|
-| `mot89-observado-inicial-1280x800.png` | `3f3e5878b92b6846c87b05bd7efc36ed9d76d58c7f0124644a4f440ea9907388` |
-| `mot89-observado-chegada.png` | `5cbaf0115d829036818ca679d946682a25589c703554b1402a1fd2a105365eb5` |
-| `mot89-observado-fechamento-parcial.png` | `f5059f8bc04c72e9858db2e18d5e10ab9bf4f44a598e1d6a209fe1e23910f55b` |
-| `mot89-observado-remessa-out.png` | `d76613673cbdd547f3a247a250cb7be7c1be00fe601bb1d6a5d00d94bbfda1dd` |
-| `mot89-observado-zoom-200.png` | `5f3531a593a1df0763a21e510f4ddb4508d4d2e45fb071975c199e0fee3395be` |
-| `mot89-sintetico-remessa-in.png` | `329b7420f35e0595fc836f40f5596b5e7fadcd4306fd6f012c1c393d19883b44` |
-| `mot89-sintetico-final.png` | `4a602014cf6860ff30b4fffb62b62c92d7b4b5eb2695abcdc793d7ece484a152` |
-| `mot89-orcamento-1000x365.json` | `aed96d8b0aa643943f375cc8218f3e0e194b192cab13c2cf48071ee27db7c67c` |
+| `mot89-observado-inicial-1280x800.png` | `395704c1c39d1984c1af3bd76b5d9d5694920dd74ff2200e5fa3e20544ecbba7` |
+| `mot89-observado-chegada.png` | `f5879d80ffe8b738bc7db05e392f0aa1099247eeffe2ccf50070ac106a7c8f6e` |
+| `mot89-observado-fechamento-parcial.png` | `b1980a6e000fb3dbfa41b885824186b78265b9b471ccaf4084e1872d56b72b25` |
+| `mot89-observado-remessa-out.png` | `88beee40cf81c2dfa7576e6b9d2b5be3c1916f83800d33cead2a5689060f134e` |
+| `mot89-observado-zoom-200.png` | `672776718762fc997b20d5fa7cd3082d3569a79d1333f61f42ab8c9cd80f21f6` |
+| `mot89-sintetico-remessa-in.png` | `de5af8f98ce5db89780ae43463c6fbb16acd4e441b97c610bcdb411112e8d060` |
+| `mot89-sintetico-final.png` | `c6ec62d54b07f4bc5d58635bfa189fab926f2ae58ebe796460c2c06f0c630c0b` |
+| `mot89-orcamento-1000x365.json` | `b59de5f51dee0b1a35b51b615b923ffc2d6fa3d13eaebed0199e3ddfb862bbeb` |
 
 A inspeção confirmou cartões legíveis, saldo parcial preservado, saída sincronizada,
-curvas ancoradas antes e depois de resize, remessas nas duas direções, diário e
-métricas coerentes. A primeira versão comprimiu cartões letra a letra em 200%; o
+curvas ancoradas antes e depois de resize, rótulo de netting sem colisão com a CNR,
+remessas nas duas direções, diário cumulativo e métricas coerentes. A primeira versão comprimiu cartões letra a letra em 200%; o
 layout empilhado e a geometria vertical foram corrigidos antes deste aceite e ganharam
 regressão automatizada.
 
@@ -68,9 +71,9 @@ Medição E2E registrada em `mot89-orcamento-1000x365.json`:
 | ordens | 98 |
 | eventos / segmentos | 210 / 97 |
 | request / response | 200.513 / 156.112 bytes |
-| input + Motor | 123,513 ms |
-| builder p50 / máximo | 19,153 / 53,291 ms |
-| reconstrução browser p50 / máximo | 9,6 / 11,1 ms |
+| input + Motor | 57,145 ms |
+| builder p50 / máximo | 12,262 / 39,019 ms |
+| reconstrução browser p50 / máximo | 9,9 / 11,7 ms |
 
 Request e response ficaram abaixo do teto de 8 MiB e o estado direto ficou abaixo do
 orçamento interno de 250 ms. Esses tempos caracterizam a máquina local e não são SLA.
@@ -93,8 +96,8 @@ npm --prefix web run test:e2e
 ```
 
 O resultado foi 794 testes Python aprovados e 2 ignorados, tanto normal quanto sob
-`-O`; 477 unitários web aprovados em 67 arquivos com um worker; lint, typecheck e
-build aprovados; E2E específico 3/3 duas vezes consecutivas; e Playwright integral
+`-O`; 481 unitários web aprovados em 67 arquivos com um worker; lint, typecheck e
+build aprovados; E2E específico 3/3 após o refinamento visual; e Playwright integral
 22/22. A execução Vitest padrão reproduziu uma contenção antiga no timeout de um
 teste de roteamento; o arquivo isolado passou 25/25 antes do gate integral verde.
 Detalhes estão em `docs/testing.md` e na entrada MOT-89 do Diário. Não foi rodada uma

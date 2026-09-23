@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { presentReplayDay } from './presentation';
+import { presentReplayDay, presentReplayHistory } from './presentation';
 import { replayDocumentFixture, replayDocumentWithBothRemittancesFixture } from './testFixtures';
 
 describe('apresentação factual do Replay', () => {
@@ -29,5 +29,16 @@ describe('apresentação factual do Replay', () => {
     expect(view.openBrl).toBe('0');
     expect(view.journal.join(' ')).toMatch(/remessa OUT.*60/i);
     expect(view.journal.join(' ')).toMatch(/remessa IN.*20/i);
+  });
+
+  it('constrói diário cumulativo somente até o dia selecionado e identifica cada operação', () => {
+    const history = presentReplayHistory(replayDocumentWithBothRemittancesFixture(), 2);
+
+    expect(history.map((entry) => entry.day)).toEqual([0, 2]);
+    expect(history[0]?.entries).toContain('Ordem out-1 chegou e entrou na fila aberta.');
+    expect(history[0]?.entries.join(' ')).toMatch(/netting multilateral.*out-1.*in-1/i);
+    expect(history[1]?.entries.join(' ')).toMatch(/ordem out-1.*remetida OUT.*R\$\s*60,00/i);
+    expect(history[1]?.entries.join(' ')).toMatch(/ordem in-2.*remetida IN.*R\$\s*20,00/i);
+    expect(history.some((entry) => entry.day > 2)).toBe(false);
   });
 });

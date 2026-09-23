@@ -33,7 +33,7 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-09-22, durante o aceite local do Replay da Etapa 5.
+Atualizada em 2026-09-23, durante o refinamento do Replay da Etapa 5.
 
 | Branch | Situação | Dono |
 |---|---|---|
@@ -71,6 +71,28 @@ Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. 
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+---
+
+## 2026-09-23 — Ritmo, diário acumulado e linguagem visual do Replay (MOT-89)
+
+1. **Sintoma.** O diário mostrava somente o dia selecionado, a reprodução padrão e
+   as setas desapareciam rápido demais, e a cena não distinguia visualmente
+   autonetting intracliente de netting multilateral. Com um `.env.local` real, o E2E
+   também semeava e lia namespaces IndexedDB diferentes.
+2. **Causa.** A apresentação consumia apenas `presentReplayDay`; os temporizadores
+   eram 1,6 s por dia e 1,3 s por evento; as duas origens usavam a mesma linguagem
+   gráfica. O modo E2E derivava `projectRef` da URL Supabase local enquanto sua ponte
+   semeava explicitamente `local`.
+3. **O que foi feito.** Na branch `codex/frontend-etapa-5`, o diário passou a agrupar
+   todas as operações até o dia selecionado, omitindo dias vazios e futuro; 1× passou
+   a 3,2 s por dia e as conexões permanecem 2,6 s. Autonetting e multilateral ganharam
+   cores, legenda e rótulos distintos ligados às setas. O namespace E2E ficou
+   hermético, e as capturas/hashes, runbook, matriz e regressões foram atualizados.
+4. **O que isso invalida.** Invalida as capturas e hashes anteriores da MOT-89 e os
+   tempos visuais de 1,6 s/1,3 s. Não altera `motor/`, alocações, prioridade EDF,
+   autonetting preferencial, números financeiros, capacidade medida ou evoluções
+   5A/5B/5C.
 
 ---
 

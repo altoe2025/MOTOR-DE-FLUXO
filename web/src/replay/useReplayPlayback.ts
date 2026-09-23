@@ -26,7 +26,7 @@ export type ReplayPlayback = Readonly<{
 
 export function useReplayPlayback(
   document: ReplayDocument,
-  { intervalMs = 1_600 }: Readonly<{ intervalMs?: number }> = {},
+  { intervalMs = 3_200 }: Readonly<{ intervalMs?: number }> = {},
 ): ReplayPlayback {
   const lastDay = document.period.settlement_end_day;
   const identity = `${document.diagnostic_execution_id}:${document.result_fingerprint}`;

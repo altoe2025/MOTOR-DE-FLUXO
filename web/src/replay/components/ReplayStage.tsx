@@ -63,7 +63,7 @@ export function ReplayStage({ document, state, sort, transitionMode, transitionK
     const timeout = globalThis.setTimeout(() => {
       setDeparting([]);
       setEventActive(false);
-    }, 1_300);
+    }, 2_600);
     return () => globalThis.clearTimeout(timeout);
   }, [animate, document, state.day, transitionKey]);
 
@@ -79,7 +79,8 @@ export function ReplayStage({ document, state, sort, transitionMode, transitionK
     <div className="replay-stage-heading">
       <div><p className="eyebrow">Fluxo agregado</p><h2 id="replay-stage-heading">Cena Fronteira Viva</h2></div>
       <div className="replay-legend" aria-label="Legenda">
-        <span><i className="legend-line legend-line--matched" />Casado — decomposição ilustrativa</span>
+        <span><i className="legend-line legend-line--intra" />Autonetting intracliente</span>
+        <span><i className="legend-line legend-line--inter" />Netting multilateral</span>
         <span><i className="legend-line legend-line--remitted" />Remetido — atravessa a fronteira</span>
       </div>
     </div>

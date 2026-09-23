@@ -49,6 +49,12 @@ consulta o IndexedDB.
   publicados pela projeção Python e reconciliados com as alocações do Motor.
 - As curvas de casamento são uma decomposição determinística para explicação visual.
   Elas não afirmam contraparte, lote físico ou pareamento persistido entre ordens.
+- A seta verde e o rótulo **Autonetting intracliente** identificam a fase
+  preferencial dentro do mesmo cliente. A seta azul e **Netting multilateral**
+  identificam a fase seguinte entre clientes. As duas continuam sendo decomposição
+  ilustrativa das alocações canônicas, não pareamento financeiro persistido.
+- O **Diário do Replay** acumula todas as operações desde o dia zero até o dia
+  selecionado. Dias vazios não criam ruído e operações futuras nunca aparecem.
 
 Só há movimento em chegada, fechamento, casamento ilustrativo, atualização de saldo
 e remessa. Seleção direta, voltar, recarregar e dias vazios aplicam o estado final sem
@@ -57,7 +63,8 @@ movimento decorativo.
 ## Controles
 
 - **Tocar/Pausar** percorre todos os dias, inclusive os vazios.
-- **1×/2×/4×** altera apenas o intervalo de reprodução.
+- **1×/2×/4×** altera apenas o intervalo de reprodução: 3,2 s, 1,6 s e 0,8 s por
+  dia, respectivamente.
 - **Anterior/Seguinte** e o seletor numérico saltam diretamente para um dia.
 - **Próximo fechamento** avança até o próximo fechamento real.
 - **Repetir evento** reencena somente o dia atual, sem alterar seus números.
@@ -82,7 +89,9 @@ Para repetir somente a medição do limite efetivo:
 O E2E cobre origem observada e hipótese sintética por Perfil, ambas passando pelo
 diagnóstico real controlado e pela rota pública do Replay. Ele também confere reload,
 controles, dia vazio, gatilhos simultâneos, saldo parcial, remessas OUT/IN, resize,
-zoom de 200%, viewport estreito e ausência de erros no console.
+zoom de 200%, viewport estreito, diário cumulativo, identificação do tipo de netting
+e ausência de erros no console. O modo E2E força seu namespace IndexedDB local mesmo
+quando `web/.env.local` contém uma configuração Supabase real.
 
 ## Limite efetivo observado
 

@@ -9,7 +9,7 @@ import { AuthProvider } from '../auth/AuthProvider';
 import type { AuthClient, AuthSession } from '../auth/types';
 import type { ApplicationRepository } from '../storage/applicationRepository';
 import type { StudyChannel } from '../study/studyController';
-import { ApplicationProviders, useStudyController } from './providers';
+import { ApplicationProviders, resolveStorageProjectRef, useStudyController } from './providers';
 
 const USER_A = '00000000-0000-4000-8000-000000000001';
 const USER_B = '00000000-0000-4000-8000-000000000002';
@@ -65,6 +65,10 @@ function Probe() {
 }
 
 describe('ApplicationProviders', () => {
+  it('mantém o namespace local no modo E2E mesmo com Supabase real configurado', () => {
+    expect(resolveStorageProjectRef('e2e', 'https://projeto-real.supabase.co')).toBe('local');
+  });
+
   it('mantém um controlador e troca seus recursos na sequência A → B → A', async () => {
     const auth = authClient();
     const repositories: Array<{ ownerSub: string; close: ReturnType<typeof vi.fn> }> = [];
