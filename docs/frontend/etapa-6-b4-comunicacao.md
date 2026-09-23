@@ -56,12 +56,28 @@ contexto. Referências diagnósticas com wildcard de repetições e caminhos de
 proveniência têm resolução explícita conforme os contratos existentes.
 
 O fingerprint é SHA-256 do JSON canônico, excluindo `generatedAt` e o próprio
-`contextFingerprint`. Ele detecta mudança de conteúdo/contexto; **não autentica
+`contextFingerprint`. As chaves são ordenadas por ponto de código Unicode em ambas
+as linguagens, inclusive fora do plano básico; essa regra é restrita ao fingerprint
+de comunicação e não altera os fingerprints persistidos do Estudo. Ele detecta mudança de conteúdo/contexto; **não autentica
 dados enviados pelo cliente**. A comparação recebida é a publicação pré-calculada:
 a B4 confere as identidades, compatibilidade e valores base/hipótese, mas não
 recalcula seus deltas. Os futuros endpoints devem manter essa distinção.
 
+A compatibilidade reutiliza `mvpDiagnosticIncompatibility`, o mesmo gate de
+`compareMvpDiagnostics`, incluindo `preparationVersion`, `generatorVersion` e
+`motorBuildSha` das receitas sintéticas. Cada linha de comparação precisa combinar
+eixo, chave, rótulo e unidade das definições canônicas. Valores e deltas publicados
+continuam sendo copiados literalmente, sem nova aritmética financeira.
+
 ## Evidências de desenvolvimento
+
+Correção da rodada 1 da revisão: sete regressões RED observadas (três versões de
+receita, unidade, rótulo, chave inválida de distribuição indisponível e Unicode).
+Após a correção, comunicação e comparação passaram juntas em **108 testes**.
+A nova fixture `unicode.json` contém evidências/referências U+E000 e U+10000 e fixa
+o digest `59993d8923392d220837609a984909d370a49e887240a6fe4aa5bb4c188829f0`,
+validado nas duas linguagens. Um teste positivo preserva o delta
+`12345678901234567890.012345678900`, sem recalculá-lo.
 
 - Fixtures observada/sintética e 64 mutações inválidas compartilhadas entre
   Pydantic e Ajv. O teste também protege contra divergência do schema gerado.
@@ -77,19 +93,23 @@ recalcula seus deltas. Os futuros endpoints devem manter essa distinção.
   própria execução e seleção identificando outra repetição. Ambos tiveram testes
   RED, correção e re-revisão com as duas regressões verdes.
 
-Gate final: **95 testes Python passaram em cada modalidade**, **678 testes
-Vitest em 81 arquivos passaram** (93 específicos de comunicação), typecheck,
-ESLint, build, Ruff, mypy do novo contrato e scanner passaram. Scanner: 507 textos
-e 32 binários, incluindo arquivos novos ainda não commitados. A primeira execução
-web com concorrência padrão teve um timeout de 5 segundos na rota de diagnóstico;
-a suíte completa com dois workers passou sem alterar testes, produto ou timeout.
+Gate final após a rodada 1: **96 testes Python passaram em cada modalidade**,
+**686 testes Vitest em 81 arquivos passaram** (101 específicos de comunicação),
+typecheck, ESLint, build, Ruff, mypy do novo contrato e scanner passaram.
+Scanner: 508 textos e 32 binários, incluindo a nova fixture ainda não commitada.
+A suíte web com dois workers, concorrendo com outros gates, teve o timeout de
+5 segundos já registrado na rota de diagnóstico (685 passaram, 1 timeout).
+A execução completa com um worker passou em 199,16 s sem alterar testes,
+produto ou timeout. Usou-se `--configLoader runner` para evitar a escrita
+bloqueada do config temporário pelo sandbox; Python, typecheck, build e mypy
+usaram execução autorizada para acessar pastas temporárias/caches locais.
 
 Comandos de verificação:
 
 ```powershell
 .venv/Scripts/python.exe -m pytest tests/web_api/test_communication_contracts.py tests/web_api/test_openapi.py tests/web_api/test_diagnostics_contracts.py tests/web_api/test_replay_contracts.py -q -p no:cacheprovider
 .venv/Scripts/python.exe -O -m pytest tests/web_api/test_communication_contracts.py tests/web_api/test_openapi.py tests/web_api/test_diagnostics_contracts.py tests/web_api/test_replay_contracts.py -q -p no:cacheprovider
-npm --prefix web run test:unit -- --maxWorkers=2
+npm --prefix web run test:unit -- --maxWorkers=1 --configLoader runner
 npm --prefix web run typecheck
 npm --prefix web run lint
 npm --prefix web run build

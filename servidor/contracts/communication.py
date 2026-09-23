@@ -200,6 +200,7 @@ class CommunicationDocumentV1(StrictModel):
                     raise ValueError("valor publicado não corresponde à evidência")
 
         payload = self.model_dump(mode="json", exclude={"generatedAt", "contextFingerprint"})
+        # Unicode code-point key order, mirrored by canonicalCommunication in TS.
         encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
         fingerprint = hashlib.sha256(encoded.encode("utf-8")).hexdigest()
         if fingerprint != self.contextFingerprint:

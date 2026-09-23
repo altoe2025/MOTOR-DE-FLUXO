@@ -73,6 +73,29 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-23 — Compatibilidade e semântica da projeção de comunicação (MOT-92)
+
+**Sintoma.** A revisão da B4 encontrou três lacunas: comparação pré-calculada
+aceita após mudança de versão da receita; unidade/rótulo de métrica incompatível
+com seu eixo; fingerprint diferente em Python e TypeScript para chaves U+E000 e
+U+10000.
+
+**Causa.** O construtor duplicava parcialmente a compatibilidade da comparação,
+conferia valores sem consultar suas definições e reutilizava a ordenação UTF-16
+do Estudo no contrato espelhado de comunicação.
+
+**O que foi feito.** Extraído gate de compatibilidade sem cálculo de deltas,
+compartilhado com `compareMvpDiagnostics`; identidade, rótulo e unidade são
+conferidos nas definições canônicas dos eixos. O fingerprint de comunicação usa
+ordem por ponto de código Unicode, igual ao Python, com fixture compartilhada.
+As sete regressões tiveram RED observado antes da correção; há prova positiva da
+preservação literal de delta decimal publicado.
+
+**O que isso invalida.** A aceitação de comparações com receitas incompatíveis ou
+semântica adulterada e fingerprints de comunicação com chaves Unicode cuja ordem
+UTF-16 difere da ordem por ponto de código. Fingerprints persistidos de Estudo,
+fontes, cálculos financeiros e o motor não mudaram.
+
 ## 2026-09-23 — Projeção pura de comunicação com identidade das fontes (MOT-92)
 
 **Sintoma.** Os consumidores futuros precisavam obter uma única projeção dos

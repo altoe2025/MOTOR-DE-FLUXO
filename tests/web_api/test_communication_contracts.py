@@ -25,13 +25,16 @@ def sign(document):
     ).hexdigest()
 
 
-@pytest.mark.parametrize("name", ["observed", "synthetic"])
+@pytest.mark.parametrize("name", ["observed", "synthetic", "unicode"])
 def test_preserves_shared_document_decimals_availability_and_fingerprint(name):
     document = load(name)
     parsed = CommunicationDocumentV1.model_validate(document)
     assert parsed.model_dump(mode="json") == document
     assert parsed.executiveMetrics[0].value == "12345678901234567890.0123456789"
     assert parsed.executiveMetrics[1].value is None
+    signed = deepcopy(document)
+    sign(signed)
+    assert signed["contextFingerprint"] == document["contextFingerprint"]
 
 
 @pytest.mark.parametrize("case", load("invalid-cases"), ids=lambda case: case["name"])

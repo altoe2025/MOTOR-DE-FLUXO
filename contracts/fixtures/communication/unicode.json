@@ -1,0 +1,45 @@
+{
+  "apiVersion": "1.0.0",
+  "presentationVersion": "1.0.0",
+  "generatedAt": "2026-09-23T12:00:00Z",
+  "study": { "id": "study-1", "name": "Unicode", "revision": 1 },
+  "selection": {
+    "scenarioId": "scenario-1", "scenarioRevision": 1,
+    "diagnosticExecutionId": "diagnostic-1", "repetitionId": "repetition-1",
+    "comparisonExecutionId": null, "replayDay": null
+  },
+  "source": { "family": "OBSERVED", "label": "Caso observado", "synthetic": false },
+  "executiveMetrics": [
+    {
+      "code": "gross", "label": "Volume", "availability": "AVAILABLE",
+      "value": "12345678901234567890.0123456789", "unit": "BRL",
+      "meaning": "Volume publicado", "evidenceRefs": ["\ue000"]
+    },
+    {
+      "code": "missing", "label": "Ausente", "availability": "UNAVAILABLE",
+      "value": null, "unit": "BRL", "meaning": "Ausência de dado",
+      "evidenceRefs": ["\ud800\udc00"]
+    }
+  ],
+  "composition": { "title": "Composição", "metrics": [], "facts": [] },
+  "mechanism": { "title": "Mecanismo", "metrics": [], "facts": [] },
+  "economics": { "title": "Economia", "metrics": [], "facts": [] },
+  "robustness": { "title": "Robustez", "metrics": [], "facts": [] },
+  "comparison": null, "replaySnapshot": null,
+  "assumptions": [], "provenance": [], "limitations": [], "versions": [],
+  "evidenceIndex": {
+    "\ud800\udc00": {
+      "source": "DIAGNOSTIC", "sourceId": "diagnostic-1", "studyId": "study-1",
+      "scenarioId": "scenario-1", "scenarioRevision": 1,
+      "diagnosticExecutionId": "diagnostic-1", "repetitionId": "repetition-1",
+      "path": "/metrics/missing", "value": null
+    },
+    "\ue000": {
+      "source": "DIAGNOSTIC", "sourceId": "diagnostic-1", "studyId": "study-1",
+      "scenarioId": "scenario-1", "scenarioRevision": 1,
+      "diagnosticExecutionId": "diagnostic-1", "repetitionId": "repetition-1",
+      "path": "/metrics/gross", "value": "12345678901234567890.0123456789"
+    }
+  },
+  "contextFingerprint": "59993d8923392d220837609a984909d370a49e887240a6fe4aa5bb4c188829f0"
+}
