@@ -61,3 +61,33 @@ export type ImportValidationReport = Readonly<{
   rows: readonly ImportedRow[];
   summary: Readonly<{ total: number; valid: number; invalid: number }>;
 }>;
+
+export type CanonicalClient = Readonly<{
+  id: string;
+  displayName: string;
+  createdAt: string;
+}>;
+
+export type ClientAlias = Readonly<{
+  normalizedName: string;
+  canonicalClientId: string;
+  displayVariant: string;
+  confirmedByUser: boolean;
+  createdAt: string;
+  revokedAt: string | null;
+}>;
+
+export type ClientAliasEvent = Readonly<{
+  kind: 'CLIENT_ALIAS_ASSOCIATED';
+  id: string;
+  occurredAt: string;
+  normalizedName: string;
+  canonicalClientId: string;
+}>;
+
+export type ClientIdentityState = Readonly<{
+  revision: number;
+  clients: readonly CanonicalClient[];
+  aliases: readonly ClientAlias[];
+  events: readonly ClientAliasEvent[];
+}>;

@@ -73,6 +73,26 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-23 — Identidade mecânica de clientes para revisão de importação (MOT-53)
+
+**Sintoma.** A revisão de um XLSX canônico ainda não tinha uma identidade local
+determinística para os participantes das ordens, nem caminho auditável para unir
+variantes de nome confirmadas pelo usuário.
+
+**Causa.** A portabilidade A1 termina nas linhas normalizadas; aliases e identidade
+eram contratos da pilha auditada, não tipos ou funções do domínio atual de Caso
+Observado.
+
+**O que foi feito.** Criados `web/src/importer/clients.ts` e seus contratos em
+`web/src/importer/domain.ts`, com NFKC, diacríticos, espaços e caixa mecânicos,
+sem fuzzy merge; aliases exigem associação explícita e a identidade já confirmada
+reutiliza o UUID. Testes em `clients.test.ts` cobrem as variantes e a associação.
+Desvio autorizado de roteamento: esta tarefa foi executada por
+`gpt-5.6-terra`/high em substituição ao `gpt-6-luna`/high indicado originalmente.
+
+**O que isso invalida.** Nada: ainda não há persistência, UI, execução ou mudança
+do motor; o contrato será consumido pelos lotes e pela elegibilidade da própria A2.
+
 ## 2026-09-23 — Referências esparsas e perfil inválido fechados após revisão (MOT-51/MOT-52)
 
 1. **Sintoma.** Uma célula com referência de linha extrema sem atributo `row r` não era barrada pelo SAX; e um perfil acima de 120 caracteres podia interromper a validação inteira em vez de produzir erro de linha.
