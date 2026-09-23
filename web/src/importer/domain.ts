@@ -91,3 +91,66 @@ export type ClientIdentityState = Readonly<{
   aliases: readonly ClientAlias[];
   events: readonly ClientAliasEvent[];
 }>;
+
+export type ImportedVersionRow = Readonly<{
+  versionId: string;
+  canonicalClientId: string;
+  rowNumber: number;
+  normalized: NormalizedOperation | null;
+  errors: readonly ImportRowError[];
+}>;
+
+export type ImportBatch = Readonly<{
+  id: string;
+  batchSequence: number;
+  importedAt: string;
+  rows: readonly ImportedVersionRow[];
+}>;
+
+export type ImportEvent =
+  | Readonly<{
+    kind: 'BATCH_IMPORTED' | 'BATCH_REVERTED';
+    id: string;
+    eventSequence: number;
+    occurredAt: string;
+    batchId: string;
+  }>
+  | Readonly<{
+    kind: 'CONFLICT_RESOLVED';
+    id: string;
+    eventSequence: number;
+    occurredAt: string;
+    operationId: string;
+    selectedVersionId: string;
+  }>;
+
+export type ImportPortfolio = Readonly<{
+  revision: number;
+  batches: readonly ImportBatch[];
+  events: readonly ImportEvent[];
+}>;
+
+export type PortfolioVersion = Readonly<{
+  versionId: string;
+  batchId: string;
+  batchSequence: number;
+  rowNumber: number;
+  canonicalClientId: string;
+  operation: NormalizedOperation;
+}>;
+
+export type PortfolioOperation = PortfolioVersion & Readonly<{
+  operationId: string;
+  originVersionIds: readonly string[];
+}>;
+
+export type PortfolioConflict = Readonly<{
+  operationId: string;
+  versionIds: readonly string[];
+}>;
+
+export type PortfolioProjection = Readonly<{
+  versions: readonly PortfolioVersion[];
+  currentOperations: readonly PortfolioOperation[];
+  conflicts: readonly PortfolioConflict[];
+}>;

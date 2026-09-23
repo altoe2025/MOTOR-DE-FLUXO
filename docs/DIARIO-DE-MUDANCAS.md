@@ -73,6 +73,27 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-23 — Lotes e conflitos puros na revisão de importação (MOT-54)
+
+**Sintoma.** A importação já validava cada linha, mas ainda não tinha uma projeção
+canônica para distinguir uma operação nova de reenvio idêntico ou conflito entre
+versões.
+
+**Causa.** Lotes, eventos e suas sequências existiam apenas na pilha XLSX auditada,
+que não pode ser incorporada diretamente à arquitetura atual de Caso Observado.
+
+**O que foi feito.** Criados os contratos portáveis de lote, versão, evento e
+projeção em `web/src/importer/domain.ts` e o replay puro em
+`web/src/importer/portfolio.ts`. Lotes e eventos usam sequências, nunca timestamps,
+e um conflito divergente permanece sem vencedor até comando explícito. A reversão
+remove deterministicamente o lote da projeção sem apagar sua auditoria. Os quatro
+testes de `portfolio.test.ts` cobrem novo, idêntico, divergente/resolvido e reversão.
+Desvio autorizado de roteamento: `gpt-5.6-terra`/high substitui
+`gpt-6-luna`/high quando esse papel apareceria na matriz.
+
+**O que isso invalida.** Nada: nenhuma persistência, UI, execução ou regra do motor
+foi alterada; a projeção continua local e será entregue ao publisher somente em A3.
+
 ## 2026-09-23 — Identidade mecânica de clientes para revisão de importação (MOT-53)
 
 **Sintoma.** A revisão de um XLSX canônico ainda não tinha uma identidade local
