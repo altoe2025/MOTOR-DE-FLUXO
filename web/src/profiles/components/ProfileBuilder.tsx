@@ -13,6 +13,7 @@ type Props = Readonly<{
   onConfirm(profile: OperationalProfileVersion): Promise<unknown>;
   idFactory?: () => string;
   now?: () => string;
+  preselectedCase?: Readonly<{ id: string; revision: number }> | null;
 }>;
 
 function duplicateSourceShas(cases: readonly ObservedCase[]): string[] {
@@ -32,6 +33,7 @@ export function ProfileBuilder({
   onConfirm,
   idFactory = () => crypto.randomUUID(),
   now = () => new Date().toISOString(),
+  preselectedCase = null,
 }: Props) {
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
   const [confirmedShas, setConfirmedShas] = useState<Set<string>>(new Set());
@@ -41,6 +43,11 @@ export function ProfileBuilder({
   const [draftIdentity] = useState(() => ({ id: idFactory(), createdAt: now() }));
   const nextVersion = Math.max(0, ...versions.map((item) => item.version)) + 1;
   const candidates = useMemo(() => cases.map((item, index) => ({ item, key: `${item.id}@${item.revision}#${index}` })), [cases]);
+  useEffect(() => {
+    if (preselectedCase === null) return;
+    const match = candidates.find(({ item }) => item.id === preselectedCase.id && item.revision === preselectedCase.revision);
+    if (match !== undefined) setSelectedKeys(new Set([match.key]));
+  }, [candidates, preselectedCase?.id, preselectedCase?.revision]);
   const selected = useMemo(
     () => candidates.filter(({ key }) => selectedKeys.has(key)).map(({ item }) => item),
     [candidates, selectedKeys],

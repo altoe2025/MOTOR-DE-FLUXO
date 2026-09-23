@@ -309,3 +309,13 @@ a { color: inherit; }
 @media (max-width: 760px) { .replay-frontier { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 480px) { .destination-list { grid-template-columns: 1fr; } .source-selector { padding: var(--space-3); } .source-actions > .button, .study-list__actions > .button { flex: 1 1 100%; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; } .replay-order, .replay-connection { animation: none !important; transition: none !important; } }
+.import-flow > section { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; margin-block: var(--space-4); padding: var(--space-4); }
+.import-flow label { display: block; font-weight: 600; margin-top: var(--space-3); }
+.import-flow label > input[type='checkbox'] { margin-right: var(--space-2); }
+.import-flow input:not([type='checkbox']), .import-flow select { max-width: 100%; min-height: 44px; }
+.import-flow form { border-top: 1px solid var(--border); margin-top: var(--space-4); padding-top: var(--space-3); }
+.import-flow form input, .import-flow form select { display: block; width: min(100%, 30rem); }
+.import-flow .table-scroll { margin-top: var(--space-3); }
+.import-flow .company-table button { margin: 2px; }
+.import-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-4); }
+.import-flow nav ul { display: flex; flex-wrap: wrap; gap: var(--space-3); list-style: none; padding: 0; }

@@ -23,6 +23,7 @@ _SPA_PATHS = {
     "premissas",
     "estudos",
     "empresas",
+    "importar",
 }
 _LEGACY_HASHED_ASSET = re.compile(r"\.[0-9a-fA-F]{8,}\.")
 _STUDY_PATH = re.compile(
@@ -35,7 +36,7 @@ _PORTFOLIO_PATH = re.compile(
     re.IGNORECASE,
 )
 _COMPANY_PATH = re.compile(
-    r"empresas/[A-Za-z0-9][A-Za-z0-9._~-]{0,127}(?:/(?:casos|perfis|estudos))?"
+    r"empresas/[A-Za-z0-9][A-Za-z0-9._~-]{0,127}(?:/(?:casos|perfis|estudos|importar))?"
 )
 
 

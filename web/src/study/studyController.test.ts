@@ -9,6 +9,7 @@ import type {
   ConfirmObservedCaseMutation,
 } from '../storage/applicationRepository';
 import { calculateOperationalProfile } from '../profiles/calculateOperationalProfile';
+import { createImportReview } from '../importer/eligibility';
 import { OperationConflictError, RevisionConflictError } from '../storage/errors';
 import { attachOperationalProfileEvidence, createStudy, renameStudy } from './domain';
 import { FIXTURE_NOW, FIXTURE_OWNER, makeObservedCase, makeScenarioDraft } from './fixtures';
@@ -175,6 +176,19 @@ function controller(input: {
 }
 
 describe('StudyController', () => {
+  it('publica revisão importada somente na sessão e empresa proprietárias', async () => {
+    const repository = new RepositoryDouble(FIXTURE_OWNER);
+    const subject = controller({ repositories: [repository, new RepositoryDouble(OWNER_B)] });
+    await subject.switchSession(FIXTURE_OWNER);
+    const company: CompanyRecord = { id: 'company-1', ownerSub: FIXTURE_OWNER, displayName: 'Empresa', aliases: [], createdAt: FIXTURE_NOW, updatedAt: FIXTURE_NOW, revision: 1 };
+    const review = createImportReview({
+      parsed: { layout: 'xlsx-operacoes/1.0.0', sha256: 'a'.repeat(64), byteSize: 100, rows: [{ operacao_id: 'OP-1', cliente_nome: 'Cliente', classificacao_perfil: null, direcao: 'OUT', data_conhecida: '2026-09-22', data_limite: '2026-09-23', valor_brl: '100', finalidade_codigo: null }] },
+      company, ownerSub: FIXTURE_OWNER, now: FIXTURE_NOW, positionIdentified: true,
+    });
+    await expect(subject.confirmImportedCase(review, 'stable-id')).resolves.toMatchObject({ status: 'CONFIRMED', companyId: 'company-1' });
+    await subject.switchSession(OWNER_B);
+    await expect(subject.confirmImportedCase(review, 'stable-id')).rejects.toBeInstanceOf(StudyControllerSessionError);
+  });
   async function profile(ownerSub = FIXTURE_OWNER, version = 1, id = `profile-${version}`): Promise<OperationalProfileVersion> {
     const observed = makeObservedCase();
     return calculateOperationalProfile({

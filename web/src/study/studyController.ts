@@ -1,6 +1,8 @@
 import type { ApplicationRepository } from '../storage/applicationRepository';
 import { RevisionConflictError } from '../storage/errors';
 import type { CompanyRecord, ObservedCase } from '../cases/domain';
+import type { ImportReview } from '../importer/eligibility';
+import { confirmImport } from '../importer/publisher';
 import type { OperationalProfileVersion } from '../profiles/domain';
 import { attachOperationalProfileEvidence } from './domain';
 import type { StudyDocument, StudyDocumentV3 } from './model';
@@ -268,6 +270,17 @@ export class StudyController {
     const { repository, epoch } = this.#session();
     const companies = await repository.listCompanies();
     return this.#isCurrent(repository, epoch) ? companies : [];
+  }
+
+  async confirmImportedCase(review: ImportReview, operationId: string): Promise<ObservedCase> {
+    this.#assertOpen();
+    const { repository, epoch } = this.#session();
+    if (review.draft.ownerSub !== this.#snapshot.ownerSub || review.company?.ownerSub !== this.#snapshot.ownerSub) {
+      throw new StudyControllerSessionError();
+    }
+    const result = await confirmImport(review, repository, operationId);
+    if (!this.#isCurrent(repository, epoch)) throw new StudyControllerSessionError();
+    return result;
   }
 
   async listOperationalProfileVersions(companyId?: string): Promise<OperationalProfileVersion[]> {

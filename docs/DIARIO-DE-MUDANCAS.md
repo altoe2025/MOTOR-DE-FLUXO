@@ -66,12 +66,22 @@ Atualizada em 2026-09-23, durante o planejamento da Etapa 6.
 | `codex/etapa-4-mvp` | MVP e Evolução B aceitos localmente até MOT-85; sem push/PR/merge/deploy | Codex |
 | `codex/fix-reconciliacao-decimal` | correção da aritmética exata dos mecanismos da análise, pronta para merge na `main` | Codex |
 | `codex/frontend-etapa-5` | MOT-86–MOT-89 concluídas e aceitas localmente; Replay Fronteira Viva funcional até o limite efetivo medido; sem push/PR/merge/deploy | Codex |
-| `codex/frontend-etapa-6-planejamento` | especificação aprovada, plano técnico 6A–6D e MOT-90–MOT-99 criadas; ainda sem código de produto | Codex |
+| `codex/frontend-etapa-6-planejamento` | Etapa 6 em execução local: importação A0–A5 e demonstração B1; sem push, PR, merge ou deploy | Codex |
 
 Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+## 2026-09-23 — Revisão visual e confirmação do Caso importado (MOT-60)
+
+**Sintoma.** Parser, revisão e publisher estavam disponíveis como contratos, mas o produto não oferecia rota para ler, corrigir e confirmar uma planilha nem continuidade para Caso, Perfil e Estudo.
+
+**Causa.** A interface e o controlador de sessão ainda não ligavam os módulos da importação ao repositório compartilhado e às páginas existentes.
+
+**O que foi feito.** `web/src/importer/controller.ts` orquestra leitura explícita em worker, cancelamento, revisão e confirmação com `operationId` estável em retry. A nova interface oferece upload, filtros, correção, alias, conflito, exclusão/restauração e links após confirmação. `StudyController` expõe uma ponte de publicação restrita ao owner. Rotas, navegação, pré-seleção validada em Perfis e fallback SPA foram conectados. Testes cobrem seleção por teclado sem processamento automático, correção, alias, conflito, publicação, recarga e isolamento entre contas. Gate local: 80 testes focados, typecheck, lint, build, 38 testes de fallback (2 ignorados), scanner (508 arquivos de texto/32 binários) e diff check passaram. O aviso de chunk grande do build já existia antes desta tarefa.
+
+**O que isso invalida.** A afirmação de que a importação só existe como contrato sem percurso React. Confirmar o Caso não cria Perfil, Estudo, prévia ou diagnóstico; esses passos continuam manuais. Nada muda nos números ou na política do motor.
 
 ## 2026-09-23 — IDs opacos de operação no caminho de auditoria (MOT-56)
 

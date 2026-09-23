@@ -8,6 +8,7 @@ export function CompanyNavigation({ companyId }: { companyId: string }) {
       <NavLink to={`${base}/casos`}>Casos</NavLink>
       <NavLink to={`${base}/perfis`}>Perfis</NavLink>
       <NavLink to={`${base}/estudos`}>Estudos</NavLink>
+      <NavLink to={`${base}/importar`}>Importar</NavLink>
     </nav>
   );
 }

@@ -5,6 +5,7 @@ import { useAuth } from '../auth/AuthProvider';
 const destinations = [
   { to: '/empresas', label: 'Empresas' },
   { to: '/estudos', label: 'Estudos' },
+  { to: '/importar', label: 'Importar' },
 ];
 
 export function AppShell() {

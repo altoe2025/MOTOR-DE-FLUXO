@@ -21,8 +21,15 @@ import type {
 import { createStudy } from '../study/domain';
 import { makeObservedCase, makeScenarioDraft } from '../study/fixtures';
 import type { StudyDocument } from '../study/model';
+import { parseCanonicalXlsx } from '../importer/workerClient';
 import { ApplicationProviders } from './providers';
 import { AppRoutes } from './router';
+
+vi.mock('../importer/workerClient', () => ({ parseCanonicalXlsx: vi.fn(async () => ({
+  layout: 'xlsx-operacoes/1.0.0', sha256: 'a'.repeat(64), byteSize: 128,
+  rows: [{ operacao_id: 'OP-1', cliente_nome: 'Cliente da fonte', classificacao_perfil: null,
+    direcao: 'OUT', data_conhecida: '2026-09-22', data_limite: '2026-09-23', valor_brl: '100', finalidade_codigo: null }],
+})) }));
 
 function session(userId = 'user-a'): AuthSession {
   return { access_token: `token-${userId}`, expires_at: Math.floor(Date.now() / 1000) + 3600, user: { id: userId } };
@@ -64,7 +71,7 @@ class RepositoryDouble implements ApplicationRepository {
   async listCompanies() { return this.companies; }
   async listObservedCases(companyId?: string) { return companyId === undefined ? this.cases : this.cases.filter((item) => item.companyId === companyId); }
   async getObservedCase(id: string) { return this.cases.find((item) => item.id === id) ?? null; }
-  async confirmObservedCase(input: ConfirmObservedCaseMutation) { return input.observedCase; }
+  async confirmObservedCase(input: ConfirmObservedCaseMutation) { this.cases.push(input.observedCase); return input.observedCase; }
   async listOperationalProfileVersions(companyId?: string) { return companyId === undefined ? this.profiles : this.profiles.filter((item) => item.companyId === companyId); }
   async getOperationalProfileVersion(id: string) { return this.profiles.find((item) => item.id === id) ?? null; }
   async appendOperationalProfileVersion(input: AppendProfileVersionMutation) {
@@ -131,6 +138,97 @@ function diagnosticSnapshot(request: DiagnosticRequest, status: JobSnapshot['sta
 }
 
 describe('application routes', () => {
+  it('espera Ler planilha, revisa e confirma Caso sem executar motor', async () => {
+    vi.mocked(parseCanonicalXlsx).mockClear();
+    const company: CompanyRecord = { id: 'company-1', ownerSub: 'user-a', displayName: 'Empresa A', aliases: [], createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', revision: 1 };
+    const repository = new RepositoryDouble([company]);
+    const user = userEvent.setup();
+    const view = renderAppAt('/importar', client(session('user-a')), repository);
+    await user.selectOptions(await screen.findByLabelText('Empresa'), company.id);
+    await user.upload(screen.getByLabelText('Planilha canônica XLSX'), new File(['planilha'], 'operacoes.xlsx', { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+    expect(parseCanonicalXlsx).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('checkbox', { name: /linhas representam operações explícitas/i }));
+    await user.keyboard('{Tab}');
+    expect(screen.getByRole('button', { name: 'Ler planilha' })).toHaveFocus();
+    await user.keyboard('{Enter}');
+    expect(await screen.findByRole('table', { name: 'Linhas importadas' })).toHaveTextContent('OP-1');
+    expect(parseCanonicalXlsx).toHaveBeenCalledTimes(1);
+    await user.click(screen.getByRole('button', { name: 'Confirmar Caso Observado' }));
+    expect(await screen.findByRole('heading', { name: 'Caso confirmado' })).toBeVisible();
+    expect(repository.cases).toHaveLength(1);
+    expect(screen.getByRole('link', { name: 'Criar Perfil Operacional' })).toHaveAttribute('href', expect.stringContaining('/empresas/company-1/perfis?caseId='));
+    expect(screen.getByRole('link', { name: 'Abrir Estudos' })).toHaveAttribute('href', '/empresas/company-1/estudos');
+    const caseId = repository.cases[0]!.id;
+    view.unmount();
+    renderAppAt(`/empresas/company-1/casos#caso-${caseId}`, client(session('user-a')), repository);
+    expect(await screen.findByRole('table', { name: 'Histórico de casos' })).toContainElement(document.getElementById(`caso-${caseId}`));
+  });
+  it('mantém confirmação bloqueada até corrigir uma direção inválida', async () => {
+    vi.mocked(parseCanonicalXlsx).mockResolvedValueOnce({ layout: 'xlsx-operacoes/1.0.0', sha256: 'b'.repeat(64), byteSize: 128,
+      rows: [{ operacao_id: 'OP-2', cliente_nome: 'Cliente', classificacao_perfil: null, direcao: 'INDEFINIDA', data_conhecida: '2026-09-22', data_limite: '2026-09-23', valor_brl: '100', finalidade_codigo: null }] });
+    const company: CompanyRecord = { id: 'company-1', ownerSub: 'user-a', displayName: 'Empresa A', aliases: [], createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', revision: 1 };
+    const user = userEvent.setup();
+    renderAppAt('/empresas/company-1/importar', client(session('user-a')), new RepositoryDouble([company]));
+    await user.upload(await screen.findByLabelText('Planilha canônica XLSX'), new File(['planilha'], 'operacoes.xlsx'));
+    await user.click(screen.getByRole('checkbox', { name: /linhas representam operações explícitas/i }));
+    await user.click(screen.getByRole('button', { name: 'Ler planilha' }));
+    expect(await screen.findByRole('button', { name: 'Confirmar Caso Observado' })).toBeDisabled();
+    await user.click(screen.getByRole('button', { name: 'Corrigir' }));
+    await user.type(screen.getByLabelText('Valor corrigido'), 'IN');
+    await user.click(screen.getByRole('button', { name: 'Aplicar correção' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Confirmar Caso Observado' })).toBeEnabled());
+  });
+  it('associa alias explícito e resolve conflito de versões na revisão', async () => {
+    const row = { operacao_id: 'OP-1', cliente_nome: 'Cliente Norte', classificacao_perfil: null, direcao: 'OUT', data_conhecida: '2026-09-22', data_limite: '2026-09-23', valor_brl: '100', finalidade_codigo: null };
+    vi.mocked(parseCanonicalXlsx).mockResolvedValueOnce({ layout: 'xlsx-operacoes/1.0.0', sha256: 'c'.repeat(64), byteSize: 128,
+      rows: [row, { ...row, operacao_id: 'OP-2', cliente_nome: 'Cliente Norte SA' }, { ...row, valor_brl: '200' }] });
+    const company: CompanyRecord = { id: 'company-1', ownerSub: 'user-a', displayName: 'Empresa A', aliases: [], createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', revision: 1 };
+    const user = userEvent.setup();
+    renderAppAt('/empresas/company-1/importar', client(session('user-a')), new RepositoryDouble([company]));
+    await user.upload(await screen.findByLabelText('Planilha canônica XLSX'), new File(['planilha'], 'operacoes.xlsx'));
+    await user.click(screen.getByRole('checkbox', { name: /linhas representam operações explícitas/i }));
+    await user.click(screen.getByRole('button', { name: 'Ler planilha' }));
+    expect(await screen.findByRole('region', { name: 'Conflitos de versão' })).toHaveTextContent('OP-1');
+    await user.type(screen.getByLabelText('Nome na fonte'), 'Cliente Norte SA');
+    await user.selectOptions(screen.getByLabelText('Cliente canônico'), screen.getByRole('option', { name: 'Cliente Norte' }));
+    await user.click(screen.getByRole('button', { name: 'Associar alias' }));
+    expect(within(screen.getByRole('row', { name: /OP-2/ })).getByRole('cell', { name: 'Cliente Norte' })).toBeVisible();
+    const conflict = screen.getByRole('region', { name: 'Conflitos de versão' });
+    const options = within(conflict).getByLabelText('Versão a manter').querySelectorAll('option');
+    await user.selectOptions(within(conflict).getByLabelText('Versão a manter'), options[1]!.value);
+    await waitFor(() => expect(screen.queryByRole('region', { name: 'Conflitos de versão' })).not.toBeInTheDocument());
+    expect(screen.getByRole('button', { name: 'Confirmar Caso Observado' })).toBeEnabled();
+  });
+  it('oferece importação protegida e predefine apenas empresa do owner', async () => {
+    const company: CompanyRecord = { id: 'company-1', ownerSub: 'user-a', displayName: 'Empresa A', aliases: [], createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', revision: 1 };
+    const repository = new RepositoryDouble([company]);
+    const view = renderAppAt('/importar', client(session('user-a')), repository);
+    expect(await screen.findByRole('heading', { level: 1, name: 'Importar operações' })).toBeVisible();
+    expect(await screen.findByRole('button', { name: 'Ler planilha' })).toBeDisabled();
+    view.unmount();
+    renderAppAt('/empresas/company-1/importar', client(session('user-a')), repository);
+    expect(await screen.findByRole('heading', { level: 1, name: 'Importar operações de Empresa A' })).toBeVisible();
+    expect(screen.getByLabelText('Empresa')).toHaveValue(company.id);
+  });
+  it('recusa importar para empresa de outra conta', async () => {
+    const foreign: CompanyRecord = { id: 'foreign', ownerSub: 'user-b', displayName: 'Empresa secreta', aliases: [], createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', revision: 1 };
+    renderAppAt('/empresas/foreign/importar', client(session('user-a')), new RepositoryDouble([foreign]));
+    expect(await screen.findByRole('heading', { name: 'Empresa não encontrada' })).toBeVisible();
+    expect(screen.queryByLabelText('Planilha canônica XLSX')).not.toBeInTheDocument();
+    expect(screen.queryByText('Empresa secreta')).not.toBeInTheDocument();
+  });
+
+  it('pré-seleciona em Perfis apenas o Caso e a revisão válidos, sem confirmar versão', async () => {
+    const company: CompanyRecord = { id: 'company-1', ownerSub: 'user-a', displayName: 'Empresa A', aliases: [], createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', revision: 1 };
+    const observed = { ...makeObservedCase(), id: 'case-1', revision: 4, ownerSub: 'user-a', companyId: company.id };
+    const repository = new RepositoryDouble([company], [observed]);
+    const valid = renderAppAt('/empresas/company-1/perfis?caseId=case-1&caseRevision=4', client(session('user-a')), repository);
+    await waitFor(() => expect(screen.getByRole('checkbox', { name: /case-1.*revisão 4/i })).toBeChecked());
+    expect(repository.profiles).toHaveLength(0);
+    valid.unmount();
+    renderAppAt('/empresas/company-1/perfis?caseId=case-1&caseRevision=3', client(session('user-a')), repository);
+    expect(await screen.findByRole('checkbox', { name: /case-1.*revisão 4/i })).not.toBeChecked();
+  });
   it.each([
     ['/empresas', 'Empresas'], ['/estudos', 'Estudos'],
   ])('protege %s e marca o destino ativo', async (path, destination) => {
@@ -240,7 +338,8 @@ describe('application routes', () => {
     expect(navigation).toHaveTextContent('Empresas');
     expect(navigation).toHaveTextContent('Estudos');
     expect(navigation).toHaveTextContent('Diagnóstico');
-    expect(navigation.querySelectorAll('a')).toHaveLength(3);
+    expect(navigation).toHaveTextContent('Importar');
+    expect(navigation.querySelectorAll('a')).toHaveLength(4);
     expect(screen.getByRole('link', { name: 'Empresas' })).toHaveAttribute('aria-current', 'page');
   });
 

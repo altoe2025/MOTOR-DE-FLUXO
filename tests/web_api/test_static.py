@@ -83,6 +83,8 @@ def static_client(tmp_path: Path):
         "/empresas/company-t11/casos",
         "/empresas/company-t11/perfis",
         "/empresas/company-t11/estudos",
+        "/importar",
+        "/empresas/company-t11/importar",
     ],
 )
 def test_rotas_spa_conhecidas_recebem_index_sem_cache_duradouro(static_client, path):
@@ -129,6 +131,9 @@ def test_asset_sem_hash_nao_recebe_cache_imutavel(static_client, asset):
         "/carteira/nao-e-uuid",
         "/carteira/00000000-0000-4000-8000-000000000020/extra",
         "/empresas/company-t11/desconhecida",
+        "/importar/extra",
+        "/empresas/company-t11/importar/extra",
+        "/empresas/%2e%2e/importar",
         "/rota-desconhecida",
         "/api/v1/ausente",
     ],

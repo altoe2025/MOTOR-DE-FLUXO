@@ -7,6 +7,7 @@ import { CompaniesPage } from '../companies/CompaniesPage';
 import { CompanyCasesPage } from '../companies/CompanyCasesPage';
 import { CompanyPage } from '../companies/CompanyPage';
 import { CompanyProfilesPage } from '../companies/CompanyProfilesPage';
+import { ImportFlowPage } from '../importer/components/ImportFlowPage';
 import { CompanyStudiesPage } from '../companies/CompanyStudiesPage';
 import { PortfolioPage } from '../pages/PortfolioPage';
 import { PreviewPage } from '../pages/PreviewPage';
@@ -80,6 +81,8 @@ export function AppRoutes() {
         <Route path="/empresas/:companyId/casos" element={<CompanyCasesPage />} />
         <Route path="/empresas/:companyId/perfis" element={<CompanyProfilesPage />} />
         <Route path="/empresas/:companyId/estudos" element={<CompanyStudiesPage />} />
+        <Route path="/empresas/:companyId/importar" element={<ImportFlowPage />} />
+        <Route path="/importar" element={<ImportFlowPage />} />
         <Route path="/carteira" element={<PortfolioPage />} />
         <Route path="/carteira/:id" element={<StudyPortfolioPage />} />
         <Route path="/estudos" element={<StudiesPage />} />
