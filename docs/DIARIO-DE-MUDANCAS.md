@@ -73,6 +73,15 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-23 — Validação por linha da importação portado (MOT-52)
+
+1. **Sintoma.** Após o parsing estrutural, o destino ainda não distinguia linhas válidas, inválidas e com finalidade ausente de modo revisável.
+2. **Causa.** A validação por campo e a regra de IDs duplicados estavam acopladas ao `ImportBatchDraft` da origem antiga, que não pode atravessar a fronteira de Caso Observado atual.
+3. **O que foi feito.** `web/src/importer/validation.ts` valida cada célula sem descartar as demais, preserva erros estruturados por linha, mantém `PURPOSE_MISSING` como aviso e torna todas as ocorrências de um ID repetido inválidas. O relatório retornado é serializável e não cria lote, repositório, preview ou execução. Testes cobrem linha válida com aviso, acúmulo de falhas e duplicidade. Por instrução autorizada do Gabriel, esta tarefa foi executada por gpt-5.6-terra/high em substituição ao roteamento Luna/high; a revisão independente prevista continua em gpt-6-sol/medium.
+4. **O que isso invalida.** Invalida somente a lacuna de validação local por linha. Não altera contrato HTTP, persistência, Caso/Empresa, motor, resultado financeiro, nem autoriza push, PR, merge ou deploy.
+
+---
+
 ## 2026-09-23 — Parser XLSX seguro portado (MOT-51)
 
 1. **Sintoma.** O destino não inspecionava nem convertia o XLSX canônico sem expor binário, XML ou metadados pessoais a camadas posteriores.
