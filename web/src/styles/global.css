@@ -319,3 +319,8 @@ a { color: inherit; }
 .import-flow .company-table button { margin: 2px; }
 .import-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-4); }
 .import-flow nav ul { display: flex; flex-wrap: wrap; gap: var(--space-3); list-style: none; padding: 0; }
+.import-conflict-versions { display: grid; gap: var(--space-3); list-style: none; padding: 0; }
+.import-conflict-versions > li { border: 1px solid var(--border); border-radius: 10px; padding: var(--space-3); }
+.import-conflict-versions dl { display: grid; gap: var(--space-2); grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); margin: var(--space-3) 0 0; }
+.import-conflict-versions dt { color: var(--muted); font-size: 0.8125rem; }
+.import-conflict-versions dd { font-weight: 600; margin: 0; overflow-wrap: anywhere; }

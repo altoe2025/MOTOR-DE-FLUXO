@@ -3,12 +3,28 @@ import { useState, type FormEvent } from 'react';
 import type { EditableImportField, ImportPortfolio } from '../domain';
 import type { ImportCommand, ImportReview } from '../eligibility';
 import { projectPortfolio } from '../portfolio';
+import { normalizeDirection, normalizePurposeCode } from '../normalization';
+import { parseCivilDate } from '../dates';
+import { parseBrlDecimal } from '../decimals';
 
 const editable: readonly { value: EditableImportField; label: string }[] = [
   { value: 'direction', label: 'Direção' }, { value: 'knownDate', label: 'Data conhecida' },
   { value: 'deadlineDate', label: 'Data limite' }, { value: 'valueBrl', label: 'Valor BRL' },
   { value: 'purposeCode', label: 'Finalidade' },
 ];
+
+function canonicalCorrectionValue(path: string, value: string | null): string {
+  if (value === null) return 'não coletado';
+  try {
+    switch (path.split('/').at(-1)) {
+      case 'direction': return normalizeDirection(value);
+      case 'knownDate': case 'deadlineDate': return parseCivilDate(value);
+      case 'valueBrl': return parseBrlDecimal(value);
+      case 'purposeCode': return normalizePurposeCode(value) ?? 'não coletado';
+      default: return 'não validado';
+    }
+  } catch { return 'não validado'; }
+}
 
 export function ReviewStep({ review, onCommand }: { review: ImportReview; onCommand(command: ImportCommand): void }) {
   const [filter, setFilter] = useState<'ALL' | 'INVALID' | 'CONFLICT'>('ALL');
@@ -73,7 +89,35 @@ export function ReviewStep({ review, onCommand }: { review: ImportReview; onComm
       <label htmlFor="import-correction-value">Valor corrigido</label><input id="import-correction-value" value={value} onChange={(event) => setValue(event.currentTarget.value)} required />
       <button className="button" type="submit">Aplicar correção</button>
     </form>}
-    {projection.conflicts.length === 0 ? null : <section aria-label="Conflitos de versão"><h3>Conflitos</h3>{projection.conflicts.map((conflict) => <div key={conflict.operationId}><p>{conflict.operationId}</p><label>Versão a manter<select defaultValue="" onChange={(event) => { if (event.currentTarget.value !== '') onCommand({ kind: 'RESOLVE_CONFLICT', operationId: conflict.operationId, selectedVersionId: event.currentTarget.value, ...action() }); }}><option value="">Selecione</option>{conflict.versionIds.map((id) => <option key={id} value={id}>{id}</option>)}</select></label></div>)}</section>}
+    {projection.conflicts.length === 0 ? null : <section aria-label="Conflitos de versão"><h3>Conflitos</h3>{projection.conflicts.map((conflict) => <div key={conflict.operationId}>
+      <h4>Operação {conflict.operationId}</h4>
+      <ul className="import-conflict-versions">{conflict.versionIds.map((id) => {
+        const version = projection.versions.find((item) => item.versionId === id);
+        const batch = review.batches.find((item) => item.id === version?.batchId);
+        if (version === undefined || batch === undefined) return null;
+        const operation = version.operation;
+        return <li key={id}>
+          <strong>Versão {id}</strong>
+          <p>Origem: Lote {batch.batchSequence} · ID {batch.id} · Linha {version.rowNumber}</p>
+          <dl>
+            <div><dt>Cliente canônico (ID)</dt><dd>{version.canonicalClientId}</dd></div>
+            <div><dt>Direção</dt><dd>{operation.direction}</dd></div>
+            <div><dt>Data conhecida</dt><dd>{operation.knownDate}</dd></div>
+            <div><dt>Data limite</dt><dd>{operation.deadlineDate}</dd></div>
+            <div><dt>Valor BRL</dt><dd>{operation.valueBrl}</dd></div>
+            <div><dt>Finalidade</dt><dd>{operation.purposeCode ?? 'não coletado'}</dd></div>
+          </dl>
+        </li>;
+      })}</ul>
+      <label>Versão a manter<select defaultValue="" onChange={(event) => { if (event.currentTarget.value !== '') onCommand({ kind: 'RESOLVE_CONFLICT', operationId: conflict.operationId, selectedVersionId: event.currentTarget.value, ...action() }); }}><option value="">Selecione</option>{conflict.versionIds.map((id) => {
+        const version = projection.versions.find((item) => item.versionId === id);
+        const batch = review.batches.find((item) => item.id === version?.batchId);
+        return <option key={id} value={id}>{id} · Lote {batch?.batchSequence ?? '?'} · Linha {version?.rowNumber ?? '?'}</option>;
+      })}</select></label>
+    </div>)}</section>}
+    {review.draft.corrections.length === 0 ? null : <section aria-label="Histórico de correções"><h3>Histórico de correções</h3><ol>{review.draft.corrections.map((correction) => <li key={correction.id}>
+      {correction.fieldPath} · {canonicalCorrectionValue(correction.fieldPath, correction.previousValue)} → {canonicalCorrectionValue(correction.fieldPath, correction.nextValue)} · {correction.actionAt}
+    </li>)}</ol></section>}
     <form aria-label="Associar alias" onSubmit={associate}><h3>Associar nome de cliente</h3>
       <label htmlFor="import-alias">Nome na fonte</label><input id="import-alias" value={alias} onChange={(event) => setAlias(event.currentTarget.value)} required />
       <label htmlFor="import-client">Cliente canônico</label><select id="import-client" value={clientId} onChange={(event) => setClientId(event.currentTarget.value)} required><option value="">Selecione</option>{review.clientIdentity.clients.map((client) => <option key={client.id} value={client.id}>{client.displayName}</option>)}</select>

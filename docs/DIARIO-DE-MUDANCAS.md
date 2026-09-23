@@ -73,6 +73,16 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-23 — Primeira Empresa e decisão informada de conflito (MOT-60)
+
+**Sintoma.** A revisão independente da interface encontrou três lacunas: uma conta sem Empresa não conseguia iniciar importação; a rota de uma Empresa permitia trocar o destino no seletor; e versões em conflito apareciam apenas como IDs, sem diferenças semânticas para embasar a escolha.
+
+**Causa.** A interface original consumia somente Empresas já persistidas, reutilizava o seletor global na rota contextual e não apresentava a projeção canônica de cada versão.
+
+**O que foi feito.** `/importar` permite preparar uma Empresa nova, com ID, owner, nome, revisão e timestamps estáveis até a confirmação; apenas a transação do publisher grava Empresa e Caso juntos. A rota contextual mostra a Empresa fixa e ignora query de destino. O painel de conflito exibe lote, sequência, linha, ID de versão, cliente canônico por ID, direção, datas, valor e finalidade; o seletor referencia esses mesmos IDs. O histórico de correções mostra anterior → próximo em formato canônico, ocultando célula inválida. Testes RED/GREEN cobrem primeira Empresa, rollback/cancelamento, retry idempotente, rota adulterada, escolha entre versões que diferem só em prazo/finalidade e redação da correção. Gate local: 86 testes focados, typecheck, lint, build, 38 testes de fallback (2 ignorados), scanner (508 textos/32 binários) e diff check; aviso de chunk grande preexistente.
+
+**O que isso invalida.** A dependência de pré-cadastro para importar a primeira Empresa e a possibilidade de escolher versão por ID sem contexto. A confirmação do Caso continua sendo a única gravação deste fluxo; política e números do motor não mudam.
+
 ## 2026-09-23 — Revisão visual e confirmação do Caso importado (MOT-60)
 
 **Sintoma.** Parser, revisão e publisher estavam disponíveis como contratos, mas o produto não oferecia rota para ler, corrigir e confirmar uma planilha nem continuidade para Caso, Perfil e Estudo.

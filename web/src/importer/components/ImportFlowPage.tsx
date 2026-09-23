@@ -21,6 +21,7 @@ export function ImportFlowPage() {
   const snapshot = useSyncExternalStore((listener) => flow.subscribe(listener), () => flow.snapshot);
   const [companies, setCompanies] = useState<readonly CompanyRecord[] | null>(null);
   const [selectedCompanyId, setSelectedCompanyId] = useState(companyId ?? '');
+  const [pendingCompany, setPendingCompany] = useState<CompanyRecord | null>(null);
   const [positionIdentified, setPositionIdentified] = useState(false);
   const [catalogMessage, setCatalogMessage] = useState<string | null>(null);
   const [uiError, setUiError] = useState<string | null>(null);
@@ -35,7 +36,7 @@ export function ImportFlowPage() {
     });
   }, [flow]);
   useEffect(() => heading.current?.focus(), [companyId, companies]);
-  useEffect(() => { setSelectedCompanyId(companyId ?? ''); setPositionIdentified(false); }, [companyId]);
+  useEffect(() => { setSelectedCompanyId(companyId ?? ''); setPendingCompany(null); setPositionIdentified(false); }, [companyId]);
   useEffect(() => {
     let current = true;
     setCompanies(null);
@@ -57,7 +58,9 @@ export function ImportFlowPage() {
     return () => abort.abort();
   }, [api]);
 
-  const company = companies?.find((item) => item.id === selectedCompanyId) ?? null;
+  const company = companyId !== undefined
+    ? companies?.find((item) => item.id === companyId) ?? null
+    : [...(companies ?? []), ...(pendingCompany === null ? [] : [pendingCompany])].find((item) => item.id === selectedCompanyId) ?? null;
   if (companyId !== undefined && companies !== null && !companies.some((item) => item.id === companyId)) {
     return <article className="destination-page"><h1 ref={heading} tabIndex={-1}>Empresa não encontrada</h1><p>A empresa não existe ou pertence a outra conta.</p></article>;
   }
@@ -73,9 +76,20 @@ export function ImportFlowPage() {
     {catalogMessage === null ? null : <p role="status" className="inline-notice">{catalogMessage}</p>}
     {uiError === null && snapshot.error === null ? null : <p role="alert" className="inline-notice inline-notice--error">{uiError ?? snapshot.error}</p>}
     {companies === null ? <p role="status">Carregando empresas…</p> : snapshot.confirmedCase !== null ? <CaseConfirmation observedCase={snapshot.confirmedCase} /> : <>
-      {snapshot.review === null ? <UploadStep file={snapshot.file} selectedCompanyId={selectedCompanyId} companies={companies} positionIdentified={positionIdentified} busy={busy}
+      {snapshot.review === null ? <UploadStep file={snapshot.file} selectedCompanyId={companyId ?? selectedCompanyId} companies={pendingCompany === null ? companies : [...companies, pendingCompany]} {...(companyId === undefined ? {} : { lockedCompanyName: company!.displayName })} positionIdentified={positionIdentified} busy={busy}
         onFile={(file) => { flow.selectFile(file); setUiError(null); }}
-        onCompany={(id) => setSelectedCompanyId(id)} onPosition={setPositionIdentified}
+        onCompany={(id) => { if (companyId === undefined) setSelectedCompanyId(id); }}
+        onCreateCompany={(name) => {
+          if (companyId !== undefined || userId === null) return;
+          if (companies.some((item) => item.displayName.toLocaleLowerCase('pt-BR') === name.toLocaleLowerCase('pt-BR'))) {
+            setUiError('Empresa já existente. Selecione-a na lista.'); return;
+          }
+          const now = new Date().toISOString();
+          const prepared: CompanyRecord = { id: crypto.randomUUID(), ownerSub: userId, displayName: name, aliases: [], createdAt: now, updatedAt: now, revision: 1 };
+          setPendingCompany(prepared);
+          setSelectedCompanyId(prepared.id);
+          setUiError(null);
+        }} onPosition={setPositionIdentified}
         onRead={() => {
           if (company === null || userId === null) return;
           void flow.read({ company, ownerSub: userId, positionIdentified }).catch(() => undefined);
@@ -85,7 +99,7 @@ export function ImportFlowPage() {
         <ReviewStep review={snapshot.review} onCommand={onCommand} />
         <div className="import-actions">
           <button className="button button--primary" type="button" disabled={snapshot.status !== 'READY_TO_CONFIRM'} onClick={() => { void flow.confirm().catch(() => undefined); }}>{snapshot.status === 'CONFIRMING' ? 'Confirmando…' : 'Confirmar Caso Observado'}</button>
-          <button className="button" type="button" disabled={snapshot.status === 'CONFIRMING'} onClick={() => flow.cancel()}>Cancelar importação</button>
+          <button className="button" type="button" disabled={snapshot.status === 'CONFIRMING'} onClick={() => { flow.cancel(); setPendingCompany(null); setSelectedCompanyId(companyId ?? ''); }}>Cancelar importação</button>
         </div>
       </>}
     </>}
