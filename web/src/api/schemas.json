@@ -326,10 +326,10 @@
           "type": "boolean"
         },
         "custos_origem": {
-          "$ref": "#/$defs/OrigemValor"
+          "$ref": "#/$defs/OrigemCatalogo"
         },
         "custos_padrao": {
-          "$ref": "#/$defs/CustoEntrada"
+          "$ref": "#/$defs/CustoPadraoCatalogo"
         },
         "finalidades": {
           "items": {
@@ -644,6 +644,80 @@
         "iof_por_finalidade"
       ],
       "title": "CustoEntrada",
+      "type": "object"
+    },
+    "CustoPadraoCatalogo": {
+      "additionalProperties": false,
+      "properties": {
+        "carry_cnr": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Carry Cnr",
+          "type": "string"
+        },
+        "custo_fixo_remessa": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Custo Fixo Remessa",
+          "type": "string"
+        },
+        "custo_oportunidade_aa": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Custo Oportunidade Aa",
+          "type": "string"
+        },
+        "iof_in": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Iof In",
+          "type": "string"
+        },
+        "iof_out": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Iof Out",
+          "type": "string"
+        },
+        "iof_por_finalidade": {
+          "items": {
+            "$ref": "#/$defs/RegraIOFCatalogo"
+          },
+          "maxItems": 100,
+          "title": "Iof Por Finalidade",
+          "type": "array"
+        },
+        "ptax": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Ptax",
+          "type": "string"
+        },
+        "spread_rail_bps": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Spread Rail Bps",
+          "type": "string"
+        }
+      },
+      "required": [
+        "iof_out",
+        "iof_in",
+        "carry_cnr",
+        "spread_rail_bps",
+        "custo_fixo_remessa",
+        "custo_oportunidade_aa",
+        "ptax",
+        "iof_por_finalidade"
+      ],
+      "title": "CustoPadraoCatalogo",
       "type": "object"
     },
     "CustosDTO": {
@@ -2129,6 +2203,39 @@
       "title": "OrderArrivedEventV1",
       "type": "object"
     },
+    "OrigemCatalogo": {
+      "additionalProperties": false,
+      "properties": {
+        "fonte": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Fonte",
+          "type": "string"
+        },
+        "registrado_em_utc": {
+          "format": "date-time",
+          "title": "Registrado Em Utc",
+          "type": "string"
+        },
+        "tipo": {
+          "enum": [
+            "PADRAO_SINTETICO",
+            "ESTIMATIVA_USUARIO",
+            "DADO_OBSERVADO",
+            "NAO_COLETADO"
+          ],
+          "title": "Tipo",
+          "type": "string"
+        }
+      },
+      "required": [
+        "tipo",
+        "fonte",
+        "registrado_em_utc"
+      ],
+      "title": "OrigemCatalogo",
+      "type": "object"
+    },
     "OrigemValor": {
       "additionalProperties": false,
       "properties": {
@@ -2853,6 +2960,39 @@
         "aliquota"
       ],
       "title": "RegraIOF",
+      "type": "object"
+    },
+    "RegraIOFCatalogo": {
+      "additionalProperties": false,
+      "properties": {
+        "aliquota": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Aliquota",
+          "type": "string"
+        },
+        "direcao": {
+          "enum": [
+            "OUT",
+            "IN"
+          ],
+          "title": "Direcao",
+          "type": "string"
+        },
+        "finalidade": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Finalidade",
+          "type": "string"
+        }
+      },
+      "required": [
+        "finalidade",
+        "direcao",
+        "aliquota"
+      ],
+      "title": "RegraIOFCatalogo",
       "type": "object"
     },
     "RepetitionPlan": {

@@ -35,10 +35,40 @@ def _read_catalog(path: Path | None) -> dict[str, Any]:
     return document
 
 
+def _immutable_catalog_input(document: dict[str, Any]) -> dict[str, Any]:
+    """Converte somente arrays JSON do recurso para as coleções imutáveis do contrato."""
+    costs = document.get("custos_padrao")
+    immutable_costs = (
+        {
+            **costs,
+            "iof_por_finalidade": tuple(costs.get("iof_por_finalidade", ())),
+        }
+        if isinstance(costs, dict)
+        else costs
+    )
+    finalidades = document.get("finalidades", ())
+    immutable_finalidades = tuple(
+        {
+            **finalidade,
+            "aliquotas": tuple(finalidade.get("aliquotas", ())),
+        }
+        if isinstance(finalidade, dict)
+        else finalidade
+        for finalidade in finalidades
+    ) if isinstance(finalidades, list) else finalidades
+    return {
+        **document,
+        "finalidades": immutable_finalidades,
+        "custos_padrao": immutable_costs,
+    }
+
+
 def load_import_catalog(path: Path | None = None) -> CatalogoImportacao:
     """Lê, versiona e valida o recurso publicado antes de atender requisições."""
     document = _read_catalog(path)
     if "catalog_version" in document:
         raise ValueError("catalog_version deve ser calculado pelo loader")
     catalog_version = hashlib.sha256(canonical_catalog_bytes(document)).hexdigest()
-    return CatalogoImportacao.model_validate({**document, "catalog_version": catalog_version})
+    return CatalogoImportacao.model_validate(
+        {**_immutable_catalog_input(document), "catalog_version": catalog_version}
+    )

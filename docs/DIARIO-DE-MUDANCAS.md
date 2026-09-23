@@ -73,6 +73,15 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-23 — Imutabilidade profunda do catálogo de importação (MOT-57)
+
+1. **Sintoma.** Embora o modelo externo do catálogo fosse congelado, uma lista ou modelo aninhado podia ser alterado depois do carregamento e antes de outra resposta reutilizar o estado da aplicação.
+2. **Causa.** `frozen=True` do Pydantic não congela recursivamente coleções e os contratos aninhados de custos/origem herdavam modelos mutáveis.
+3. **O que foi feito.** As camadas publicadas do catálogo agora usam modelos congelados e tuplas para finalidades, alíquotas e regras de IOF; o loader converte somente as coleções do JSON para a representação imutável depois de calcular seu hash canônico. O JSON HTTP permanece array e o endpoint/OpenAPI preserva o formato público. Os testes tentam alterar valores, tuplas e modelos aninhados de um catálogo configurado fictício e exigem falha.
+4. **O que isso invalida.** Invalida a suposição de que `frozen=True` no envelope bastava para proteger o grafo cacheado. Não altera finalidades de produção, valores técnicos, autenticação, revisão local, execução, `motor/`, persistência, push, PR, merge ou deploy.
+
+---
+
 ## 2026-09-23 — Cliente do catálogo técnico da importação (MOT-58)
 
 1. **Sintoma.** O front-end não conseguia consultar nem validar pelo caminho comum o estado técnico do catálogo de importação.
