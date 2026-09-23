@@ -1,5 +1,8 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest';
+// Prepare the actual demo fixture before timing route assertions; its first Vite
+// transform is not navigation latency. The controller still runs its real loader.
+import '../demo/generated/demo-study.v1.json';
 
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -12,6 +15,7 @@ import type { AuthClient, AuthSession } from '../auth/types';
 import type { ApiClient, DiagnosticRequest, JobSnapshot } from '../api/client';
 import type { CompanyRecord, ObservedCase } from '../cases/domain';
 import type { OperationalProfileVersion } from '../profiles/domain';
+import { DemoInstallSkippedError } from '../storage/errors';
 import type {
   ApplicationRepository,
   AppendProfileVersionMutation,
@@ -64,6 +68,8 @@ function RouteSwitch({ to }: Readonly<{ to: string }>) {
 class RepositoryDouble implements ApplicationRepository {
   failImportConfirmation = false;
   readonly importAttempts: ConfirmObservedCaseMutation[] = [];
+  // Route fixtures represent an existing account that already removed its demo.
+  async installDemoStudy(): Promise<StudyDocument> { throw new DemoInstallSkippedError(); }
   constructor(
     readonly companies: CompanyRecord[] = [],
     readonly cases: ObservedCase[] = [],

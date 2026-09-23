@@ -1,6 +1,7 @@
 export type ApplicationRepositoryErrorCode =
   | 'BINARY_DATA_NOT_ALLOWED'
   | 'DOCUMENT_CORRUPT'
+  | 'DEMO_INSTALL_SKIPPED'
   | 'INVALID_DOCUMENT'
   | 'NOT_FOUND'
   | 'OPERATION_CONFLICT'
@@ -34,6 +35,13 @@ export class DocumentCorruptError extends ApplicationRepositoryError {
 export class InvalidDocumentError extends ApplicationRepositoryError {
   constructor(message = 'Documento inválido.') {
     super('INVALID_DOCUMENT', message);
+  }
+}
+
+/** An expected no-op: automatic installation must not replace user intent. */
+export class DemoInstallSkippedError extends ApplicationRepositoryError {
+  constructor() {
+    super('DEMO_INSTALL_SKIPPED', 'A demonstração não será instalada automaticamente nesta sessão.');
   }
 }
 

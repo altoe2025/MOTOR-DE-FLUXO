@@ -92,6 +92,55 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 **O que foi feito.** `web/src/importer/controller.ts` orquestra leitura explícita em worker, cancelamento, revisão e confirmação com `operationId` estável em retry. A nova interface oferece upload, filtros, correção, alias, conflito, exclusão/restauração e links após confirmação. `StudyController` expõe uma ponte de publicação restrita ao owner. Rotas, navegação, pré-seleção validada em Perfis e fallback SPA foram conectados. Testes cobrem seleção por teclado sem processamento automático, correção, alias, conflito, publicação, recarga e isolamento entre contas. Gate local: 80 testes focados, typecheck, lint, build, 38 testes de fallback (2 ignorados), scanner (508 arquivos de texto/32 binários) e diff check passaram. O aviso de chunk grande do build já existia antes desta tarefa.
 
 **O que isso invalida.** A afirmação de que a importação só existe como contrato sem percurso React. Confirmar o Caso não cria Perfil, Estudo, prévia ou diagnóstico; esses passos continuam manuais. Nada muda nos números ou na política do motor.
+## 2026-09-23 — Instalação, remoção e restauração atômicas da B2 (MOT-91)
+
+**Sintoma.** O pacote reconciliado ainda não era instalado no primeiro acesso;
+não havia marcador para impedir duplicação ou ressurgimento após remoção.
+
+**Causa.** O ApplicationRepository tinha transações individuais para importação,
+Perfis e Estudos, sem uma mutação atômica para o pacote completo.
+
+**O que foi feito.** `installDemoStudy` valida/materializa o pacote antes da
+abertura do banco e grava Empresas, Casos, Perfis, Estudo, execuções, Replays,
+operação idempotente e marcador numa transação. O namespace inclui projeto,
+owner e instalação; `add` impede sobrescrita de documentos existentes. A
+elegibilidade automática é reavaliada sob a mesma transação, contando também
+Estudos na lixeira. Remoção permanente apaga Estudo/execuções/Replays e payloads
+de operações e marca `REMOVED` atomicamente; retries antigos não ressuscitam
+dados. Empresas, Casos e Perfis permanecem na biblioteca, como no purge vigente,
+para preservar evidência de Estudos derivados. Restauração explícita de demo
+existente preserva edições; após purge cria identidades novas sem tocar nas
+evidências retidas ou em Estudos do usuário.
+
+O ciclo de sessão carrega o JSON sob demanda e oferece **Carregar estudo
+demonstrativo** na página vazia. Falhas ficam visíveis e permitem retry; logout,
+troca de seleção e autosave pendente impedem publicação tardia. Auditoria
+independente encontrou dois casos de recovery, reproduzidos RED e corrigidos:
+fingerprint corrompido não grava restauração e instalação sem Estudo persistido
+não devolve resultado fantasma. O estado é validado antes da escrita e
+reconferido sob a transação, com retry limitado para concorrência. Não restaram
+achados materiais confirmados. O banco continua no schema físico 2.
+
+TDD cobre rollback síncrono em cada store e assíncrono, concorrência, recarga,
+remoção/restauração, isolamento, payload parcial/oculto, snapshot antes de await,
+recovery e preservação de evidência compartilhada. A preparação dos testes de
+rota carrega a fixture real antes das asserções cronometradas para não confundir
+a transformação inicial do JSON pelo Vite com latência de navegação.
+
+Gates finais: **707 testes em 86 arquivos PASS** (`test:unit -- --maxWorkers 2`),
+incluindo os 22 testes de storage da B2, storage/recovery e regressão integral do
+importador; typecheck, lint, build, scanner (508 textos/32 binários) e
+`git diff --check` PASS. O subconjunto de rotas passou também isoladamente
+(25/25), depois do ajuste de fixture. Revisão independente Astra/high; nenhum
+achado material pendente.
+
+**O que isso invalida.** O primeiro acesso vazio deixa de exigir criação manual.
+Nada nos resultados B1/B3, importador, contratos financeiros ou motor. O bundle
+passa a incluir um chunk lazy do pacote (~1,93 MB, ~187 kB gzip); permanece o aviso
+de chunks maiores que 500 kB. Aceite E2E integrado da 6B é B6 e fica fora desta
+Task B2. MOT-91 permanece In Progress aguardando aceite. Sem push, PR, merge ou
+deploy.
+
 ## 2026-09-23 — Materialização isolada da demonstração B2 (MOT-91)
 
 **Sintoma.** O pacote B1 continha o owner placeholder e identidades canônicas,
