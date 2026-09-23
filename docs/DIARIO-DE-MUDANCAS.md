@@ -73,6 +73,30 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-23 — Correções e elegibilidade do Caso Observado na importação (MOT-55)
+
+**Sintoma.** A revisão precisava transformar as linhas canônicas em um rascunho de
+Caso Observado rastreável, sem publicar dados ainda, e manter bloqueios separados de
+avisos enquanto o usuário corrige uma linha inválida.
+
+**Causa.** A validação por linha A1 não tinha ainda o agregado puro que reconcilia
+totais OUT/IN, conflitos, exclusões, correções e proveniência com o contrato atual
+de `ObservedCaseDraft`.
+
+**O que foi feito.** Criados `web/src/importer/eligibility.ts` e seus testes.
+`createImportReview` produz o rascunho com ISO, Decimal em string, finalidade
+nullable, eFX `NOT_COLLECTED`, proveniência por campo e totais derivados;
+`applyImportCommand` é uma união discriminada para correção, alias explícito,
+resolução, exclusão/restauração e reversão. Empresa ausente, direção/data/valor
+inválidos, duplicidade, total divergente e posição não identificada bloqueiam;
+finalidade ausente e eFX não coletado avisam. A correção de uma linha inicialmente
+inválida usa células brutas apenas enquanto a revisão está em memória e as descarta
+na fronteira de publicação da A3. Desvio autorizado de roteamento:
+`gpt-5.6-terra`/high substitui `gpt-6-luna`/high onde a matriz o indicaria.
+
+**O que isso invalida.** Nada: os lotes ainda não foram persistidos, nenhuma UI ou
+chamada de rede foi criada e o motor, P0, EDF e a grade histórica não mudaram.
+
 ## 2026-09-23 — Lotes e conflitos puros na revisão de importação (MOT-54)
 
 **Sintoma.** A importação já validava cada linha, mas ainda não tinha uma projeção

@@ -96,6 +96,7 @@ export type ImportedVersionRow = Readonly<{
   versionId: string;
   canonicalClientId: string;
   rowNumber: number;
+  raw: RawOperationCells;
   normalized: NormalizedOperation | null;
   errors: readonly ImportRowError[];
 }>;
@@ -122,6 +123,13 @@ export type ImportEvent =
     occurredAt: string;
     operationId: string;
     selectedVersionId: string;
+  }>
+  | Readonly<{
+    kind: 'OPERATION_EXCLUDED' | 'OPERATION_RESTORED';
+    id: string;
+    eventSequence: number;
+    occurredAt: string;
+    operationId: string;
   }>;
 
 export type ImportPortfolio = Readonly<{
@@ -154,3 +162,10 @@ export type PortfolioProjection = Readonly<{
   currentOperations: readonly PortfolioOperation[];
   conflicts: readonly PortfolioConflict[];
 }>;
+
+export type EditableImportField =
+  | 'direction'
+  | 'knownDate'
+  | 'deadlineDate'
+  | 'valueBrl'
+  | 'purposeCode';

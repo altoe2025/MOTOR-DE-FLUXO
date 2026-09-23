@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { ImportBatch, ImportPortfolio, ImportedVersionRow } from './domain';
+import type { ImportBatch, ImportPortfolio, ImportedVersionRow, NormalizedOperation } from './domain';
 import {
   incorporateBatch,
   projectPortfolio,
@@ -13,13 +13,18 @@ function row(versionId: string, operationId: string, valueBrl: string): Imported
     versionId,
     canonicalClientId: 'client-1',
     rowNumber: 2,
+    raw: {
+      operacao_id: operationId, cliente_nome: 'Cliente', classificacao_perfil: null,
+      direcao: 'OUT', data_conhecida: '2026-10-17', data_limite: '2026-10-19',
+      valor_brl: valueBrl, finalidade_codigo: 'SERVICO',
+    },
     normalized: {
       operationId,
       clientName: 'Cliente',
       profileClassification: null,
       direction: 'OUT',
-      knownDate: '2026-10-17',
-      deadlineDate: '2026-10-19',
+      knownDate: '2026-10-17' as NormalizedOperation['knownDate'],
+      deadlineDate: '2026-10-19' as NormalizedOperation['deadlineDate'],
       valueBrl,
       purposeCode: 'SERVICO',
     },
