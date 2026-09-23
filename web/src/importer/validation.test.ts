@@ -31,4 +31,19 @@ describe('validateImportedRows', () => {
     expect(report.summary).toEqual({ total: 2, valid: 0, invalid: 2 });
     expect(report.rows.every((row) => row.errors.some((error) => error.code === 'DUPLICATE_ID_IN_BATCH'))).toBe(true);
   });
+
+  it('records an oversized profile alongside other row errors without aborting later rows', () => {
+    const report = validateImportedRows([
+      { ...validRow, classificacao_perfil: 'p'.repeat(121), direcao: 'UNKNOWN', valor_brl: '0' },
+      { ...validRow, operacao_id: 'OP-0002' },
+    ]);
+
+    expect(report.summary).toEqual({ total: 2, valid: 1, invalid: 1 });
+    expect(report.rows[0]?.errors).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: 'VALUE_OUT_OF_RANGE', field: 'classificacao_perfil' }),
+      expect.objectContaining({ code: 'DIRECTION_INVALID', field: 'direcao' }),
+      expect.objectContaining({ code: 'VALUE_OUT_OF_RANGE', field: 'valor_brl' }),
+    ]));
+    expect(report.rows[1]?.normalized).toMatchObject({ operationId: 'OP-0002' });
+  });
 });

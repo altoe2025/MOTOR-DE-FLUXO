@@ -10,10 +10,11 @@ async function fixture(name: string): Promise<ArrayBuffer> {
   return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
 }
 
-function sparseWorkbook(): ArrayBuffer {
+function sparseWorkbook(withoutRowReference: boolean = false): ArrayBuffer {
   const headers = ['operacao_id', 'cliente_nome', 'classificacao_perfil', 'direcao', 'data_conhecida', 'data_limite', 'valor_brl', 'finalidade_codigo'];
   const headerCells = headers.map((header, index) => `<c r="${String.fromCharCode(65 + index)}1" t="inlineStr"><is><t>${header}</t></is></c>`).join('');
-  const sheet = `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData><row r="1">${headerCells}</row><row r="1000000"><c r="A1000000" t="inlineStr"><is><t>OP-SPARSE</t></is></c></row></sheetData></worksheet>`;
+  const sparseRowReference = withoutRowReference ? '' : ' r="1000000"';
+  const sheet = `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData><row r="1">${headerCells}</row><row${sparseRowReference}><c r="A1000000" t="inlineStr"><is><t>OP-SPARSE</t></is></c></row></sheetData></worksheet>`;
   const archive = zipSync({
     '[Content_Types].xml': strToU8('<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>'),
     'xl/workbook.xml': strToU8('<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="operacoes" sheetId="1" r:id="rId1"/></sheets></workbook>'),
@@ -60,5 +61,9 @@ describe('preflightXlsx', () => {
 
   it('rejects an extreme sparse row reference before the cell reader allocates it', async () => {
     await expect(preflightXlsx(sparseWorkbook())).rejects.toMatchObject({ code: 'ROW_LIMIT_EXCEEDED' });
+  });
+
+  it('rejects a sparse cell reference when its row omits the r attribute', async () => {
+    await expect(preflightXlsx(sparseWorkbook(true))).rejects.toMatchObject({ code: 'ROW_LIMIT_EXCEEDED' });
   });
 });

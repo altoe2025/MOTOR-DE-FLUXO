@@ -73,6 +73,15 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-23 — Referências esparsas e perfil inválido fechados após revisão (MOT-51/MOT-52)
+
+1. **Sintoma.** Uma célula com referência de linha extrema sem atributo `row r` não era barrada pelo SAX; e um perfil acima de 120 caracteres podia interromper a validação inteira em vez de produzir erro de linha.
+2. **Causa.** O preflight verificava somente o atributo da linha; `normalizeProfileClassification` era invocado depois do capturador de erros por campo.
+3. **O que foi feito.** O preflight compara o teto de 1.001 contra `row r` e o sufixo numérico de `c r`, sem regex sobre XML; a classificação agora passa por `validate`, preservando erros da mesma linha e linhas posteriores. RED/GREEN cobre `<row><c r="A1000000">` e perfil de 121 caracteres combinado com direção/valor inválidos e uma linha seguinte válida. Por instrução autorizada do Gabriel, esta rodada foi executada por gpt-5.6-terra/high em substituição ao roteamento Luna/high; a revisão independente prevista continua em gpt-6-sol/medium.
+4. **O que isso invalida.** Invalida a conclusão anterior de que apenas o atributo `row r` bastaria como preflight e de que todos os limites de normalização já eram reportados por linha. Não muda motor, persistência, HTTP, execução, timeout ou limites publicados; sem push, PR, merge ou deploy.
+
+---
+
 ## 2026-09-23 — Preflight e normalização da importação endurecidos após revisão (MOT-51/MOT-52)
 
 1. **Sintoma.** A revisão independente identificou que o leitor removia espaços significativos, os limites textuais do layout não eram aplicados, arquivos inválidos podiam ser lidos antes da rejeição e uma referência de linha esparsa podia alcançar o leitor de células.

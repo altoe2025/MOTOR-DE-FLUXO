@@ -20,6 +20,7 @@ function normalizeRow(raw: RawOperationCells, rowNumber: number): MutableRow {
   const errors: ImportRowError[] = [];
   const operationId = validate(raw, 'operacao_id', rowNumber, errors, normalizeOperationId);
   const clientName = validate(raw, 'cliente_nome', rowNumber, errors, normalizeClientName);
+  const profileClassification = validate(raw, 'classificacao_perfil', rowNumber, errors, normalizeProfileClassification);
   const direction = validate(raw, 'direcao', rowNumber, errors, normalizeDirection);
   const knownDate = validate(raw, 'data_conhecida', rowNumber, errors, (value) => parseCivilDate(requireOperationCell(value, 'data_conhecida')));
   const deadlineDate = validate(raw, 'data_limite', rowNumber, errors, (value) => parseCivilDate(requireOperationCell(value, 'data_limite')));
@@ -30,7 +31,7 @@ function normalizeRow(raw: RawOperationCells, rowNumber: number): MutableRow {
   });
   if (knownDate !== null && deadlineDate !== null && deadlineDate < knownDate) errors.push({ code: 'DATE_ORDER_INVALID', field: 'data_limite', rowNumber, value: raw.data_limite, message: 'DATE_ORDER_INVALID: data limite anterior à data conhecida' });
   const blocking = errors.some((error) => error.code !== 'PURPOSE_MISSING');
-  return { rowNumber, raw, errors, normalized: !blocking && operationId !== null && clientName !== null && direction !== null && knownDate !== null && deadlineDate !== null && valueBrl !== null ? { operationId, clientName, profileClassification: normalizeProfileClassification(raw.classificacao_perfil), direction, knownDate, deadlineDate, valueBrl, purposeCode } : null };
+  return { rowNumber, raw, errors, normalized: !blocking && operationId !== null && clientName !== null && direction !== null && knownDate !== null && deadlineDate !== null && valueBrl !== null ? { operationId, clientName, profileClassification, direction, knownDate, deadlineDate, valueBrl, purposeCode } : null };
 }
 
 function rejectDuplicates(rows: MutableRow[]): void {
