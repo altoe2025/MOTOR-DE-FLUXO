@@ -73,6 +73,36 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-23 — Publicação atômica da importação no repositório compartilhado (MOT-56)
+
+**Sintoma.** A revisão transitória XLSX ainda não podia publicar um Caso Observado
+no repositório atual. Os registros de lote/evento eram placeholders e o guard de
+binários não recusava ArrayBuffer nem suas views.
+
+**Causa.** A porta transacional da Etapa 2 já tinha CAS e idempotência, mas faltavam
+a projeção explícita da revisão e validação fechada dos metadados. O input podia
+ser alterado pelo chamador enquanto a abertura assíncrona do banco aguardava.
+
+**O que foi feito.** `confirmImport` projeta Empresa, Caso, lotes e eventos sem
+espalhar o agregado transitório. Células, nomes de cliente/arquivo brutos, contexto
+do parser e `rawValue` não entram na mutação. A auditoria mantém somente valores
+canônicos dos campos editáveis; valores originais inválidos ficam `null`. O Caso
+é revalidado e publicado com revisão persistida 1/esperada 0; a revisão semântica
+da edição não substitui o CAS. `confirmedAt` usa o instante determinístico da
+revisão, permitindo retry idêntico. Metadados ganham whitelist e snapshot antes
+do primeiro await; binários são recusados antes de abrir a base. A transação única
+existente cobre Empresa, Caso, lote, evento e operation record. Não foi necessária
+migração física: stores e chaves continuam no schema 2, sem reescrever históricos.
+Testes cobrem rollback síncrono em cada store e assíncrono, retry após reload,
+concorrência, isolamento de owner/projeto e sanitização. Modelo Astra/high conforme
+o plano. Gates focados: 50 testes; regressão importer/storage: 154 testes antes dos
+dois testes adicionais de auditoria/rollback; typecheck, lint, build e scanner
+aprovados. O build mantém o aviso preexistente de chunks acima de 500 kB.
+
+**O que isso invalida.** A aceitação anterior de buffers e campos extras em novas
+mutações de importação. Nada nos números do motor, schemas de Caso/Estudo ou grade
+histórica. Sem push, PR, merge ou deploy.
+
 ## 2026-09-23 — Artefato demonstrativo com bytes canônicos após integração (MOT-91)
 
 **Sintoma.** Após integrar localmente A4 e B1, o teste determinístico do pacote

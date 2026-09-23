@@ -391,12 +391,15 @@ describe('observed cases', () => {
       company: company(),
       observedCase: caseDocument,
       batches: [{
+        id: 'batch-1', sha256: 'a'.repeat(64), byteSize: 123, layout: 'xlsx-operacoes/1.0.0',
+        counts: { total: 1, valid: 1, invalid: 0 },
         caseId: caseDocument.id,
         batchSequence: 1,
         ownerSub: OWNER_SUB,
         companyId: caseDocument.companyId,
       }],
       events: [{
+        id: 'event-1', occurredAt: FIXTURE_NOW, kind: 'BATCH_IMPORTED', path: 'batches/batch-1', audit: null,
         caseId: caseDocument.id,
         eventSequence: 1,
         ownerSub: OWNER_SUB,
@@ -477,6 +480,7 @@ describe('observed cases', () => {
       observedCase: observedCase(),
       batches: [],
       events: [{
+        id: 'event-1', occurredAt: FIXTURE_NOW, kind: 'BATCH_IMPORTED' as const, path: 'batches/batch-1', audit: null,
         caseId: 'case-1',
         eventSequence: 1,
         ownerSub: OWNER_SUB,
@@ -867,6 +871,45 @@ describe('studies', () => {
 });
 
 describe('lifecycle', () => {
+  it.each([new ArrayBuffer(8), new Uint8Array(8), new DataView(new ArrayBuffer(8))])('rejects binary buffers before database creation', async (binary) => {
+    await expect(repository().confirmObservedCase({
+      expectedRevision: 0, operationId: 'buffer', company: company(),
+      observedCase: observedCase(), batches: [], events: [], binary,
+    } as Parameters<IndexedDbApplicationRepository['confirmObservedCase']>[0]))
+      .rejects.toBeInstanceOf(BinaryDataNotAllowedError);
+    expect(await indexedDB.databases()).toEqual([]);
+  });
+
+  it('rejects raw extra properties in import metadata before opening a database', async () => {
+    const document = observedCase();
+    await expect(repository().confirmObservedCase({
+      expectedRevision: 0, operationId: 'raw', company: company(), observedCase: document,
+      batches: [{ caseId: document.id, batchSequence: 1, ownerSub: OWNER_SUB, companyId: document.companyId,
+        id: 'batch-1', sha256: 'a'.repeat(64), byteSize: 123, layout: 'xlsx-operacoes/1.0.0', counts: { total: 1, valid: 1, invalid: 0 }, raw: 'PRIVATE RAW CELL' }], events: [],
+    } as unknown as Parameters<IndexedDbApplicationRepository['confirmObservedCase']>[0])).rejects.toBeInstanceOf(InvalidDocumentError);
+    expect(await indexedDB.databases()).toEqual([]);
+  });
+
+  it('snapshots a validated confirmation before asynchronous database opening', async () => {
+    const document = observedCase();
+    const mutation = { expectedRevision: 0, operationId: 'snapshot', company: company(), observedCase: document, batches: [], events: [] };
+    const promise = repository().confirmObservedCase(mutation);
+    mutation.company = { ...company(), displayName: 'MUTATED AFTER VALIDATION' };
+    (document as DeepMutable<ObservedCase>).orders[0]!.valueBrl = '999';
+    const stored = await promise;
+    expect(stored.orders[0]!.valueBrl).toBe('100');
+    expect(await repository().listCompanies()).toEqual([company()]);
+  });
+
+  it('rejects non-scalar company aliases before database creation', async () => {
+    await expect(repository().confirmObservedCase({
+      expectedRevision: 0, operationId: 'raw-company',
+      company: { ...company(), aliases: [{ raw: 'PRIVATE CELL' }] },
+      observedCase: observedCase(), batches: [], events: [],
+    } as unknown as Parameters<IndexedDbApplicationRepository['confirmObservedCase']>[0])).rejects.toBeInstanceOf(InvalidDocumentError);
+    expect(await indexedDB.databases()).toEqual([]);
+  });
+
   it('closes on logout without deleting data', async () => {
     const first = repository();
     const original = await study();

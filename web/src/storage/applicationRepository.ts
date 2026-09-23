@@ -9,17 +9,33 @@ export type CASMutation<T> = Readonly<{
 }>;
 
 export type ImportBatchRecord = Readonly<{
+  id: string;
   caseId: string;
   batchSequence: number;
   ownerSub: string;
   companyId: string;
+  sha256: string;
+  byteSize: number;
+  layout: 'xlsx-operacoes/1.0.0';
+  counts: Readonly<{ total: number; valid: number; invalid: number }>;
 }>;
 
 export type ImportEventRecord = Readonly<{
+  id: string;
   caseId: string;
   eventSequence: number;
   ownerSub: string;
   companyId: string;
+  occurredAt: string;
+  kind: 'BATCH_IMPORTED' | 'BATCH_REVERTED' | 'CONFLICT_RESOLVED'
+    | 'OPERATION_EXCLUDED' | 'OPERATION_RESTORED' | 'OPERATION_CORRECTED'
+    | 'CLIENT_ALIAS_ASSOCIATED';
+  path: string;
+  audit: Readonly<{
+    originalValue: string | null;
+    previousValue: string | null;
+    nextValue: string | null;
+  }> | null;
 }>;
 
 export type ConfirmObservedCaseMutation = Readonly<{
