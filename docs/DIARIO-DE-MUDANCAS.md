@@ -73,6 +73,16 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-23 — Contrato local de conversas do chat, C1 (MOT-93)
+
+**Sintoma.** O chat planejado ainda não tinha contrato local validável de conversas e mensagens.
+
+**Causa.** A Etapa 6C ainda não havia iniciado sua persistência.
+
+**O que foi feito.** Tipos e JSON Schema 1.0.0 com owner, Estudo opcional, revisão, timestamps, estados, fingerprint e citações tipadas por ID. Validação limita 100 mensagens, 4.000 caracteres por pergunta e 12.000 por resposta, rejeita IDs duplicados, owner divergente e propriedades extras. Citações usam `{kind, id}` para evidência, métrica, limitação ou ajuda; existência no contexto será validada em C5. TDD: RED comportamental observado e 13 testes GREEN. Commit local, sem push/PR/merge/deploy.
+
+**O que isso invalida.** Nada nos contratos e números do motor. Não entrega shell, HTTP nem integração OpenAI.
+
 ## 2026-09-23 — Primeira Empresa e decisão informada de conflito (MOT-60)
 
 **Sintoma.** A revisão independente da interface encontrou três lacunas: uma conta sem Empresa não conseguia iniciar importação; a rota de uma Empresa permitia trocar o destino no seletor; e versões em conflito apareciam apenas como IDs, sem diferenças semânticas para embasar a escolha.
