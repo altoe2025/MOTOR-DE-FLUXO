@@ -1,6 +1,14 @@
 import type { CompanyRecord, ObservedCase } from '../cases/domain';
 import type { StudyDocument } from '../study/model';
 import type { OperationalProfileVersion } from '../profiles/domain';
+import type { DemoStudyPackageV1 } from '../demo/domain';
+
+export type DemoInstallMode = 'FIRST_EMPTY_SESSION' | 'EXPLICIT_RESTORE';
+export type DemoInstallMutation = Readonly<{
+  package: DemoStudyPackageV1;
+  mode: DemoInstallMode;
+  operationId: string;
+}>;
 
 export type CASMutation<T> = Readonly<{
   expectedRevision: number;
@@ -53,6 +61,7 @@ export type AppendProfileVersionMutation = Readonly<{
 }>;
 
 export interface ApplicationRepository {
+  installDemoStudy(input: DemoInstallMutation): Promise<StudyDocument>;
   listCompanies(): Promise<CompanyRecord[]>;
   listObservedCases(companyId?: string): Promise<ObservedCase[]>;
   getObservedCase(id: string): Promise<ObservedCase | null>;

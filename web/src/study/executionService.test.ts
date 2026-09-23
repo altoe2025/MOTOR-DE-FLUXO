@@ -60,6 +60,7 @@ function deferred<T>() {
 }
 
 class MemoryRepository implements ApplicationRepository {
+  async installDemoStudy(): Promise<StudyDocument> { throw new Error('Demonstração não usada neste double de execução.'); }
   document: StudyDocument | null;
   readonly additionalDocuments = new Map<string, StudyDocument>();
   readonly saves: CASMutation<StudyDocument>[] = [];

@@ -1,5 +1,6 @@
 import type { CompanyRecord, ObservedCase } from '../cases/domain';
 import { validateObservedCase } from '../cases/validation';
+import { materializeDemoPackage, snapshotDemoPackage } from '../demo/materializeDemoPackage';
 import type { OperationalProfileVersion } from '../profiles/domain';
 import { validateOperationalProfile } from '../profiles/validation';
 import { canonical } from '../study/fingerprints';
@@ -10,9 +11,12 @@ import type {
   AppendProfileVersionMutation,
   CASMutation,
   ConfirmObservedCaseMutation,
+  DemoInstallMutation,
 } from './applicationRepository';
 import {
   InvalidDocumentError,
+  DemoInstallSkippedError,
+  DocumentCorruptError,
   NotFoundError,
   OperationConflictError,
   OwnerMismatchError,
@@ -108,7 +112,7 @@ type ProfileVersionOperationRow = Readonly<{
 type StudyOperationRow = Readonly<{
   operation_id: string;
   owner_sub: string;
-  entity_kind: 'study' | 'restore_study';
+  entity_kind: 'study' | 'restore_study' | 'demo_install';
   entity_id: string;
   intent: string;
   result_document: Omit<StudyDocument, 'executions'>;
@@ -122,6 +126,34 @@ type PurgedOperationRow = Readonly<{
 }>;
 
 type OperationRow = ObservedCaseOperationRow | ProfileVersionOperationRow | StudyOperationRow | PurgedOperationRow;
+
+type DemoMarker = Readonly<{
+  status: 'INSTALLED' | 'REMOVED';
+  ownerSub: string;
+  studyId: string;
+  packageVersion: string;
+  packageDigest: string;
+}>;
+const DEMO_MARKER_KEY = 'demo:installation';
+class DemoStateChangedError extends Error {}
+
+function readDemoMarker(row: unknown, ownerSub: string): DemoMarker | null {
+  if (row === undefined) return null;
+  if (!isObject(row) || !isObject(row.value)) throw new DocumentCorruptError('Marcador da demonstração inválido.');
+  const value = row.value;
+  if ((value.status !== 'INSTALLED' && value.status !== 'REMOVED')
+    || value.ownerSub !== ownerSub || typeof value.studyId !== 'string'
+    || typeof value.packageVersion !== 'string' || typeof value.packageDigest !== 'string'
+    || !/^[a-f0-9]{64}$/.test(value.packageDigest)) {
+    throw new DocumentCorruptError('Marcador da demonstração inválido.');
+  }
+  return value as DemoMarker;
+}
+
+async function digest(value: unknown): Promise<string> {
+  const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(canonical(value)));
+  return [...new Uint8Array(bytes)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+}
 
 type StudyRow = Readonly<{
   study_id: string;
@@ -515,6 +547,124 @@ export class IndexedDbApplicationRepository implements ApplicationRepository {
       transaction.objectStore('companies').index('by_owner').getAll(this.#ownerSub),
     );
     return rows.map((row) => structuredClone(row.document));
+  }
+
+  /** Validate and materialize before opening the one transaction that publishes the package. */
+  async installDemoStudy(candidate: DemoInstallMutation): Promise<StudyDocument> {
+    rejectBinary(candidate);
+    if (!isObject(candidate) || Reflect.ownKeys(candidate).length !== 3
+      || Reflect.ownKeys(candidate).some((key) => typeof key !== 'string'
+        || !['package', 'mode', 'operationId'].includes(key)
+        || !('value' in Object.getOwnPropertyDescriptor(candidate, key)!))) {
+      throw new InvalidDocumentError('Mutação da demonstração inválida.');
+    }
+    const input: DemoInstallMutation = {
+      package: snapshotDemoPackage(candidate.package), mode: candidate.mode, operationId: candidate.operationId,
+    };
+    if ((input.mode !== 'FIRST_EMPTY_SESSION' && input.mode !== 'EXPLICIT_RESTORE')
+      || typeof input.operationId !== 'string' || input.operationId.trim().length === 0) {
+      throw new InvalidDocumentError('Mutação da demonstração inválida.');
+    }
+    const intent = await digest(input);
+    const packageDigest = await digest(input.package);
+    const installationId = await digest({ database: this.#databaseName, operationId: input.operationId });
+    const materialized = await materializeDemoPackage(input.package, this.#ownerSub, installationId);
+    const database = await this.#database();
+    if (this.#closed) throw new StorageClosedError();
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      // Hash validation cannot run inside an IndexedDB transaction. Validate a
+      // consistent read snapshot, then compare it again under the write lock.
+      const preflight = await transactionResult(database, ['meta', 'studies', 'executions'], 'readonly', async (tx) => {
+        const marker = readDemoMarker(await requestResult(tx.objectStore('meta').get(DEMO_MARKER_KEY)), this.#ownerSub);
+        if (marker?.status !== 'INSTALLED') return { marker, document: null };
+        const [row, records] = await Promise.all([
+          requestResult<StudyRow | undefined>(tx.objectStore('studies').get(marker.studyId)),
+          requestResult<ExecutionRow[]>(tx.objectStore('executions').index('by_owner_study').getAll([this.#ownerSub, marker.studyId])),
+        ]);
+        if (row === undefined || row.owner_sub !== this.#ownerSub) {
+          throw new DocumentCorruptError('Estudo demonstrativo instalado está ausente.');
+        }
+        return { marker, document: assembleStudy(row, records) };
+      });
+      if (preflight.document !== null) await validateStoredStudy(preflight.document, this.#ownerSub);
+      if (this.#closed) throw new StorageClosedError();
+      try {
+        const result = await transactionResult(database,
+          ['companies', 'observed_cases', 'profile_versions', 'studies', 'executions', 'operations', 'meta'],
+          'readwrite', async (transaction) => {
+            const operations = transaction.objectStore('operations');
+            const studies = transaction.objectStore('studies');
+            const executions = transaction.objectStore('executions');
+            const meta = transaction.objectStore('meta');
+            const [previous, markerRow] = await Promise.all([
+              requestResult<OperationRow | undefined>(operations.get(input.operationId)),
+              requestResult<unknown>(meta.get(DEMO_MARKER_KEY)),
+            ]);
+            const marker = readDemoMarker(markerRow, this.#ownerSub);
+            if (!sameDocument(marker, preflight.marker)) throw new DemoStateChangedError();
+            if (marker?.status === 'INSTALLED') {
+              const [row, records] = await Promise.all([
+                requestResult<StudyRow | undefined>(studies.get(marker.studyId)),
+                requestResult<ExecutionRow[]>(executions.index('by_owner_study').getAll([this.#ownerSub, marker.studyId])),
+              ]);
+              if (row === undefined || row.owner_sub !== this.#ownerSub
+                || !sameDocument(assembleStudy(row, records), preflight.document)) throw new DemoStateChangedError();
+            }
+            if (previous !== undefined) {
+              if (previous.owner_sub !== this.#ownerSub || previous.entity_kind !== 'demo_install'
+                || previous.intent !== intent || marker?.status !== 'INSTALLED'
+                || marker.studyId !== previous.entity_id) throw new OperationConflictError();
+              const storedExecutions = await requestResult<ExecutionRow[]>(executions.index('by_owner_study')
+                .getAll([this.#ownerSub, previous.entity_id]));
+              return assembleOperationStudy(previous, storedExecutions);
+            }
+            if (input.mode === 'FIRST_EMPTY_SESSION') {
+              const count = await requestResult(studies.index('by_owner').count(this.#ownerSub));
+              if (marker !== null || count !== 0) throw new DemoInstallSkippedError();
+            }
+            let document = materialized.study;
+            if (marker?.status === 'INSTALLED') {
+              // Explicit restore keeps edits and evidence; a corrupt installation is never silently repaired.
+              document = preflight.document!;
+              if (document.deletedAt !== null) {
+                document = { ...document, deletedAt: null, revision: document.revision + 1 };
+                studies.put(studyRow(document));
+              }
+            } else {
+              for (const company of materialized.companies) transaction.objectStore('companies').add({
+                company_id: company.id, owner_sub: this.#ownerSub, display_name: company.displayName, document: company,
+              } satisfies CompanyRow);
+              for (const observedCase of materialized.observedCases) transaction.objectStore('observed_cases').add({
+                case_id: observedCase.id, owner_sub: this.#ownerSub, company_id: observedCase.companyId, document: observedCase,
+              } satisfies ObservedCaseRow);
+              for (const profile of materialized.profiles) transaction.objectStore('profile_versions').add({
+                profile_version_id: profile.id, owner_sub: this.#ownerSub, company_id: profile.companyId,
+                version: profile.version, document: profile,
+              } satisfies ProfileVersionRow);
+              studies.add(studyRow(document));
+              for (const [sequence, execution] of document.executions.entries()) executions.add({
+                study_id: document.id, execution_id: execution.id, owner_sub: this.#ownerSub,
+                sequence, document: execution,
+              } satisfies ExecutionRow);
+              meta.put({ key: `demo:replays:${document.id}`, value: materialized.replays });
+              meta.put({ key: DEMO_MARKER_KEY, value: {
+                status: 'INSTALLED', ownerSub: this.#ownerSub, studyId: document.id,
+                packageVersion: input.package.packageVersion, packageDigest,
+              } satisfies DemoMarker });
+            }
+            operations.add({ operation_id: input.operationId, owner_sub: this.#ownerSub,
+              entity_kind: 'demo_install', entity_id: document.id, intent,
+              result_document: studyRow(document).document,
+              result_execution_ids: document.executions.map((execution) => execution.id),
+            } satisfies StudyOperationRow);
+            return structuredClone(document);
+          });
+        return validateStoredStudy(result, this.#ownerSub);
+      } catch (error) {
+        if (!(error instanceof DemoStateChangedError)) throw error;
+      }
+    }
+    throw new OperationConflictError('A demonstração mudou durante a instalação. Tente novamente.');
   }
 
   async listObservedCases(companyId?: string): Promise<ObservedCase[]> {
@@ -981,7 +1131,7 @@ export class IndexedDbApplicationRepository implements ApplicationRepository {
     const database = await this.#database();
     return transactionResult(
       database,
-      ['studies', 'executions', 'operations'],
+      ['studies', 'executions', 'operations', 'meta'],
       'readwrite',
       async (transaction) => {
         const studies = transaction.objectStore('studies');
@@ -989,7 +1139,7 @@ export class IndexedDbApplicationRepository implements ApplicationRepository {
         if (row === undefined || row.owner_sub !== this.#ownerSub) return;
         const executions = transaction.objectStore('executions');
         const operations = transaction.objectStore('operations');
-        const [records, studyOperations, restoreOperations] = await Promise.all([
+        const [records, studyOperations, restoreOperations, demoOperations, markerRow] = await Promise.all([
           requestResult<ExecutionRow[]>(
             executions.index('by_owner_study').getAll([this.#ownerSub, id]),
           ),
@@ -999,16 +1149,26 @@ export class IndexedDbApplicationRepository implements ApplicationRepository {
           requestResult<StudyOperationRow[]>(
             operations.index('by_owner_entity').getAll([this.#ownerSub, 'restore_study', id]),
           ),
+          requestResult<StudyOperationRow[]>(
+            operations.index('by_owner_entity').getAll([this.#ownerSub, 'demo_install', id]),
+          ),
+          requestResult<unknown>(transaction.objectStore('meta').get(DEMO_MARKER_KEY)),
         ]);
         for (const execution of records) {
           executions.delete([execution.study_id, execution.execution_id]);
         }
-        for (const operation of [...studyOperations, ...restoreOperations]) {
+        for (const operation of [...studyOperations, ...restoreOperations, ...demoOperations]) {
           operations.put({
             operation_id: operation.operation_id,
             owner_sub: this.#ownerSub,
             entity_kind: 'purged',
           } satisfies PurgedOperationRow);
+        }
+        const marker = readDemoMarker(markerRow, this.#ownerSub);
+        if (marker?.studyId === id) {
+          const meta = transaction.objectStore('meta');
+          meta.put({ key: DEMO_MARKER_KEY, value: { ...marker, status: 'REMOVED' } satisfies DemoMarker });
+          meta.delete(`demo:replays:${id}`);
         }
         studies.delete(id);
       },
