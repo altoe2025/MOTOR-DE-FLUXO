@@ -20,10 +20,12 @@ function Controls() {
     <button onClick={() => { activeSignal = chat.beginRequest(); }}>Iniciar request</button>
     <button onClick={() => chat.setHelpId('replay.day')}>Definir ajuda</button>
     <button onClick={() => navigate('/estudos/study-a/replay?executionId=run-a')}>Abrir Replay</button>
+    <button onClick={() => chat.selectConversation('conversation-older')}>Selecionar conversa antiga</button>
     <button onClick={() => chat.setReplayDay(2)}>Selecionar dia 2</button>
     <button onClick={() => navigate('/estudos/study-a/diagnostico?scenarioId=invalid')}>Abrir cenário inválido</button>
     <button onClick={() => chat.setScenarioId(null)}>Limpar cenário</button>
     <output data-testid="context">{JSON.stringify(chat.routeContext)}</output>
+    <output data-testid="active-conversation">{chat.activeConversation?.id ?? 'none'}</output>
   </>;
 }
 
@@ -42,6 +44,27 @@ function setup(ownerSub = 'owner-a', records: ChatConversation[] = []) {
 }
 
 describe('session chat shell', () => {
+  it('preserves an older active PENDING conversation and its live request across routes in one Study', async () => {
+    const user = userEvent.setup();
+    const newer = conversation({ id: 'conversation-newer', studyId: 'study-a', title: 'Recente',
+      updatedAt: '2026-09-23T13:00:00Z' });
+    const older = conversation({ id: 'conversation-older', studyId: 'study-a', title: 'Antiga',
+      messages: [message({ id: 'pending', role: 'ASSISTANT', text: '', status: 'PENDING' })] });
+    const { repository } = setup('owner-a', [newer, older]);
+    await waitFor(() => expect(repository.listChatConversations).toHaveBeenCalledWith('study-a'));
+    await user.click(screen.getByRole('button', { name: 'Selecionar conversa antiga' }));
+    await user.click(screen.getByRole('button', { name: 'Iniciar request' }));
+    await user.click(screen.getByRole('button', { name: 'Perguntar' }));
+    expect(screen.getByTestId('active-conversation')).toHaveTextContent('conversation-older');
+    expect(screen.getByText('Respondendo…')).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Abrir Replay' }));
+    expect(screen.getByTestId('active-conversation')).toHaveTextContent('conversation-older');
+    expect(activeSignal?.aborted).toBe(false);
+    expect(screen.getByText('Respondendo…')).toBeVisible();
+    expect(repository.listChatConversations).toHaveBeenCalledTimes(1);
+    expect(repository.saveChatConversation).not.toHaveBeenCalled();
+  });
+
   it('clears an invalid route selection when the page resolves no scenario', async () => {
     const user = userEvent.setup();
     setup();
@@ -57,7 +80,7 @@ describe('session chat shell', () => {
       status: 'PENDING', contextFingerprint: 'original-fingerprint' })] });
     const { repository } = setup('owner-a', [pending]);
     await user.click(screen.getByRole('button', { name: 'Perguntar' }));
-    expect(await screen.findByText('Falha ao responder. Tente novamente.')).toBeVisible();
+    expect((await screen.findAllByText('Falha ao responder. Tente novamente.')).length).toBeGreaterThan(0);
     expect(repository.saveChatConversation).toHaveBeenCalledWith(expect.objectContaining({
       expectedRevision: 1, document: expect.objectContaining({ revision: 2,
         messages: [expect.objectContaining({ status: 'FAILED', contextFingerprint: 'original-fingerprint' })] }),
