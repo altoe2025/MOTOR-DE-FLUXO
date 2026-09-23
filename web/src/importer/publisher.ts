@@ -2,6 +2,7 @@ import type { CorrectionRecord, ObservedCase } from '../cases/domain';
 import { validateObservedCase } from '../cases/validation';
 import type { ApplicationRepository, ImportBatchRecord, ImportEventRecord } from '../storage/applicationRepository';
 import { InvalidDocumentError, OwnerMismatchError } from '../storage/errors';
+import { encodeImportOrderSegment } from '../storage/importRecords';
 import { rejectBinary } from '../storage/rejectBinary';
 import { parseCivilDate } from './dates';
 import { parseBrlDecimal } from './decimals';
@@ -40,7 +41,7 @@ function eventPath(event: ImportEvent): string {
   switch (event.kind) {
     case 'BATCH_IMPORTED': case 'BATCH_REVERTED': return `batches/${event.batchId}`;
     case 'CONFLICT_RESOLVED': return `versions/${event.selectedVersionId}`;
-    case 'OPERATION_EXCLUDED': case 'OPERATION_RESTORED': return `orders/${encodeURIComponent(event.operationId)}`;
+    case 'OPERATION_EXCLUDED': case 'OPERATION_RESTORED': return `orders/${encodeImportOrderSegment(event.operationId)}`;
     case 'OPERATION_CORRECTED': return `versions/${event.versionId}/${event.field}`;
     case 'CLIENT_ALIAS_ASSOCIATED': return `clients/${event.canonicalClientId}`;
   }

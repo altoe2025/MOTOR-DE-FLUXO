@@ -154,6 +154,27 @@ describe('confirmImport', () => {
     await expect(confirmImport({ ...review(), company: { ...company, ownerSub: 'owner-b' } }, repository(), 'mismatch')).rejects.toBeInstanceOf(OwnerMismatchError);
   });
 
+  it.each([
+    { id: '.', path: 'orders/%2E' },
+    { id: '..', path: 'orders/%2E%2E' },
+    { id: 'a/b', path: 'orders/a%2Fb' },
+    { id: 'a b', path: 'orders/a%20b' },
+    { id: 'a%b', path: 'orders/a%25b' },
+  ])('publishes exclusion/restoration of the opaque ID $id with canonical path $path', async ({ id, path }) => {
+    const initial = createImportReview({ parsed: { layout: 'xlsx-operacoes/1.0.0', sha256: 'a'.repeat(64), byteSize: 123,
+      rows: [row, { ...row, operacao_id: id }] }, company, ownerSub: 'owner-a', now, positionIdentified: true });
+    const excluded = applyImportCommand(initial, { kind: 'EXCLUDE_OPERATION', operationId: id, eventId: 'exclude-opaque', at: now });
+    const restored = applyImportCommand(excluded, { kind: 'RESTORE_OPERATION', operationId: id, eventId: 'restore-opaque', at: now });
+    expect(excluded.blockers).toEqual([]);
+    expect(restored.blockers).toEqual([]);
+    const result = await confirmImport(restored, repository(), 'opaque-id');
+    expect(result.orders.map((order) => order.id)).toContain(id);
+    expect((await storedRows()).import_events).toEqual([
+      expect.objectContaining({ document: expect.objectContaining({ kind: 'OPERATION_EXCLUDED', path }) }),
+      expect.objectContaining({ document: expect.objectContaining({ kind: 'OPERATION_RESTORED', path }) }),
+    ]);
+  });
+
   it.each(['2026-09-23T12:02:00.000Z', '2026-09-23T12:01:00.000Z'])('keeps alias then correction chronology even if timestamps are equal (%s)', async (correctionAt) => {
     const initial = createImportReview({ parsed: { layout: 'xlsx-operacoes/1.0.0', sha256: 'a'.repeat(64), byteSize: 123, rows: [row, { ...row, operacao_id: 'OP-2', cliente_nome: 'ALIAS' }] }, company, ownerSub: 'owner-a', now, positionIdentified: true });
     const alias = applyImportCommand(initial, { kind: 'ASSOCIATE_ALIAS', alias: 'ALIAS', canonicalClientId: initial.draft.orders[0]!.clientId, eventId: 'alias-first', at: '2026-09-23T12:01:00.000Z' });

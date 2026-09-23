@@ -73,6 +73,26 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-23 — IDs opacos de operação no caminho de auditoria (MOT-56)
+
+**Sintoma.** Uma importação válida com operação `.` ou `..` falhava ao confirmar
+depois de excluir/restaurar a operação, apesar de não haver blockers.
+
+**Causa.** `encodeURIComponent` preserva pontos literais, mas o validador de paths
+recusava segmentos relativos; os IDs do domínio são opacos e aceitam esses valores.
+
+**O que foi feito.** Um encoder canônico compartilhado representa apenas os IDs
+dot-only como `%2E` e `%2E%2E`. Publisher e repositório usam o mesmo round-trip;
+slash, espaço e percent conservam a representação anterior. Dois testes públicos
+RED reproduziram o problema, acompanhados dos três casos já válidos. Paths com
+segmento adicional, inclusive após `%2E%2E`, continuam rejeitados.
+Gate: 190 testes importer/storage PASS; typecheck, lint, build, scanner (496
+textos/32 binários) e diff check PASS. Warning de chunk preexistente preservado.
+
+**O que isso invalida.** A rejeição excessiva desses dois IDs no primeiro fix A3.
+Nada no contrato de operação, motor ou schema persistido. Sem push, PR, merge ou
+deploy.
+
 ## 2026-09-23 — Fronteira persistível e concorrência da Empresa endurecidas (MOT-56)
 
 **Sintoma.** Revisão adversarial da A3 encontrou propriedades `raw` em arrays

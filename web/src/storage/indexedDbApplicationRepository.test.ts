@@ -893,6 +893,8 @@ describe('lifecycle', () => {
     { kind: 'CONFLICT_RESOLVED', path: 'raw/PRIVATE', audit: null },
     { kind: 'CLIENT_ALIAS_ASSOCIATED', path: 'raw/PRIVATE', audit: null },
     { kind: 'OPERATION_EXCLUDED', path: 'orders/../PRIVATE', audit: null },
+    { kind: 'OPERATION_EXCLUDED', path: 'orders/%2E%2E/PRIVATE', audit: null },
+    { kind: 'OPERATION_EXCLUDED', path: 'orders/%2e%2e', audit: null },
     { kind: 'OPERATION_RESTORED', path: 'raw/PRIVATE', audit: null },
     { kind: 'OPERATION_CORRECTED', path: 'versions/version-1/rawValue', audit: { originalValue: null, previousValue: null, nextValue: 'PRIVATE' } },
     { kind: 'OPERATION_CORRECTED', path: 'versions/version-1/direction', audit: { originalValue: 'PRIVATE', previousValue: null, nextValue: 'OUT' } },

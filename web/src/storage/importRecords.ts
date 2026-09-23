@@ -47,6 +47,12 @@ function canonicalAuditValue(field: string, value: unknown): boolean {
   }
 }
 
+/** Dot-only operation IDs are opaque data, never relative path segments. */
+export function encodeImportOrderSegment(id: string): string {
+  const encoded = encodeURIComponent(id);
+  return encoded === '.' || encoded === '..' ? encoded.replaceAll('.', '%2E') : encoded;
+}
+
 function validateEventContent(event: ImportEventRecord): void {
   const parts = event.path.split('/');
   const segment = parts[1] ?? '';
@@ -57,7 +63,7 @@ function validateEventContent(event: ImportEventRecord): void {
   if (parts[0] !== root || parts.length !== (corrected ? 3 : 2)
     || segment.length === 0 || segment === '.' || segment === '..') fail();
   if (root === 'orders') {
-    try { if (encodeURIComponent(decodeURIComponent(segment)) !== segment) fail(); } catch { fail(); }
+    try { if (encodeImportOrderSegment(decodeURIComponent(segment)) !== segment) fail(); } catch { fail(); }
   } else if (!/^[A-Za-z0-9._~-]+$/.test(segment)) fail();
   if (!corrected) { if (event.audit !== null) fail(); return; }
   const field = parts[2]!;
