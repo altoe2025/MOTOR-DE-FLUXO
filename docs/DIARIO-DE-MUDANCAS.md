@@ -73,6 +73,15 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-23 — Reconciliação completa do Replay demonstrativo (MOT-91, B1)
+
+1. **Sintoma.** Adulterações isoladas de autonetting, netting multilateral, resíduo, ID e revisão do cenário, seeds dos participantes ou versão do motor no Replay ainda eram aceitas pelo validador do pacote.
+2. **Causa.** `web/src/demo/validation.ts` comparava com o diagnóstico somente bruto, casado e taxa de netabilidade, além de parte da identidade do Replay. Os outros campos eram validados quanto à forma, mas não ligados aos dados canônicos selecionados.
+3. **O que foi feito.** Na branch local `codex/frontend-etapa-6b-b1`, sete testes de adulteração isolada falharam antes da correção e passaram depois. O validador passou a comparar os três volumes restantes com `agregado`, cenário e revisão com o cenário, requisição e execução selecionada, seeds com plano e resumo da repetição selecionada, e versão do motor com o manifesto. O JSON gerado permaneceu byte a byte idêntico (SHA-256 `A819CE3B1A4047937BCA7199519DC939C69C609D8D4F65543A19522AF34331CD`). Vitest focado: 13 testes; Python normal e `-O`: 2 testes cada; ESLint e scanner de credenciais: passaram. `typecheck` e `build` ainda param nos dois erros preexistentes de `ISODate` em `web/src/importer/dates.test.ts:19–20`.
+4. **O que isso invalida.** Invalida a afirmação anterior de que a validação TypeScript já rejeitava todas as adulterações independentes de totais e identidade do Replay. Não altera a receita, o pacote gerado, os números demonstrativos nem o motor. Sem push, PR, merge ou deploy.
+
+---
+
 ## 2026-09-23 — Estudo demonstrativo gerado e reconciliado (MOT-91, B1)
 
 1. **Sintoma.** A Etapa 6 ainda não tinha um pacote demonstrativo atual para o primeiro acesso; os cinco mixes existentes descreviam somente pesos e os números da grade histórica pertencem à política anterior.

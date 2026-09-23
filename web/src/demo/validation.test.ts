@@ -6,6 +6,13 @@ import type { DemoStudyPackageV1 } from './domain';
 import generated from './generated/demo-study.v1.json';
 import { validateDemoStudyPackage } from './validation';
 
+type GeneratedPackage = typeof generated;
+
+function selectedReplay(packageValue: GeneratedPackage) {
+  const scenarioId = packageValue.study.scenarios[0]!.id;
+  return packageValue.replays[scenarioId as keyof GeneratedPackage['replays']];
+}
+
 describe('DemoStudyPackageV1', () => {
   // Production break caught: generated data cannot cross the same validation boundary as user data.
   it('accepts the versioned synthetic package and every embedded document', async () => {
@@ -24,6 +31,46 @@ describe('DemoStudyPackageV1', () => {
     const scenarioId = tampered.study.scenarios[0]!.id;
     tampered.replays[scenarioId as keyof typeof tampered.replays].totals.measured_gross_brl = '1';
     expect(await validateDemoStudyPackage(tampered)).toMatchObject({ ok: false });
+  });
+
+  it.each([
+    ['autonetting', (value: GeneratedPackage) => {
+      selectedReplay(value).totals.measured_autonetting_contribution_brl = '1';
+    }],
+    ['multilateral', (value: GeneratedPackage) => {
+      selectedReplay(value).totals.measured_multilateral_contribution_brl = '1';
+    }],
+    ['remitted residue', (value: GeneratedPackage) => {
+      selectedReplay(value).totals.measured_remitted_brl = '1';
+    }],
+  ])('rejects isolated %s total tampering', async (_name, tamper) => {
+    const value = structuredClone(generated);
+    tamper(value);
+    const result = await validateDemoStudyPackage(value);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.issues).toContain('REPLAY_TOTALS:0');
+  });
+
+  it.each([
+    ['scenario id', (value: GeneratedPackage) => {
+      selectedReplay(value).scenario_id = value.study.scenarios[1]!.id;
+    }],
+    ['scenario revision', (value: GeneratedPackage) => {
+      selectedReplay(value).scenario_revision += 1;
+    }],
+    ['participant seeds', (value: GeneratedPackage) => {
+      const seeds = selectedReplay(value).participant_seeds as Record<string, string>;
+      seeds[Object.keys(seeds)[0]!] = '999999';
+    }],
+    ['motor version', (value: GeneratedPackage) => {
+      selectedReplay(value).motor_version += '-tampered';
+    }],
+  ])('rejects isolated %s identity tampering', async (_name, tamper) => {
+    const value = structuredClone(generated);
+    tamper(value);
+    const result = await validateDemoStudyPackage(value);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.issues).toContain('REPLAY_IDENTITY:0');
   });
 
   // Production break caught: synthetic provenance is replaced by an observed claim.
