@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import type { ApiClient, ImportCatalog } from '../api/client';
+import { createApiClient, type ApiClient, type ImportCatalog } from '../api/client';
 import { ApiError } from '../api/errors';
 
 const UNCONFIGURED_CATALOG: ImportCatalog = {
@@ -39,11 +39,13 @@ describe('catálogo da importação', () => {
     });
   });
 
-  it('obtém o catálogo pela fronteira ApiClient existente', async () => {
+  it('carrega catálogo por ApiClient tipado sem estreitar o contrato', async () => {
     const module = await loadCatalogModule();
     const signal = new AbortController().signal;
-    const getImportCatalog = vi.fn().mockResolvedValue(UNCONFIGURED_CATALOG);
-    const api: Required<Pick<ApiClient, 'getImportCatalog'>> = { getImportCatalog };
+    const fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify(UNCONFIGURED_CATALOG), {
+      headers: { 'content-type': 'application/json' },
+    }));
+    const api: ApiClient = createApiClient({ getAccessToken: async () => 'token', fetch });
 
     expect(module).toBeDefined();
     await expect(module!.loadImportCatalog(api, signal)).resolves.toEqual({
@@ -52,7 +54,11 @@ describe('catálogo da importação', () => {
       localReviewAvailable: true,
       canConfirmExecution: false,
     });
-    expect(getImportCatalog).toHaveBeenCalledWith(signal);
+    expect(fetch).toHaveBeenCalledWith('/api/v1/catalogos/importacao', expect.objectContaining({
+      method: 'GET',
+      headers: expect.objectContaining({ Authorization: 'Bearer token' }),
+      signal: expect.any(AbortSignal),
+    }));
   });
 
   it('mantém revisão local e devolve erro uniforme quando o catálogo está indisponível', async () => {
@@ -60,7 +66,7 @@ describe('catálogo da importação', () => {
     const unavailable = new ApiError({
       status: 0, code: 'TRANSPORTE_INDISPONIVEL', message: 'Não foi possível alcançar o servidor.',
     });
-    const api: Required<Pick<ApiClient, 'getImportCatalog'>> = {
+    const api: Pick<ApiClient, 'getImportCatalog'> = {
       getImportCatalog: vi.fn().mockRejectedValue(unavailable),
     };
 

@@ -73,6 +73,15 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-23 — Contrato obrigatório do catálogo no ApiClient (MOT-58)
+
+1. **Sintoma.** Um consumidor tipado como `ApiClient` não podia ser passado diretamente a `loadImportCatalog`, embora a fábrica sempre publique `getImportCatalog`; os testes estreitavam o tipo para esconder essa divergência.
+2. **Causa.** O método do catálogo estava declarado como opcional no contrato público de `ApiClient`, enquanto a fronteira do importador exigia que ele existisse.
+3. **O que foi feito.** `getImportCatalog` passou a ser obrigatório em `ApiClient`; o carregador usa o recorte normal desse contrato, os doubles tipados o implementam e o teste de integração cria um `ApiClient` real sem cast. Foram removidos os casts que simulavam artificialmente o método do catálogo nos testes do cliente.
+4. **O que isso invalida.** Invalida a hipótese de que consumidores do `ApiClient` possam omitir a rota canônica já publicada. Não altera endpoint, autenticação, validação AJV, estado `NAO_CONFIGURADO`, revisão local, execução, persistência, conteúdo regulatório, `motor/`, push, PR, merge ou deploy.
+
+---
+
 ## 2026-09-23 — Estado indisponível do cliente de catálogo (MOT-58)
 
 1. **Sintoma.** Se a leitura autenticada do catálogo falhasse, o cliente propagava apenas a exceção e não oferecia à camada seguinte o estado explícito que mantém a revisão local disponível e bloqueia confirmação executável.

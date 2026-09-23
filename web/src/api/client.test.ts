@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { components } from './generated';
-import { createApiClient, type ApiClient } from './client';
+import { createApiClient } from './client';
 import { ApiError } from './errors';
 
 type PreviaRequest = components['schemas']['PreviaRequest'];
@@ -117,10 +117,7 @@ describe('typed API client', () => {
       custos_calibrados: false,
     };
     const fetch = vi.fn().mockResolvedValue(jsonResponse(catalog));
-    const client = createApiClient({ getAccessToken: async () => 'token', fetch });
-    const catalogClient = client as ApiClient & {
-      getImportCatalog(signal?: AbortSignal): Promise<typeof catalog>;
-    };
+    const catalogClient = createApiClient({ getAccessToken: async () => 'token', fetch });
 
     await expect(catalogClient.getImportCatalog()).resolves.toEqual(catalog);
     expect(fetch).toHaveBeenCalledWith('/api/v1/catalogos/importacao', expect.objectContaining({
@@ -131,10 +128,7 @@ describe('typed API client', () => {
 
   it('rejeita catálogo inválido pela mesma resposta segura da API', async () => {
     const fetch = vi.fn().mockResolvedValue(jsonResponse({ schema_version: '1.0.0' }));
-    const client = createApiClient({ getAccessToken: async () => 'token', fetch });
-    const catalogClient = client as ApiClient & {
-      getImportCatalog(signal?: AbortSignal): Promise<unknown>;
-    };
+    const catalogClient = createApiClient({ getAccessToken: async () => 'token', fetch });
 
     await expect(catalogClient.getImportCatalog()).rejects.toMatchObject({
       status: 200,

@@ -30,7 +30,7 @@ type FetchLike = (input: RequestInfo | URL, init?: RequestInit) => Promise<Respo
 
 export type ApiClient = {
   getReferenceExample(signal?: AbortSignal): Promise<ReferenceExample>;
-  getImportCatalog?(signal?: AbortSignal): Promise<ImportCatalog>;
+  getImportCatalog(signal?: AbortSignal): Promise<ImportCatalog>;
   preparePortfolio?(input: PreparationRequest, signal?: AbortSignal): Promise<PreparationResponse>;
   runPreview(input: PreviaRequest, signal?: AbortSignal): Promise<PreviewEnvelope>;
   submitDiagnostic(input: DiagnosticRequest, signal?: AbortSignal): Promise<JobSnapshot>;
