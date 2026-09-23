@@ -226,6 +226,15 @@ do motor; o contrato será consumido pelos lotes e pela elegibilidade da própri
 2. **Causa.** A validação por campo e a regra de IDs duplicados estavam acopladas ao `ImportBatchDraft` da origem antiga, que não pode atravessar a fronteira de Caso Observado atual.
 3. **O que foi feito.** `web/src/importer/validation.ts` valida cada célula sem descartar as demais, preserva erros estruturados por linha, mantém `PURPOSE_MISSING` como aviso e torna todas as ocorrências de um ID repetido inválidas. O relatório retornado é serializável e não cria lote, repositório, preview ou execução. Testes cobrem linha válida com aviso, acúmulo de falhas e duplicidade. Por instrução autorizada do Gabriel, esta tarefa foi executada por gpt-5.6-terra/high em substituição ao roteamento Luna/high; a revisão independente prevista continua em gpt-6-sol/medium.
 4. **O que isso invalida.** Invalida somente a lacuna de validação local por linha. Não altera contrato HTTP, persistência, Caso/Empresa, motor, resultado financeiro, nem autoriza push, PR, merge ou deploy.
+## 2026-09-23 — Estado indisponível do cliente de catálogo (MOT-58)
+
+1. **Sintoma.** Se a leitura autenticada do catálogo falhasse, o cliente propagava apenas a exceção e não oferecia à camada seguinte o estado explícito que mantém a revisão local disponível e bloqueia confirmação executável.
+2. **Causa.** `loadImportCatalog` só transformava respostas de sucesso em disponibilidade; não representava a indisponibilidade como parte tipada do seu resultado.
+3. **O que foi feito.** A leitura agora retorna a união discriminada `AVAILABLE | UNAVAILABLE`. Falhas uniformes do `ApiClient` (`ApiError`) tornam-se `UNAVAILABLE`, com `localReviewAvailable: true`, `canConfirmExecution: false` e o próprio erro seguro para apresentação. Erros fora da fronteira continuam propagando. Foi acrescentado teste de payload inválido que confirma que `ApiClient` preserva `RESPOSTA_INVALIDA` antes dessa adaptação.
+4. **O que isso invalida.** Invalida a leitura de que ausência temporária do catálogo deveria impedir revisão local ou que um payload inválido pudesse entrar no fluxo. Não adiciona cache, TanStack, UI, elegibilidade, execução, persistência, conteúdo regulatório, alteração em `motor/`, push, PR, merge ou deploy.
+
+---
+
 ## 2026-09-23 — Imutabilidade profunda do catálogo de importação (MOT-57)
 
 1. **Sintoma.** Embora o modelo externo do catálogo fosse congelado, uma lista ou modelo aninhado podia ser alterado depois do carregamento e antes de outra resposta reutilizar o estado da aplicação.

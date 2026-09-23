@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import type { ApiClient, ImportCatalog } from '../api/client';
+import { ApiError } from '../api/errors';
 
 const UNCONFIGURED_CATALOG: ImportCatalog = {
   schema_version: '1.0.0',
@@ -31,6 +32,7 @@ describe('catálogo da importação', () => {
 
     expect(module).toBeDefined();
     expect(module!.catalogAvailability(UNCONFIGURED_CATALOG)).toEqual({
+      kind: 'AVAILABLE',
       catalog: UNCONFIGURED_CATALOG,
       localReviewAvailable: true,
       canConfirmExecution: false,
@@ -45,10 +47,29 @@ describe('catálogo da importação', () => {
 
     expect(module).toBeDefined();
     await expect(module!.loadImportCatalog(api, signal)).resolves.toEqual({
+      kind: 'AVAILABLE',
       catalog: UNCONFIGURED_CATALOG,
       localReviewAvailable: true,
       canConfirmExecution: false,
     });
     expect(getImportCatalog).toHaveBeenCalledWith(signal);
+  });
+
+  it('mantém revisão local e devolve erro uniforme quando o catálogo está indisponível', async () => {
+    const module = await loadCatalogModule();
+    const unavailable = new ApiError({
+      status: 0, code: 'TRANSPORTE_INDISPONIVEL', message: 'Não foi possível alcançar o servidor.',
+    });
+    const api: Required<Pick<ApiClient, 'getImportCatalog'>> = {
+      getImportCatalog: vi.fn().mockRejectedValue(unavailable),
+    };
+
+    expect(module).toBeDefined();
+    await expect(module!.loadImportCatalog(api)).resolves.toEqual({
+      kind: 'UNAVAILABLE',
+      localReviewAvailable: true,
+      canConfirmExecution: false,
+      error: unavailable,
+    });
   });
 });
