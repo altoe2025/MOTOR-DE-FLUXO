@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://motor-de-fluxo.local/demo/demoStudyPackage.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "$defs": {
+    "Digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "Mix": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "label": { "type": "string", "minLength": 1 },
+        "scenarioId": { "type": "string", "format": "uuid" },
+        "requestedWeights": { "type": "object", "additionalProperties": { "type": "number", "minimum": 0 } },
+        "realizedCounts": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } }
+      },
+      "required": ["id", "label", "scenarioId", "requestedWeights", "realizedCounts"]
+    }
+  },
+  "properties": {
+    "apiVersion": { "const": "1.0.0" },
+    "packageVersion": { "const": "1.0.0" },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "motorBuildSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "recipeFingerprint": { "$ref": "#/$defs/Digest" },
+    "ownerPlaceholder": { "const": "$OWNER_SUB" },
+    "syntheticWarning": { "const": "Hipótese sintética demonstrativa — não calibrada com carteira real" },
+    "recipe": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "version": { "const": "1.0.0" },
+        "participants": { "const": 12 },
+        "warmupDays": { "const": 30 },
+        "measurementDays": { "const": 30 },
+        "windowDays": { "const": 7 },
+        "monthlyOrderCapPerParticipant": { "const": 4 },
+        "selectedRepetitionCriterion": { "const": "FIRST_PLANNED_REPETITION" },
+        "repetitionSeedOffsetByMix": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0, "maximum": 9 } },
+        "mixes": { "type": "array", "minItems": 5, "maxItems": 5, "items": { "$ref": "#/$defs/Mix" } }
+      },
+      "required": ["version", "participants", "warmupDays", "measurementDays", "windowDays", "monthlyOrderCapPerParticipant", "selectedRepetitionCriterion", "repetitionSeedOffsetByMix", "mixes"]
+    },
+    "companies": {
+      "type": "array", "minItems": 12, "maxItems": 12,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "ownerSub": { "const": "$OWNER_SUB" },
+          "displayName": { "type": "string", "minLength": 1 },
+          "aliases": { "type": "array", "items": { "type": "string" } },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" },
+          "revision": { "const": 1 }
+        },
+        "required": ["id", "ownerSub", "displayName", "aliases", "createdAt", "updatedAt", "revision"]
+      }
+    },
+    "observedCases": { "type": "array", "minItems": 12, "maxItems": 12, "items": { "$ref": "https://motor-de-fluxo.local/cases/observedCase.schema.json" } },
+    "profiles": { "type": "array", "minItems": 12, "maxItems": 12, "items": { "$ref": "https://motor-de-fluxo.local/profiles/operationalProfile.schema.json" } },
+    "mixes": { "type": "array", "minItems": 5, "maxItems": 5, "items": { "$ref": "#/$defs/Mix" } },
+    "study": { "$ref": "https://motor-de-fluxo.local/study/study.schema.json#/$defs/StudyDocumentV3" },
+    "replays": { "type": "object", "minProperties": 5, "maxProperties": 5,
+      "additionalProperties": { "$ref": "https://motor-de-fluxo.local/contracts/schemas.json#/$defs/ReplayDocumentV1" } }
+  },
+  "required": ["apiVersion", "packageVersion", "generatedAt", "motorBuildSha", "recipeFingerprint", "ownerPlaceholder", "syntheticWarning", "recipe", "companies", "observedCases", "profiles", "mixes", "study", "replays"]
+}
