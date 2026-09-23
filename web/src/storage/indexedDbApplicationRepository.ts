@@ -702,6 +702,19 @@ export class IndexedDbApplicationRepository implements ApplicationRepository {
           throw new RevisionConflictError(input.expectedRevision, actualRevision);
         }
 
+        const companyStore = transaction.objectStore('companies');
+        const existingCompany = await requestResult<CompanyRow | undefined>(companyStore.get(company.id));
+        if (existingCompany !== undefined) {
+          if (existingCompany.owner_sub !== this.#ownerSub) throw new OwnerMismatchError();
+          if (company.revision < existingCompany.document.revision) {
+            throw new RevisionConflictError(company.revision, existingCompany.document.revision);
+          }
+          if (company.revision === existingCompany.document.revision
+            && !sameDocument(company, existingCompany.document)) {
+            throw new OperationConflictError('Empresa já possui outro conteúdo nesta revisão.');
+          }
+        }
+
         const batchStore = transaction.objectStore('import_batches');
         for (const batch of batches) {
           const existing = await requestResult<ImportBatchRow | undefined>(
@@ -736,7 +749,7 @@ export class IndexedDbApplicationRepository implements ApplicationRepository {
           } satisfies ImportEventRow);
         }
 
-        transaction.objectStore('companies').put({
+        companyStore.put({
           company_id: company.id,
           owner_sub: company.ownerSub,
           display_name: company.displayName,

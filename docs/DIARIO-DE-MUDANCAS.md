@@ -73,6 +73,30 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-23 — Fronteira persistível e concorrência da Empresa endurecidas (MOT-56)
+
+**Sintoma.** Revisão adversarial da A3 encontrou propriedades `raw` em arrays
+persistidas, paths/auditoria textuais fora do contrato e sobrescrita de uma Empresa
+mais nova quando outro Caso usava snapshot antigo.
+
+**Causa.** O schema JSON validava itens de arrays, mas não suas propriedades
+nomeadas. Os eventos validavam apenas estrutura e o CAS existente protegia o Caso,
+sem comparar o documento da Empresa.
+
+**O que foi feito.** A validação recursiva recusa propriedades extras, arrays
+esparsos e accessors antes de abrir o banco. Paths são fechados por kind e auditoria
+por campo: direção, data ISO válida, Decimal canônico ou código de finalidade
+normalizado conforme contrato vigente. A mesma transação compara owner, revisão e
+conteúdo da Empresa, rejeitando snapshots obsoletos ou conflitantes antes de
+gravar qualquer store. Os 25 testes adversariais de storage falharam antes e agora
+passam. Com a correção de cronologia MOT-55, são 99 testes focados e 183 de
+regressão importer/storage PASS; typecheck, lint, build, scanner (496 textos/32
+binários) e diff check PASS. O warning preexistente de chunks >500 kB permanece.
+
+**O que isso invalida.** O aceite do primeiro candidato A3 para esses três casos
+adversariais. Nada nos cálculos, na grade ou nos schemas físicos. Sem push, PR,
+merge ou deploy.
+
 ## 2026-09-23 — Cronologia única dos comandos de revisão da importação (MOT-55)
 
 **Sintoma.** O publisher emitia todos os aliases depois das correções, mesmo quando
