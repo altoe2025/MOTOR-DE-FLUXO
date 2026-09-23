@@ -572,6 +572,15 @@ do motor; o contrato será consumido pelos lotes e pela elegibilidade da própri
 2. **Causa.** O catálogo da pilha anterior não podia ser portado cegamente: seus contratos e integração não eram os da aplicação atual, enquanto o piloto não autoriza inventar finalidades, alíquotas ou calibração.
 3. **O que foi feito.** Foram criados o recurso empacotado `servidor/catalogs/importacao.v1.json`, seu loader canônico SHA-256 e os contratos/rota estritos em `servidor/contracts/importation.py` e `servidor/routes/importation.py`. A aplicação valida o recurso ao iniciar e publica `GET /api/v1/catalogos/importacao` somente com Bearer, `no-store`, estado `NAO_CONFIGURADO`, lista vazia e defaults técnicos sintéticos não calibrados. O schema OpenAPI registra a rota; `pyproject.toml` inclui somente esse JSON como package data. Os testes cobrem autenticação, cache, schema, hash, startup inválido e ausência de finalidade em produção. A execução foi autorizada em `gpt-5.6-terra/high` em vez do roteamento planejado Luna/high; a revisão independente Sol/medium permanece pendente. A hierarquia da especificação/plano 6A aprovada limita esta MOT ao catálogo: não foram implementados parâmetros de `ImportStudy`, cache TanStack, elegibilidade, domínio ou rotas históricas conflitantes.
 4. **O que isso invalida.** Invalida a ausência de um gate técnico explícito do catálogo. Não configura conteúdo regulatório, não torna importação executável, não altera revisão local, `motor/`, persistência, casos, perfis, estudos, push, PR, merge ou deploy.
+## 2026-09-23 — Tipagem do gerador demonstrativo (MOT-91, B1)
+
+1. **Sintoma.** O gate `mypy servidor` da integração apontou 13 erros em `servidor/demo/generate_package.py`.
+2. **Causa.** Duas entradas de preparação eram declaradas como `object`, a coleção de custos misturava decimais e lista, a versão era inferida como `str`, e duas factories de ID usavam lambdas com argumento padrão cuja assinatura não era inferida; a lista de execuções também precisava de tipo explícito.
+3. **O que foi feito.** Na branch local `codex/frontend-etapa-6b-b1`, o gerador recebeu `PreparationResponse` e `Literal` nas fronteiras correspondentes, separou os campos decimais de custo, fixou os IDs antes de passá-los às factories e tipou a lista de execuções. `mypy` passou de 13 erros para zero em 38 arquivos; Ruff passou. O JSON regenerado permaneceu byte a byte idêntico (SHA-256 `A819CE3B1A4047937BCA7199519DC939C69C609D8D4F65543A19522AF34331CD`). Testes Python normal e `-O`: 2/2 cada; Vitest B1: 13/13.
+4. **O que isso invalida.** Invalida somente a pendência de tipagem do gerador B1. Não altera a receita, os números, o pacote versionado, contratos públicos nem o motor. Sem push, PR, merge ou deploy.
+
+---
+
 ## 2026-09-23 — Reconciliação completa do Replay demonstrativo (MOT-91, B1)
 
 1. **Sintoma.** Adulterações isoladas de autonetting, netting multilateral, resíduo, ID e revisão do cenário, seeds dos participantes ou versão do motor no Replay ainda eram aceitas pelo validador do pacote.
