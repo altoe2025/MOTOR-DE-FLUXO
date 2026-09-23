@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { useOptionalChat } from '../chat/ChatProvider';
 
 import type { ReplayRequest } from '../api/client';
 import { ApiError } from '../api/errors';
@@ -168,6 +169,11 @@ function ReplayReady({ document, studyName, studyId, scenarioId, selected }: Rea
   selected: ReturnType<typeof describeSelectedRepetition>;
 }>) {
   const playback = useReplayPlayback(document);
+  const chat = useOptionalChat();
+  const setReplayDay = chat?.setReplayDay;
+  const setScenarioId = chat?.setScenarioId;
+  useEffect(() => { setReplayDay?.(playback.day); }, [setReplayDay, playback.day]);
+  useEffect(() => { setScenarioId?.(scenarioId); }, [setScenarioId, scenarioId]);
   const [sort, setSort] = useState<ReplaySort>('ARRIVAL');
   const state = replayStateAt(document, playback.day);
   const directDay = `Dia ${playback.day} de ${document.period.settlement_end_day}`;

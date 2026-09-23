@@ -1,6 +1,9 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 
 import { useAuth } from '../auth/AuthProvider';
+import { ChatProvider } from '../chat/ChatProvider';
+import { ChatPanel } from '../chat/components/ChatPanel';
+import { useChatRepository } from './providers';
 
 const destinations = [
   { to: '/empresas', label: 'Empresas' },
@@ -10,13 +13,14 @@ const destinations = [
 
 export function AppShell() {
   const { userId, signOut } = useAuth();
+  const chatRepository = useChatRepository();
   const location = useLocation();
   const studyId = /^\/(?:estudos|carteira)\/([^/]+)/.exec(location.pathname)?.[1];
   const navigation = [...destinations, {
     to: studyId === undefined ? '/diagnostico' : `/estudos/${studyId}/diagnostico`,
     label: 'Diagnóstico',
   }];
-  return (
+  return <ChatProvider key={userId} ownerSub={userId!} repository={chatRepository}>
     <div className="app-shell">
       <a className="skip-link" href="#main-content">Pular para o conteúdo</a>
       <aside className="sidebar">
@@ -45,11 +49,12 @@ export function AppShell() {
         <header className="workspace-header">
           <p>Estudo</p>
           <strong>Ainda não iniciado</strong>
+          <ChatPanel />
         </header>
         <main id="main-content" className="workspace-content">
           <Outlet />
         </main>
       </section>
     </div>
-  );
+  </ChatProvider>;
 }

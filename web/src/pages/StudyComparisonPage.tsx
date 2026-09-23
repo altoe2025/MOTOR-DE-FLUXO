@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 import { useStudyController } from '../app/providers';
+import { useOptionalChat } from '../chat/ChatProvider';
 import { compareMvpDiagnostics, type MvpComparisonResult } from '../hypotheses/comparison';
 import { ScenarioComparison } from '../hypotheses/components/ScenarioComparison';
 import { isProfileMvpScenario } from '../hypotheses/hypothesis';
@@ -26,6 +27,9 @@ export function StudyComparisonPage() {
   const [searchParams] = useSearchParams();
   const studyId = searchParams.get('studyId');
   const controller = useStudyController();
+  const chat = useOptionalChat();
+  const setChatScenarioId = chat?.setScenarioId;
+  const setChatExecutionId = chat?.setDiagnosticExecutionId;
   const heading = useRef<HTMLHeadingElement>(null);
   const [study, setStudy] = useState<StudyDocument | null>(null);
   const [baseId, setBaseId] = useState('');
@@ -53,6 +57,9 @@ export function StudyComparisonPage() {
   }) ?? [];
   const base = candidates.filter((item) => item.scenarioId === study?.baseScenarioId);
   const hypotheses = candidates.filter((item) => item.scenarioId !== study?.baseScenarioId);
+  const selectedHypothesis = study?.id === studyId ? hypotheses.find((item) => item.id === hypothesisId) : undefined;
+  useEffect(() => { setChatScenarioId?.(selectedHypothesis?.scenarioId ?? null); }, [setChatScenarioId, selectedHypothesis?.scenarioId]);
+  useEffect(() => { setChatExecutionId?.(selectedHypothesis?.id ?? null); }, [setChatExecutionId, selectedHypothesis?.id]);
   const compare = () => {
     const left = base.find((item) => item.id === baseId);
     const right = hypotheses.find((item) => item.id === hypothesisId);

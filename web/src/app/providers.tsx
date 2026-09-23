@@ -22,6 +22,7 @@ import { createUserQueryClient, disposeUserQueryClient } from './queryClient';
 
 const StudyControllerContext = createContext<StudyController | null>(null);
 const ApiClientContext = createContext<ApiClient | null>(null);
+const ChatRepositoryContext = createContext<ApplicationRepository | null>(null);
 const DiagnosticRuntimeContext = createContext<Readonly<{
   ownerSub: string | null;
   controller: StudyController;
@@ -80,6 +81,10 @@ export function ApplicationProviders({
     channelScope: storageProjectRef,
     ...(channelFactory === undefined ? {} : { channelFactory }),
   }), [channelFactory, repositoryFactory, storageProjectRef]);
+  const chatRepository = useMemo(() => userId === null ? null
+    : (repositoryFactory ?? ((ownerSub: string) => createBrowserApplicationRepository({
+      projectRef: storageProjectRef, ownerSub,
+    })))(userId), [repositoryFactory, storageProjectRef, userId]);
   const lifecycle = useRef({ controller, generation: 0 });
 
   useEffect(() => {
@@ -108,6 +113,8 @@ export function ApplicationProviders({
     };
   }, [controller]);
 
+  useEffect(() => () => { chatRepository?.close(); }, [chatRepository]);
+
   const apiClient = useMemo(
     () => client ?? createApiClient({ getAccessToken, onUnauthorized: expireSession }),
     [client, expireSession, getAccessToken],
@@ -122,7 +129,9 @@ export function ApplicationProviders({
       <ApiClientContext.Provider value={apiClient}>
         <StudyControllerContext.Provider value={controller}>
           <DiagnosticRuntimeContext.Provider value={{ ownerSub: userId, controller, client: apiClient }}>
-            <PreviewProvider client={apiClient} ownerId={userId}>{children}</PreviewProvider>
+            <ChatRepositoryContext.Provider value={chatRepository}>
+              <PreviewProvider client={apiClient} ownerId={userId}>{children}</PreviewProvider>
+            </ChatRepositoryContext.Provider>
           </DiagnosticRuntimeContext.Provider>
         </StudyControllerContext.Provider>
       </ApiClientContext.Provider>
@@ -142,6 +151,12 @@ export function useApiClient(): ApiClient {
   const client = useContext(ApiClientContext);
   if (client === null) throw new Error('useApiClient deve ser usado dentro de ApplicationProviders');
   return client;
+}
+
+export function useChatRepository(): ApplicationRepository {
+  const repository = useContext(ChatRepositoryContext);
+  if (repository === null) throw new Error('useChatRepository requer sessão autenticada');
+  return repository;
 }
 
 export function useDiagnosticRuntime() {

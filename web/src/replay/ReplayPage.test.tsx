@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { createMemoryRouter, MemoryRouter, Route, RouterProvider, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -8,6 +8,13 @@ import type { DiagnosticExecutionRecord, StudyDocument } from '../study/model';
 import { makeScenarioDraft } from '../study/fixtures';
 import { ReplayPage, resolveReplayRequest } from './ReplayPage';
 import { replayDocumentFixture } from './testFixtures';
+import { ChatProvider, useChat } from '../chat/ChatProvider';
+
+function ChatDayProbe() {
+  const chat = useChat();
+  return <><output data-testid="chat-day">{chat.routeContext?.replayDay ?? 'none'}</output>
+    <output data-testid="chat-scenario">{chat.routeContext?.scenarioId ?? 'none'}</output></>;
+}
 
 const mocks = vi.hoisted(() => {
   const buildReplay = vi.fn();
@@ -64,6 +71,22 @@ describe('resolução local do Replay', () => {
 });
 
 describe('ReplayPage', () => {
+  it('reports the selected day to typed chat context', async () => {
+    mocks.loadStudy.mockResolvedValue(persistedStudy());
+    mocks.buildReplay.mockResolvedValue(replayDocumentFixture());
+    render(<MemoryRouter initialEntries={['/estudos/study-1/replay?executionId=00000000-0000-4000-8000-000000000701']}>
+      <ChatProvider ownerSub="owner-1" repository={{ listChatConversations: async () => [], getChatConversation: async () => null,
+        saveChatConversation: async ({ document }) => document }}>
+        <Routes><Route path="/estudos/:studyId/replay" element={<ReplayPage />} /></Routes><ChatDayProbe />
+      </ChatProvider>
+    </MemoryRouter>);
+    await screen.findByRole('heading', { name: 'Fronteira Viva' });
+    expect(screen.getByTestId('chat-day')).toHaveTextContent('0');
+    expect(screen.getByTestId('chat-scenario')).toHaveTextContent(persistedStudy().scenarios[0]!.id);
+    const range = screen.getByRole('slider', { name: 'Selecionar dia' });
+    fireEvent.change(range, { target: { value: '1' } });
+    await waitFor(() => expect(screen.getByTestId('chat-day')).toHaveTextContent('1'));
+  });
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.loadStudy.mockResolvedValue(persistedStudy());
