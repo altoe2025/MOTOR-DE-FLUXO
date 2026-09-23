@@ -2,12 +2,13 @@ import { describe, expect, it } from 'vitest';
 
 import observed from '../../../contracts/fixtures/communication/observed.json';
 import synthetic from '../../../contracts/fixtures/communication/synthetic.json';
+import unicode from '../../../contracts/fixtures/communication/unicode.json';
 import invalidCases from '../../../contracts/fixtures/communication/invalid-cases.json';
 import type { CommunicationDocumentV1 } from './domain';
 import { fingerprintCommunicationDocument } from './evidence';
 import { assertValidCommunicationDocument, validateCommunicationDocument } from './validation';
 
-const fixtures = { observed, synthetic };
+const fixtures = { observed, synthetic, unicode };
 
 describe('CommunicationDocumentV1 trust boundary', () => {
   it.each(Object.entries(fixtures))('preserves %s decimals, absence and cross-language fingerprint', async (_name, fixture) => {

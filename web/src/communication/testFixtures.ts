@@ -36,8 +36,8 @@ export async function observedInput() {
     comparisonExecutionId: null, replay: null, replayDay: null };
 }
 
-export async function comparisonInput() {
-  const input = await observedInput();
+export async function comparisonInput(sourceInput?: Awaited<ReturnType<typeof observedInput>>) {
+  const input = sourceInput ?? await observedInput();
   const base = input.execution;
   const next = structuredClone(base);
   next.id = '60000000-0000-4000-8000-000000000001';
@@ -47,8 +47,8 @@ export async function comparisonInput() {
   next.requestSnapshot.idempotency_key = next.jobId;
   next.requestSnapshot.request_id = '60000000-0000-4000-8000-000000000005';
   next.requestSnapshot.scenario_id = next.scenarioId;
-  if (next.requestSnapshot.sampling.kind !== 'FIXED_INPUT' || next.envelope === null) throw new Error('Fixture fixa esperada.');
-  next.requestSnapshot.sampling.preview_request.scenario_id = next.scenarioId;
+  if (next.envelope === null) throw new Error('Envelope esperado.');
+  if (next.requestSnapshot.sampling.kind === 'FIXED_INPUT') next.requestSnapshot.sampling.preview_request.scenario_id = next.scenarioId;
   next.envelope.job_id = next.jobId;
   next.envelope.selected_execution.scenario_id = next.scenarioId;
   input.study.scenarios.push({ ...structuredClone(input.study.scenarios[0]!), id: next.scenarioId });

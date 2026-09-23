@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 
 import demoJson from '../demo/generated/demo-study.v1.json';
 import type { DemoStudyPackageV1 } from '../demo/domain';
+import { compareMvpDiagnostics } from '../hypotheses/comparison';
 import { canonical } from '../study/fingerprints';
+import { assertValidStudy } from '../study/validation';
 import type { DeepMutable, DiagnosticExecutionRecord } from '../study/model';
 import { buildCommunicationDocument } from './buildCommunicationDocument';
 import { observedInput, comparisonInput, refreshSourceFingerprints } from './testFixtures';
@@ -53,6 +55,46 @@ describe('buildCommunicationDocument', () => {
     const input = await comparisonInput();
     input.comparison.value.axes[0]!.base = '999';
     await expect(buildCommunicationDocument(input)).rejects.toThrow('Valores da comparação');
+  });
+
+  it.each(['preparationVersion', 'generatorVersion', 'motorBuildSha'] as const)(
+    'rejeita comparação publicada antes da divergência de recipe.%s', async (field) => {
+      const input = await comparisonInput(fixture());
+      const hypothesis = input.study.executions.find((item) => item.id === input.comparisonExecutionId)! as DeepMutable<DiagnosticExecutionRecord>;
+      if (hypothesis.sourceSnapshot.source.kind !== 'SYNTHETIC') throw new Error('Receita sintética esperada.');
+      hypothesis.sourceSnapshot.source.recipe[field] = field === 'motorBuildSha' ? 'f'.repeat(40) : '9.9.9';
+      for (const record of input.study.executions) {
+        if (record.kind === 'DIAGNOSTIC' && record.attemptId === hypothesis.attemptId) {
+          record.sourceSnapshot = structuredClone(hypothesis.sourceSnapshot);
+        }
+      }
+      await assertValidStudy(input.study);
+      expect(compareMvpDiagnostics(input.execution, hypothesis)).toMatchObject({ ok: false });
+      await expect(buildCommunicationDocument(input)).rejects.toThrow(/incompatíveis/);
+    },
+  );
+
+  it.each([
+    { unit: 'DAYS' as const },
+    { label: 'Prazo' },
+  ])('rejeita semântica adulterada da métrica de comparação: %j', async (change) => {
+    const input = await comparisonInput();
+    Object.assign(input.comparison.value.axes[0]!, change);
+    await expect(buildCommunicationDocument(input)).rejects.toThrow('Métrica de comparação');
+  });
+
+  it('rejeita chave não canônica mesmo quando a métrica está indisponível', async () => {
+    const input = await comparisonInput();
+    input.comparison.value.axes.find((row) => row.metric === 'baseline_brl.p50')!.metric += '.extra';
+    await expect(buildCommunicationDocument(input)).rejects.toThrow('Métrica de comparação');
+  });
+
+  it('preserva os bytes do delta publicado sem recalcular a comparação', async () => {
+    const input = await comparisonInput();
+    input.comparison.value.axes[0]!.delta = '12345678901234567890.012345678900';
+    const document = await buildCommunicationDocument(input);
+    expect(document.comparison?.metrics.find((item) => item.code === 'STRUCTURAL_POTENTIAL.gross_out_brl.delta')?.value)
+      .toBe('12345678901234567890.012345678900');
   });
 
   it('comparisonExecutionId precisa identificar a outra execução', async () => {

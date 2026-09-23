@@ -130,6 +130,12 @@ const DISTRIBUTIONS: readonly DistributionDefinition[] = [
   { axis: 'ECONOMIC_ROBUSTNESS', metric: 'netability_fraction.p50', label: 'Netabilidade p50', unit: 'FRACTION', read: (a) => a.economic_robustness.netability_fraction },
 ];
 
+/** Validate published identity only; never recompute values or deltas. */
+export function hasCanonicalComparisonMetricIdentity(row: MvpComparisonMetric): boolean {
+  return [...SCALARS, ...DISTRIBUTIONS].some((definition) => definition.axis === row.axis
+    && definition.metric === row.metric && definition.label === row.label && definition.unit === row.unit);
+}
+
 function canonical(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`;
   if (value !== null && typeof value === 'object') {
@@ -337,23 +343,32 @@ function inputChanges(base: DiagnosticExecutionRecord, hypothesis: DiagnosticExe
   return changes;
 }
 
-export function compareMvpDiagnostics(
+/** Shared compatibility gate for calculation and consumers of a published comparison. */
+export function mvpDiagnosticIncompatibility(
   base: DiagnosticExecutionRecord,
   hypothesis: DiagnosticExecutionRecord,
-): MvpComparisonResult {
+): string | null {
   if (base.status !== 'SUCCEEDED' || hypothesis.status !== 'SUCCEEDED'
-      || base.envelope === null || hypothesis.envelope === null) return incompatible('As duas execuções devem estar concluídas.');
-  if (base.scenarioId === hypothesis.scenarioId) return incompatible('Selecione cenários diferentes.');
+      || base.envelope === null || hypothesis.envelope === null) return 'As duas execuções devem estar concluídas.';
+  if (base.scenarioId === hypothesis.scenarioId) return 'Selecione cenários diferentes.';
   const a = base.envelope; const b = hypothesis.envelope;
   if (a.api_version !== b.api_version || a.schema_version !== b.schema_version
       || a.selected_execution.motor_build_sha !== b.selected_execution.motor_build_sha
       || a.selected_execution.presentation_version !== b.selected_execution.presentation_version
       || canonical(a.selected_execution.presentation) !== canonical(b.selected_execution.presentation)
       || canonical(base.periodSnapshot) !== canonical(hypothesis.periodSnapshot)) {
-    return incompatible('Versões, apresentação ou horizonte incompatíveis.');
+    return 'Versões, apresentação ou horizonte incompatíveis.';
   }
-  const sourceReason = compatibleSources(base.sourceSnapshot, hypothesis.sourceSnapshot);
-  if (sourceReason !== null) return incompatible(sourceReason);
+  return compatibleSources(base.sourceSnapshot, hypothesis.sourceSnapshot);
+}
+
+export function compareMvpDiagnostics(
+  base: DiagnosticExecutionRecord,
+  hypothesis: DiagnosticExecutionRecord,
+): MvpComparisonResult {
+  const reason = mvpDiagnosticIncompatibility(base, hypothesis);
+  if (reason !== null) return incompatible(reason);
+  const a = base.envelope!; const b = hypothesis.envelope!;
   const baseInput = base.sourceSnapshot.generationInputSnapshot;
   const hypothesisInput = hypothesis.sourceSnapshot.generationInputSnapshot;
   const compatibility = baseInput !== undefined && hypothesisInput !== undefined

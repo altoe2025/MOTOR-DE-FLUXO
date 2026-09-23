@@ -1,5 +1,5 @@
 import { validateReplayDocument } from '../api/validators';
-import { compareCompositionInputs, type MvpComparison } from '../hypotheses/comparison';
+import { compareCompositionInputs, hasCanonicalComparisonMetricIdentity, mvpDiagnosticIncompatibility, type MvpComparison } from '../hypotheses/comparison';
 import { deepFreeze, PROFILE_MVP_EXAMPLE_ID } from '../study/domain';
 import { canonical } from '../study/fingerprints';
 import type { DiagnosticEnvelope, DiagnosticExecutionRecord, StudyDocument } from '../study/model';
@@ -137,11 +137,7 @@ function checkComparison(input: CommunicationInput, selected: DiagnosticExecutio
     && [comparison.baseExecutionId, comparison.hypothesisExecutionId].includes(input.comparisonExecutionId), 'Identidade da comparação incompatível.');
   const base = diagnostic(input.study, comparison.baseExecutionId);
   const hypothesis = diagnostic(input.study, comparison.hypothesisExecutionId);
-  const a = base.envelope.selected_execution; const b = hypothesis.envelope.selected_execution;
-  requireCondition(base.scenarioId !== hypothesis.scenarioId && a.motor_build_sha === b.motor_build_sha
-    && a.presentation_version === b.presentation_version && canonical(a.presentation) === canonical(b.presentation)
-    && canonical(base.periodSnapshot) === canonical(hypothesis.periodSnapshot)
-    && base.sourceSnapshot.source.kind === hypothesis.sourceSnapshot.source.kind, 'Comparação entre execuções incompatíveis.');
+  requireCondition(mvpDiagnosticIncompatibility(base, hypothesis) === null, 'Comparação entre execuções incompatíveis.');
   const baseInput = base.sourceSnapshot.generationInputSnapshot;
   const hypothesisInput = hypothesis.sourceSnapshot.generationInputSnapshot;
   if (baseInput !== undefined && hypothesisInput !== undefined) {
@@ -154,6 +150,7 @@ function checkComparison(input: CommunicationInput, selected: DiagnosticExecutio
   requireCondition(comparison.value.compatibility.status === 'COMPARABLE' && comparison.value.compatibility.blockers.length === 0, 'Comparação incompatível.');
   const codes = new Set<string>();
   for (const row of comparison.value.axes) {
+    requireCondition(hasCanonicalComparisonMetricIdentity(row), 'Métrica de comparação com identidade, rótulo ou unidade incompatível.');
     const code = `${row.axis}.${row.metric}`;
     requireCondition(!codes.has(code), 'Métrica de comparação duplicada.'); codes.add(code);
     const [name, percentile] = row.metric.split('.');
