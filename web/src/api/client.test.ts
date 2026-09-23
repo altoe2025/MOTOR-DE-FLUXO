@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { components } from './generated';
-import { createApiClient } from './client';
+import { createApiClient, type ApiClient } from './client';
 import { ApiError } from './errors';
 
 type PreviaRequest = components['schemas']['PreviaRequest'];
@@ -100,6 +100,35 @@ function jobSnapshotFixture(status: 'QUEUED' | 'RUNNING' | 'CANCEL_REQUESTED' = 
 }
 
 describe('typed API client', () => {
+  it('obtém e valida o catálogo técnico pela rota canônica', async () => {
+    const catalog = {
+      schema_version: '1.0.0', catalog_version: 'a'.repeat(64),
+      status: 'NAO_CONFIGURADO', publicado_em_utc: '2026-09-23T00:00:00Z',
+      finalidades: [],
+      custos_padrao: {
+        iof_out: '0.035', iof_in: '0.0038', carry_cnr: '0.0004',
+        spread_rail_bps: '25', custo_fixo_remessa: '40',
+        custo_oportunidade_aa: '0', ptax: '5.4', iof_por_finalidade: [],
+      },
+      custos_origem: {
+        tipo: 'PADRAO_SINTETICO', fonte: 'Parâmetros técnicos sintéticos não calibrados',
+        registrado_em_utc: '2026-09-23T00:00:00Z',
+      },
+      custos_calibrados: false,
+    };
+    const fetch = vi.fn().mockResolvedValue(jsonResponse(catalog));
+    const client = createApiClient({ getAccessToken: async () => 'token', fetch });
+    const catalogClient = client as ApiClient & {
+      getImportCatalog(signal?: AbortSignal): Promise<typeof catalog>;
+    };
+
+    await expect(catalogClient.getImportCatalog()).resolves.toEqual(catalog);
+    expect(fetch).toHaveBeenCalledWith('/api/v1/catalogos/importacao', expect.objectContaining({
+      method: 'GET',
+      headers: expect.objectContaining({ Authorization: 'Bearer token' }),
+    }));
+  });
+
   it('bloqueia Replay local inválido antes de chamar a API', async () => {
     const fetch = vi.fn();
     const client = createApiClient({ getAccessToken: async () => 'token', fetch });

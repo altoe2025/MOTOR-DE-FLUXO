@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 
-import type { ISODate } from './domain';
 import { addCivilDays, daysBetween, parseCivilDate } from './dates';
 
 describe('civil dates', () => {
@@ -17,7 +16,7 @@ describe('civil dates', () => {
     });
 
   it('calculates and shifts dates as calendar days', () => {
-    expect(daysBetween('2026-10-17' as ISODate, '2026-10-19' as ISODate)).toBe(2);
-    expect(addCivilDays('2026-12-31' as ISODate, 1)).toBe('2027-01-01');
+    expect(daysBetween(parseCivilDate('2026-10-17'), parseCivilDate('2026-10-19'))).toBe(2);
+    expect(addCivilDays(parseCivilDate('2026-12-31'), 1)).toBe('2027-01-01');
   });
 });

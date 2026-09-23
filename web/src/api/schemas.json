@@ -104,6 +104,32 @@
       "title": "AgregadoDTO",
       "type": "object"
     },
+    "AliquotaFinalidade": {
+      "additionalProperties": false,
+      "properties": {
+        "aliquota": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Aliquota",
+          "type": "string"
+        },
+        "direcao": {
+          "enum": [
+            "OUT",
+            "IN"
+          ],
+          "title": "Direcao",
+          "type": "string"
+        }
+      },
+      "required": [
+        "direcao",
+        "aliquota"
+      ],
+      "title": "AliquotaFinalidade",
+      "type": "object"
+    },
     "AllocationEventV1": {
       "additionalProperties": false,
       "properties": {
@@ -284,6 +310,65 @@
         "evidence"
       ],
       "title": "AvailableEvidenceMetric[DistributionSummary]",
+      "type": "object"
+    },
+    "CatalogoImportacao": {
+      "additionalProperties": false,
+      "properties": {
+        "catalog_version": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Catalog Version",
+          "type": "string"
+        },
+        "custos_calibrados": {
+          "const": false,
+          "title": "Custos Calibrados",
+          "type": "boolean"
+        },
+        "custos_origem": {
+          "$ref": "#/$defs/OrigemValor"
+        },
+        "custos_padrao": {
+          "$ref": "#/$defs/CustoEntrada"
+        },
+        "finalidades": {
+          "items": {
+            "$ref": "#/$defs/FinalidadeCatalogo"
+          },
+          "maxItems": 100,
+          "title": "Finalidades",
+          "type": "array"
+        },
+        "publicado_em_utc": {
+          "format": "date-time",
+          "title": "Publicado Em Utc",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "CONFIGURADO",
+            "NAO_CONFIGURADO"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "catalog_version",
+        "status",
+        "publicado_em_utc",
+        "finalidades",
+        "custos_padrao",
+        "custos_origem",
+        "custos_calibrados"
+      ],
+      "title": "CatalogoImportacao",
       "type": "object"
     },
     "CenarioEntrada": {
@@ -1376,6 +1461,39 @@
         "percentile_method"
       ],
       "title": "EstatisticaPrevia",
+      "type": "object"
+    },
+    "FinalidadeCatalogo": {
+      "additionalProperties": false,
+      "properties": {
+        "aliquotas": {
+          "items": {
+            "$ref": "#/$defs/AliquotaFinalidade"
+          },
+          "maxItems": 2,
+          "minItems": 1,
+          "title": "Aliquotas",
+          "type": "array"
+        },
+        "codigo": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Codigo",
+          "type": "string"
+        },
+        "descricao": {
+          "maxLength": 240,
+          "minLength": 1,
+          "title": "Descricao",
+          "type": "string"
+        }
+      },
+      "required": [
+        "codigo",
+        "descricao",
+        "aliquotas"
+      ],
+      "title": "FinalidadeCatalogo",
       "type": "object"
     },
     "FixedDeadline": {
