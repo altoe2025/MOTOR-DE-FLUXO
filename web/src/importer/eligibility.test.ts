@@ -23,7 +23,7 @@ const row = {
 
 describe('createImportReview', () => {
   it('projects valid canonical rows into an auditable ObservedCase draft', () => {
-    const review = createImportReview({ parsed: parsed([row]), company, ownerSub: 'owner-1', now: '2026-09-23T12:00:00.000Z' });
+    const review = createImportReview({ parsed: parsed([row]), company, ownerSub: 'owner-1', now: '2026-09-23T12:00:00.000Z', positionIdentified: true });
 
     expect(review.draft).toMatchObject({
       status: 'DRAFT', ownerSub: 'owner-1', companyId: 'company-1',
@@ -70,7 +70,7 @@ describe('applyImportCommand', () => {
   it('records a correction, can exclude and restore it, and reverts the batch deterministically', () => {
     const original = createImportReview({ parsed: parsed([row]), company, ownerSub: 'owner-1', now: '2026-09-23T12:00:00.000Z' });
     const corrected = applyImportCommand(original, {
-      kind: 'CORRECT_FIELD', operationId: 'OP-1', field: 'valueBrl', rawValue: '125,75', actionId: 'correction-1', at: '2026-09-23T12:01:00.000Z',
+      kind: 'CORRECT_FIELD', versionId: original.batches[0]!.rows[0]!.versionId, operationId: 'OP-1', field: 'valueBrl', rawValue: '125,75', actionId: 'correction-1', at: '2026-09-23T12:01:00.000Z',
     });
     const excluded = applyImportCommand(corrected, {
       kind: 'EXCLUDE_OPERATION', operationId: 'OP-1', eventId: 'exclude-1', at: '2026-09-23T12:02:00.000Z',
@@ -114,10 +114,82 @@ describe('applyImportCommand', () => {
     });
 
     const corrected = applyImportCommand(review, {
-      kind: 'CORRECT_FIELD', operationId: 'OP-1', field: 'direction', rawValue: 'IN', actionId: 'correction-direction', at: '2026-09-23T12:01:00.000Z',
+      kind: 'CORRECT_FIELD', versionId: review.batches[0]!.rows[0]!.versionId, operationId: 'OP-1', field: 'direction', rawValue: 'IN', actionId: 'correction-direction', at: '2026-09-23T12:01:00.000Z',
     });
 
     expect(corrected.blockers.map((blocker) => blocker.code)).not.toContain('DIRECTION_UNKNOWN');
     expect(corrected.draft.orders).toEqual([expect.objectContaining({ id: 'OP-1', direction: 'IN' })]);
+  });
+
+  it('replays a correction against only its target version without mutating imported batches', () => {
+    const original = createImportReview({ parsed: parsed([{ ...row, finalidade_codigo: 'SERVICO' }]), company, ownerSub: 'owner-1', now: '2026-09-23T12:00:00.000Z' });
+    const second = applyImportCommand(original, {
+      kind: 'INCORPORATE_BATCH', parsed: { ...parsed([{ ...row, valor_brl: '200', finalidade_codigo: 'SERVICO' }]), sha256: 'b'.repeat(64) }, at: '2026-09-23T12:01:00.000Z',
+    });
+    const firstVersion = second.batches[0]!.rows[0]!.versionId;
+    const corrected = applyImportCommand(second, {
+      kind: 'CORRECT_FIELD', versionId: firstVersion, operationId: 'OP-1', field: 'valueBrl', rawValue: '150', actionId: 'correction-version-1', at: '2026-09-23T12:02:00.000Z',
+    });
+    const resolved = applyImportCommand(corrected, {
+      kind: 'RESOLVE_CONFLICT', operationId: 'OP-1', selectedVersionId: firstVersion, eventId: 'resolve-version-1', at: '2026-09-23T12:03:00.000Z',
+    });
+
+    expect(second.batches[0]!.rows[0]!.raw.valor_brl).toBe('100,50');
+    expect(corrected.batches[0]!.rows[0]!.raw.valor_brl).toBe('100,50');
+    expect(resolved.draft.orders.find((order) => order.id === 'OP-1')?.valueBrl).toBe('150');
+  });
+
+  it('keeps same-file duplicates as a resolvable conflict and does not let correction bypass it', () => {
+    const duplicate = createImportReview({
+      parsed: parsed([{ ...row, finalidade_codigo: 'SERVICO' }, { ...row, valor_brl: '200', finalidade_codigo: 'SERVICO' }]), company, ownerSub: 'owner-1', now: '2026-09-23T12:00:00.000Z',
+    });
+    const firstVersion = duplicate.batches[0]!.rows[0]!.versionId;
+    const corrected = applyImportCommand(duplicate, {
+      kind: 'CORRECT_FIELD', versionId: firstVersion, operationId: 'OP-1', field: 'purposeCode', rawValue: 'SERVICO', actionId: 'irrelevant-correction', at: '2026-09-23T12:01:00.000Z',
+    });
+
+    expect(corrected.blockers.map((blocker) => blocker.code)).toContain('DUPLICATE_UNRESOLVED');
+    const resolved = applyImportCommand(corrected, {
+      kind: 'RESOLVE_CONFLICT', operationId: 'OP-1', selectedVersionId: firstVersion, eventId: 'resolution-1', at: '2026-09-23T12:02:00.000Z',
+    });
+    expect(resolved.blockers.map((blocker) => blocker.code)).not.toContain('DUPLICATE_UNRESOLVED');
+  });
+
+  it('preserves the first imported value as original across repeated corrections', () => {
+    const original = createImportReview({ parsed: parsed([{ ...row, finalidade_codigo: 'SERVICO' }]), company, ownerSub: 'owner-1', now: '2026-09-23T12:00:00.000Z' });
+    const versionId = original.batches[0]!.rows[0]!.versionId;
+    const once = applyImportCommand(original, { kind: 'CORRECT_FIELD', versionId, operationId: 'OP-1', field: 'valueBrl', rawValue: '125', actionId: 'correction-1', at: '2026-09-23T12:01:00.000Z' });
+    const twice = applyImportCommand(once, { kind: 'CORRECT_FIELD', versionId, operationId: 'OP-1', field: 'valueBrl', rawValue: '150', actionId: 'correction-2', at: '2026-09-23T12:02:00.000Z' });
+
+    expect(twice.draft.corrections.at(-1)).toMatchObject({ originalValue: '100.5', previousValue: '125', nextValue: '150' });
+  });
+
+  it('increments the semantic draft revision when an alias changes identity', () => {
+    const original = createImportReview({ parsed: parsed([{ ...row, finalidade_codigo: 'SERVICO' }, { ...row, operacao_id: 'OP-2', cliente_nome: 'Órbita Comercial', finalidade_codigo: 'SERVICO' }]), company, ownerSub: 'owner-1', now: '2026-09-23T12:00:00.000Z' });
+    const target = original.draft.orders[0]!;
+    const associated = applyImportCommand(original, { kind: 'ASSOCIATE_ALIAS', alias: 'Órbita Comercial', canonicalClientId: target.clientId, eventId: 'alias-revision', at: '2026-09-23T12:01:00.000Z' });
+
+    expect(associated.draft.revision).toBe(original.draft.revision + 1);
+  });
+
+  it('compares declared control totals as Decimal values', () => {
+    const equal = createImportReview({ parsed: parsed([{ ...row, finalidade_codigo: 'SERVICO' }]), company, ownerSub: 'owner-1', now: '2026-09-23T12:00:00.000Z', controlTotals: { out: '100.50', in: '0.0' } });
+    const divergent = createImportReview({ parsed: parsed([{ ...row, finalidade_codigo: 'SERVICO' }]), company, ownerSub: 'owner-1', now: '2026-09-23T12:00:00.000Z', controlTotals: { out: '100.51', in: '0' } });
+
+    expect(equal.blockers.map((blocker) => blocker.code)).not.toContain('TOTAL_DIVERGENT');
+    expect(divergent.blockers.map((blocker) => blocker.code)).toContain('TOTAL_DIVERGENT');
+  });
+
+  it('excludes an invalid row from blockers, defaults an unverified position to blocked, and blocks cross-owner company use', () => {
+    const invalid = createImportReview({ parsed: parsed([{ ...row, direcao: 'UNKNOWN' }]), company, ownerSub: 'owner-1', now: '2026-09-23T12:00:00.000Z' });
+    const excluded = applyImportCommand(invalid, { kind: 'EXCLUDE_OPERATION', operationId: 'OP-1', eventId: 'exclude-invalid', at: '2026-09-23T12:01:00.000Z' });
+    const restored = applyImportCommand(excluded, { kind: 'RESTORE_OPERATION', operationId: 'OP-1', eventId: 'restore-invalid', at: '2026-09-23T12:02:00.000Z' });
+    const unknownPosition = createImportReview({ parsed: parsed([{ ...row, finalidade_codigo: 'SERVICO' }]), company, ownerSub: 'owner-1', now: '2026-09-23T12:00:00.000Z' });
+    const foreignCompany = createImportReview({ parsed: parsed([{ ...row, finalidade_codigo: 'SERVICO' }]), company: { ...company, ownerSub: 'other-owner' }, ownerSub: 'owner-1', now: '2026-09-23T12:00:00.000Z', positionIdentified: true });
+
+    expect(excluded.blockers.map((blocker) => blocker.code)).not.toContain('DIRECTION_UNKNOWN');
+    expect(restored.blockers.map((blocker) => blocker.code)).toContain('DIRECTION_UNKNOWN');
+    expect(unknownPosition.blockers.map((blocker) => blocker.code)).toContain('POSITION_UNIDENTIFIED');
+    expect(foreignCompany.blockers.map((blocker) => blocker.code)).toContain('COMPANY_OWNER_MISMATCH');
   });
 });

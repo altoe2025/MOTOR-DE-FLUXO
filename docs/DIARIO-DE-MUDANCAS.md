@@ -73,6 +73,32 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-23 — Replay append-only de correções e fronteiras de elegibilidade (MOT-53/MOT-54/MOT-55)
+
+**Sintoma.** A revisão independente da A2 identificou que uma correção alterava o
+lote histórico, não havia comando público para segundo lote, duplicatas do mesmo
+arquivo não eram resolvíveis e alguns blockers podiam ser comparados ou reaplicados
+de forma incorreta.
+
+**Causa.** A primeira porta tratava a revisão como snapshot mutável; por isso não
+preservava a identidade de versão como alvo do evento nem reaplicava os efeitos por
+sequência sobre a entrada original.
+
+**O que foi feito.** `portfolio.ts` agora revalida uma cópia transitória de cada
+linha a partir dos lotes imutáveis e dos eventos `OPERATION_CORRECTED` ordenados.
+`CORRECT_FIELD` exige `versionId`, registra original/antes/depois sem mutar o lote;
+`INCORPORATE_BATCH` expõe a segunda fonte em comando discriminado; duplicata de um
+mesmo arquivo entra no mesmo mecanismo explícito de conflito/resolução. A revisão
+também compara totais via Decimal, isola blockers de linha excluída, exige posição
+identificada explicitamente, bloqueia empresa de outro `ownerSub` e incrementa a
+revisão semântica após alias. Os 31 testes focados cobrem as regressões. Desvio
+autorizado de roteamento: `gpt-5.6-terra`/high substitui `gpt-6-luna`/high quando
+o papel original o indicaria.
+
+**O que isso invalida.** A interpretação anterior de que correção podia atualizar
+o lote ou que `positionIdentified` era verdadeiro por omissão. A A3 continua sendo
+a fronteira responsável por nunca persistir `raw`/`ParsedImport`.
+
 ## 2026-09-23 — Correções e elegibilidade do Caso Observado na importação (MOT-55)
 
 **Sintoma.** A revisão precisava transformar as linhas canônicas em um rascunho de

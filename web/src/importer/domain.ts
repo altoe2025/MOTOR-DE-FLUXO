@@ -130,6 +130,16 @@ export type ImportEvent =
     eventSequence: number;
     occurredAt: string;
     operationId: string;
+  }>
+  | Readonly<{
+    kind: 'OPERATION_CORRECTED';
+    id: string;
+    eventSequence: number;
+    occurredAt: string;
+    versionId: string;
+    operationId: string;
+    field: EditableImportField;
+    rawValue: string;
   }>;
 
 export type ImportPortfolio = Readonly<{
@@ -159,6 +169,7 @@ export type PortfolioConflict = Readonly<{
 
 export type PortfolioProjection = Readonly<{
   versions: readonly PortfolioVersion[];
+  rows: readonly ImportedVersionRow[];
   currentOperations: readonly PortfolioOperation[];
   conflicts: readonly PortfolioConflict[];
 }>;

@@ -21,9 +21,9 @@ import type {
   RawOperationCells,
 } from './domain';
 import { mergeClientAlias, normalizeClientNameKey, resolveClient } from './clients';
-import { projectPortfolio, resolveVersionConflict, revertBatch } from './portfolio';
+import { incorporateBatch, projectPortfolio, resolveVersionConflict, revertBatch } from './portfolio';
 import type { ParsedImport } from './xlsxParser';
-import { normalizeDirection, normalizePurposeCode } from './normalization';
+import { normalizeClientName, normalizeDirection, normalizePurposeCode } from './normalization';
 import { validateImportedRows } from './validation';
 
 const DecimalBrl = Decimal.clone({ precision: 40 });
@@ -40,11 +40,12 @@ export type CreateImportReviewInput = Readonly<{
 }>;
 
 export type ImportCommand =
-  | Readonly<{ kind: 'CORRECT_FIELD'; operationId: string; field: EditableImportField; rawValue: string; actionId: string; at: string }>
+  | Readonly<{ kind: 'CORRECT_FIELD'; versionId: string; operationId: string; field: EditableImportField; rawValue: string; actionId: string; at: string }>
   | Readonly<{ kind: 'ASSOCIATE_ALIAS'; alias: string; canonicalClientId: string; eventId: string; at: string }>
   | Readonly<{ kind: 'RESOLVE_CONFLICT'; operationId: string; selectedVersionId: string; eventId: string; at: string }>
   | Readonly<{ kind: 'EXCLUDE_OPERATION' | 'RESTORE_OPERATION'; operationId: string; eventId: string; at: string }>
-  | Readonly<{ kind: 'REVERT_BATCH'; batchId: string; eventId: string; at: string }>;
+  | Readonly<{ kind: 'REVERT_BATCH'; batchId: string; eventId: string; at: string }>
+  | Readonly<{ kind: 'INCORPORATE_BATCH'; parsed: ParsedImport; at: string }>;
 
 type ReviewContext = Readonly<{
   parsed: ParsedImport;
@@ -122,17 +123,27 @@ function rowIssues(row: ImportedVersionRow): Readonly<{ invalid: readonly DataQu
   return { invalid, warnings };
 }
 
-function toBatch(input: CreateImportReviewInput): { batch: ImportBatch; identity: ClientIdentityState; invalid: readonly DataQualityIssue[]; warnings: readonly DataQualityIssue[] } {
+function toBatch(input: CreateImportReviewInput, batchSequence = 1): { batch: ImportBatch; identity: ClientIdentityState; invalid: readonly DataQualityIssue[]; warnings: readonly DataQualityIssue[] } {
   const report = validateImportedRows(input.parsed.rows);
   let identity = input.clientIdentity ?? emptyIdentity();
   const invalid: DataQualityIssue[] = [];
   const warnings: DataQualityIssue[] = [];
-  const rows: ImportedVersionRow[] = report.rows.map((row) => {
-    const found = rowIssues({ versionId: '', canonicalClientId: '', rowNumber: row.rowNumber, raw: row.raw, normalized: row.normalized, errors: row.errors });
+  const rows: ImportedVersionRow[] = report.rows.map((sourceRow) => {
+    const row = validateImportedRows([sourceRow.raw]).rows[0] ?? sourceRow;
+    const found = rowIssues({ versionId: '', canonicalClientId: '', rowNumber: sourceRow.rowNumber, raw: row.raw, normalized: row.normalized, errors: row.errors });
     invalid.push(...found.invalid);
     warnings.push(...found.warnings);
     if (row.normalized === null) {
-      return { versionId: stableUuid(`${input.parsed.sha256}:row:${row.rowNumber}`), canonicalClientId: '', rowNumber: row.rowNumber, raw: row.raw, normalized: null, errors: row.errors };
+      let canonicalClientId = '';
+      try {
+        const name = normalizeClientName(row.raw.cliente_nome);
+        const resolution = resolveClient(identity, name, input.now, () => stableUuid(`${input.ownerSub}:${input.company?.id ?? 'missing'}:${normalizeClientNameKey(name)}`));
+        identity = resolution.state;
+        canonicalClientId = resolution.client.id;
+      } catch {
+        // A linha segue bloqueada; não inventar identidade sem nome válido.
+      }
+      return { versionId: stableUuid(`${input.parsed.sha256}:row:${sourceRow.rowNumber}`), canonicalClientId, rowNumber: sourceRow.rowNumber, raw: row.raw, normalized: null, errors: row.errors };
     }
     const normalized = row.normalized;
     const resolution = resolveClient(
@@ -143,16 +154,16 @@ function toBatch(input: CreateImportReviewInput): { batch: ImportBatch; identity
     );
     identity = resolution.state;
     return {
-      versionId: stableUuid(`${input.parsed.sha256}:row:${row.rowNumber}`),
+      versionId: stableUuid(`${input.parsed.sha256}:row:${sourceRow.rowNumber}`),
       canonicalClientId: resolution.client.id,
-      rowNumber: row.rowNumber,
+      rowNumber: sourceRow.rowNumber,
       raw: row.raw,
       normalized,
       errors: row.errors,
     };
   });
   return {
-    batch: { id: stableUuid(`${input.parsed.sha256}:batch`), batchSequence: 1, importedAt: input.now, rows },
+    batch: { id: stableUuid(`${input.parsed.sha256}:batch`), batchSequence, importedAt: input.now, rows },
     identity,
     invalid,
     warnings,
@@ -168,31 +179,20 @@ function excludedOperationIds(events: readonly ImportEvent[]): Set<string> {
   return excluded;
 }
 
-function activeBatchIds(batches: readonly ImportBatch[], events: readonly ImportEvent[]): Set<string> {
-  const active = new Set(batches.map((batch) => batch.id));
-  for (const event of [...events].sort((left, right) => left.eventSequence - right.eventSequence)) {
-    if (event.kind === 'BATCH_REVERTED') active.delete(event.batchId);
-    if (event.kind === 'BATCH_IMPORTED') active.add(event.batchId);
-  }
-  return active;
-}
-
-function currentRowIssues(batches: readonly ImportBatch[], events: readonly ImportEvent[]): Readonly<{ invalid: readonly DataQualityIssue[]; warnings: readonly DataQualityIssue[] }> {
+function currentRowIssues(rows: readonly ImportedVersionRow[], events: readonly ImportEvent[]): Readonly<{ invalid: readonly DataQualityIssue[]; warnings: readonly DataQualityIssue[] }> {
   const invalid: DataQualityIssue[] = [];
   const warnings: DataQualityIssue[] = [];
-  const active = activeBatchIds(batches, events);
-  for (const batch of batches) {
-    if (!active.has(batch.id)) continue;
-    for (const row of batch.rows) {
-      const found = rowIssues(row);
-      invalid.push(...found.invalid);
-      warnings.push(...found.warnings);
-    }
+  const excluded = excludedOperationIds(events);
+  for (const row of rows) {
+    if (row.raw.operacao_id !== null && excluded.has(row.raw.operacao_id)) continue;
+    const found = rowIssues(row);
+    invalid.push(...found.invalid);
+    warnings.push(...found.warnings);
   }
   return { invalid, warnings };
 }
 
-function ordersFor(portfolio: ImportPortfolio, corrections: readonly CorrectionRecord[], now: string): ObservedOrder[] {
+function ordersFor(portfolio: ImportPortfolio, identity: ClientIdentityState, corrections: readonly CorrectionRecord[], now: string): ObservedOrder[] {
   const correctionsByPath = new Map(corrections.map((item) => [item.fieldPath, item]));
   const excluded = excludedOperationIds(portfolio.events);
   return projectPortfolio(portfolio).currentOperations
@@ -203,7 +203,7 @@ function ordersFor(portfolio: ImportPortfolio, corrections: readonly CorrectionR
         fieldName: T,
         fallback: FieldProvenance,
       ): FieldProvenance => {
-        const change = correctionsByPath.get(`orders/${operation.operationId}/${fieldName}`);
+        const change = correctionsByPath.get(`versions/${operation.versionId}/${fieldName}`);
         return change === undefined ? fallback : corrected(change.actionAt, change.id);
       };
       const base = observed(now);
@@ -211,7 +211,7 @@ function ordersFor(portfolio: ImportPortfolio, corrections: readonly CorrectionR
       const efx = notCollected(now);
       return {
         id: operation.operationId,
-        clientId: operation.canonicalClientId,
+        clientId: identity.aliases.find((alias) => alias.revokedAt === null && alias.normalizedName === normalizeClientNameKey(value.clientName))?.canonicalClientId ?? operation.canonicalClientId,
         direction: value.direction,
         knownDate: value.knownDate,
         deadlineDate: value.deadlineDate,
@@ -250,15 +250,16 @@ function buildReview(
 ): ImportReview {
   const portfolio: ImportPortfolio = { revision: corrections.length + events.length + 1, batches, events };
   const projection = projectPortfolio(portfolio);
-  const orders = ordersFor(portfolio, corrections, now);
+  const orders = ordersFor(portfolio, clientIdentity, corrections, now);
   const generatedTotals = totals(orders, now);
   const declared = context.controlTotals;
-  const quality = currentRowIssues(batches, events);
+  const quality = currentRowIssues(projection.rows, events);
   const blockers = [...quality.invalid];
   if (company === null) blockers.push(issue('COMPANY_MISSING', 'Empresa selecionada é obrigatória.'));
+  if (company !== null && company.ownerSub !== ownerSub) blockers.push(issue('COMPANY_OWNER_MISMATCH', 'Empresa pertence a outro usuário.'));
   if (!context.positionIdentified) blockers.push(issue('POSITION_UNIDENTIFIED', 'A posição líquida a publicar não foi identificada.'));
   for (const conflict of projection.conflicts) blockers.push(issue('DUPLICATE_UNRESOLVED', `Conflito não resolvido em ${conflict.operationId}.`, `/orders/${conflict.operationId}`));
-  if (declared !== null && (declared.out !== generatedTotals.out || declared.in !== generatedTotals.in)) {
+  if (declared !== null && (!new DecimalBrl(declared.out).eq(generatedTotals.out) || !new DecimalBrl(declared.in).eq(generatedTotals.in))) {
     blockers.push(issue('TOTAL_DIVERGENT', 'Total de controle diverge das ordens revisadas.', '/controlTotals'));
   }
   const windowDates = orders.flatMap((order) => [order.knownDate, order.deadlineDate]).sort();
@@ -277,7 +278,7 @@ function buildReview(
     ownerSub,
     companyId: company?.id ?? 'missing-company',
     status: 'DRAFT',
-    revision: portfolio.revision,
+    revision: Math.max(portfolio.revision, clientIdentity.revision + 1),
     window: { startDate, endDate, closingDate: endDate },
     orders,
     controlTotals: [
@@ -306,7 +307,7 @@ export function createImportReview(input: CreateImportReviewInput): ImportReview
     [],
     prepared.identity,
     [],
-    { parsed: input.parsed, positionIdentified: input.positionIdentified ?? true, controlTotals: input.controlTotals ?? null },
+    { parsed: input.parsed, positionIdentified: input.positionIdentified ?? false, controlTotals: input.controlTotals ?? null },
     input.now,
   );
 }
@@ -343,6 +344,12 @@ function rebuild(
 
 export function applyImportCommand(review: ImportReview, command: ImportCommand): ImportReview {
   switch (command.kind) {
+    case 'INCORPORATE_BATCH': {
+      const prepared = toBatch({ parsed: command.parsed, company: review.company, ownerSub: review.draft.ownerSub, now: command.at, clientIdentity: review.clientIdentity }, review.batches.length + 1);
+      const portfolio: ImportPortfolio = { revision: review.draft.revision, batches: review.batches, events: review.events };
+      const next = incorporateBatch(portfolio, prepared.batch);
+      return rebuild(review, next.batches, next.events, prepared.identity, review.draft.corrections, command.at);
+    }
     case 'RESOLVE_CONFLICT': {
       const portfolio: ImportPortfolio = { revision: review.draft.revision, batches: review.batches, events: review.events };
       const next = resolveVersionConflict(portfolio, command);
@@ -357,56 +364,35 @@ export function applyImportCommand(review: ImportReview, command: ImportCommand)
     case 'RESTORE_OPERATION': return appendOperationEvent(review, 'OPERATION_RESTORED', command);
     case 'ASSOCIATE_ALIAS': {
       const identity = mergeClientAlias(review.clientIdentity, command.alias, command.canonicalClientId, command.at, () => command.eventId);
-      const key = normalizeClientNameKey(command.alias);
-      const batches = review.batches.map((batch) => ({ ...batch, rows: batch.rows.map((row) => (
-        row.normalized !== null && normalizeClientNameKey(row.normalized.clientName) === key
-          ? { ...row, canonicalClientId: command.canonicalClientId }
-          : row
-      )) }));
-      return rebuild(review, batches, review.events, identity, review.draft.corrections, command.at);
+      return rebuild(review, review.batches, review.events, identity, review.draft.corrections, command.at);
     }
     case 'CORRECT_FIELD': {
-      let original: string | null = null;
-      let previous: string | null = null;
-      let found = false;
-      let identity = review.clientIdentity;
+      const portfolio: ImportPortfolio = { revision: review.draft.revision, batches: review.batches, events: review.events };
+      const before = projectPortfolio(portfolio);
+      const originalRow = review.batches.flatMap((batch) => batch.rows).find((row) => row.versionId === command.versionId);
+      const previousVersion = before.versions.find((version) => version.versionId === command.versionId);
+      if (originalRow === undefined || originalRow.raw.operacao_id !== command.operationId) throw new Error(`OPERATION_NOT_EDITABLE: operação ${command.operationId} não existe`);
       const rawField: Record<EditableImportField, keyof RawOperationCells> = {
         direction: 'direcao', knownDate: 'data_conhecida', deadlineDate: 'data_limite',
         valueBrl: 'valor_brl', purposeCode: 'finalidade_codigo',
       };
-      const batches = review.batches.map((batch) => ({ ...batch, rows: batch.rows.map((row) => {
-        if (row.raw.operacao_id !== command.operationId) return row;
-        found = true;
-        const current = row.normalized?.[command.field] ?? row.raw[rawField[command.field]];
-        original ??= current;
-        previous = current;
-        const raw = { ...row.raw, [rawField[command.field]]: command.rawValue };
-        const revalidated = validateImportedRows([raw]).rows[0];
-        if (revalidated === undefined) throw new Error('ROW_REVALIDATION_FAILED');
-        let canonicalClientId = row.canonicalClientId;
-        if (revalidated.normalized !== null) {
-          const resolution = resolveClient(
-            identity,
-            revalidated.normalized.clientName,
-            command.at,
-            () => stableUuid(`${review.draft.ownerSub}:${review.company?.id ?? 'missing'}:${normalizeClientNameKey(revalidated.normalized!.clientName)}`),
-          );
-          identity = resolution.state;
-          canonicalClientId = resolution.client.id;
-        }
-        return { ...row, canonicalClientId, raw, normalized: revalidated.normalized, errors: revalidated.errors };
-      }) }));
-      if (!found) throw new Error(`OPERATION_NOT_EDITABLE: operação ${command.operationId} não existe`);
+      const initial = validateImportedRows([originalRow.raw]).rows[0];
+      if (initial === undefined) throw new Error('ROW_REVALIDATION_FAILED');
+      const original = initial.normalized?.[command.field] ?? originalRow.raw[rawField[command.field]];
+      const previous = previousVersion?.operation[command.field] ?? original;
+      const sequence = review.events.reduce((maximum, event) => Math.max(maximum, event.eventSequence), 0) + 1;
+      const event: ImportEvent = { kind: 'OPERATION_CORRECTED', id: command.actionId, eventSequence: sequence, occurredAt: command.at, versionId: command.versionId, operationId: command.operationId, field: command.field, rawValue: command.rawValue };
+      const priorCorrection = review.draft.corrections.find((correction) => correction.fieldPath === `versions/${command.versionId}/${command.field}`);
       const correction: CorrectionRecord = {
         id: command.actionId,
-        fieldPath: `orders/${command.operationId}/${command.field}`,
-        originalValue: original,
+        fieldPath: `versions/${command.versionId}/${command.field}`,
+        originalValue: priorCorrection?.originalValue ?? original,
         previousValue: previous,
         nextValue: normalizeEditedValue(command.field, command.rawValue),
         actionAt: command.at,
         actorSub: review.draft.ownerSub,
       };
-      return rebuild(review, batches, review.events, identity, [...review.draft.corrections, correction], command.at);
+      return rebuild(review, review.batches, [...review.events, event], review.clientIdentity, [...review.draft.corrections, correction], command.at);
     }
   }
 }
