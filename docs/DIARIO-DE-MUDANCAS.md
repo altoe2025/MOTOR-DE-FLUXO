@@ -73,6 +73,15 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-23 — Catálogo técnico autenticado da importação (MOT-57)
+
+1. **Sintoma.** A importação não tinha um contrato público versionado para declarar que as finalidades regulatórias e os custos reais ainda não estão configurados.
+2. **Causa.** O catálogo da pilha anterior não podia ser portado cegamente: seus contratos e integração não eram os da aplicação atual, enquanto o piloto não autoriza inventar finalidades, alíquotas ou calibração.
+3. **O que foi feito.** Foram criados o recurso empacotado `servidor/catalogs/importacao.v1.json`, seu loader canônico SHA-256 e os contratos/rota estritos em `servidor/contracts/importation.py` e `servidor/routes/importation.py`. A aplicação valida o recurso ao iniciar e publica `GET /api/v1/catalogos/importacao` somente com Bearer, `no-store`, estado `NAO_CONFIGURADO`, lista vazia e defaults técnicos sintéticos não calibrados. O schema OpenAPI registra a rota; `pyproject.toml` inclui somente esse JSON como package data. Os testes cobrem autenticação, cache, schema, hash, startup inválido e ausência de finalidade em produção. A execução foi autorizada em `gpt-5.6-terra/high` em vez do roteamento planejado Luna/high; a revisão independente Sol/medium permanece pendente. A hierarquia da especificação/plano 6A aprovada limita esta MOT ao catálogo: não foram implementados parâmetros de `ImportStudy`, cache TanStack, elegibilidade, domínio ou rotas históricas conflitantes.
+4. **O que isso invalida.** Invalida a ausência de um gate técnico explícito do catálogo. Não configura conteúdo regulatório, não torna importação executável, não altera revisão local, `motor/`, persistência, casos, perfis, estudos, push, PR, merge ou deploy.
+
+---
+
 ## 2026-09-23 — Parser XLSX seguro portado (MOT-51)
 
 1. **Sintoma.** O destino não inspecionava nem convertia o XLSX canônico sem expor binário, XML ou metadados pessoais a camadas posteriores.

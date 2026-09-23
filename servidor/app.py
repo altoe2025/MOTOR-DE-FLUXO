@@ -21,6 +21,7 @@ from servidor.auth import (
     SessionInvalid,
     TokenVerifier,
 )
+from servidor.catalogs.importacao import load_import_catalog
 from servidor.config import Settings
 from servidor.contracts.diagnostics import (
     DiagnosticEnvelope,
@@ -28,6 +29,7 @@ from servidor.contracts.diagnostics import (
     DiagnosticRetryRequest,
     JobSnapshot,
 )
+from servidor.contracts.importation import CatalogoImportacao
 from servidor.contracts.input import PreviaRequest
 from servidor.contracts.preparation import PreparationRequest, PreparationResponse
 from servidor.contracts.preview import PreviewEnvelope, ReferenceExample
@@ -38,7 +40,15 @@ from servidor.diagnostics.executor import DiagnosticExecutor
 from servidor.errors import ApiFailure, entrada_invalida, failure_response
 from servidor.generate_reference_fixture import build_reference_request
 from servidor.preparation import preparar_carteira
-from servidor.routes import diagnostics, examples, preparation, preview, replay, session
+from servidor.routes import (
+    diagnostics,
+    examples,
+    importation,
+    preparation,
+    preview,
+    replay,
+    session,
+)
 from servidor.static import install_static_routes
 
 _LOGGER = logging.getLogger("servidor.http")
@@ -60,6 +70,7 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
+        app.state.import_catalog = load_import_catalog()
         executor = diagnostic_executor or DiagnosticExecutor(
             build_sha=configured.motor_build_sha,
             max_workers=configured.diagnostic_max_workers,
@@ -158,6 +169,7 @@ def create_app(
         )
 
     app.include_router(session.router)
+    app.include_router(importation.router)
     app.include_router(examples.router)
     app.include_router(preparation.router)
     app.include_router(preview.router)
@@ -191,6 +203,10 @@ def create_schema_app() -> FastAPI:
     @app.get("/api/v1/session", response_model=SessionResponse)
     def session_schema(_: SchemaBearer) -> SessionResponse:
         raise HTTPException(status_code=501, detail="endpoint disponível na T3")
+
+    @app.get("/api/v1/catalogos/importacao", response_model=CatalogoImportacao)
+    def import_catalog_schema(_: SchemaBearer) -> CatalogoImportacao:
+        raise HTTPException(status_code=501, detail="endpoint disponível na Etapa 6")
 
     @app.get("/api/v1/examples/reference", response_model=ReferenceExample)
     def reference_example_schema(_: SchemaBearer) -> ReferenceExample:
