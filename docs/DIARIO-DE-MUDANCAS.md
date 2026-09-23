@@ -73,6 +73,13 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-23 — Domínio canônico da importação portado (MOT-50)
+
+1. **Sintoma.** A base da Etapa 6 não possuía tipos, datas civis, decimais BRL ou normalização local para ler linhas do XLSX canônico.
+2. **Causa.** A implementação auditada vivia numa pilha anterior, cujo `domain.ts` também carregava `ImportStudy`, repositório e contrato HTTP incompatíveis com o Caso Observado atual.
+3. **O que foi feito.** Na branch `codex/frontend-etapa-6-planejamento`, foram portados somente `web/src/importer/domain.ts`, `errors.ts`, `dates.ts`, `decimals.ts` e `normalization.ts`, com testes reais de formato, calendário civil, precisão decimal e normalização. O domínio é serializável e não inclui `File`, armazenamento, HTTP, execução ou `ImportStudy`. Por instrução autorizada do Gabriel, esta tarefa foi executada por gpt-5.6-terra/high em substituição ao roteamento Luna/high; a revisão independente prevista continua em gpt-6-sol/medium.
+4. **O que isso invalida.** Nada de produto ou de regras do motor; invalida somente a ausência desses utilitários no destino. Não houve mudança em `motor/`, persistência, API, execução, push, PR, merge ou deploy.
+
 ---
 
 ## 2026-09-23 — Matriz de portabilidade e baseline da importação 6A (MOT-90)
