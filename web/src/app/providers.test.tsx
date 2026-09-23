@@ -2,7 +2,7 @@
 
 import { useQueryClient } from '@tanstack/react-query';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { useState, useSyncExternalStore } from 'react';
+import { StrictMode, useState, useSyncExternalStore } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { AuthProvider } from '../auth/AuthProvider';
@@ -12,7 +12,14 @@ import { useProductHelpCatalog } from '../help/HelpCatalogProvider';
 import productHelp from '../../../servidor/catalogs/product_help.v1.json';
 import type { ApplicationRepository } from '../storage/applicationRepository';
 import type { StudyChannel } from '../study/studyController';
-import { ApplicationProviders, resolveStorageProjectRef, useStudyController } from './providers';
+import { ApplicationProviders, resolveStorageProjectRef, useChatRepository, useStudyController } from './providers';
+
+function ChatRepositoryProbe() {
+  const repository = useChatRepository();
+  const [result, setResult] = useState('pending');
+  return <><button onClick={() => void repository.listChatConversations(null).then(() => setResult('open')).catch(() => setResult('closed'))}>Ler chat</button>
+    <output data-testid="chat-repository">{result}</output></>;
+}
 
 const USER_A = '00000000-0000-4000-8000-000000000001';
 const USER_B = '00000000-0000-4000-8000-000000000002';
@@ -94,6 +101,23 @@ describe('ApplicationProviders', () => {
     await waitFor(() => expect(screen.getByTestId('product-help-state')).toHaveTextContent('unavailable'));
   });
 
+  it('keeps chat storage usable after StrictMode effect replay', async () => {
+    const auth = authClient();
+    const repositoryFactory = () => {
+      let closed = false;
+      return { close: () => { closed = true; },
+        listChatConversations: async () => { if (closed) throw new Error('closed'); return []; },
+      } as unknown as ApplicationRepository;
+    };
+    render(<StrictMode><AuthProvider client={auth.client}>
+      <ApplicationProviders repositoryFactory={repositoryFactory} channelFactory={() => ({
+        postMessage: vi.fn(), addEventListener: vi.fn(), removeEventListener: vi.fn(), close: vi.fn(),
+      }) as unknown as StudyChannel}><ChatRepositoryProbe /></ApplicationProviders>
+    </AuthProvider></StrictMode>);
+    fireEvent.click(await screen.findByRole('button', { name: 'Ler chat' }));
+    await waitFor(() => expect(screen.getByTestId('chat-repository')).toHaveTextContent('open'));
+  });
+
   it('mantém o namespace local no modo E2E mesmo com Supabase real configurado', () => {
     expect(resolveStorageProjectRef('e2e', 'https://projeto-real.supabase.co')).toBe('local');
   });
@@ -139,12 +163,11 @@ describe('ApplicationProviders', () => {
     const epochA2 = Number(screen.getByTestId('controller-state').textContent?.split(':')[1]);
 
     expect([epochA1, epochB, epochA2]).toEqual([1, 2, 3]);
-    expect(repositories.map((repository) => repository.ownerSub)).toEqual([USER_A, USER_B, USER_A]);
-    expect(repositories[0]?.close).toHaveBeenCalledOnce();
-    expect(repositories[1]?.close).toHaveBeenCalledOnce();
+    expect(repositories.map((repository) => repository.ownerSub)).toEqual([USER_A, USER_A, USER_B, USER_B, USER_A, USER_A]);
+    for (const repository of repositories.slice(0, 4)) expect(repository.close).toHaveBeenCalledOnce();
 
     view.unmount();
     await Promise.resolve();
-    expect(repositories[2]?.close).toHaveBeenCalledOnce();
+    for (const repository of repositories.slice(4)) expect(repository.close).toHaveBeenCalledOnce();
   });
 });

@@ -3,6 +3,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 
 import type { JobSnapshot } from '../api/client';
 import { useDiagnosticRuntime } from '../app/providers';
+import { useOptionalChat } from '../chat/ChatProvider';
 import type { FieldProvenance } from '../cases/domain';
 import { buildDiagnosticRequest, DiagnosticRequestBuildError } from '../diagnostics/buildDiagnosticRequest';
 import { DiagnosticAxesView } from '../diagnostics/components/DiagnosticAxesView';
@@ -91,6 +92,9 @@ export function StudyDiagnosticPage() {
   const requestedScenarioId = searchParams.get('scenarioId');
   const screenIdentity = `${studyId ?? ''}:${requestedScenarioId ?? ''}`;
   const { controller, client } = useDiagnosticRuntime();
+  const chat = useOptionalChat();
+  const setChatScenarioId = chat?.setScenarioId;
+  const setChatExecutionId = chat?.setDiagnosticExecutionId;
   const heading = useRef<HTMLHeadingElement>(null);
   const resumedAttempts = useRef(new Set<string>());
   const mounted = useRef(true);
@@ -238,6 +242,10 @@ export function StudyDiagnosticPage() {
   const terminal = scenario === null ? null : [...scenarioDiagnostics].reverse().find((item) =>
     item.status === 'SUCCEEDED' && item.envelope !== null && isCurrentForScenario(item, scenario)) ?? null;
   const envelope = terminal?.envelope ?? null;
+  const chatScenarioId = study?.id === studyId ? scenario?.id ?? null : null;
+  const chatExecutionId = study?.id === studyId ? terminal?.id ?? null : null;
+  useEffect(() => { setChatScenarioId?.(chatScenarioId); }, [setChatScenarioId, chatScenarioId]);
+  useEffect(() => { setChatExecutionId?.(chatExecutionId); }, [setChatExecutionId, chatExecutionId]);
   return <article className="diagnostic-page">
     <p className="eyebrow">Estudo {study?.name ?? ''}</p>
     <h1 ref={heading} tabIndex={-1}>Diagnóstico robusto</h1>

@@ -157,6 +157,19 @@ function diagnosticSnapshot(request: DiagnosticRequest, status: JobSnapshot['sta
 }
 
 describe('application routes', () => {
+  it.each(['/empresas', '/empresas/acme/perfis', '/importar', '/estudos', '/carteira', '/diagnostico', '/comparar', '/replay'])
+  ('offers the global chat on authenticated route %s', async (path) => {
+    renderAppAt(path, client(session('user-a')), new RepositoryDouble());
+    expect(await screen.findByRole('button', { name: 'Perguntar' })).toBeVisible();
+  });
+
+  it.each(['/login', '/auth/callback', '/auth/definir-senha'])
+  ('omits chat on authentication route %s', async (path) => {
+    renderAppAt(path, client(session('user-a')), new RepositoryDouble());
+    await screen.findByTestId('location');
+    expect(screen.queryByRole('button', { name: 'Perguntar' })).not.toBeInTheDocument();
+  });
+
   it('prepara primeira empresa sem persistir até confirmação atômica do Caso', async () => {
     const repository = new RepositoryDouble();
     const user = userEvent.setup();

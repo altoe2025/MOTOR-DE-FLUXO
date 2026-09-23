@@ -12,7 +12,9 @@ import type { DiagnosticExecutionRecord, ScenarioDocument, StudyDocument } from 
 import { StudyComparisonPage } from './StudyComparisonPage';
 
 const controller = { loadStudy: vi.fn<(id: string) => Promise<StudyDocument | null>>() };
+const chat = vi.hoisted(() => ({ setScenarioId: vi.fn(), setDiagnosticExecutionId: vi.fn() }));
 vi.mock('../app/providers', () => ({ useStudyController: () => controller }));
+vi.mock('../chat/ChatProvider', () => ({ useOptionalChat: () => chat }));
 
 function terminal(id: string, scenario: ScenarioDocument): DiagnosticExecutionRecord {
   return {
@@ -45,5 +47,7 @@ describe('StudyComparisonPage', () => {
     await user.selectOptions(screen.getByLabelText('Execução base'), 'execution-0');
     await user.selectOptions(screen.getByLabelText('Execução da hipótese'), 'execution-1');
     expect(action).toBeEnabled();
+    expect(chat.setScenarioId).toHaveBeenCalledWith('00000000-0000-4000-8000-000000000803');
+    expect(chat.setDiagnosticExecutionId).toHaveBeenCalledWith('execution-1');
   });
 });

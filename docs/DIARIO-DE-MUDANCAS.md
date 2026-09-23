@@ -95,6 +95,30 @@ imutável; `CONFIGURADO` não significa que toda carteira seja executável. Não
 migração retroativa de autoria anterior ao fix, alteração financeira ou catálogo
 regulatório fabricado. O aceite importado completo permanece condicionado.
 
+## 2026-09-23 — Shell global e contexto tipado do chat, C2 (MOT-93)
+
+**Sintoma.** A persistência C1 existia, mas as rotas autenticadas ainda não ofereciam
+um painel de chat nem transportavam a seleção da tela para uma conversa local.
+
+**Causa.** Faltavam a matriz de rotas, um provider ligado ao repositório da sessão e
+componentes de histórico, composição e foco no shell.
+
+**O que foi feito.** Na branch local `codex/mot93-c2-chat-shell`, foram adicionados
+`web/src/chat/routeContext.ts`, `ChatProvider.tsx` e os componentes `ChatPanel`,
+`ChatHistory` e `ChatComposer`; `web/src/app/providers.tsx`, `AppShell.tsx` e o CSS
+ligam o diálogo lateral não modal às rotas autenticadas. Conversas gerais e por
+Estudo são abertas no repositório da conta; mensagens pendentes reabertas passam
+pela recuperação CAS da C1. Requests registrados pelo provider são abortados ao
+desmontar, o botão de fechar restaura foco; Diagnóstico e Replay comunicam cenário,
+execução e dia aplicáveis, enquanto Comparação comunica a hipótese selecionada.
+Os testes de rota, sessão, foco, histórico e seleção acompanham a mudança. O par
+completo base/hipótese dependerá do Documento de Comunicação na C5, pois
+`RouteChatContext` possui apenas um `diagnosticExecutionId`. O envio
+de perguntas permanece indisponível até a integração da API nas C3–C5.
+
+**O que isso invalida.** Nada dos números ou conclusões do motor; o aceite C1 de
+storage isolado não cobre por si só a presença e a acessibilidade do shell C2.
+
 ## 2026-09-23 — Aceite local da importação e gate de execução (MOT-61)
 
 **Sintoma.** Faltava prova integrada XLSX→Caso→Perfil→Estudo, privacidade e
