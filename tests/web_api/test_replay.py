@@ -166,7 +166,7 @@ def test_replay_natural_marca_aquecimento_medicao_e_liquidacao():
     assert replay.period.measurement_end_day == 1
     assert replay.period.settlement_end_day == 4
     assert {order.id: order.cohort for order in replay.orders}["measured-1"] == "MEASUREMENT"
-    assert replay.totals.measured_gross_brl == Decimal("100")
+    assert replay.totals.measured_gross_brl == Decimal(100)
 
 
 def test_replay_falha_fechado_quando_resultado_persistido_foi_adulterado():
@@ -175,7 +175,7 @@ def test_replay_falha_fechado_quando_resultado_persistido_foi_adulterado():
     invalid_result = selected.result.model_copy(
         update={
             "agregado": selected.result.agregado.model_copy(
-                update={"volume_casado_periodo_brl": Decimal("1")}
+                update={"volume_casado_periodo_brl": Decimal(1)}
             )
         }
     )
@@ -214,10 +214,10 @@ def test_replay_preserva_parcial_e_remete_saldo_no_prazo():
 
     replay = construir_replay(replay_request(payload))
 
-    assert replay.days[0].end_state.open_out_brl == Decimal("60")
+    assert replay.days[0].end_state.open_out_brl == Decimal(60)
     day_two = replay.days[2]
     assert day_two.closing is not None
-    assert day_two.closing.remitted_out_brl == Decimal("60")
+    assert day_two.closing.remitted_out_brl == Decimal(60)
     assert day_two.end_state.open_out_brl == 0
 
 
@@ -248,4 +248,4 @@ def test_replay_mostra_drenagem_final_de_ordem_com_prazo_alem_do_horizonte():
     closing = replay.days[2].closing
     assert closing is not None
     assert closing.triggers == ["HORIZON_END"]
-    assert closing.remitted_out_brl == Decimal("75")
+    assert closing.remitted_out_brl == Decimal(75)

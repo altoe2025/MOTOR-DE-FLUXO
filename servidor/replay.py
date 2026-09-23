@@ -11,6 +11,7 @@ from typing import Literal
 
 from motor.analise import ConfiguracaoTemporal, preparar_execucao_temporal
 from motor.dominio import Cenario, Direcao, Ordem
+from servidor.contracts.input import PeriodoNatural
 from servidor.contracts.output import AlocacaoDTO, CicloDTO
 from servidor.contracts.replay import (
     ReplayClosingV1,
@@ -22,8 +23,8 @@ from servidor.contracts.replay import (
     ReplayPeriodV1,
     ReplayRequestV1,
     ReplayTotalsV1,
+    ReplayTrigger,
 )
-from servidor.contracts.input import PeriodoNatural
 from servidor.motor_adapter import construir_cenario
 
 
@@ -61,14 +62,14 @@ def _pair_allocations(
     in_allocations: Iterable[AlocacaoDTO],
     orders: dict[str, Ordem],
 ) -> list[ReplayFlowSegmentV1]:
-    out_queue = [
-        [allocation, allocation.valor_brl]
+    out_queue: list[tuple[AlocacaoDTO, Decimal]] = [
+        (allocation, allocation.valor_brl)
         for allocation in sorted(
             out_allocations, key=lambda item: _priority(orders[item.ordem_id])
         )
     ]
-    in_queue = [
-        [allocation, allocation.valor_brl]
+    in_queue: list[tuple[AlocacaoDTO, Decimal]] = [
+        (allocation, allocation.valor_brl)
         for allocation in sorted(
             in_allocations, key=lambda item: _priority(orders[item.ordem_id])
         )
@@ -83,17 +84,17 @@ def _pair_allocations(
         if value <= 0:
             raise ReplayInconsistente("waterfall ilustrativo recebeu parcela inválida")
         segments.append(
-            ReplayFlowSegmentV1(
-                closing_day=day,
-                out_order_id=out_allocation.ordem_id,
-                in_order_id=in_allocation.ordem_id,
-                value_brl=_text(value),
-                matching_origin=origin,
-                meaning="ILLUSTRATIVE_AGGREGATE_DECOMPOSITION",
-            )
+            ReplayFlowSegmentV1.model_validate({
+                "closing_day": day,
+                "out_order_id": out_allocation.ordem_id,
+                "in_order_id": in_allocation.ordem_id,
+                "value_brl": _text(value),
+                "matching_origin": origin,
+                "meaning": "ILLUSTRATIVE_AGGREGATE_DECOMPOSITION",
+            })
         )
-        out_queue[out_index][1] = out_remaining - value
-        in_queue[in_index][1] = in_remaining - value
+        out_queue[out_index] = (out_allocation, out_remaining - value)
+        in_queue[in_index] = (in_allocation, in_remaining - value)
         if out_queue[out_index][1] == 0:
             out_index += 1
         if in_queue[in_index][1] == 0:
@@ -200,8 +201,8 @@ def _execution_scenario(request: ReplayRequestV1) -> tuple[Cenario, ReplayPeriod
 def _triggers(
     *, day: int, last_closing_day: int, scenario: Cenario, open_orders: set[str],
     orders: dict[str, Ordem], period: ReplayPeriodV1,
-) -> list[str]:
-    triggers: list[str] = []
+) -> list[ReplayTrigger]:
+    triggers: list[ReplayTrigger] = []
     if day - last_closing_day >= scenario.janela_dias:
         triggers.append("WINDOW")
     if any(orders[order_id].dia_limite == day for order_id in open_orders):
@@ -363,18 +364,18 @@ def construir_replay(request: ReplayRequestV1) -> ReplayDocumentV1:
             if remitted_out + remitted_in != cycle.residuo:
                 raise ReplayInconsistente("resíduo do ciclo não fecha")
             matched_position_accumulated += cycle.casado
-            closing = ReplayClosingV1(
-                triggers=triggers,
-                gross_out_brl=_text(cycle.bruto_out),
-                gross_in_brl=_text(cycle.bruto_in),
-                matched_position_brl=_text(cycle.casado),
-                matched_contribution_brl=_text(matched_contribution),
-                intra_client_position_brl=_text(intra_position),
-                inter_client_position_brl=_text(inter_position),
-                remitted_out_brl=_text(remitted_out),
-                remitted_in_brl=_text(remitted_in),
-                flow_segments=decompor_fluxos(cycle, orders),
-            )
+            closing = ReplayClosingV1.model_validate({
+                "triggers": triggers,
+                "gross_out_brl": _text(cycle.bruto_out),
+                "gross_in_brl": _text(cycle.bruto_in),
+                "matched_position_brl": _text(cycle.casado),
+                "matched_contribution_brl": _text(matched_contribution),
+                "intra_client_position_brl": _text(intra_position),
+                "inter_client_position_brl": _text(inter_position),
+                "remitted_out_brl": _text(remitted_out),
+                "remitted_in_brl": _text(remitted_in),
+                "flow_segments": decompor_fluxos(cycle, orders),
+            })
 
         open_out = sum(
             (
@@ -393,25 +394,25 @@ def construir_replay(request: ReplayRequestV1) -> ReplayDocumentV1:
             Decimal(0),
         )
         days.append(
-            ReplayDayV1(
-                day=day,
-                events=events,
-                closing=closing,
-                end_state=ReplayEndStateV1(
-                    open_out_brl=_text(open_out),
-                    open_in_brl=_text(open_in),
-                    matched_position_accumulated_brl=_text(
+            ReplayDayV1.model_validate({
+                "day": day,
+                "events": events,
+                "closing": closing,
+                "end_state": ReplayEndStateV1.model_validate({
+                    "open_out_brl": _text(open_out),
+                    "open_in_brl": _text(open_in),
+                    "matched_position_accumulated_brl": _text(
                         matched_position_accumulated
                     ),
-                    measured_matched_contribution_accumulated_brl=_text(
+                    "measured_matched_contribution_accumulated_brl": _text(
                         measured_matched_accumulated
                     ),
-                    remitted_out_accumulated_brl=_text(
+                    "remitted_out_accumulated_brl": _text(
                         remitted_out_accumulated
                     ),
-                    remitted_in_accumulated_brl=_text(remitted_in_accumulated),
-                ),
-            )
+                    "remitted_in_accumulated_brl": _text(remitted_in_accumulated),
+                }),
+            })
         )
 
     for order_id, order in orders.items():
@@ -430,8 +431,8 @@ def construir_replay(request: ReplayRequestV1) -> ReplayDocumentV1:
         "multilateral": measured_inter,
         "remetido": measured_remitted,
     }
-    for name in expected:
-        if expected[name] != observed[name]:
+    for name, expected_value in expected.items():
+        if expected_value != observed[name]:
             raise ReplayInconsistente(
                 f"{name} medido diverge do resultado canônico"
             )
@@ -449,33 +450,33 @@ def construir_replay(request: ReplayRequestV1) -> ReplayDocumentV1:
         == request.diagnostic_envelope.statistics.selected_repetition_id
     )
     replay_orders = [
-        ReplayOrderV1(
-            id=order.id,
-            client_id=order.cliente_id,
-            direction=order.direcao.value,
-            known_day=order.dia_conhecida,
-            deadline_day=order.dia_limite,
-            value_brl=_text(order.valor_brl),
-            cohort=(
+        ReplayOrderV1.model_validate({
+            "id": order.id,
+            "client_id": order.cliente_id,
+            "direction": order.direcao.value,
+            "known_day": order.dia_conhecida,
+            "deadline_day": order.dia_limite,
+            "value_brl": _text(order.valor_brl),
+            "cohort": (
                 "WARMUP"
                 if period.mode == "NATURAL"
                 and order.dia_conhecida < period.measurement_start_day
                 else "MEASUREMENT"
             ),
-        )
+        })
         for order in sorted(scenario.ordens, key=lambda item: item.id)
     ]
-    totals = ReplayTotalsV1(
-        measured_gross_brl=_text(aggregate.volume_bruto_periodo_brl),
-        measured_matched_contribution_brl=_text(measured_matched),
-        measured_autonetting_contribution_brl=_text(measured_intra),
-        measured_multilateral_contribution_brl=_text(measured_inter),
-        measured_remitted_brl=_text(measured_remitted),
-        netability_fraction=_text(aggregate.taxa_netabilidade_periodo),
-        execution_matched_position_brl=_text(matched_position_accumulated),
-        execution_remitted_out_brl=_text(execution_remitted_out),
-        execution_remitted_in_brl=_text(execution_remitted_in),
-    )
+    totals = ReplayTotalsV1.model_validate({
+        "measured_gross_brl": _text(aggregate.volume_bruto_periodo_brl),
+        "measured_matched_contribution_brl": _text(measured_matched),
+        "measured_autonetting_contribution_brl": _text(measured_intra),
+        "measured_multilateral_contribution_brl": _text(measured_inter),
+        "measured_remitted_brl": _text(measured_remitted),
+        "netability_fraction": _text(aggregate.taxa_netabilidade_periodo),
+        "execution_matched_position_brl": _text(matched_position_accumulated),
+        "execution_remitted_out_brl": _text(execution_remitted_out),
+        "execution_remitted_in_brl": _text(execution_remitted_in),
+    })
     return ReplayDocumentV1(
         api_version="1.0.0",
         diagnostic_execution_id=request.diagnostic_execution_id,
@@ -493,4 +494,3 @@ def construir_replay(request: ReplayRequestV1) -> ReplayDocumentV1:
         execution_fingerprint=selected.execution_fingerprint,
         result_fingerprint=_fingerprint(selected.result.model_dump(mode="json")),
     )
-

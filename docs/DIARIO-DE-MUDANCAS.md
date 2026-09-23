@@ -75,6 +75,32 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 
 ---
 
+## 2026-09-23 — Gates estáticos do Replay reconciliados em A0 (MOT-90)
+
+1. **Sintoma.** O baseline anterior à Etapa 6 registrava Ruff e mypy vermelhos.
+   Na árvore inicial `7d72a2d`, mypy reproduziu 30 erros em `servidor/replay.py`;
+   Ruff 0.16.7 reproduziu 10 achados, não os 308 registrados no planejamento.
+2. **Causa.** A fila do waterfall misturava DTO e Decimal em listas inferidas como
+   object; gatilhos tinham tipo amplo e construtores tipados recebiam o formato de
+   entrada textual exigido por DecimalSaida. Os demais achados eram imports,
+   Decimal inteiro em testes e iteração de dicionário. A diferença histórica de
+   contagem Ruff não foi explicada: a execução atual usa defaults e Py311 inferido
+   do pyproject, sem evidência de versão/configuração para atribuir a divergência.
+3. **O que foi feito.** Na branch `codex/frontend-etapa-6-planejamento`, tuplas
+   tipadas e ReplayTrigger explicitam os tipos; seis modelos passam a validar os
+   mesmos payloads com `model_validate`, preservando texto decimal e validadores.
+   Ajustes mecânicos em `servidor/app.py`, `tests/web_api/measure_replay.py`,
+   `test_replay.py` e `test_replay_contracts.py` resolvem o lint. RED observado nos
+   gates antes da edição; GREEN: Ruff sem achados e mypy sem erros em 36 arquivos.
+   Replay passou 18 testes; pytest completo passou 794/2 normal e 794/2 sob `-O`.
+   O baseline web focado passou 173 testes, typecheck e lint. Nenhuma regra,
+   ignore, exclude, baseline, dependência ou contrato público foi alterado.
+4. **O que isso invalida.** Invalida o estado de gates estáticos vermelhos na base
+   local da Etapa 6. Não invalida resultados financeiros, contrato de Replay ou
+   aceite da Etapa 5. Nenhum arquivo de `motor/` foi alterado; sem push/PR/deploy.
+
+---
+
 ## 2026-09-23 — Especificação, plano técnico e issues da Etapa 6 (MOT-90)
 
 1. **Sintoma.** O plano geral reservava chat, relatório, apresentação, acabamento e

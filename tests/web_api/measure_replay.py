@@ -10,7 +10,11 @@ from uuid import UUID
 
 from servidor.contracts.diagnostics import DiagnosticRequest
 from servidor.contracts.replay import ReplayDocumentV1, ReplayRequestV1
-from servidor.diagnostics.service import RepetitionTask, aggregate_diagnostic, execute_repetition
+from servidor.diagnostics.service import (
+    RepetitionTask,
+    aggregate_diagnostic,
+    execute_repetition,
+)
 from servidor.generate_reference_fixture import build_reference_request
 from servidor.replay import construir_replay
 
