@@ -95,6 +95,29 @@ imutável; `CONFIGURADO` não significa que toda carteira seja executável. Não
 migração retroativa de autoria anterior ao fix, alteração financeira ou catálogo
 regulatório fabricado. O aceite importado completo permanece condicionado.
 
+## 2026-09-23 — Contexto vivo do chat entre rotas, revisão C2 (MOT-93)
+
+**Sintoma.** Navegar de Diagnóstico para Replay no mesmo Estudo selecionava de novo
+a conversa mais recente e podia recuperar como `FAILED` um `PENDING` com request
+ainda vivo. Ao sair de um Replay pronto para execução inválida ou outro Estudo,
+o contexto do chat ainda recebia cenário e dia do resultado anterior.
+
+**Causa.** O provider vinculava a carga do histórico ao `routeId`, embora a
+identidade da conversa fosse owner/Estudo. O Replay mantinha `READY` sem a identidade
+da URL que o carregou e publicava seleção a partir desse estado durante a troca.
+
+**O que foi feito.** Na branch local `codex/mot93-c2-chat-shell`, o provider conserva
+a conversa e o request enquanto owner e Estudo permanecem; a recuperação de
+`PENDING` ocorre na reabertura sem request vivo daquela conversa. A troca real de
+escopo aborta o request. `ReplayPage` associa `READY` à identidade carregada,
+limpa cenário/dia ao iniciar outra carga e impede que o resultado antigo seja
+renderizado sob a nova rota. Testes cobrem conversa antiga ativa e as duas transições
+de Replay.
+
+**O que isso invalida.** O aceite C2 anterior não cobria preservação de request e
+conversa entre rotas nem limpeza de contexto após sair de um Replay pronto; números
+e conclusões do motor não mudam.
+
 ## 2026-09-23 — Shell global e contexto tipado do chat, C2 (MOT-93)
 
 **Sintoma.** A persistência C1 existia, mas as rotas autenticadas ainda não ofereciam

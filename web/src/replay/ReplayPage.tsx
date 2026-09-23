@@ -71,7 +71,7 @@ export function resolveReplayRequest(
 
 type LoadState =
   | Readonly<{ kind: 'LOADING' }>
-  | Readonly<{ kind: 'READY'; document: ReplayDocument; studyName: string; scenarioId: string;
+  | Readonly<{ kind: 'READY'; identity: string; document: ReplayDocument; studyName: string; scenarioId: string;
     selected: ReturnType<typeof describeSelectedRepetition> }>
   | Readonly<{ kind: 'ERROR'; code: ReplayPublicErrorCode; message: string; retryable: boolean }>;
 
@@ -91,6 +91,10 @@ export function ReplayPage() {
   const [searchParams] = useSearchParams();
   const executionId = searchParams.get('executionId');
   const { ownerSub, controller, client } = useDiagnosticRuntime();
+  const chat = useOptionalChat();
+  const setReplayDay = chat?.setReplayDay;
+  const setScenarioId = chat?.setScenarioId;
+  const routeIdentity = JSON.stringify([ownerSub, studyId, executionId]);
   const [loadState, setLoadState] = useState<LoadState>({ kind: 'LOADING' });
   const [retryRevision, setRetryRevision] = useState(0);
   const identityToken = useRef(0);
@@ -100,6 +104,8 @@ export function ReplayPage() {
     const abort = new AbortController();
     let active = true;
     setLoadState({ kind: 'LOADING' });
+    setReplayDay?.(null);
+    setScenarioId?.(null);
     if (studyId === undefined || executionId === null) {
       setLoadState({ kind: 'ERROR', code: 'EXECUCAO_NAO_ENCONTRADA', message: 'Informe uma execução válida na URL do Replay.', retryable: false });
       return () => { active = false; abort.abort(); };
@@ -128,7 +134,8 @@ export function ReplayPage() {
               message: 'O Replay não corresponde à repetição selecionada no diagnóstico.', retryable: false });
             return;
           }
-          setLoadState({ kind: 'READY', document, studyName: study.name, scenarioId: resolution.scenarioId, selected });
+          setLoadState({ kind: 'READY', identity: routeIdentity, document, studyName: study.name,
+            scenarioId: resolution.scenarioId, selected });
         }
       } catch (reason) {
         if (active && token === identityToken.current && !abort.signal.aborted) setLoadState(errorState(reason));
@@ -137,9 +144,11 @@ export function ReplayPage() {
       if (active && token === identityToken.current) setLoadState(errorState(reason));
     });
     return () => { active = false; abort.abort(); };
-  }, [client, controller, executionId, ownerSub, retryRevision, studyId]);
+  }, [client, controller, executionId, ownerSub, retryRevision, routeIdentity, setReplayDay, setScenarioId, studyId]);
 
-  if (loadState.kind === 'LOADING') return <p role="status">Reconstruindo Replay…</p>;
+  if (loadState.kind === 'LOADING' || (loadState.kind === 'READY' && loadState.identity !== routeIdentity)) {
+    return <p role="status">Reconstruindo Replay…</p>;
+  }
   if (loadState.kind === 'ERROR') return <ReplayError state={loadState} studyId={studyId} onRetry={() => setRetryRevision((value) => value + 1)} />;
   return <ReplayReady document={loadState.document} studyName={loadState.studyName} studyId={studyId!} scenarioId={loadState.scenarioId} selected={loadState.selected} />;
 }

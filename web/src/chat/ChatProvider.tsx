@@ -58,6 +58,7 @@ export function ChatProvider({ ownerSub, repository, children }: Readonly<{
       ? selection.scenarioId : baseContext.scenarioId,
   }, [baseContext, routeKey, selection]);
   const contextFingerprint = routeContext === null ? null : JSON.stringify(routeContext);
+  const routeAvailable = routeContext !== null;
   const studyId = routeContext?.studyId ?? null;
   const scope = JSON.stringify([ownerSub, studyId]);
   const [conversations, setConversations] = useState<readonly ChatConversation[]>([]);
@@ -67,6 +68,7 @@ export function ChatProvider({ ownerSub, repository, children }: Readonly<{
   const [loading, setLoading] = useState(true);
   const [loadedScope, setLoadedScope] = useState<string | null>(null);
   const request = useRef<AbortController | null>(null);
+  const requestConversationId = useRef<string | null>(null);
   const creating = useRef(false);
   const recovering = useRef(new Set<string>());
   const reopenPending = useRef(new Set<string>());
@@ -82,7 +84,7 @@ export function ChatProvider({ ownerSub, repository, children }: Readonly<{
     creating.current = false;
     recovering.current.clear();
     reopenPending.current.clear();
-    if (routeContext === null) return;
+    if (!routeAvailable) return;
     void repository.listChatConversations(studyId).then((rows) => {
       if (generation.current !== currentGeneration) return;
       const owned = rows.filter((row) => row.ownerSub === ownerSub && row.studyId === studyId);
@@ -95,8 +97,8 @@ export function ChatProvider({ ownerSub, repository, children }: Readonly<{
     }).catch(() => {
       if (generation.current === currentGeneration) { setError(true); setLoading(false); }
     });
-    return () => { generation.current += 1; };
-  }, [ownerSub, repository, routeContext?.routeId, scope, studyId]);
+    return () => { generation.current += 1; request.current?.abort(); requestConversationId.current = null; };
+  }, [ownerSub, repository, routeAvailable, scope, studyId]);
 
   useEffect(() => () => { request.current?.abort(); }, []);
 
@@ -127,8 +129,9 @@ export function ChatProvider({ ownerSub, repository, children }: Readonly<{
   const beginRequest = useCallback(() => {
     request.current?.abort();
     request.current = new AbortController();
+    requestConversationId.current = activeId;
     return request.current.signal;
-  }, []);
+  }, [activeId]);
   const setHelpId = useCallback((helpId: string | null) => setSelection((current) => ({
     routeKey, helpId, replayDay: current.routeKey === routeKey ? current.replayDay : undefined,
     executionId: current.routeKey === routeKey ? current.executionId : undefined,
@@ -156,6 +159,8 @@ export function ChatProvider({ ownerSub, repository, children }: Readonly<{
   const activeConversation = visibleConversations.find((row) => row.id === activeId) ?? null;
   useEffect(() => {
     if (!open || activeConversation === null || !activeConversation.messages.some((item) => item.status === 'PENDING')) return;
+    if (requestConversationId.current === activeConversation.id
+      && request.current !== null && !request.current.signal.aborted) return;
     const key = `${activeConversation.id}:${activeConversation.revision}`;
     if (!reopenPending.current.has(key) || recovering.current.has(key)) return;
     reopenPending.current.delete(key);

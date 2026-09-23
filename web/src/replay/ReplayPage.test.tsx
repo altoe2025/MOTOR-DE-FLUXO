@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { createMemoryRouter, MemoryRouter, Route, RouterProvider, Routes } from 'react-router-dom';
+import { createMemoryRouter, MemoryRouter, Route, RouterProvider, Routes, useNavigate } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { DiagnosticExecutionRecord, StudyDocument } from '../study/model';
@@ -14,6 +14,14 @@ function ChatDayProbe() {
   const chat = useChat();
   return <><output data-testid="chat-day">{chat.routeContext?.replayDay ?? 'none'}</output>
     <output data-testid="chat-scenario">{chat.routeContext?.scenarioId ?? 'none'}</output></>;
+}
+
+function ReplayNavigation() {
+  const navigate = useNavigate();
+  return <>
+    <button onClick={() => navigate('/estudos/study-1/replay?executionId=invalid')}>Execução inválida</button>
+    <button onClick={() => navigate('/estudos/study-2/replay?executionId=00000000-0000-4000-8000-000000000701')}>Outro Estudo</button>
+  </>;
 }
 
 const mocks = vi.hoisted(() => {
@@ -71,6 +79,31 @@ describe('resolução local do Replay', () => {
 });
 
 describe('ReplayPage', () => {
+  it.each([
+    ['execução inválida', 'Execução inválida'],
+    ['troca de Estudo', 'Outro Estudo'],
+  ])('clears old chat selection after READY on %s', async (_case, destination) => {
+    mocks.loadStudy.mockImplementation(async (id: string) => id === 'study-2'
+      ? new Promise<StudyDocument | null>(() => undefined) : persistedStudy());
+    mocks.buildReplay.mockResolvedValue(replayDocumentFixture());
+    render(<MemoryRouter initialEntries={['/estudos/study-1/replay?executionId=00000000-0000-4000-8000-000000000701']}>
+      <ChatProvider ownerSub="owner-1" repository={{ listChatConversations: async () => [], getChatConversation: async () => null,
+        saveChatConversation: async ({ document }) => document }}>
+        <Routes><Route path="/estudos/:studyId/replay" element={<ReplayPage />} /></Routes>
+        <ReplayNavigation /><ChatDayProbe />
+      </ChatProvider>
+    </MemoryRouter>);
+    await screen.findByRole('heading', { name: 'Fronteira Viva' });
+    fireEvent.change(screen.getByRole('slider', { name: 'Selecionar dia' }), { target: { value: '1' } });
+    await waitFor(() => expect(screen.getByTestId('chat-day')).toHaveTextContent('1'));
+    expect(screen.getByTestId('chat-scenario')).toHaveTextContent(persistedStudy().scenarios[0]!.id);
+
+    fireEvent.click(screen.getByRole('button', { name: destination }));
+    expect(screen.queryByRole('heading', { name: 'Fronteira Viva' })).not.toBeInTheDocument();
+    expect(screen.getByTestId('chat-day')).toHaveTextContent('none');
+    expect(screen.getByTestId('chat-scenario')).toHaveTextContent('none');
+  });
+
   it('reports the selected day to typed chat context', async () => {
     mocks.loadStudy.mockResolvedValue(persistedStudy());
     mocks.buildReplay.mockResolvedValue(replayDocumentFixture());
