@@ -75,6 +75,31 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 
 ---
 
+## 2026-09-23 — Matriz de portabilidade e baseline da importação 6A (MOT-90)
+
+1. **Sintoma.** A pilha de importação remota não era ancestral da base da Etapa 5
+   e incluía persistência e execução próprias incompatíveis com o fluxo vigente.
+2. **Causa.** A origem `3999ae6` partiu de `c2ad175`; no HEAD inicial `7d72a2d`,
+   havia 101 commits exclusivos do destino e 16 da origem. Um merge integral
+   reaplicaria contratos já integrados e recriaria ImportStudy/ImportRepository.
+3. **O que foi feito.** `docs/frontend/etapa-6-importacao-portabilidade.md` registra
+   SHA por arquivo, decisões PORTAR/REESCREVER/DESCARTAR, fronteiras reais de Caso,
+   Empresa, mutação transacional, Perfil e Estudo, e a ausência de publisher na
+   origem. Baseline local: 173 testes focados, TS/ESLint, Ruff/mypy, pytest 794/2
+   normal e `-O`, build/scanner e 22 E2E PASS. Vitest completo passou 481 testes
+   com `--maxWorkers=2`; duas tentativas com concorrência padrão tiveram um timeout
+   de rota de 5 s, enquanto a rota isolada passou 25/25. Nenhum timeout, teste ou
+   config foi relaxado. As cinco evidências MOT-89 regravadas pelo E2E foram
+   restauradas ao HEAD; não fazem parte da auditoria. A correção estática está
+   separada no commit `02e5c0c`. A issue MOT-90 foi consultada somente para leitura.
+4. **O que isso invalida.** Invalida portar a pilha inteira ou tratar seu domínio
+   antigo como contrato do importador. Não modifica produto da Etapa 6, motor,
+   resultados financeiros, contratos públicos ou decisões regulatórias. Mantém
+   explícitos o timeout dependente de concorrência e os 308 achados históricos
+   Ruff não reproduzidos. Nenhum push, PR, merge ou deploy foi executado.
+
+---
+
 ## 2026-09-23 — Gates estáticos do Replay reconciliados em A0 (MOT-90)
 
 1. **Sintoma.** O baseline anterior à Etapa 6 registrava Ruff e mypy vermelhos.
