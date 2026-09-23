@@ -31,8 +31,10 @@ import {
 } from './migrations';
 import { rejectBinary } from './rejectBinary';
 import { validateImportRecords } from './importRecords';
+import { IndexedDbChatRepository } from '../chat/repository';
+import type { ChatConversation } from '../chat/domain';
 
-const DATABASE_VERSION = 2;
+const DATABASE_VERSION = 3;
 
 const STORE_NAMES = [
   'companies',
@@ -44,6 +46,8 @@ const STORE_NAMES = [
   'operations',
   'profile_versions',
   'meta',
+  'chat_conversations',
+  'chat_operations',
 ] as const;
 
 type Scope = Readonly<{
@@ -318,6 +322,16 @@ function createProfileStore(database: IDBDatabase): void {
   );
 }
 
+function createChatStores(database: IDBDatabase): void {
+  const conversations = database.createObjectStore('chat_conversations', { keyPath: 'conversation_id' });
+  conversations.createIndex('by_owner', 'owner_sub');
+  conversations.createIndex('by_owner_study', ['owner_sub', 'study_key']);
+  conversations.createIndex('by_owner_study_updated', ['owner_sub', 'study_key', 'updated_at']);
+  const operations = database.createObjectStore('chat_operations', { keyPath: 'operation_id' });
+  operations.createIndex('by_owner', 'owner_sub');
+  operations.createIndex('by_owner_conversation', ['owner_sub', 'conversation_id']);
+}
+
 function isObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
@@ -381,7 +395,26 @@ function upgradeSchema(
   if (oldVersion === 0) {
     createBaseStores(database);
     createProfileStore(database);
+    createChatStores(database);
     transaction.objectStore('meta').add({ key: 'schema_version', value: DATABASE_VERSION });
+    return;
+  }
+  if (oldVersion === 2) {
+    const marker = transaction.objectStore('meta').get('schema_version');
+    marker.onsuccess = () => {
+      try {
+        if (marker.result?.value !== 2) {
+          if (typeof marker.result?.value === 'number' && marker.result.value > DATABASE_VERSION) {
+            throw new SchemaUnsupportedError();
+          }
+          throw new DocumentCorruptError('Marcador físico e lógico são incompatíveis.');
+        }
+        createChatStores(database);
+        transaction.objectStore('meta').put({ key: 'schema_version', value: DATABASE_VERSION });
+      } catch (error) {
+        abortUpgrade(transaction, error);
+      }
+    };
     return;
   }
   if (oldVersion !== 1) {
@@ -390,6 +423,7 @@ function upgradeSchema(
   }
 
   createProfileStore(database);
+  createChatStores(database);
   const fail = (error: unknown) => abortUpgrade(transaction, error);
   const studies = transaction.objectStore('studies');
   const executions = transaction.objectStore('executions');
@@ -484,12 +518,30 @@ export class IndexedDbApplicationRepository implements ApplicationRepository {
   readonly #migrationSourceLoader: Scope['migrationSourceLoader'];
   #databasePromise: Promise<IDBDatabase> | null = null;
   #closed = false;
+  readonly #chat: IndexedDbChatRepository;
 
   constructor(scope: Scope) {
     this.#databaseName = `motor-fluxo:app:v2:${encodeURIComponent(scope.projectRef)}:${encodeURIComponent(scope.ownerSub)}`;
     this.#ownerSub = scope.ownerSub;
     this.#migrationSources = scope.migrationSources ?? {};
     this.#migrationSourceLoader = scope.migrationSourceLoader;
+    this.#chat = new IndexedDbChatRepository(() => this.#database(), this.#ownerSub);
+  }
+
+  listChatConversations(studyId: string | null): Promise<ChatConversation[]> {
+    return this.#chat.listChatConversations(studyId);
+  }
+
+  getChatConversation(id: string): Promise<ChatConversation | null> {
+    return this.#chat.getChatConversation(id);
+  }
+
+  saveChatConversation(input: CASMutation<ChatConversation>): Promise<ChatConversation> {
+    return this.#chat.saveChatConversation(input);
+  }
+
+  deleteChatConversation(id: string, expectedRevision: number, operationId: string): Promise<void> {
+    return this.#chat.deleteChatConversation(id, expectedRevision, operationId);
   }
 
   async #database(): Promise<IDBDatabase> {
@@ -521,6 +573,7 @@ export class IndexedDbApplicationRepository implements ApplicationRepository {
           database.onversionchange = () => {
             database.close();
             this.#closed = true;
+            this.#chat.close();
           };
           void Promise.resolve(this.#migrationSourceLoader?.() ?? this.#migrationSources)
             .then((migrationSources) => migrateDatabase(database, {
@@ -1177,6 +1230,7 @@ export class IndexedDbApplicationRepository implements ApplicationRepository {
 
   close(): void {
     this.#closed = true;
+    this.#chat.close();
     void this.#databasePromise?.then(
       (database) => database.close(),
       () => undefined,

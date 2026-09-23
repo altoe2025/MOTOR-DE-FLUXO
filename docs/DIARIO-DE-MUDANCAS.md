@@ -104,6 +104,16 @@ O Ruff literal do plano (`servidor tests`) ainda aponta 298 achados legados;
 o escopo CI (`servidor tests/web_api`) passa, sem ignores adicionados. Nenhum
 número financeiro, regra do motor ou grade foi alterado. Sem publicação.
 
+## 2026-09-23 — Persistência transacional e recuperação do chat, C1 (MOT-93)
+
+**Sintoma.** Conversas não tinham histórico local, controle de concorrência nem recuperação após interrupção.
+
+**Causa.** Faltavam stores, métodos do repositório e contrato de falha do chat na Etapa 6C.
+
+**O que foi feito.** Na branch local `codex/frontend-etapa-6c-c1`, IndexedDB sobe de versão física 2 para 3 no mesmo nome de banco, preservando stores, documentos e marcadores anteriores; o caminho legado 1→3 mantém a conversão existente. Conversas usam owner/Estudo/revisão, CAS transacional e IDs de operação com digest, limite de 20 por Estudo ou grupo geral e exclusão idempotente com tombstones sem texto. Retry de save retorna documento vigente; delete não permite ressuscitar conversa antiga. Fechar sessão aborta transações do chat. Helper explícito de recuperação converte PENDING em FAILED por CAS, preserva fingerprints e não reenvia pergunta; será consumido por C2/C5. TDD: RED de storage e migration, GREEN inicial 27/27; gate final C1 com 98 testes PASS, typecheck e lint PASS. Casos cobrem corrida entre instâncias, quotas, snapshot antes de await, corrupção, rollback de upgrade interrompido, fechamento em voo e recovery concorrente. Ajustes de doubles são apenas compatibilidade da interface. Commit local, sem push/PR/merge/deploy.
+
+**O que isso invalida.** O schema físico local 2 deixa de ser a versão atual; documentos do produto e números do motor permanecem iguais. C1 não entrega shell, HTTP, integração OpenAI nem acionamento automático da recuperação.
+
 ## 2026-09-23 — Contrato local de conversas do chat, C1 (MOT-93)
 
 **Sintoma.** O chat planejado ainda não tinha contrato local validável de conversas e mensagens.

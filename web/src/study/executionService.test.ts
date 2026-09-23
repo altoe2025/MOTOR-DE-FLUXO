@@ -60,6 +60,10 @@ function deferred<T>() {
 }
 
 class MemoryRepository implements ApplicationRepository {
+  async listChatConversations(): Promise<never[]> { return []; }
+  async getChatConversation(): Promise<null> { return null; }
+  async saveChatConversation(): Promise<never> { throw new Error('Chat outside fixture scope'); }
+  async deleteChatConversation(): Promise<void> { throw new Error('Chat outside fixture scope'); }
   async installDemoStudy(): Promise<StudyDocument> { throw new Error('Demonstração não usada neste double de execução.'); }
   document: StudyDocument | null;
   readonly additionalDocuments = new Map<string, StudyDocument>();

@@ -49,6 +49,10 @@ async function makeStudy(ownerSub = FIXTURE_OWNER, id = 'study-1'): Promise<Stud
 }
 
 class RepositoryDouble implements ApplicationRepository {
+  async listChatConversations(): Promise<never[]> { return []; }
+  async getChatConversation(): Promise<null> { return null; }
+  async saveChatConversation(): Promise<never> { throw new Error('Chat outside fixture scope'); }
+  async deleteChatConversation(): Promise<void> { throw new Error('Chat outside fixture scope'); }
   closed = false;
   readonly saveCalls: CASMutation<StudyDocument>[] = [];
   readonly appendProfileCalls: AppendProfileVersionMutation[] = [];

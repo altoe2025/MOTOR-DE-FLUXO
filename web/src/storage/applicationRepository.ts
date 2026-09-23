@@ -2,6 +2,7 @@ import type { CompanyRecord, ObservedCase } from '../cases/domain';
 import type { StudyDocument } from '../study/model';
 import type { OperationalProfileVersion } from '../profiles/domain';
 import type { DemoStudyPackageV1 } from '../demo/domain';
+import type { ChatConversation } from '../chat/domain';
 
 export type DemoInstallMode = 'FIRST_EMPTY_SESSION' | 'EXPLICIT_RESTORE';
 export type DemoInstallMutation = Readonly<{
@@ -61,6 +62,10 @@ export type AppendProfileVersionMutation = Readonly<{
 }>;
 
 export interface ApplicationRepository {
+  listChatConversations(studyId: string | null): Promise<ChatConversation[]>;
+  getChatConversation(id: string): Promise<ChatConversation | null>;
+  saveChatConversation(input: CASMutation<ChatConversation>): Promise<ChatConversation>;
+  deleteChatConversation(id: string, expectedRevision: number, operationId: string): Promise<void>;
   installDemoStudy(input: DemoInstallMutation): Promise<StudyDocument>;
   listCompanies(): Promise<CompanyRecord[]>;
   listObservedCases(companyId?: string): Promise<ObservedCase[]>;
