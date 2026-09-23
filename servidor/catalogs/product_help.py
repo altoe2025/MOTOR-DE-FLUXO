@@ -101,9 +101,11 @@ def _immutable_catalog_input(document: dict[str, Any]) -> dict[str, Any]:
     immutable_items = tuple(
         {
             **item,
-            "disabledWhen": tuple(item.get("disabledWhen", ())),
-            "recovery": tuple(item.get("recovery", ())),
-            "relatedConceptIds": tuple(item.get("relatedConceptIds", ())),
+            **{
+                field: tuple(item[field])
+                for field in ("disabledWhen", "recovery", "relatedConceptIds")
+                if field in item
+            },
         }
         if isinstance(item, dict)
         else item

@@ -214,7 +214,9 @@ Ajv, congela e carrega o catálogo por cliente autenticado. `helpIds.ts`
 centraliza a união literal e `HelpCatalogProvider` cria o cache em memória por
 identidade, limpa-o em logout/troca de usuário e descarta respostas em voo de uma
 sessão anterior; falha de catálogo devolve `null` e não bloqueia o produto. Os
-padrões de rota do catálogo foram alinhados ao router atual. Testes RED→GREEN
+padrões de rota do catálogo foram alinhados ao router atual; o limite explícito
+permanece: `/empresas/:companyId/importar` ainda não é um segundo `routePattern`
+do catálogo. Testes RED→GREEN
 cobrem a rota, autenticação, versão canônica, falha de inicialização, cobertura
 dos IDs, dados malformados, schema local, cache, logout, rotas e cliente. Desvio
 de roteamento registrado: B5 foi executada com

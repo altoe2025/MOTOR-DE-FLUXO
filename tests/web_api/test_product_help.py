@@ -11,7 +11,6 @@ from fastapi.testclient import TestClient
 
 from tests.web_api.test_http import FakeVerifier, auth, make_settings
 
-
 REQUIRED_HELP_IDS = {
     "page.importacao",
     "concept.empresa",
@@ -98,6 +97,32 @@ def test_loader_calcula_versao_canonica_e_recusa_versao_fornecida(tmp_path):
         json.dumps({**payload, "catalogVersion": "0" * 64}), encoding="utf-8"
     )
     with pytest.raises(ValueError, match="catalogVersion"):
+        catalogs.load_product_help_catalog(path)
+
+
+@pytest.mark.parametrize("missing_field", ["disabledWhen", "recovery", "relatedConceptIds"])
+def test_loader_rejeita_campo_de_operacao_obrigatorio_ausente(tmp_path, missing_field):
+    catalogs = importlib.import_module("servidor.catalogs.product_help")
+    item = {
+        "id": "page.importacao",
+        "routePattern": "/importar",
+        "elementKind": "PAGE",
+        "label": "Importar",
+        "purpose": "Revisar uma planilha antes da confirmação.",
+        "changes": "Prepara uma revisão local.",
+        "doesNotChange": "Não confirma automaticamente um Caso.",
+        "disabledWhen": [],
+        "recovery": [],
+        "relatedConceptIds": [],
+    }
+    del item[missing_field]
+    path = tmp_path / "product-help.json"
+    path.write_text(
+        json.dumps({"apiVersion": "1.0.0", "items": [item]}, ensure_ascii=False),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match=missing_field):
         catalogs.load_product_help_catalog(path)
 
 

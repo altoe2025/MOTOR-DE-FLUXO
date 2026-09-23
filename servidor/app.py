@@ -22,7 +22,10 @@ from servidor.auth import (
     TokenVerifier,
 )
 from servidor.catalogs.importacao import load_import_catalog
-from servidor.catalogs.product_help import ProductHelpCatalogV1, load_product_help_catalog
+from servidor.catalogs.product_help import (
+    ProductHelpCatalogV1,
+    load_product_help_catalog,
+)
 from servidor.config import Settings
 from servidor.contracts.diagnostics import (
     DiagnosticEnvelope,
@@ -46,8 +49,8 @@ from servidor.routes import (
     examples,
     importation,
     preparation,
-    product_help,
     preview,
+    product_help,
     replay,
     session,
 )

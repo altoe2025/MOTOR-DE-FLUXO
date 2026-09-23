@@ -5,10 +5,10 @@ from servidor.routes import (
     examples,
     importation,
     preparation,
-    product_help,
     preview,
+    product_help,
     replay,
     session,
 )
 
-__all__ = ["diagnostics", "examples", "importation", "preparation", "product_help", "preview", "replay", "session"]
+__all__ = ["diagnostics", "examples", "importation", "preparation", "preview", "product_help", "replay", "session"]
