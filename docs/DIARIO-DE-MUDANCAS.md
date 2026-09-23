@@ -73,6 +73,29 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-23 — Materialização isolada da demonstração B2 (MOT-91)
+
+**Sintoma.** O pacote B1 continha o owner placeholder e identidades canônicas,
+sem uma cópia validada para cada instalação local.
+
+**Causa.** Trocar apenas o owner deixaria fingerprints de Casos/Perfis e
+referências de evidência incompatíveis, além de reutilizar IDs entre instalações.
+
+**O que foi feito.** Na `codex/frontend-etapa-6b-b2`, sobre `5ef4fe8`,
+`materializeDemoPackage` captura JSON fechado antes de qualquer await, valida o
+pacote completo e deriva identidades de owner/instalação. Recalcula fingerprints
+pelas funções canônicas e reconcilia Casos, Perfis, snapshots e proveniência.
+Resultados, seeds e IDs internos do motor permanecem idênticos. TDD RED→GREEN:
+16 testes de materialização, mais 13 da validação B1, passaram; auditoria
+independente não encontrou achado material no materializador. Arrays com
+protótipos alterados, propriedades ocultas, getters, ciclos e payload parcial
+são recusados antes da persistência. Typecheck e lint globais PASS.
+
+**O que isso invalida.** Nada nos resultados de B1, contratos financeiros ou
+motor. B2 ainda depende da transação e integração de sessão no próximo commit;
+MOT-91 foi devolvida a In Progress porque B1/B3 não encerram a issue agregada.
+Sem push, PR, merge ou deploy.
+
 ## 2026-09-23 — IDs opacos de operação no caminho de auditoria (MOT-56)
 
 **Sintoma.** Uma importação válida com operação `.` ou `..` falhava ao confirmar
