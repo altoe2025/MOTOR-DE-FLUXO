@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
 
+import { strToU8, zipSync } from 'fflate';
 import { describe, expect, it } from 'vitest';
 
 import { preflightXlsx } from './xlsxPreflight';
@@ -7,6 +8,19 @@ import { preflightXlsx } from './xlsxPreflight';
 async function fixture(name: string): Promise<ArrayBuffer> {
   const bytes = await readFile(new URL(`./__fixtures__/${name}`, import.meta.url));
   return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+}
+
+function sparseWorkbook(): ArrayBuffer {
+  const headers = ['operacao_id', 'cliente_nome', 'classificacao_perfil', 'direcao', 'data_conhecida', 'data_limite', 'valor_brl', 'finalidade_codigo'];
+  const headerCells = headers.map((header, index) => `<c r="${String.fromCharCode(65 + index)}1" t="inlineStr"><is><t>${header}</t></is></c>`).join('');
+  const sheet = `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData><row r="1">${headerCells}</row><row r="1000000"><c r="A1000000" t="inlineStr"><is><t>OP-SPARSE</t></is></c></row></sheetData></worksheet>`;
+  const archive = zipSync({
+    '[Content_Types].xml': strToU8('<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>'),
+    'xl/workbook.xml': strToU8('<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="operacoes" sheetId="1" r:id="rId1"/></sheets></workbook>'),
+    'xl/_rels/workbook.xml.rels': strToU8('<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>'),
+    'xl/worksheets/sheet1.xml': strToU8(sheet),
+  });
+  return archive.buffer.slice(archive.byteOffset, archive.byteOffset + archive.byteLength) as ArrayBuffer;
 }
 
 describe('preflightXlsx', () => {
@@ -42,5 +56,9 @@ describe('preflightXlsx', () => {
   it('rejects compacted files greater than five MiB', async () => {
     await expect(preflightXlsx(new ArrayBuffer(5 * 1024 * 1024 + 1)))
       .rejects.toMatchObject({ code: 'FILE_TOO_LARGE' });
+  });
+
+  it('rejects an extreme sparse row reference before the cell reader allocates it', async () => {
+    await expect(preflightXlsx(sparseWorkbook())).rejects.toMatchObject({ code: 'ROW_LIMIT_EXCEEDED' });
   });
 });

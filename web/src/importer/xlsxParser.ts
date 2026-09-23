@@ -30,7 +30,7 @@ async function sha256(buffer: ArrayBuffer): Promise<string> { const digest = awa
 
 export async function parseXlsxBuffer(buffer: ArrayBuffer): Promise<ParsedImport> {
   await preflightXlsx(buffer);
-  const sheets = await readXlsxFile<string>(buffer, { parseNumber: (value) => value });
+  const sheets = await readXlsxFile<string>(buffer, { parseNumber: (value) => value, trim: false });
   const sheet = sheets.find((candidate) => candidate.sheet === 'operacoes');
   if (sheet === undefined) throw new ImportFileError('SHEET_NAME_INVALID', 'aba operacoes não encontrada');
   const rows = sheet.data.slice(1);

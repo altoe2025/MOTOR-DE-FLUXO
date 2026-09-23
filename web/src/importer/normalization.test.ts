@@ -25,4 +25,31 @@ describe('normalizeOperation', () => {
   it('keeps missing purpose as null for a later warning', () => {
     expect(normalizeOperation(validRow).purposeCode).toBeNull();
   });
+
+  it.each([
+    [128, 'operation ID'],
+    [200, 'client name'],
+    [120, 'profile classification'],
+    [128, 'purpose code'],
+  ] as const)('accepts the literal maximum %i for %s and rejects maximum plus one', (maximumLength, field) => {
+    const maximum = 'x'.repeat(maximumLength);
+    const tooLong = 'x'.repeat(maximumLength + 1);
+    const maximumRow = field === 'operation ID'
+      ? { ...validRow, operacao_id: maximum }
+      : field === 'client name'
+        ? { ...validRow, cliente_nome: maximum }
+        : field === 'profile classification'
+          ? { ...validRow, classificacao_perfil: maximum }
+          : { ...validRow, finalidade_codigo: maximum };
+    const tooLongRow = field === 'operation ID'
+      ? { ...validRow, operacao_id: tooLong }
+      : field === 'client name'
+        ? { ...validRow, cliente_nome: tooLong }
+        : field === 'profile classification'
+          ? { ...validRow, classificacao_perfil: tooLong }
+          : { ...validRow, finalidade_codigo: tooLong };
+
+    expect(() => normalizeOperation(maximumRow)).not.toThrow();
+    expect(() => normalizeOperation(tooLongRow)).toThrow('VALUE_OUT_OF_RANGE');
+  });
 });

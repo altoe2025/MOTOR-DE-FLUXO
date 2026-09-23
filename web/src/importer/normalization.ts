@@ -13,6 +13,11 @@ function exact(value: string, field: keyof RawOperationCells): string {
   return value;
 }
 
+function limited(value: string, field: keyof RawOperationCells, maximum: number): string {
+  if (value.length > maximum) throw new ImportValidationError('VALUE_OUT_OF_RANGE', `${field} excede ${maximum} caracteres`);
+  return value;
+}
+
 export function normalizeDirection(value: string | null): NormalizedOperation['direction'] {
   const direction = value?.trim().toUpperCase();
   if (direction !== 'OUT' && direction !== 'IN') throw new ImportValidationError('DIRECTION_INVALID', 'direção deve ser OUT ou IN');
@@ -21,21 +26,21 @@ export function normalizeDirection(value: string | null): NormalizedOperation['d
 
 export function normalizeProfileClassification(value: string | null): string | null {
   const normalized = value?.trim() ?? '';
-  return normalized === '' ? null : normalized;
+  return normalized === '' ? null : limited(normalized, 'classificacao_perfil', 120);
 }
 
 export function normalizePurposeCode(value: string | null): string | null {
   if (value === null || value === '') return null;
-  return exact(value, 'finalidade_codigo');
+  return limited(exact(value, 'finalidade_codigo'), 'finalidade_codigo', 128);
 }
 
 export function normalizeClientName(value: string | null): string {
   const name = requireOperationCell(value, 'cliente_nome').trim().replace(/\s+/g, ' ');
   if (name === '') throw new ImportValidationError('REQUIRED', 'cliente_nome é obrigatório');
-  return name;
+  return limited(name, 'cliente_nome', 200);
 }
 
-export function normalizeOperationId(value: string | null): string { return exact(requireOperationCell(value, 'operacao_id'), 'operacao_id'); }
+export function normalizeOperationId(value: string | null): string { return limited(exact(requireOperationCell(value, 'operacao_id'), 'operacao_id'), 'operacao_id', 128); }
 
 export function normalizeOperation(raw: RawOperationCells): NormalizedOperation {
   return {

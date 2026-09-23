@@ -28,6 +28,19 @@ function file(): File {
 }
 
 describe('parseCanonicalXlsx', () => {
+  it.each([
+    ['operacoes.csv', 4, 'FILE_NOT_XLSX'],
+    ['operacoes.xlsx', 5 * 1024 * 1024 + 1, 'FILE_TOO_LARGE'],
+  ])('rejects %s before reading bytes or creating a worker', async (name, byteLength, code) => {
+    FakeWorker.instances = [];
+    const source = new File([new Uint8Array(byteLength)], name);
+    const arrayBuffer = vi.spyOn(source, 'arrayBuffer');
+
+    await expect(parseCanonicalXlsx(source, new AbortController().signal)).rejects.toMatchObject({ code });
+    expect(arrayBuffer).not.toHaveBeenCalled();
+    expect(FakeWorker.instances).toHaveLength(0);
+  });
+
   it('transfers the buffer and resolves only serializable parsed output', async () => {
     FakeWorker.instances = [];
     vi.stubGlobal('Worker', FakeWorker);

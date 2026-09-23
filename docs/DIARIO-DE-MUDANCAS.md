@@ -73,6 +73,15 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-23 — Preflight e normalização da importação endurecidos após revisão (MOT-51/MOT-52)
+
+1. **Sintoma.** A revisão independente identificou que o leitor removia espaços significativos, os limites textuais do layout não eram aplicados, arquivos inválidos podiam ser lidos antes da rejeição e uma referência de linha esparsa podia alcançar o leitor de células.
+2. **Causa.** O port inicial manteve o trim padrão de `read-excel-file`, concentrou limite de tamanho apenas no preflight do buffer e não confrontava o índice de linha OOXML com o limite de 1.000 operações.
+3. **O que foi feito.** `xlsxParser.ts` usa `trim: false`; `normalization.ts` impõe 128/200/120/128 caracteres para ID, cliente, perfil e finalidade; `workerClient.ts` recusa extensão e tamanho antes de `arrayBuffer()`/Worker; `xlsxPreflight.ts` recusa células após a linha 1.001 ainda no SAX. Testes RED/GREEN cobrem campos com espaços, os quatro pares máximo/máximo+1, extensão/tamanho sem leitura e referência esparsa extrema. Por instrução autorizada do Gabriel, esta rodada foi executada por gpt-5.6-terra/high em substituição ao roteamento Luna/high; a revisão independente prevista continua em gpt-6-sol/medium.
+4. **O que isso invalida.** Invalida a conclusão anterior de que o parser A1 já preservava texto exato e aplicava integralmente seus limites na fronteira mais cedo. Não altera motor, persistência, HTTP, execução, timeout ou limites publicados; sem push, PR, merge ou deploy.
+
+---
+
 ## 2026-09-23 — Validação por linha da importação portado (MOT-52)
 
 1. **Sintoma.** Após o parsing estrutural, o destino ainda não distinguia linhas válidas, inválidas e com finalidade ausente de modo revisável.
