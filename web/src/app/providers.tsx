@@ -12,6 +12,7 @@ import {
 import { createApiClient, type ApiClient } from '../api/client';
 import { useAuth, useAuthControl } from '../auth/AuthProvider';
 import { PreviewProvider } from '../preview/PreviewProvider';
+import { HelpCatalogProvider } from '../help/HelpCatalogProvider';
 import type { ApplicationRepository } from '../storage/applicationRepository';
 import { createBrowserApplicationRepository } from '../storage/productionRepository';
 import {
@@ -122,7 +123,9 @@ export function ApplicationProviders({
       <ApiClientContext.Provider value={apiClient}>
         <StudyControllerContext.Provider value={controller}>
           <DiagnosticRuntimeContext.Provider value={{ ownerSub: userId, controller, client: apiClient }}>
-            <PreviewProvider client={apiClient} ownerId={userId}>{children}</PreviewProvider>
+            <HelpCatalogProvider client={apiClient} ownerSub={status === 'authenticated' ? userId : null}>
+              <PreviewProvider client={apiClient} ownerId={userId}>{children}</PreviewProvider>
+            </HelpCatalogProvider>
           </DiagnosticRuntimeContext.Provider>
         </StudyControllerContext.Provider>
       </ApiClientContext.Provider>

@@ -1,5 +1,6 @@
 import type { components } from './generated';
 import { ApiError, type ApiErrorField } from './errors';
+import { validateProductHelpCatalog, type ProductHelpCatalogV1 } from '../help/catalog';
 import {
   validatePreparationRequest,
   validatePreparationResponse,
@@ -31,6 +32,7 @@ type FetchLike = (input: RequestInfo | URL, init?: RequestInit) => Promise<Respo
 export type ApiClient = {
   getReferenceExample(signal?: AbortSignal): Promise<ReferenceExample>;
   getImportCatalog(signal?: AbortSignal): Promise<ImportCatalog>;
+  getProductHelpCatalog(signal?: AbortSignal): Promise<ProductHelpCatalogV1>;
   preparePortfolio?(input: PreparationRequest, signal?: AbortSignal): Promise<PreparationResponse>;
   runPreview(input: PreviaRequest, signal?: AbortSignal): Promise<PreviewEnvelope>;
   submitDiagnostic(input: DiagnosticRequest, signal?: AbortSignal): Promise<JobSnapshot>;
@@ -192,6 +194,13 @@ export function createApiClient({
       const document = await request('/api/v1/catalogos/importacao', { method: 'GET' }, signal);
       if (!validateCatalogoImportacao(document)) throw invalidResponse(200);
       return deepFreeze(document as ImportCatalog);
+    },
+
+    async getProductHelpCatalog(signal) {
+      const document = await request('/api/v1/catalogos/ajuda', { method: 'GET' }, signal);
+      const catalog = validateProductHelpCatalog(document);
+      if (catalog === null) throw invalidResponse(200);
+      return catalog;
     },
 
     async preparePortfolio(input, signal) {

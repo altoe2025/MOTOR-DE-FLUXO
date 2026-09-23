@@ -1,4 +1,21 @@
 export interface paths {
+    "/api/v1/catalogos/ajuda": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Product Help Catalog Schema */
+        get: operations["product_help_catalog_schema_api_v1_catalogos_ajuda_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/catalogos/importacao": {
         parameters: {
             query?: never;
@@ -1255,6 +1272,50 @@ export interface components {
              */
             study_id: string;
         };
+        /**
+         * ProductHelpCatalogV1
+         * @description Documento imutável servido ao chat e à ajuda contextual.
+         */
+        ProductHelpCatalogV1: {
+            /**
+             * Apiversion
+             * @constant
+             */
+            apiVersion: "1.0.0";
+            /** Catalogversion */
+            catalogVersion: string;
+            /** Items */
+            items: components["schemas"]["ProductHelpItem"][];
+        };
+        /**
+         * ProductHelpItem
+         * @description Explicação contextual fechada, independente de conteúdo visual da página.
+         */
+        ProductHelpItem: {
+            /** Changes */
+            changes: string;
+            /** Disabledwhen */
+            disabledWhen: string[];
+            /** Doesnotchange */
+            doesNotChange: string;
+            /**
+             * Elementkind
+             * @enum {string}
+             */
+            elementKind: "PAGE" | "SECTION" | "CONTROL" | "METRIC" | "MESSAGE";
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+            /** Purpose */
+            purpose: string;
+            /** Recovery */
+            recovery: string[];
+            /** Relatedconceptids */
+            relatedConceptIds: string[];
+            /** Routepattern */
+            routePattern: string;
+        };
         /** ProfileDeadline */
         ProfileDeadline: {
             /**
@@ -1694,6 +1755,26 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    product_help_catalog_schema_api_v1_catalogos_ajuda_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductHelpCatalogV1"];
+                };
+            };
+        };
+    };
     import_catalog_schema_api_v1_catalogos_importacao_get: {
         parameters: {
             query?: never;

@@ -6,7 +6,10 @@ import { useState, useSyncExternalStore } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { AuthProvider } from '../auth/AuthProvider';
+import { createApiClient } from '../api/client';
 import type { AuthClient, AuthSession } from '../auth/types';
+import { useProductHelpCatalog } from '../help/HelpCatalogProvider';
+import productHelp from '../../../servidor/catalogs/product_help.v1.json';
 import type { ApplicationRepository } from '../storage/applicationRepository';
 import type { StudyChannel } from '../study/studyController';
 import { ApplicationProviders, resolveStorageProjectRef, useStudyController } from './providers';
@@ -64,7 +67,33 @@ function Probe() {
   );
 }
 
+function HelpProbe() {
+  const catalog = useProductHelpCatalog();
+  return <output data-testid="product-help-state">{
+    catalog === undefined ? 'loading' : catalog === null ? 'unavailable' : catalog.apiVersion
+  }</output>;
+}
+
 describe('ApplicationProviders', () => {
+  it('carrega ajuda na sessão autenticada e a remove quando a sessão termina', async () => {
+    const auth = authClient();
+    const fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      ...productHelp, catalogVersion: 'a'.repeat(64),
+    }), { headers: { 'Content-Type': 'application/json' } }));
+    const client = createApiClient({ getAccessToken: async () => `token-${USER_A}`, fetch });
+
+    render(
+      <AuthProvider client={auth.client}>
+        <ApplicationProviders client={client} projectRef="project-test"><HelpProbe /></ApplicationProviders>
+      </AuthProvider>,
+    );
+    await waitFor(() => expect(screen.getByTestId('product-help-state')).toHaveTextContent('1.0.0'));
+    expect(fetch).toHaveBeenCalledWith('/api/v1/catalogos/ajuda', expect.objectContaining({ method: 'GET' }));
+
+    act(() => auth.emit(null));
+    await waitFor(() => expect(screen.getByTestId('product-help-state')).toHaveTextContent('unavailable'));
+  });
+
   it('mantém o namespace local no modo E2E mesmo com Supabase real configurado', () => {
     expect(resolveStorageProjectRef('e2e', 'https://projeto-real.supabase.co')).toBe('local');
   });

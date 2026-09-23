@@ -192,6 +192,40 @@ da Etapa 6 completa ou de publicação; nada muda no motor ou nos números exist
 
 **O que isso invalida.** Nada nos contratos e números do motor. Não entrega shell, HTTP nem integração OpenAI.
 
+## 2026-09-23 — Catálogo versionado de ajuda do produto (MOT-92)
+
+**Sintoma.** A interface e o chat não dispunham de uma fonte única, versionada e
+autenticada para explicar páginas, controles e conceitos do produto; por isso, uma
+futura ajuda contextual poderia divergir da linguagem publicada ou depender do DOM.
+
+**Causa.** Os contratos HTTP existentes publicavam catálogo técnico de importação,
+mas não havia recurso validado para ajuda nem IDs literais que ligassem os
+componentes ao catálogo.
+
+**O que foi feito.** Foi publicado `ProductHelpCatalogV1` como recurso JSON
+versionado, validado e imutável na inicialização, com rota autenticada
+`GET /api/v1/catalogos/ajuda` e `Cache-Control: no-store`. O catálogo cobre
+importação, Empresa, Caso, Perfil, participante, arquétipo, composição, mix
+demonstrativo, seed, repetição, repetição selecionada, Replay, Diagnóstico,
+Comparação, Apresentação, Relatório e chat, sempre com propósito, efeito, limite,
+indisponibilidade, recuperação e referências internas fechadas. O OpenAPI e os
+artefatos TypeScript gerados foram atualizados; o front valida pelo mesmo schema
+Ajv, congela e carrega o catálogo por cliente autenticado. `helpIds.ts`
+centraliza a união literal e `HelpCatalogProvider` cria o cache em memória por
+identidade, limpa-o em logout/troca de usuário e descarta respostas em voo de uma
+sessão anterior; falha de catálogo devolve `null` e não bloqueia o produto. Os
+padrões de rota do catálogo foram alinhados ao router atual. Testes RED→GREEN
+cobrem a rota, autenticação, versão canônica, falha de inicialização, cobertura
+dos IDs, dados malformados, schema local, cache, logout, rotas e cliente. Desvio
+de roteamento registrado: B5 foi executada com
+`gpt-5.6-terra`/`high`, por instrução explícita do Gabriel, substituindo
+`gpt-6-luna`/`high` do plano.
+
+**O que isso invalida.** A premissa de que ajuda contextual pode depender de texto
+ou estado visual arbitrário da tela. Nenhuma regra financeira, resultado do motor,
+conteúdo do vault, dado observado ou decisão regulatória foi incorporado. Sem push,
+PR, merge ou deploy.
+
 ## 2026-09-23 — Primeira Empresa e decisão informada de conflito (MOT-60)
 
 **Sintoma.** A revisão independente da interface encontrou três lacunas: uma conta sem Empresa não conseguia iniciar importação; a rota de uma Empresa permitia trocar o destino no seletor; e versões em conflito apareciam apenas como IDs, sem diferenças semânticas para embasar a escolha.

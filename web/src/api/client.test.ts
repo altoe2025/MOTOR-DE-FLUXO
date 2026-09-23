@@ -5,6 +5,9 @@ import { describe, expect, it, vi } from 'vitest';
 import type { components } from './generated';
 import { createApiClient } from './client';
 import { ApiError } from './errors';
+import productHelp from '../../../servidor/catalogs/product_help.v1.json';
+
+const productHelpFixture = { ...productHelp, catalogVersion: 'a'.repeat(64) };
 
 type PreviaRequest = components['schemas']['PreviaRequest'];
 type DiagnosticRequest = components['schemas']['DiagnosticRequest'];
@@ -100,6 +103,16 @@ function jobSnapshotFixture(status: 'QUEUED' | 'RUNNING' | 'CANCEL_REQUESTED' = 
 }
 
 describe('typed API client', () => {
+  it('obtém e valida o catálogo de ajuda pela rota autenticada', async () => {
+    const fetch = vi.fn().mockResolvedValue(jsonResponse(productHelpFixture));
+    const client = createApiClient({ getAccessToken: async () => 'token', fetch });
+
+    await expect(client.getProductHelpCatalog()).resolves.toEqual(productHelpFixture);
+    expect(fetch).toHaveBeenCalledWith('/api/v1/catalogos/ajuda', expect.objectContaining({
+      method: 'GET', headers: expect.objectContaining({ Authorization: 'Bearer token' }),
+    }));
+  });
+
   it('obtém e valida o catálogo técnico pela rota canônica', async () => {
     const catalog = {
       schema_version: '1.0.0', catalog_version: 'a'.repeat(64),

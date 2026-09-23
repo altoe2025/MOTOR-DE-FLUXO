@@ -3027,6 +3027,131 @@
         "title": "PreviewEnvelope",
         "type": "object"
       },
+      "ProductHelpCatalogV1": {
+        "additionalProperties": false,
+        "description": "Documento imutável servido ao chat e à ajuda contextual.",
+        "properties": {
+          "apiVersion": {
+            "const": "1.0.0",
+            "title": "Apiversion",
+            "type": "string"
+          },
+          "catalogVersion": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Catalogversion",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ProductHelpItem"
+            },
+            "maxItems": 200,
+            "minItems": 1,
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "apiVersion",
+          "catalogVersion",
+          "items"
+        ],
+        "title": "ProductHelpCatalogV1",
+        "type": "object"
+      },
+      "ProductHelpItem": {
+        "additionalProperties": false,
+        "description": "Explicação contextual fechada, independente de conteúdo visual da página.",
+        "properties": {
+          "changes": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Changes",
+            "type": "string"
+          },
+          "disabledWhen": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 30,
+            "title": "Disabledwhen",
+            "type": "array"
+          },
+          "doesNotChange": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Doesnotchange",
+            "type": "string"
+          },
+          "elementKind": {
+            "enum": [
+              "PAGE",
+              "SECTION",
+              "CONTROL",
+              "METRIC",
+              "MESSAGE"
+            ],
+            "title": "Elementkind",
+            "type": "string"
+          },
+          "id": {
+            "maxLength": 120,
+            "minLength": 3,
+            "pattern": "^[a-z][a-z0-9-]*(\\.[a-z][a-z0-9-]*)+$",
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "purpose": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Purpose",
+            "type": "string"
+          },
+          "recovery": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 30,
+            "title": "Recovery",
+            "type": "array"
+          },
+          "relatedConceptIds": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 40,
+            "title": "Relatedconceptids",
+            "type": "array"
+          },
+          "routePattern": {
+            "maxLength": 300,
+            "minLength": 1,
+            "pattern": "^/[A-Za-z0-9_:/?&=.-]*$",
+            "title": "Routepattern",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "routePattern",
+          "elementKind",
+          "label",
+          "purpose",
+          "changes",
+          "doesNotChange",
+          "disabledWhen",
+          "recovery",
+          "relatedConceptIds"
+        ],
+        "title": "ProductHelpItem",
+        "type": "object"
+      },
       "ProfileDeadline": {
         "additionalProperties": false,
         "properties": {
@@ -4440,6 +4565,29 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/catalogos/ajuda": {
+      "get": {
+        "operationId": "product_help_catalog_schema_api_v1_catalogos_ajuda_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductHelpCatalogV1"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Product Help Catalog Schema"
+      }
+    },
     "/api/v1/catalogos/importacao": {
       "get": {
         "operationId": "import_catalog_schema_api_v1_catalogos_importacao_get",

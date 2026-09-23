@@ -22,6 +22,7 @@ from servidor.auth import (
     TokenVerifier,
 )
 from servidor.catalogs.importacao import load_import_catalog
+from servidor.catalogs.product_help import ProductHelpCatalogV1, load_product_help_catalog
 from servidor.config import Settings
 from servidor.contracts.diagnostics import (
     DiagnosticEnvelope,
@@ -45,6 +46,7 @@ from servidor.routes import (
     examples,
     importation,
     preparation,
+    product_help,
     preview,
     replay,
     session,
@@ -71,6 +73,7 @@ def create_app(
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         app.state.import_catalog = load_import_catalog()
+        app.state.product_help_catalog = load_product_help_catalog()
         executor = diagnostic_executor or DiagnosticExecutor(
             build_sha=configured.motor_build_sha,
             max_workers=configured.diagnostic_max_workers,
@@ -170,6 +173,7 @@ def create_app(
 
     app.include_router(session.router)
     app.include_router(importation.router)
+    app.include_router(product_help.router)
     app.include_router(examples.router)
     app.include_router(preparation.router)
     app.include_router(preview.router)
@@ -206,6 +210,10 @@ def create_schema_app() -> FastAPI:
 
     @app.get("/api/v1/catalogos/importacao", response_model=CatalogoImportacao)
     def import_catalog_schema(_: SchemaBearer) -> CatalogoImportacao:
+        raise HTTPException(status_code=501, detail="endpoint disponível na Etapa 6")
+
+    @app.get("/api/v1/catalogos/ajuda", response_model=ProductHelpCatalogV1)
+    def product_help_catalog_schema(_: SchemaBearer) -> ProductHelpCatalogV1:
         raise HTTPException(status_code=501, detail="endpoint disponível na Etapa 6")
 
     @app.get("/api/v1/examples/reference", response_model=ReferenceExample)

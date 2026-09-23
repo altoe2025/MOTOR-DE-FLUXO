@@ -131,6 +131,7 @@ export const validateDiagnosticEnvelope = ajv.compile({ $ref: 'https://motor-de-
 export const validateReplayRequest = ajv.compile({ $ref: 'https://motor-de-fluxo.local/contracts/schemas.json#/$defs/ReplayRequestV1' });
 export const validateReplayDocument = ajv.compile({ $ref: 'https://motor-de-fluxo.local/contracts/schemas.json#/$defs/ReplayDocumentV1' });
 export const validateCatalogoImportacao = ajv.compile({ $ref: 'https://motor-de-fluxo.local/contracts/schemas.json#/$defs/CatalogoImportacao' });
+export const validateProductHelpCatalogV1 = ajv.compile({ $ref: 'https://motor-de-fluxo.local/contracts/schemas.json#/$defs/ProductHelpCatalogV1' });
 `;
 
 await mkdir(apiDirectory, { recursive: true });
