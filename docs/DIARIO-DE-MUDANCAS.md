@@ -214,6 +214,27 @@ passaram; o aviso de chunks grandes do build já existia.
 **O que isso invalida.** Nada nos resultados do motor, nos Perfis, nas execuções
 persistidas ou no pacote demonstrativo. A descrição de “repetição mediana” não é
 suportada pelo contrato atual e não deve ser usada para esta seleção.
+## 2026-09-23 — Contratos espelhados do Documento de Comunicação V1 (MOT-92)
+
+**Sintoma.** A B4 ainda não tinha contrato comum para transportar valores publicados
+até apresentação, relatório e chat sem perder disponibilidade ou proveniência.
+
+**Causa.** Os envelopes existentes descrevem cada fonte; faltava a projeção de
+comunicação com identidade explícita e validação equivalente nas duas linguagens.
+
+**O que foi feito.** Criados modelo Pydantic, tipos TypeScript, JSON Schema gerado
+diretamente do modelo (sem endpoint), validador Ajv e fingerprint SHA-256 canônico.
+O contrato rejeita referências ausentes/duplicadas/de outro contexto, disponibilidade
+incoerente e valores numéricos que não sejam strings decimais. `generatedAt` fica
+fora do fingerprint. Fixtures observada/sintética e 64 mutações inválidas são
+compartilhadas por Python e Vitest. TDD: fixtures válidas falharam antes da
+implementação; 68 testes Python normal e `-O` e 67 Vitest passaram. A revisão
+independente conferiu o espelhamento, disponibilidade e identidade das evidências.
+MOT-92 permanece In Progress: esta entrega cobre somente B4, sem B5/B6.
+
+**O que isso invalida.** Nada nos resultados do motor. Integridade do documento não
+é atestado de autenticidade das fontes: o construtor confere os dados de origem.
+Sem alteração de OpenAPI, storage, ApplicationRepository, motor ou implantação.
 
 ## 2026-09-23 — Artefato demonstrativo com bytes canônicos após integração (MOT-91)
 

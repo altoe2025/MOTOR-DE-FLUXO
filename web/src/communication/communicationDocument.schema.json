@@ -1,0 +1,579 @@
+{
+  "$defs": {
+    "CommunicationEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "source": {
+          "enum": [
+            "STUDY",
+            "DIAGNOSTIC",
+            "COMPARISON",
+            "REPLAY"
+          ],
+          "title": "Source",
+          "type": "string"
+        },
+        "sourceId": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Sourceid",
+          "type": "string"
+        },
+        "studyId": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Studyid",
+          "type": "string"
+        },
+        "scenarioId": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Scenarioid",
+          "type": "string"
+        },
+        "scenarioRevision": {
+          "minimum": 1,
+          "title": "Scenariorevision",
+          "type": "integer"
+        },
+        "diagnosticExecutionId": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Diagnosticexecutionid",
+          "type": "string"
+        },
+        "repetitionId": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Repetitionid",
+          "type": "string"
+        },
+        "path": {
+          "maxLength": 20000,
+          "minLength": 1,
+          "pattern": "^(/([^~]|~[01])*)+$",
+          "title": "Path",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "maxLength": 20000,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Value"
+        }
+      },
+      "required": [
+        "source",
+        "sourceId",
+        "studyId",
+        "scenarioId",
+        "scenarioRevision",
+        "diagnosticExecutionId",
+        "repetitionId",
+        "path",
+        "value"
+      ],
+      "title": "CommunicationEvidence",
+      "type": "object"
+    },
+    "CommunicationFact": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Code",
+          "type": "string"
+        },
+        "label": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "value": {
+          "maxLength": 20000,
+          "minLength": 1,
+          "title": "Value",
+          "type": "string"
+        },
+        "evidenceRefs": {
+          "items": {
+            "maxLength": 128,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 20,
+          "minItems": 1,
+          "title": "Evidencerefs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "code",
+        "label",
+        "value",
+        "evidenceRefs"
+      ],
+      "title": "CommunicationFact",
+      "type": "object"
+    },
+    "CommunicationLimitation": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Code",
+          "type": "string"
+        },
+        "severity": {
+          "enum": [
+            "INFO",
+            "WARNING"
+          ],
+          "title": "Severity",
+          "type": "string"
+        },
+        "statement": {
+          "maxLength": 20000,
+          "minLength": 1,
+          "title": "Statement",
+          "type": "string"
+        },
+        "evidenceRefs": {
+          "items": {
+            "maxLength": 128,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 20,
+          "minItems": 1,
+          "title": "Evidencerefs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "code",
+        "severity",
+        "statement",
+        "evidenceRefs"
+      ],
+      "title": "CommunicationLimitation",
+      "type": "object"
+    },
+    "CommunicationMetric": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Code",
+          "type": "string"
+        },
+        "label": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "availability": {
+          "enum": [
+            "AVAILABLE",
+            "UNAVAILABLE"
+          ],
+          "title": "Availability",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "maxLength": 20000,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Value"
+        },
+        "unit": {
+          "enum": [
+            "BRL",
+            "FRACTION",
+            "DAYS",
+            "COUNT",
+            "BPS",
+            "TEXT"
+          ],
+          "title": "Unit",
+          "type": "string"
+        },
+        "meaning": {
+          "maxLength": 20000,
+          "minLength": 1,
+          "title": "Meaning",
+          "type": "string"
+        },
+        "evidenceRefs": {
+          "items": {
+            "maxLength": 128,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 20,
+          "minItems": 1,
+          "title": "Evidencerefs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "code",
+        "label",
+        "availability",
+        "value",
+        "unit",
+        "meaning",
+        "evidenceRefs"
+      ],
+      "title": "CommunicationMetric",
+      "type": "object"
+    },
+    "CommunicationReplaySnapshot": {
+      "additionalProperties": false,
+      "properties": {
+        "day": {
+          "minimum": 0,
+          "title": "Day",
+          "type": "integer"
+        },
+        "metrics": {
+          "items": {
+            "$ref": "#/$defs/CommunicationMetric"
+          },
+          "maxItems": 500,
+          "title": "Metrics",
+          "type": "array"
+        },
+        "facts": {
+          "items": {
+            "$ref": "#/$defs/CommunicationFact"
+          },
+          "maxItems": 2000,
+          "title": "Facts",
+          "type": "array"
+        }
+      },
+      "required": [
+        "day",
+        "metrics",
+        "facts"
+      ],
+      "title": "CommunicationReplaySnapshot",
+      "type": "object"
+    },
+    "CommunicationSection": {
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "metrics": {
+          "items": {
+            "$ref": "#/$defs/CommunicationMetric"
+          },
+          "maxItems": 500,
+          "title": "Metrics",
+          "type": "array"
+        },
+        "facts": {
+          "items": {
+            "$ref": "#/$defs/CommunicationFact"
+          },
+          "maxItems": 2000,
+          "title": "Facts",
+          "type": "array"
+        }
+      },
+      "required": [
+        "title",
+        "metrics",
+        "facts"
+      ],
+      "title": "CommunicationSection",
+      "type": "object"
+    },
+    "CommunicationSelection": {
+      "additionalProperties": false,
+      "properties": {
+        "scenarioId": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Scenarioid",
+          "type": "string"
+        },
+        "scenarioRevision": {
+          "minimum": 1,
+          "title": "Scenariorevision",
+          "type": "integer"
+        },
+        "diagnosticExecutionId": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Diagnosticexecutionid",
+          "type": "string"
+        },
+        "repetitionId": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Repetitionid",
+          "type": "string"
+        },
+        "comparisonExecutionId": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Comparisonexecutionid"
+        },
+        "replayDay": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Replayday"
+        }
+      },
+      "required": [
+        "scenarioId",
+        "scenarioRevision",
+        "diagnosticExecutionId",
+        "repetitionId",
+        "comparisonExecutionId",
+        "replayDay"
+      ],
+      "title": "CommunicationSelection",
+      "type": "object"
+    },
+    "CommunicationSource": {
+      "additionalProperties": false,
+      "properties": {
+        "family": {
+          "enum": [
+            "OBSERVED",
+            "PROFILE_SIMULATION"
+          ],
+          "title": "Family",
+          "type": "string"
+        },
+        "label": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "synthetic": {
+          "title": "Synthetic",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "family",
+        "label",
+        "synthetic"
+      ],
+      "title": "CommunicationSource",
+      "type": "object"
+    },
+    "CommunicationStudy": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "revision": {
+          "minimum": 1,
+          "title": "Revision",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "revision"
+      ],
+      "title": "CommunicationStudy",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "apiVersion": {
+      "const": "1.0.0",
+      "title": "Apiversion",
+      "type": "string"
+    },
+    "presentationVersion": {
+      "const": "1.0.0",
+      "title": "Presentationversion",
+      "type": "string"
+    },
+    "generatedAt": {
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$",
+      "title": "Generatedat",
+      "type": "string"
+    },
+    "study": {
+      "$ref": "#/$defs/CommunicationStudy"
+    },
+    "selection": {
+      "$ref": "#/$defs/CommunicationSelection"
+    },
+    "source": {
+      "$ref": "#/$defs/CommunicationSource"
+    },
+    "executiveMetrics": {
+      "items": {
+        "$ref": "#/$defs/CommunicationMetric"
+      },
+      "maxItems": 500,
+      "title": "Executivemetrics",
+      "type": "array"
+    },
+    "composition": {
+      "$ref": "#/$defs/CommunicationSection"
+    },
+    "mechanism": {
+      "$ref": "#/$defs/CommunicationSection"
+    },
+    "economics": {
+      "$ref": "#/$defs/CommunicationSection"
+    },
+    "robustness": {
+      "$ref": "#/$defs/CommunicationSection"
+    },
+    "comparison": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CommunicationSection"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "replaySnapshot": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CommunicationReplaySnapshot"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "assumptions": {
+      "items": {
+        "$ref": "#/$defs/CommunicationFact"
+      },
+      "maxItems": 2000,
+      "title": "Assumptions",
+      "type": "array"
+    },
+    "provenance": {
+      "items": {
+        "$ref": "#/$defs/CommunicationFact"
+      },
+      "maxItems": 2000,
+      "title": "Provenance",
+      "type": "array"
+    },
+    "limitations": {
+      "items": {
+        "$ref": "#/$defs/CommunicationLimitation"
+      },
+      "maxItems": 2000,
+      "title": "Limitations",
+      "type": "array"
+    },
+    "versions": {
+      "items": {
+        "$ref": "#/$defs/CommunicationFact"
+      },
+      "maxItems": 2000,
+      "title": "Versions",
+      "type": "array"
+    },
+    "evidenceIndex": {
+      "additionalProperties": {
+        "$ref": "#/$defs/CommunicationEvidence"
+      },
+      "maxProperties": 10000,
+      "propertyNames": {
+        "maxLength": 128,
+        "minLength": 1
+      },
+      "title": "Evidenceindex",
+      "type": "object"
+    },
+    "contextFingerprint": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Contextfingerprint",
+      "type": "string"
+    }
+  },
+  "required": [
+    "apiVersion",
+    "presentationVersion",
+    "generatedAt",
+    "study",
+    "selection",
+    "source",
+    "executiveMetrics",
+    "composition",
+    "mechanism",
+    "economics",
+    "robustness",
+    "comparison",
+    "replaySnapshot",
+    "assumptions",
+    "provenance",
+    "limitations",
+    "versions",
+    "evidenceIndex",
+    "contextFingerprint"
+  ],
+  "title": "CommunicationDocumentV1",
+  "type": "object"
+}
