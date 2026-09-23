@@ -247,6 +247,8 @@ describe('IndexedDbApplicationRepository schema', () => {
     );
     database.close();
     expect(storeNames).toEqual([
+      'chat_conversations',
+      'chat_operations',
       'companies',
       'executions',
       'import_batches',
@@ -294,7 +296,7 @@ describe('IndexedDbApplicationRepository schema', () => {
       'by_owner_company',
       'by_owner_company_version',
     ]);
-    expect(meta).toEqual({ key: 'schema_version', value: 2 });
+    expect(meta).toEqual({ key: 'schema_version', value: 3 });
     databaseForIndexes.close();
   });
 
@@ -986,7 +988,7 @@ describe('lifecycle', () => {
   it('closes the repository connection on versionchange', async () => {
     const target = repository();
     await target.listCompanies();
-    const upgrade = indexedDB.open(DATABASE_NAME, 3);
+    const upgrade = indexedDB.open(DATABASE_NAME, 4);
     const upgraded = await new Promise<IDBDatabase>((resolve, reject) => {
       upgrade.onerror = () => reject(upgrade.error);
       upgrade.onsuccess = () => resolve(upgrade.result);

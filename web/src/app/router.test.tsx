@@ -66,6 +66,10 @@ function RouteSwitch({ to }: Readonly<{ to: string }>) {
 }
 
 class RepositoryDouble implements ApplicationRepository {
+  async listChatConversations(): Promise<never[]> { return []; }
+  async getChatConversation(): Promise<null> { return null; }
+  async saveChatConversation(): Promise<never> { throw new Error('Chat outside fixture scope'); }
+  async deleteChatConversation(): Promise<void> { throw new Error('Chat outside fixture scope'); }
   failImportConfirmation = false;
   readonly importAttempts: ConfirmObservedCaseMutation[] = [];
   // Route fixtures represent an existing account that already removed its demo.

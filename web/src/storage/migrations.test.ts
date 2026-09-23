@@ -194,11 +194,14 @@ describe('physical schema 1 to 2', () => {
     const metaRequest = transaction.objectStore('meta').get('schema_version');
     const operationsRequest = transaction.objectStore('operations').getAll();
     expect([...database.objectStoreNames]).toContain('profile_versions');
+    expect([...database.objectStoreNames]).toContain('chat_conversations');
+    expect([...database.objectStoreNames]).toContain('chat_operations');
+    expect(database.version).toBe(3);
     const [meta, operations] = await Promise.all([
       requestResult(metaRequest),
       requestResult<Array<Record<string, unknown>>>(operationsRequest),
     ]);
-    expect(meta).toEqual({ key: 'schema_version', value: 2 });
+    expect(meta).toEqual({ key: 'schema_version', value: 3 });
     expect(operations).toHaveLength(2);
     expect(operations.every((row) =>
       (row.result_document as Record<string, unknown>).schemaVersion === '3.0.0')).toBe(true);
@@ -436,7 +439,7 @@ describe('migrateDatabase', () => {
 
   it('maps a future IndexedDB version to SCHEMA_UNSUPPORTED', async () => {
     const future = await new Promise<IDBDatabase>((resolve, reject) => {
-      const request = indexedDB.open(DATABASE_NAME, 3);
+      const request = indexedDB.open(DATABASE_NAME, 4);
       request.onerror = () => reject(request.error);
       request.onsuccess = () => resolve(request.result);
     });

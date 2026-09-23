@@ -17,7 +17,7 @@ import {
   SchemaUnsupportedError,
 } from './errors';
 
-const DATABASE_SCHEMA_VERSION = 2;
+const DATABASE_SCHEMA_VERSION = 3;
 
 export type LegacySource = Readonly<{
   sourceKey: string;
