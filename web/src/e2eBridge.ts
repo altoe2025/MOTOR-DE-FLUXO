@@ -5,10 +5,14 @@ import type { DeepMutable, PreviewExecutionRecord, StudyDocument } from './study
 import { calculateOperationalProfile } from './profiles/calculateOperationalProfile';
 import { createStudy } from './study/domain';
 import { resolvePortfolioSource } from './preparation/resolvePortfolioSource';
+import type { ReplayDocument } from './replay/domain';
+import { replayStateAt } from './replay/state';
 
 const E2E_OWNER_SUB = '00000000-0000-4000-8000-000000000021';
 const STAGE4_OBSERVED_ID = '00000000-0000-4000-8000-000000000901';
 const STAGE4_PROFILE_ID = '00000000-0000-4000-8000-000000000902';
+const STAGE5_OBSERVED_ID = '00000000-0000-4000-8000-000000000905';
+const STAGE5_OBSERVED_SCENARIO_ID = '00000000-0000-4000-8000-000000000915';
 
 export type Stage4Fixture = 'OBSERVED_HYPOTHESIS' | 'PROFILE_HYPOTHESIS';
 export type Stage4Snapshot = Readonly<{
@@ -43,6 +47,8 @@ export type MotorE2EBridge = Readonly<{
     | Readonly<{ stage: 'write'; event: 'abort'; requestEvent: 'success' | 'error'; errorName: string }>
   >;
   seedStage4(fixture: Stage4Fixture): Promise<void>;
+  seedStage5Observed(): Promise<Readonly<{ studyId: string; scenarioId: string }>>;
+  measureReplayState(document: ReplayDocument, day: number, iterations: number): Readonly<{ p50Ms: number; maxMs: number }>;
   stage4Snapshot(studyId: string): Promise<Stage4Snapshot>;
 }>;
 
@@ -72,6 +78,28 @@ function stage4Case(companyId: string, suffix: string): ObservedCase {
   };
 }
 
+function stage5ObservedCase(companyId: string): ObservedCase {
+  const recordedAt = '2026-09-20T12:00:00Z';
+  const provenance = { kind: 'OBSERVED' as const, source: 'stage5-replay', version: '1', recordedAt };
+  return {
+    schemaVersion: '2.0.0', id: 'stage5-replay-case', ownerSub: E2E_OWNER_SUB,
+    companyId, status: 'CONFIRMED', revision: 1,
+    window: { startDate: '2026-01-01', endDate: '2026-01-05', closingDate: '2026-01-05' },
+    orders: [
+      { id: 'stage5-out-partial', clientId: 'cliente-out', direction: 'OUT', knownDate: '2026-01-01', deadlineDate: '2026-01-03', valueBrl: '100', purposeCode: 'ANEXO_V_REMESSA_TERCEIRO', efxStatus: 'NO', provenance: [provenance] },
+      { id: 'stage5-in-match', clientId: 'cliente-in', direction: 'IN', knownDate: '2026-01-01', deadlineDate: '2026-01-01', valueBrl: '40', purposeCode: 'ANEXO_V_DISPONIBILIDADE', efxStatus: 'NO', provenance: [provenance] },
+    ],
+    controlTotals: [
+      { code: 'GROSS_OUT_BRL', valueBrl: '100', provenance },
+      { code: 'GROSS_IN_BRL', valueBrl: '40', provenance },
+    ],
+    sourceManifest: { adapterId: 'stage5-e2e', adapterVersion: '1', sourceKind: 'XLSX', files: [{ name: 'stage5-replay.xlsx', sizeBytes: 10, sha256: '5'.repeat(64) }] },
+    normalization: { rulesetId: 'stage5-e2e', rulesetVersion: '1', normalizedAt: recordedAt },
+    quality: { blockers: [], warnings: [] }, corrections: [], observedOutcome: null,
+    confirmedAt: recordedAt,
+  };
+}
+
 async function fingerprint(value: unknown): Promise<string> {
   const bytes = new TextEncoder().encode(JSON.stringify(value));
   const digest = await crypto.subtle.digest('SHA-256', bytes);
@@ -86,6 +114,48 @@ declare global {
 
 export function installE2EBridge(): void {
   window.__MOTOR_E2E__ = Object.freeze({
+    measureReplayState(document: ReplayDocument, day: number, iterations: number) {
+      replayStateAt(document, day);
+      const durations: number[] = [];
+      for (let index = 0; index < iterations; index += 1) {
+        const started = performance.now();
+        replayStateAt(document, day);
+        durations.push(performance.now() - started);
+      }
+      durations.sort((left, right) => left - right);
+      return {
+        p50Ms: durations[Math.floor(durations.length / 2)] ?? 0,
+        maxMs: durations.at(-1) ?? 0,
+      };
+    },
+    async seedStage5Observed() {
+      const repository = new IndexedDbApplicationRepository({ projectRef: 'local', ownerSub: E2E_OWNER_SUB });
+      const now = '2026-09-20T12:00:00Z';
+      try {
+        if (await repository.getStudy(STAGE5_OBSERVED_ID) === null) {
+          const company: CompanyRecord = { id: 'stage5-company', ownerSub: E2E_OWNER_SUB, displayName: 'Empresa Replay', aliases: [], createdAt: now, updatedAt: now, revision: 1 };
+          const observedCase = stage5ObservedCase(company.id);
+          if (await repository.getObservedCase(observedCase.id) === null) {
+            await repository.confirmObservedCase({ expectedRevision: 0, operationId: crypto.randomUUID(), company, observedCase, batches: [], events: [] });
+          }
+          const snapshot = await resolvePortfolioSource({ kind: 'OBSERVED_CASE', caseId: observedCase.id, caseRevision: 1 }, {
+            getObservedCase: (id) => repository.getObservedCase(id),
+            preparePortfolio: async () => { throw new Error('Preparação não esperada ao semear Replay observado.'); },
+            now: () => now,
+          });
+          const created = await createStudy({
+            id: STAGE5_OBSERVED_ID, ownerSub: E2E_OWNER_SUB, name: 'Etapa 5 observada', now,
+            baseScenario: {
+              id: STAGE5_OBSERVED_SCENARIO_ID, revision: 1, name: 'Replay observado', sourceSnapshot: snapshot,
+              premises: { windowDays: 2, costs: { iof_out: '0', iof_in: '0', carry_cnr: '0', spread_rail_bps: '0', custo_fixo_remessa: '0', custo_oportunidade_aa: '0', ptax: '5.4', iof_por_finalidade: [] } },
+              period: { httpPeriod: { modo: 'NATURAL', dias_aquecimento: 0, periodo_medicao_dias: 4 } },
+            },
+          });
+          await repository.saveStudy({ expectedRevision: 0, operationId: crypto.randomUUID(), document: created });
+        }
+        return { studyId: STAGE5_OBSERVED_ID, scenarioId: STAGE5_OBSERVED_SCENARIO_ID };
+      } finally { repository.close(); }
+    },
     async seedStage4(fixture: Stage4Fixture) {
       const repository = new IndexedDbApplicationRepository({ projectRef: 'local', ownerSub: E2E_OWNER_SUB });
       const now = '2026-09-20T12:00:00Z';

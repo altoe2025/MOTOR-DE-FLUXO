@@ -1,7 +1,7 @@
 # Mapa do repositório
 
 Índice para achar as coisas sem procurar. Estado técnico e planejamento do
-front-end atualizados em 2026-09-21.
+front-end atualizados em 2026-09-22.
 
 ## Comece por aqui
 
@@ -70,6 +70,8 @@ make test          # a contagem vigente é registrada em docs/testing.md
 | Design, plano e auditoria da Evolução B da Etapa 4 | `docs/superpowers/specs/2026-09-21-frontend-etapa-4-evolucao-b-design.md`, `docs/superpowers/plans/2026-09-21-frontend-etapa-4-evolucao-b.md`, `docs/frontend/etapa-4-evolucao-b-auditoria.md` |
 | Aceite técnico da Evolução B da Etapa 4 | `docs/frontend/etapa-4-evolucao-b-aceitacao.md` |
 | Especificação aprovada e plano executável da Etapa 5 — Replay temporal | `docs/superpowers/specs/2026-09-22-frontend-etapa-5-replay-design.md`, `docs/superpowers/plans/2026-09-22-frontend-etapa-5-replay.md` |
+| Operar o Replay Fronteira Viva da Etapa 5 | `docs/frontend/etapa-5-replay-operacao.md` |
+| Aceite, evidências visuais e limite efetivo da Etapa 5 | `docs/frontend/etapa-5-replay-aceitacao.md`, `docs/frontend/evidencias/mot89-*` |
 | IDs T0–T12 e auditoria de `50fc384`/`1270458` | seção "Rastreabilidade aprovada no Linear" e matriz da Task 0 no plano técnico v2 da Etapa 2 |
 | Importação de fontes reais e Caso Observado | `docs/superpowers/specs/2026-09-19-importacao-dados-reais-design-v2.md` |
 | Plano vigente do importador | `docs/superpowers/plans/2026-09-19-importacao-dados-reais-plano-tecnico-v2.md` |
@@ -82,7 +84,8 @@ versões de 2026-09-19.
 Os dois relatórios são **autocontidos**: não pressupõem a conversa que os gerou.
 
 O gate documental da Etapa 2 é MOT-62. A Etapa 3 usa MOT-65–MOT-77 para T0–T12.
-O MVP da Etapa 4 usa MOT-78–MOT-81 e a Evolução B usa MOT-82–MOT-85. Os candidatos e matrizes de evidência não
+O MVP da Etapa 4 usa MOT-78–MOT-81, a Evolução B usa MOT-82–MOT-85 e o Replay
+da Etapa 5 usa MOT-86–MOT-89. Os candidatos e matrizes de evidência não
 implicam autorização de publicação, merge ou deploy.
 
 ## Dados

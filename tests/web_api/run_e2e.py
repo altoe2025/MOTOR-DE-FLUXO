@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import subprocess
 from collections import deque
 from concurrent.futures import Future
@@ -18,6 +19,7 @@ from servidor.auth import AuthenticatedUser, SessionInvalid
 from servidor.config import Settings
 from servidor.diagnostics.executor import DiagnosticExecutor
 from servidor.diagnostics.service import RepetitionTask, execute_repetition
+from tests.web_api.measure_replay import measure_limit_replay
 
 CONTROLLED_TOKEN = "mot21-controlled-e2e-token"
 CONTROLLED_USER_ID = UUID("00000000-0000-4000-8000-000000000021")
@@ -167,8 +169,16 @@ def build_e2e_app(
     def diagnostic_state() -> dict[str, object]:
         return pool.snapshot()
 
-    control_routes = app.router.routes[-2:]
-    del app.router.routes[-2:]
+    @app.get("/__e2e__/replay/limit", include_in_schema=False)
+    def replay_limit() -> dict[str, object]:
+        report, document = measure_limit_replay()
+        return {
+            "report": report,
+            "document": json.loads(document.model_dump_json()),
+        }
+
+    control_routes = app.router.routes[-3:]
+    del app.router.routes[-3:]
     app.router.routes[0:0] = control_routes
 
     return app

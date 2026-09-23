@@ -27,7 +27,7 @@ _SPA_PATHS = {
 _LEGACY_HASHED_ASSET = re.compile(r"\.[0-9a-fA-F]{8,}\.")
 _STUDY_PATH = re.compile(
     r"estudos/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}"
-    r"(?:/diagnostico)?",
+    r"(?:/(?:diagnostico|replay))?",
     re.IGNORECASE,
 )
 _PORTFOLIO_PATH = re.compile(

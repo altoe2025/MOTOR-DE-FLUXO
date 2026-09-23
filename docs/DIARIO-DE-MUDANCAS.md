@@ -33,8 +33,7 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-09-21, durante a integração do MVP da Etapa 4 com a correção
-decimal vigente para iniciar a Evolução B.
+Atualizada em 2026-09-22, durante o aceite local do Replay da Etapa 5.
 
 | Branch | Situação | Dono |
 |---|---|---|
@@ -66,12 +65,46 @@ decimal vigente para iniciar a Evolução B.
 | `codex/frontend-etapa-3` | T0–T12 concluídos localmente; gate global verde em `57be689`; aceite técnico **PASS**; sem push/PR/merge | Codex |
 | `codex/etapa-4-mvp` | MVP e Evolução B aceitos localmente até MOT-85; sem push/PR/merge/deploy | Codex |
 | `codex/fix-reconciliacao-decimal` | correção da aritmética exata dos mecanismos da análise, pronta para merge na `main` | Codex |
-| `codex/frontend-etapa-5` | MOT-86–MOT-88 concluídas localmente; contrato, estado determinístico, rota e cena Fronteira Viva orientada a eventos; sem push/PR/merge | Codex |
+| `codex/frontend-etapa-5` | MOT-86–MOT-89 concluídas e aceitas localmente; Replay Fronteira Viva funcional até o limite efetivo medido; sem push/PR/merge/deploy | Codex |
 
 Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+---
+
+## 2026-09-22 — Integração e aceite local do Replay temporal (MOT-89)
+
+1. **Sintoma.** A fatia vertical do Replay ainda não provava os percursos observado
+   e sintético no browser, reload pela origem estática, responsividade real, limites
+   de volume nem regressão conjunta das Etapas 1–4. O teto nominal de 1.000 ordens
+   também não havia sido confrontado com o contrato que efetivamente alimenta a
+   projeção.
+2. **Causa.** O fallback SPA aceitava diagnóstico, mas não a rota profunda do Replay;
+   em 200% a grade de três colunas comprimia os cartões; e o contrato do diagnóstico
+   limita proveniência a 500 itens, embora o schema isolado do Replay aceite 1.000
+   ordens. Faltavam fixtures E2E orientadas aos eventos de aceite e medição pelo
+   pipeline real.
+3. **O que foi feito.** A branch `codex/frontend-etapa-5` ganhou E2E observado e de
+   hipótese sintética por Perfil, medição 98 × 365, fallback estrito da rota,
+   empilhamento responsivo com curvas verticais ancoradas, capturas com SHA-256 e
+   guias de operação/aceite. O Chromium cobre chegada, parcial, gatilhos simultâneos,
+   dias vazios, controles, reload, remessas OUT/IN, resize, 200% e tela estreita. O
+   gate final passou com 794 testes Python + 2 ignorados normal e `-O`, 477 unitários
+   web, lint/typecheck/build, E2E novo 3/3 duas vezes e Playwright integral 22/22. A
+   execução Vitest paralela reproduziu o timeout conhecido de um teste antigo; ele
+   passou 25/25 isolado e a suíte passou integralmente com um worker.
+4. **O que isso invalida.** Invalida a suposição de capacidade ponta a ponta
+   1.000 × 365: com nove entradas fixas e cinco por ordem, o teto real vigente é 98
+   ordens e 499 entradas de proveniência. Não invalida números do Motor, custos,
+   cenário Amanda ou a grade histórica; `motor/` não mudou e as 27.000 simulações não
+   foram reexecutadas. 5A (seleção/inspeção), 5B (baseline sincronizado) e 5C
+   (apresentação/escala/exportação) continuam posteriores.
+
+```text
+test: fecha integração e aceite do replay temporal (MOT-89)
+```
 
 ---
 

@@ -22,4 +22,17 @@ describe('geometria ancorada do Replay', () => {
     expect(remittanceCurve(stage, out, 'OUT').end.x).toBe(876);
     expect(remittanceCurve(stage, incoming, 'IN').end.x).toBe(24);
   });
+
+  it('mantém curvas conectadas no empilhamento móvel sem comprimir cartões', () => {
+    const narrowStage: Box = { left: 20, top: 40, width: 360, height: 900 };
+    const out: Box = { left: 36, top: 150, width: 328, height: 100 };
+    const incoming: Box = { left: 36, top: 700, width: 328, height: 100 };
+
+    expect(anchoredCurve(narrowStage, out, incoming)).toEqual({
+      start: { x: 180, y: 210 }, end: { x: 180, y: 660 },
+      path: 'M 180 210 C 180 390, 180 480, 180 660',
+    });
+    expect(remittanceCurve(narrowStage, out, 'OUT').end).toEqual({ x: 180, y: 876 });
+    expect(remittanceCurve(narrowStage, incoming, 'IN').end).toEqual({ x: 180, y: 24 });
+  });
 });

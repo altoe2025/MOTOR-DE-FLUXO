@@ -3,11 +3,12 @@ import { defineConfig, devices } from '@playwright/test';
 const localBaseUrl = 'http://127.0.0.1:8021';
 const realBaseUrl = process.env.MOT_REAL_AUTH_BASE_URL;
 const runLocalServer = process.env.MOT_REAL_AUTH_ONLY !== '1';
-const localPython = process.env.CI === 'true'
+const localPython = process.env.MOT_E2E_PYTHON ?? (process.env.CI === 'true'
   ? 'python'
   : process.platform === 'win32'
     ? '.venv\\Scripts\\python.exe'
-    : '.venv/bin/python';
+    : '.venv/bin/python');
+const localPythonCommand = localPython.includes(' ') ? `"${localPython}"` : localPython;
 
 export default defineConfig({
   testDir: './e2e',
@@ -22,7 +23,7 @@ export default defineConfig({
   projects: [
     {
       name: 'local',
-      testMatch: /(?:foundation|study-.*|company-profiles|diagnostic-jobs|stage2-regression|stage4-(?:mvp|evolution-b))\.spec\.ts/,
+      testMatch: /(?:foundation|study-.*|company-profiles|diagnostic-jobs|stage2-regression|stage4-(?:mvp|evolution-b)|stage5-replay)\.spec\.ts/,
       use: { ...devices['Desktop Chrome'] },
     },
     {
@@ -36,7 +37,7 @@ export default defineConfig({
     },
   ],
   webServer: runLocalServer ? {
-    command: `${localPython} -m tests.web_api.run_e2e`,
+    command: `${localPythonCommand} -m tests.web_api.run_e2e`,
     cwd: '..',
     url: `${localBaseUrl}/api/v1/health`,
     reuseExistingServer: false,

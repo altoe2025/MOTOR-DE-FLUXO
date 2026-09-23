@@ -8,6 +8,11 @@ tanto na execução normal quanto sob `python -O`. O front-end tem **388 testes
 unitários aprovados em 51 arquivos**; typecheck, lint, build e os **14 testes
 Playwright** também passam. Esse estado não foi publicado ou mergeado.
 
+O fechamento local da Etapa 5 em 2026-09-22 é aditivo a esse histórico e está
+detalhado na seção **Aceitação integrada da Etapa 5 — MOT-89**. A contagem final
+abaixo prevalece para a branch `codex/frontend-etapa-5`; ela também não foi
+publicada ou mergeada.
+
 ## Decisão
 
 ### Módulos testados
@@ -139,6 +144,46 @@ ele confere a política contra uma segunda implementação em vez de contra uma 
 escrita à mão.
 
 Para contexto de negócio e proveniência, consultar o vault Obsidian.
+
+## Aceitação integrada da Etapa 5 — MOT-89
+
+O spec `stage5-replay.spec.ts` percorre, no Chromium e pela API real local, um Estudo
+observado e uma hipótese sintética baseada em Perfil. Ele verifica todos os dias do
+horizonte, dia vazio, chegada, cobertura parcial, gatilhos simultâneos, remessas OUT
+e IN, estado final, play/pause, navegação, próximo fechamento, repetição, reload,
+resize, zoom de 200%, viewport estreito e ausência de erro no console.
+
+A página recarrega pela rota `/estudos/<uuid>/replay`; o fallback estático possui
+regressão Python para aceitar exatamente essa rota e continuar recusando segmentos
+extras. O E2E usa o `DiagnosticEnvelope` persistido no IndexedDB e não o job efêmero.
+
+A prova de capacidade tentou o limite nominal de 1.000 ordens, mas o contrato de
+proveniência do diagnóstico limita o caminho real a 500 entradas, ou 98 ordens com
+a representação atual. Em 98 × 365 foram medidos 200.513 bytes de request, 156.112
+bytes de response, builder p50 de 19,153 ms e máximo de 53,291 ms, e reconstrução
+direta no browser p50 de 9,6 ms e máximo de 11,1 ms. O relatório reproduzível está
+em `docs/frontend/evidencias/mot89-orcamento-1000x365.json`. Os números são regressão
+técnica local, não SLA.
+
+Gate final da branch `codex/frontend-etapa-5`:
+
+| Verificação | Resultado |
+|---|---|
+| `python -m pytest -q` | 794 aprovados, 2 ignorados |
+| `python -O -m pytest -q` | 794 aprovados, 2 ignorados |
+| `npx vitest run --maxWorkers=1` | 477 aprovados em 67 arquivos |
+| `npm run lint`, `typecheck`, `build` | aprovados |
+| E2E específico, duas execuções consecutivas | 3/3 em 20,9 s; 3/3 em 22,9 s |
+| Playwright local integral | 22/22 em 1,9 min |
+| `git diff --check` | aprovado |
+
+Na execução unitária padrão, 476/477 testes passaram e um caso antigo de roteamento
+atingiu exatamente o timeout de 5 s sob 67 workers. O arquivo isolado passou 25/25;
+a suíte integral com um worker passou 477/477. Isso reproduz a contenção de partida
+já documentada na Etapa 4, sem esconder uma falha funcional ou aumentar o timeout.
+
+A grade de 27.000 simulações não foi regenerada porque o Replay não modifica
+`motor/`.
 
 ## Aceitação local da Etapa 2 — MOT-32
 

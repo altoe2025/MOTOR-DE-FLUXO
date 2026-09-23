@@ -1,0 +1,24 @@
+{
+  "requested_orders": 1000,
+  "requested_orders_supported": false,
+  "binding_limit": "DIAGNOSTIC_PROVENANCE_MAX_500",
+  "provenance_entries": 499,
+  "orders": 98,
+  "days": 365,
+  "horizon_days_inclusive": 365,
+  "events": 210,
+  "segments": 97,
+  "request_bytes": 200513,
+  "response_bytes": 156112,
+  "body_limit_bytes": 8388608,
+  "within_request_limit": true,
+  "within_response_limit": true,
+  "input_and_engine_ms": 67.072,
+  "builder_iterations": 5,
+  "builder_p50_ms": 14.452,
+  "builder_max_ms": 15.325,
+  "browser_direct_state": {
+    "p50Ms": 12.700000047683716,
+    "maxMs": 16.399999976158142
+  }
+}

@@ -274,23 +274,23 @@ feat: implementa cena fronteira viva orientada a eventos (MOT-88)
 - Consumes: complete Replay vertical slice.
 - Produces: reproducible E2E, measured limits, visual captures, operation and acceptance records.
 
-- [ ] **Step 1: Write failing E2E for observed and synthetic Studies**
+- [x] **Step 1: Write failing E2E for observed and synthetic Studies**
 
 Seed public/non-private fixtures from Stage 4. Open Replay through the selected execution; verify arrival, simultaneous closing triggers, partial balance, both remittance directions, empty day, pause, next closing, direct jump, back and reload determinism. Repeat with observed-input and generated-hypothesis records.
 
-- [ ] **Step 2: Run E2E and verify RED**
+- [x] **Step 2: Run E2E and verify RED**
 
 Run: `npm run test:e2e -- stage5-replay.spec.ts`
 
-- [ ] **Step 3: Complete fixture bridge and visual assertions**
+- [x] **Step 3: Complete fixture bridge and visual assertions**
 
 Expose only deterministic test seeding already used by E2E. Capture 1280×800 initial, arrival, partial closing, OUT remittance, IN remittance and final states; also inspect 640 CSS px equivalence for 200% zoom and one narrow viewport without global horizontal overflow.
 
-- [ ] **Step 4: Measure the real 1.000 × 365 budget**
+- [x] **Step 4: Measure the real 1.000 × 365 budget**
 
 Build a deterministic request at the public contract limit, run `construir_replay` repeatedly, record p50/max builder duration, serialized request/response bytes, event/segment counts and browser direct-state timing. If either document exceeds 8 MiB or direct reconstruction exceeds the documented internal-test budget, report the measured lower supported limit instead of claiming 1.000 × 365.
 
-- [ ] **Step 5: Run the complete proportional gate**
+- [x] **Step 5: Run the complete proportional gate**
 
 Run:
 
@@ -307,15 +307,15 @@ npm run test:e2e -- stage5-replay.spec.ts
 
 Repeat the new E2E twice. Run the Amanda scenario only if the adapter/result code changed beyond the additive Replay transformation; do not run the 27.000-simulation sweep.
 
-- [ ] **Step 6: Browser QA and systemic audit**
+- [x] **Step 6: Browser QA and systemic audit**
 
 Open the built app with the local server, test every control in a real browser, inspect line/card anchoring during resize, console errors, empty/final days, reduced motion and reload. Audit contract identity, measured-cohort math, late-response cancellation and Stage 1–4 regressions; fix every material finding with a red-green regression test.
 
-- [ ] **Step 7: Document operation, acceptance and future evolutions**
+- [x] **Step 7: Document operation, acceptance and future evolutions**
 
 Record exact commands, evidence hashes, measured budget, known limitations and the explicit future scope: 5A selection/inspection, 5B synchronized baseline, 5C presentation/scale/export.
 
-- [ ] **Step 8: Verify MOT-89 and commit**
+- [x] **Step 8: Verify MOT-89 and commit**
 
 Update MAPA, testing and Diário in the same commit; commit:
 
