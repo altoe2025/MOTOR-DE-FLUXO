@@ -164,6 +164,16 @@ aprovados. O build mantém o aviso preexistente de chunks acima de 500 kB.
 **O que isso invalida.** A aceitação anterior de buffers e campos extras em novas
 mutações de importação. Nada nos números do motor, schemas de Caso/Estudo ou grade
 histórica. Sem push, PR, merge ou deploy.
+## 2026-09-23 — Ação de composição coerente com a origem (MOT-91)
+
+**Sintoma.** Uma origem sintética legada com snapshot de geração mostrava “Criar hipótese / alterar carteira”, mas a ação levava ao editor legado, sem controles de composição.
+
+**Causa.** O resumo inferia capacidade de editar a carteira pela presença de `generationInputSnapshot`; o editor escolhe a composição somente para cenário Profile MVP.
+
+**O que foi feito.** Na branch `codex/frontend-etapa-6b-b3`, o rótulo do resumo usa o mesmo critério de origem Profile MVP do editor. Testes cobrem a ação e o foco no editor de composição para Profile MVP, além da ação honesta e do editor legado para origem sintética com snapshot.
+
+**O que isso invalida.** A afirmação da entrada B3 abaixo de que somente origens sem composição gerável exibiam “Criar hipótese” era incompleta: origens sintéticas legadas com snapshot também exibem apenas essa ação. Nenhum resultado do motor ou dado persistido muda.
+
 ## 2026-09-23 — Composição descobrível e repetição identificada (MOT-91)
 
 **Sintoma.** A edição da composição ficava no fim da página do Estudo; Diagnóstico
