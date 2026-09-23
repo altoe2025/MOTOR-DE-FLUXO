@@ -33,7 +33,7 @@ function row(versionId: string, operationId: string, valueBrl: string): Imported
 }
 
 function batch(id: string, batchSequence: number, rows: readonly ImportedVersionRow[]): ImportBatch {
-  return { id, batchSequence, importedAt: '2026-09-23T12:00:00.000Z', rows };
+  return { id, batchSequence, importedAt: '2026-09-23T12:00:00.000Z', sha256: id.padEnd(64, '0'), byteSize: 1, rows };
 }
 
 function portfolio(batches: readonly ImportBatch[] = []): ImportPortfolio {

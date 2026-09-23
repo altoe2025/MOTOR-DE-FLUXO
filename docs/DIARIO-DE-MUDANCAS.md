@@ -73,6 +73,28 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-23 — Invariantes de conflito, revisão e proveniência multi-lote (MOT-54/MOT-55)
+
+**Sintoma.** A segunda revisão da A2 mostrou que duplicatas idênticas do mesmo
+arquivo eram coalescidas, a revisão do rascunho podia deixar de avançar após uma
+sequência mista e o manifesto não enumerava todas as fontes incorporadas.
+
+**Causa.** O replay distinguia conteúdo idêntico sem levar em conta a origem no
+mesmo lote; a revisão derivava de contadores independentes; e o manifesto preservava
+apenas o `ParsedImport` inicial.
+
+**O que foi feito.** Reenvios idênticos dentro do mesmo arquivo passam a exigir
+`RESOLVE_CONFLICT`; `ImportReview` guarda uma revisão semântica monotônica usada no
+rascunho; e `ImportBatch` carrega somente SHA-256/tamanho necessários para projetar
+deterministicamente cada fonte ativa no manifesto. `controlTotals` malformado vira o
+blocker estável `TOTAL_INVALID`, sem `DecimalError`. Quatro novas regressões e o
+gate focado de 35 testes confirmam esses contratos. Desvio autorizado de roteamento:
+`gpt-5.6-terra`/high substitui `gpt-6-luna`/high onde indicado originalmente.
+
+**O que isso invalida.** A coalescência automática de duplicata no mesmo arquivo e
+qualquer hipótese de que strings numéricas malformadas seriam erro excepcional; a
+fronteira transitória de `raw`/`ParsedImport` para A3 permanece inalterada.
+
 ## 2026-09-23 — Replay append-only de correções e fronteiras de elegibilidade (MOT-53/MOT-54/MOT-55)
 
 **Sintoma.** A revisão independente da A2 identificou que uma correção alterava o

@@ -155,6 +155,17 @@ describe('applyImportCommand', () => {
     expect(resolved.blockers.map((blocker) => blocker.code)).not.toContain('DUPLICATE_UNRESOLVED');
   });
 
+  it('requires explicit resolution for identical same-file duplicate IDs too', () => {
+    const duplicate = createImportReview({
+      parsed: parsed([{ ...row, finalidade_codigo: 'SERVICO' }, { ...row, finalidade_codigo: 'SERVICO' }]), company, ownerSub: 'owner-1', now: '2026-09-23T12:00:00.000Z', positionIdentified: true,
+    });
+    const firstVersion = duplicate.batches[0]!.rows[0]!.versionId;
+
+    expect(duplicate.blockers.map((blocker) => blocker.code)).toContain('DUPLICATE_UNRESOLVED');
+    const resolved = applyImportCommand(duplicate, { kind: 'RESOLVE_CONFLICT', operationId: 'OP-1', selectedVersionId: firstVersion, eventId: 'resolve-identical', at: '2026-09-23T12:01:00.000Z' });
+    expect(resolved.blockers.map((blocker) => blocker.code)).not.toContain('DUPLICATE_UNRESOLVED');
+  });
+
   it('preserves the first imported value as original across repeated corrections', () => {
     const original = createImportReview({ parsed: parsed([{ ...row, finalidade_codigo: 'SERVICO' }]), company, ownerSub: 'owner-1', now: '2026-09-23T12:00:00.000Z' });
     const versionId = original.batches[0]!.rows[0]!.versionId;
@@ -170,6 +181,31 @@ describe('applyImportCommand', () => {
     const associated = applyImportCommand(original, { kind: 'ASSOCIATE_ALIAS', alias: 'Órbita Comercial', canonicalClientId: target.clientId, eventId: 'alias-revision', at: '2026-09-23T12:01:00.000Z' });
 
     expect(associated.draft.revision).toBe(original.draft.revision + 1);
+  });
+
+  it('increments semantic revision exactly once across correction then alias', () => {
+    const original = createImportReview({ parsed: parsed([{ ...row, finalidade_codigo: 'SERVICO' }, { ...row, operacao_id: 'OP-2', cliente_nome: 'Órbita Comercial', finalidade_codigo: 'SERVICO' }]), company, ownerSub: 'owner-1', now: '2026-09-23T12:00:00.000Z', positionIdentified: true });
+    const corrected = applyImportCommand(original, { kind: 'CORRECT_FIELD', versionId: original.batches[0]!.rows[0]!.versionId, operationId: 'OP-1', field: 'valueBrl', rawValue: '125', actionId: 'revision-correction', at: '2026-09-23T12:01:00.000Z' });
+    const alias = applyImportCommand(corrected, { kind: 'ASSOCIATE_ALIAS', alias: 'Órbita Comercial', canonicalClientId: corrected.draft.orders.find((order) => order.id === 'OP-1')!.clientId, eventId: 'revision-alias', at: '2026-09-23T12:02:00.000Z' });
+
+    expect(corrected.draft.revision).toBe(original.draft.revision + 1);
+    expect(alias.draft.revision).toBe(corrected.draft.revision + 1);
+  });
+
+  it('lists every active source deterministically after batch incorporation', () => {
+    const original = createImportReview({ parsed: parsed([{ ...row, finalidade_codigo: 'SERVICO' }]), company, ownerSub: 'owner-1', now: '2026-09-23T12:00:00.000Z', positionIdentified: true });
+    const combined = applyImportCommand(original, { kind: 'INCORPORATE_BATCH', parsed: { ...parsed([{ ...row, operacao_id: 'OP-2', finalidade_codigo: 'SERVICO' }]), sha256: 'b'.repeat(64), byteSize: 456 }, at: '2026-09-23T12:01:00.000Z' });
+
+    expect(combined.draft.sourceManifest.files).toEqual([
+      expect.objectContaining({ sha256: 'a'.repeat(64), sizeBytes: 123 }),
+      expect.objectContaining({ sha256: 'b'.repeat(64), sizeBytes: 456 }),
+    ]);
+  });
+
+  it('turns malformed declared totals into a stable blocker instead of throwing', () => {
+    expect(() => createImportReview({ parsed: parsed([{ ...row, finalidade_codigo: 'SERVICO' }]), company, ownerSub: 'owner-1', now: '2026-09-23T12:00:00.000Z', positionIdentified: true, controlTotals: { out: 'not-a-decimal', in: '0' } })).not.toThrow();
+    const review = createImportReview({ parsed: parsed([{ ...row, finalidade_codigo: 'SERVICO' }]), company, ownerSub: 'owner-1', now: '2026-09-23T12:00:00.000Z', positionIdentified: true, controlTotals: { out: 'not-a-decimal', in: '0' } });
+    expect(review.blockers.map((blocker) => blocker.code)).toContain('TOTAL_INVALID');
   });
 
   it('compares declared control totals as Decimal values', () => {

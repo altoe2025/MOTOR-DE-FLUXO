@@ -58,7 +58,8 @@ export function projectPortfolio(portfolio: ImportPortfolio): PortfolioProjectio
   for (const [operationId, candidates] of byOperationId) {
     const byContent = new Map<string, PortfolioVersion[]>();
     for (const candidate of candidates) { const key = canonicalContent(candidate); byContent.set(key, [...(byContent.get(key) ?? []), candidate]); }
-    if (byContent.size === 1) {
+    const sameFileDuplicate = new Set(candidates.map((candidate) => candidate.batchId)).size < candidates.length;
+    if (byContent.size === 1 && !sameFileDuplicate) {
       const current = candidates[0];
       if (current !== undefined) currentOperations.push({ ...current, operationId, originVersionIds: candidates.map((candidate) => candidate.versionId) });
       continue;

@@ -105,6 +105,8 @@ export type ImportBatch = Readonly<{
   id: string;
   batchSequence: number;
   importedAt: string;
+  sha256: string;
+  byteSize: number;
   rows: readonly ImportedVersionRow[];
 }>;
 

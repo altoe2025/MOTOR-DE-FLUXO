@@ -62,6 +62,7 @@ export type ImportReview = Readonly<{
   warnings: readonly DataQualityIssue[];
   clientIdentity: ClientIdentityState;
   context: ReviewContext;
+  semanticRevision: number;
 }>;
 
 function stableUuid(seed: string): string {
@@ -163,7 +164,7 @@ function toBatch(input: CreateImportReviewInput, batchSequence = 1): { batch: Im
     };
   });
   return {
-    batch: { id: stableUuid(`${input.parsed.sha256}:batch`), batchSequence, importedAt: input.now, rows },
+    batch: { id: stableUuid(`${input.parsed.sha256}:batch`), batchSequence, importedAt: input.now, sha256: input.parsed.sha256, byteSize: input.parsed.byteSize, rows },
     identity,
     invalid,
     warnings,
@@ -247,6 +248,7 @@ function buildReview(
   corrections: readonly CorrectionRecord[],
   context: ReviewContext,
   now: string,
+  semanticRevision: number,
 ): ImportReview {
   const portfolio: ImportPortfolio = { revision: corrections.length + events.length + 1, batches, events };
   const projection = projectPortfolio(portfolio);
@@ -259,8 +261,12 @@ function buildReview(
   if (company !== null && company.ownerSub !== ownerSub) blockers.push(issue('COMPANY_OWNER_MISMATCH', 'Empresa pertence a outro usuário.'));
   if (!context.positionIdentified) blockers.push(issue('POSITION_UNIDENTIFIED', 'A posição líquida a publicar não foi identificada.'));
   for (const conflict of projection.conflicts) blockers.push(issue('DUPLICATE_UNRESOLVED', `Conflito não resolvido em ${conflict.operationId}.`, `/orders/${conflict.operationId}`));
-  if (declared !== null && (!new DecimalBrl(declared.out).eq(generatedTotals.out) || !new DecimalBrl(declared.in).eq(generatedTotals.in))) {
-    blockers.push(issue('TOTAL_DIVERGENT', 'Total de controle diverge das ordens revisadas.', '/controlTotals'));
+  if (declared !== null) {
+    try {
+      if (!new DecimalBrl(declared.out).eq(generatedTotals.out) || !new DecimalBrl(declared.in).eq(generatedTotals.in)) blockers.push(issue('TOTAL_DIVERGENT', 'Total de controle diverge das ordens revisadas.', '/controlTotals'));
+    } catch {
+      blockers.push(issue('TOTAL_INVALID', 'Total de controle inválido.', '/controlTotals'));
+    }
   }
   const windowDates = orders.flatMap((order) => [order.knownDate, order.deadlineDate]).sort();
   const startDate = windowDates[0] ?? EPOCH;
@@ -278,7 +284,7 @@ function buildReview(
     ownerSub,
     companyId: company?.id ?? 'missing-company',
     status: 'DRAFT',
-    revision: Math.max(portfolio.revision, clientIdentity.revision + 1),
+    revision: semanticRevision,
     window: { startDate, endDate, closingDate: endDate },
     orders,
     controlTotals: [
@@ -287,7 +293,7 @@ function buildReview(
     ],
     sourceManifest: {
       adapterId: 'xlsx-canonical', adapterVersion: '1.0.0', sourceKind: 'XLSX',
-      files: [{ name: 'importacao-canonica.xlsx', sizeBytes: context.parsed.byteSize, sha256: context.parsed.sha256 }],
+      files: batches.filter((batch) => projectPortfolio(portfolio).rows.some((row) => batch.rows.some((stored) => stored.versionId === row.versionId))).sort((left, right) => left.batchSequence - right.batchSequence).map((batch) => ({ name: 'importacao-canonica.xlsx', sizeBytes: batch.byteSize, sha256: batch.sha256 })),
     },
     normalization: { rulesetId: 'xlsx-operacoes', rulesetVersion: '1.0.0', normalizedAt: now },
     quality: { blockers, warnings },
@@ -295,7 +301,7 @@ function buildReview(
     observedOutcome: null,
     confirmedAt: null,
   };
-  return { company, draft, batches, events, blockers, warnings, clientIdentity, context };
+  return { company, draft, batches, events, blockers, warnings, clientIdentity, context, semanticRevision };
 }
 
 export function createImportReview(input: CreateImportReviewInput): ImportReview {
@@ -309,6 +315,7 @@ export function createImportReview(input: CreateImportReviewInput): ImportReview
     [],
     { parsed: input.parsed, positionIdentified: input.positionIdentified ?? false, controlTotals: input.controlTotals ?? null },
     input.now,
+    1,
   );
 }
 
@@ -339,7 +346,7 @@ function rebuild(
   corrections: readonly CorrectionRecord[],
   now: string,
 ): ImportReview {
-  return buildReview(review.company, review.draft.ownerSub, batches, events, clientIdentity, corrections, review.context, now);
+  return buildReview(review.company, review.draft.ownerSub, batches, events, clientIdentity, corrections, review.context, now, review.semanticRevision + 1);
 }
 
 export function applyImportCommand(review: ImportReview, command: ImportCommand): ImportReview {
