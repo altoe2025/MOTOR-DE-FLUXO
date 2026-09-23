@@ -1,7 +1,7 @@
 import type { ApiClient, ImportCatalog } from '../api/client';
 import { ApiError } from '../api/errors';
 
-type ImportCatalogApi = Required<Pick<ApiClient, 'getImportCatalog'>>;
+type ImportCatalogApi = Pick<ApiClient, 'getImportCatalog'>;
 
 export type ImportCatalogAvailable = Readonly<{
   kind: 'AVAILABLE';

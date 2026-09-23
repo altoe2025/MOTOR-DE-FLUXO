@@ -92,6 +92,7 @@ function renderAppAt(
 ) {
   const apiClient: ApiClient = providedApiClient ?? {
     getReferenceExample: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
+    getImportCatalog: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
     runPreview: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
     submitDiagnostic: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
     getDiagnosticJob: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
@@ -301,6 +302,7 @@ describe('application routes', () => {
     });
     const apiClient: ApiClient = {
       getReferenceExample: vi.fn(async () => { throw new Error('não chamado'); }),
+      getImportCatalog: vi.fn(async () => { throw new Error('não chamado'); }),
       runPreview: vi.fn(async () => { throw new Error('não chamado'); }),
       submitDiagnostic,
       getDiagnosticJob,
