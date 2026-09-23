@@ -92,6 +92,28 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 **O que foi feito.** `web/src/importer/controller.ts` orquestra leitura explícita em worker, cancelamento, revisão e confirmação com `operationId` estável em retry. A nova interface oferece upload, filtros, correção, alias, conflito, exclusão/restauração e links após confirmação. `StudyController` expõe uma ponte de publicação restrita ao owner. Rotas, navegação, pré-seleção validada em Perfis e fallback SPA foram conectados. Testes cobrem seleção por teclado sem processamento automático, correção, alias, conflito, publicação, recarga e isolamento entre contas. Gate local: 80 testes focados, typecheck, lint, build, 38 testes de fallback (2 ignorados), scanner (508 arquivos de texto/32 binários) e diff check passaram. O aviso de chunk grande do build já existia antes desta tarefa.
 
 **O que isso invalida.** A afirmação de que a importação só existe como contrato sem percurso React. Confirmar o Caso não cria Perfil, Estudo, prévia ou diagnóstico; esses passos continuam manuais. Nada muda nos números ou na política do motor.
+## 2026-09-23 — Materialização isolada da demonstração B2 (MOT-91)
+
+**Sintoma.** O pacote B1 continha o owner placeholder e identidades canônicas,
+sem uma cópia validada para cada instalação local.
+
+**Causa.** Trocar apenas o owner deixaria fingerprints de Casos/Perfis e
+referências de evidência incompatíveis, além de reutilizar IDs entre instalações.
+
+**O que foi feito.** Na `codex/frontend-etapa-6b-b2`, sobre `5ef4fe8`,
+`materializeDemoPackage` captura JSON fechado antes de qualquer await, valida o
+pacote completo e deriva identidades de owner/instalação. Recalcula fingerprints
+pelas funções canônicas e reconcilia Casos, Perfis, snapshots e proveniência.
+Resultados, seeds e IDs internos do motor permanecem idênticos. TDD RED→GREEN:
+16 testes de materialização, mais 13 da validação B1, passaram; auditoria
+independente não encontrou achado material no materializador. Arrays com
+protótipos alterados, propriedades ocultas, getters, ciclos e payload parcial
+são recusados antes da persistência. Typecheck e lint globais PASS.
+
+**O que isso invalida.** Nada nos resultados de B1, contratos financeiros ou
+motor. B2 ainda depende da transação e integração de sessão no próximo commit;
+MOT-91 foi devolvida a In Progress porque B1/B3 não encerram a issue agregada.
+Sem push, PR, merge ou deploy.
 
 ## 2026-09-23 — IDs opacos de operação no caminho de auditoria (MOT-56)
 
