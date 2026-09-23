@@ -1,5 +1,6 @@
 import type { ScenarioDocument } from '../../study/model';
 import { Button } from '../../ui/Button';
+import { isProfileMvpScenario } from '../hypothesis';
 
 const ARCHETYPE_LABELS: Record<string, string> = {
   tesouraria_corporativa: 'Tesouraria corporativa',
@@ -15,6 +16,7 @@ export function PortfolioCompositionSummary({ scenario, onEdit }: Readonly<{
   onEdit(): void;
 }>) {
   const input = scenario.sourceSnapshot.generationInputSnapshot;
+  const canEditComposition = input !== undefined && isProfileMvpScenario(scenario);
   return <div className="portfolio-composition-summary">
     <h3>Composição de {scenario.name}</h3>
     {input === undefined ? <p>Esta origem não possui participantes geráveis registrados.</p> : <>
@@ -29,7 +31,7 @@ export function PortfolioCompositionSummary({ scenario, onEdit }: Readonly<{
       })}</ul>
     </>}
     <Button variant="secondary" onClick={onEdit}>
-      {input === undefined ? 'Criar hipótese' : 'Criar hipótese / alterar carteira'}
+      {canEditComposition ? 'Criar hipótese / alterar carteira' : 'Criar hipótese'}
     </Button>
   </div>;
 }
