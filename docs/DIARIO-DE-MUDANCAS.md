@@ -33,7 +33,7 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-09-23, durante o refinamento do Replay da Etapa 5.
+Atualizada em 2026-09-23, durante o planejamento da Etapa 6.
 
 | Branch | Situação | Dono |
 |---|---|---|
@@ -66,11 +66,55 @@ Atualizada em 2026-09-23, durante o refinamento do Replay da Etapa 5.
 | `codex/etapa-4-mvp` | MVP e Evolução B aceitos localmente até MOT-85; sem push/PR/merge/deploy | Codex |
 | `codex/fix-reconciliacao-decimal` | correção da aritmética exata dos mecanismos da análise, pronta para merge na `main` | Codex |
 | `codex/frontend-etapa-5` | MOT-86–MOT-89 concluídas e aceitas localmente; Replay Fronteira Viva funcional até o limite efetivo medido; sem push/PR/merge/deploy | Codex |
+| `codex/frontend-etapa-6-planejamento` | especificação aprovada, plano técnico 6A–6D e MOT-90–MOT-99 criadas; ainda sem código de produto | Codex |
 
 Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+---
+
+## 2026-09-23 — Especificação, plano técnico e issues da Etapa 6 (MOT-90)
+
+1. **Sintoma.** O plano geral reservava chat, relatório, apresentação, acabamento e
+   publicação para a Etapa 6, mas não definia o recorte do piloto, a fronteira de
+   dados do chat, o formato visual nem o destino de hospedagem.
+2. **Causa.** Esses subsistemas dependiam do diagnóstico, comparação e Replay reais
+   das Etapas 3–5 e precisavam ser reconciliados com a persistência local antes de
+   receber um plano executável.
+3. **O que foi feito.** A branch `codex/frontend-etapa-6-planejamento` recebeu a
+   especificação aprovada e um plano mestre dividido em quatro planos executáveis:
+   integração da importação, demonstração/comunicação, chat e apresentação/publicação.
+   Eles detalham arquivos, contratos, TDD, gates, commits e dependências para o
+   Documento de Comunicação V1, chat lateral somente leitura
+   e restrito ao projeto, histórico local, Painel A contínuo, relatório pelo navegador,
+   OpenAI Responses API com `store: false`, contêiner único e Render gratuito. A
+   proposta também torna visível o editor de composição existente, distingue Perfil,
+   participante, arquétipo, repetição e Replay e define um Estudo demonstrativo local
+   com cinco composições sintéticas regeneradas pelo motor vigente. Resultados da
+   varredura histórica não são reaproveitados. A revisão constatou que a importação
+   XLSX MOT-49–MOT-61 existe apenas numa pilha remota anterior às Etapas 2–5; a
+   especificação agora exige uma 6A que porte seus módulos válidos, publique no
+   `ApplicationRepository` atual e conecte Caso → Empresa → Perfil → Estudo antes do
+   piloto. Os documentos registram contratos, limites, testes, riscos, publicação
+   separada do aceite local e a incorporação parcial da Evolução 5C. Uma busca
+   read-only no Linear confirmou inicialmente que não existiam issues novas da
+   Etapa 6. Após autorização explícita do Gabriel, foram criadas MOT-90–MOT-99 no
+   projeto `Motor de fluxo de CNR`, em Backlog, com dependências, prioridades,
+   critérios de evidência e roteamento de modelos. O plano usa Astra apenas nas
+   fronteiras de maior risco, Sol como padrão e Luna em portabilidade, catálogos e
+   trabalho repetitivo com revisão superior. O baseline registrou a divergência
+   `100 16` contra a pilha de importação; pytest normal e `-O` passaram com 794/2,
+   Vitest passou 481 testes, Playwright passou 22, e typecheck, ESLint, build e
+   scanner ficaram verdes. Ruff revelou 308 achados preexistentes e mypy 30 erros
+   preexistentes em `servidor/replay.py`; ambos permanecem dívida explícita de T0/A0,
+   sem correção ou máscara neste commit. Nenhum código de produto foi alterado.
+4. **O que isso invalida.** Invalida a leitura de que a Etapa 6 terminaria apenas com
+   preparo local sem URL para a Amanda. Não invalida o aceite da Etapa 5, números do
+   Motor, regras financeiras ou o escopo futuro de 5A/5B. A entrada ainda não possui
+   implementação ainda não começou. As issues e o plano autorizam a execução local
+   futura, mas não autorizam push, merge, criação do serviço Render ou deploy.
 
 ---
 
