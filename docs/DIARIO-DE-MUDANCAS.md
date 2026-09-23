@@ -73,6 +73,22 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-23 — Manifesto de lote vazio e confirmação sem operações (MOT-54/MOT-55)
+
+**Sintoma.** Um lote ativo sem linhas não aparecia no manifesto e um rascunho sem
+operações ainda podia parecer confirmável quando a posição era marcada.
+
+**Causa.** O manifesto era derivado das ordens projetadas, que naturalmente omitem
+lote vazio, e não havia bloqueio explícito para conjunto selecionado vazio.
+
+**O que foi feito.** O manifesto agora deriva de `activeBatchIds`, preservando
+SHA/tamanho de lote vazio até sua reversão; `ZERO_SELECTED_OPERATIONS` bloqueia a
+confirmação mesmo com posição identificada. Duas regressões RED e 37 testes focados
+passaram. Desvio autorizado: Terra/high substitui Luna/high.
+
+**O que isso invalida.** A ideia de que proveniência dependia de haver ordens; A3
+continua responsável por não persistir células brutas.
+
 ## 2026-09-23 — Invariantes de conflito, revisão e proveniência multi-lote (MOT-54/MOT-55)
 
 **Sintoma.** A segunda revisão da A2 mostrou que duplicatas idênticas do mesmo

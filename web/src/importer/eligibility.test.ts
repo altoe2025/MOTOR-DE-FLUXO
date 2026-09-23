@@ -202,10 +202,24 @@ describe('applyImportCommand', () => {
     ]);
   });
 
+  it('keeps an active zero-row batch in provenance and removes it after revert', () => {
+    const original = createImportReview({ parsed: parsed([{ ...row, finalidade_codigo: 'SERVICO' }]), company, ownerSub: 'owner-1', now: '2026-09-23T12:00:00.000Z', positionIdentified: true });
+    const combined = applyImportCommand(original, { kind: 'INCORPORATE_BATCH', parsed: { ...parsed([]), sha256: 'c'.repeat(64), byteSize: 789 }, at: '2026-09-23T12:01:00.000Z' });
+    const reverted = applyImportCommand(combined, { kind: 'REVERT_BATCH', batchId: combined.batches[1]!.id, eventId: 'revert-empty', at: '2026-09-23T12:02:00.000Z' });
+
+    expect(combined.draft.sourceManifest.files.map((file) => file.sha256)).toEqual(['a'.repeat(64), 'c'.repeat(64)]);
+    expect(reverted.draft.sourceManifest.files.map((file) => file.sha256)).toEqual(['a'.repeat(64)]);
+  });
+
   it('turns malformed declared totals into a stable blocker instead of throwing', () => {
     expect(() => createImportReview({ parsed: parsed([{ ...row, finalidade_codigo: 'SERVICO' }]), company, ownerSub: 'owner-1', now: '2026-09-23T12:00:00.000Z', positionIdentified: true, controlTotals: { out: 'not-a-decimal', in: '0' } })).not.toThrow();
     const review = createImportReview({ parsed: parsed([{ ...row, finalidade_codigo: 'SERVICO' }]), company, ownerSub: 'owner-1', now: '2026-09-23T12:00:00.000Z', positionIdentified: true, controlTotals: { out: 'not-a-decimal', in: '0' } });
     expect(review.blockers.map((blocker) => blocker.code)).toContain('TOTAL_INVALID');
+  });
+
+  it('blocks confirmation when no operation remains selected', () => {
+    const review = createImportReview({ parsed: parsed([]), company, ownerSub: 'owner-1', now: '2026-09-23T12:00:00.000Z', positionIdentified: true });
+    expect(review.blockers.map((blocker) => blocker.code)).toContain('ZERO_SELECTED_OPERATIONS');
   });
 
   it('compares declared control totals as Decimal values', () => {

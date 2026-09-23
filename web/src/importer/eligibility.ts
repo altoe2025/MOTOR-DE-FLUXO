@@ -21,7 +21,7 @@ import type {
   RawOperationCells,
 } from './domain';
 import { mergeClientAlias, normalizeClientNameKey, resolveClient } from './clients';
-import { incorporateBatch, projectPortfolio, resolveVersionConflict, revertBatch } from './portfolio';
+import { activeBatchIds, incorporateBatch, projectPortfolio, resolveVersionConflict, revertBatch } from './portfolio';
 import type { ParsedImport } from './xlsxParser';
 import { normalizeClientName, normalizeDirection, normalizePurposeCode } from './normalization';
 import { validateImportedRows } from './validation';
@@ -260,6 +260,7 @@ function buildReview(
   if (company === null) blockers.push(issue('COMPANY_MISSING', 'Empresa selecionada é obrigatória.'));
   if (company !== null && company.ownerSub !== ownerSub) blockers.push(issue('COMPANY_OWNER_MISMATCH', 'Empresa pertence a outro usuário.'));
   if (!context.positionIdentified) blockers.push(issue('POSITION_UNIDENTIFIED', 'A posição líquida a publicar não foi identificada.'));
+  if (orders.length === 0) blockers.push(issue('ZERO_SELECTED_OPERATIONS', 'Nenhuma operação selecionada para confirmação.'));
   for (const conflict of projection.conflicts) blockers.push(issue('DUPLICATE_UNRESOLVED', `Conflito não resolvido em ${conflict.operationId}.`, `/orders/${conflict.operationId}`));
   if (declared !== null) {
     try {
@@ -293,7 +294,7 @@ function buildReview(
     ],
     sourceManifest: {
       adapterId: 'xlsx-canonical', adapterVersion: '1.0.0', sourceKind: 'XLSX',
-      files: batches.filter((batch) => projectPortfolio(portfolio).rows.some((row) => batch.rows.some((stored) => stored.versionId === row.versionId))).sort((left, right) => left.batchSequence - right.batchSequence).map((batch) => ({ name: 'importacao-canonica.xlsx', sizeBytes: batch.byteSize, sha256: batch.sha256 })),
+      files: batches.filter((batch) => activeBatchIds(portfolio).has(batch.id)).sort((left, right) => left.batchSequence - right.batchSequence).map((batch) => ({ name: 'importacao-canonica.xlsx', sizeBytes: batch.byteSize, sha256: batch.sha256 })),
     },
     normalization: { rulesetId: 'xlsx-operacoes', rulesetVersion: '1.0.0', normalizedAt: now },
     quality: { blockers, warnings },
