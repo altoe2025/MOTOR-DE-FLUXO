@@ -104,6 +104,42 @@ O Ruff literal do plano (`servidor tests`) ainda aponta 298 achados legados;
 o escopo CI (`servidor tests/web_api`) passa, sem ignores adicionados. Nenhum
 número financeiro, regra do motor ou grade foi alterado. Sem publicação.
 
+## 2026-09-23 — Gates e auditoria independente da C1 (MOT-93)
+
+**Sintoma.** Os contratos e a persistência do chat estavam implementados, mas ainda
+faltava registrar a regressão integrada e a revisão independente do recorte C1.
+
+**Causa.** A alteração de schema e da interface compartilhada precisava comprovar
+compatibilidade com importação, demonstração e consumidores existentes.
+
+**O que foi feito.** Sobre a base `5419f49`, os commits locais `e873569`, `af8c580`
+e `16ed3ef` entregam somente C1. O gate focado de chat/storage/migrations/recovery
+passou com **98 testes**. A suíte completa web passou com **854 testes em 92
+arquivos**, via `npm --prefix web run test:unit -- --maxWorkers 1` (440,59 s),
+incluindo regressão do importador e da demonstração. Typecheck, lint, build,
+scanner de credenciais (539 textos/32 binários) e `git diff --check 5419f49..HEAD`
+passaram; permanece o aviso preexistente de chunks maiores que 500 kB.
+
+A primeira execução ampla, simultânea ao build e aos testes focados, mostrou
+timeouts em testes existentes e duas fixtures que ainda usavam versão física 3
+como futura. As fixtures passaram a usar 4; a execução ampla foi interrompida e
+repetida com um worker, sem alterar timeouts nem código de produto para esses
+timeouts. O resultado sequencial acima é a evidência final.
+
+Auditoria independente Astra/high: **spec PASS, qualidade PASS**, sem achado
+material confirmado ou provável. Foram inspecionados CAS/quota transacionais,
+isolamento, idempotência, exclusão sem ressurreição ou cópia de texto, snapshot,
+close em voo, recovery concorrente e upgrades 1→3/2→3. Limites da evidência:
+concorrência e rollback usam `fake-indexeddb`, sem teste de crash ou duas abas
+reais; a preservação 2→3 usa registros sentinela em todas as stores anteriores e
+marcador demo, além da inspeção de que o upgrade apenas adiciona stores e atualiza
+seu marcador. A recuperação explícita e as citações `{kind, id}` aguardam,
+respectivamente, consumo por C2/C5 e validação contextual em C5. MOT-93 permanece
+In Progress porque inclui C2. Sem push, PR, merge ou deploy.
+
+**O que isso invalida.** A pendência dos gates da C1. Não implica aceite de C2+,
+da Etapa 6 completa ou de publicação; nada muda no motor ou nos números existentes.
+
 ## 2026-09-23 — Higiene do schema local do chat (MOT-93)
 
 **Sintoma.** O gate `git diff --check` contra a base identificou uma linha vazia extra no fim do JSON Schema do chat.
