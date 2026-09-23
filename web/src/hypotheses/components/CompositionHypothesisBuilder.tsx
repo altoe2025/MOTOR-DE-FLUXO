@@ -136,6 +136,12 @@ export function CompositionHypothesisBuilder({ baseScenario, availableProfiles, 
 
   return <section className="hypothesis-card" aria-labelledby="composition-hypothesis-title">
     <h2 id="composition-hypothesis-title">Criar hipótese de composição</h2>
+    <div className="composition-guidance">
+      <p>Perfil Operacional é uma versão imutável das evidências de uma empresa.</p>
+      <p>Participante é a presença de uma empresa nesta carteira simulada. Remover um participante da hipótese não altera o Perfil.</p>
+      <p>Arquétipo gerador é um padrão sintético usado para gerar ordens a partir dos parâmetros do Perfil.</p>
+      <p>A hipótese cria um novo cenário; o cenário base permanece disponível e sem alterações.</p>
+    </div>
     <label>Nome da hipótese<input value={name} onChange={(event) => setName(event.target.value)} /></label>
     <fieldset><legend>Composição</legend>
       <label>Adicionar Perfil<select value="" onChange={(event) => addProfile(event.target.value)}>

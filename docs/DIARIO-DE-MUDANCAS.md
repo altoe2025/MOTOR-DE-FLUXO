@@ -73,6 +73,27 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-23 — Composição descobrível e repetição identificada (MOT-91)
+
+**Sintoma.** A edição da composição ficava no fim da página do Estudo; Diagnóstico
+e Replay não mostravam juntos o total, o ID e o critério da repetição selecionada.
+
+**Causa.** A página não resumia os participantes junto dos cenários, e cada tela
+tratava isoladamente a identidade da execução. A seleção é registrada no plano do
+diagnóstico; ela não representa necessariamente a mediana das métricas.
+
+**O que foi feito.** Na Task B3 da branch `codex/frontend-etapa-6b-b3`, o Estudo
+mostra a composição persistida e uma ação que leva o foco ao editor. O editor
+explica Perfil, participante e arquétipo, preservando o cenário base e o Perfil
+imutável. Diagnóstico e Replay usam o mesmo descritor do ID, total e critério; o
+Replay recusa resposta com ID divergente. Para origens sem composição gerável, a
+ação é apenas **Criar hipótese**. Testes B3, typecheck, lint, build e scanner
+passaram; o aviso de chunks grandes do build já existia.
+
+**O que isso invalida.** Nada nos resultados do motor, nos Perfis, nas execuções
+persistidas ou no pacote demonstrativo. A descrição de “repetição mediana” não é
+suportada pelo contrato atual e não deve ser usada para esta seleção.
+
 ## 2026-09-23 — Artefato demonstrativo com bytes canônicos após integração (MOT-91)
 
 **Sintoma.** Após integrar localmente A4 e B1, o teste determinístico do pacote

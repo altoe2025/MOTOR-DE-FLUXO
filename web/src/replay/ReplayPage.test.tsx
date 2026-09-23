@@ -27,6 +27,8 @@ function persistedStudy(status: DiagnosticExecutionRecord['status'] = 'SUCCEEDED
   const scenario = makeScenarioDraft();
   const envelope = {
     selected_execution: { statistics: { repetition_id: '00000000-0000-4000-8000-000000000703' } },
+    statistics: { kind: 'DISTRIBUTION', count: 10, selected_repetition_id: '00000000-0000-4000-8000-000000000703' },
+    repetitions: [{ repetition_id: '00000000-0000-4000-8000-000000000703' }],
   } as unknown as NonNullable<DiagnosticExecutionRecord['envelope']>;
   return {
     schemaVersion: '3.0.0', id: 'study-1', ownerSub: 'owner-1', name: 'Estudo replay', revision: 1,
@@ -78,6 +80,10 @@ describe('ReplayPage', () => {
       diagnostic_execution_id: '00000000-0000-4000-8000-000000000701',
     }), expect.any(AbortSignal));
     expect(screen.getByText('Dia 0 de 2')).toBeInTheDocument();
+    expect(screen.getByText('00000000-0000-4000-8000-000000000703')).toBeVisible();
+    expect(screen.getByText(/10 repetições executadas/i)).toBeVisible();
+    expect(screen.getByText(/Primeira repetição do plano/i)).toBeVisible();
+    expect(screen.getByText(/Replay mostra uma repetição específica/i)).toBeVisible();
   });
 
   it('ignora resposta tardia quando a rota muda', async () => {
@@ -94,5 +100,14 @@ describe('ReplayPage', () => {
 
     await waitFor(() => expect(screen.queryByRole('heading', { name: 'Fronteira Viva' })).not.toBeInTheDocument());
     expect(screen.getByText('EXECUCAO_NAO_ENCONTRADA')).toBeInTheDocument();
+  });
+
+  it('não apresenta Replay com ID diferente da repetição selecionada', async () => {
+    mocks.buildReplay.mockResolvedValueOnce({ ...replayDocumentFixture(), repetition_id: 'outro-id' });
+    render(<MemoryRouter initialEntries={['/estudos/study-1/replay?executionId=00000000-0000-4000-8000-000000000701']}>
+      <Routes><Route path="/estudos/:studyId/replay" element={<ReplayPage />} /></Routes>
+    </MemoryRouter>);
+    expect(await screen.findByText('REPLAY_INCONSISTENTE')).toBeVisible();
+    expect(screen.queryByRole('heading', { name: 'Fronteira Viva' })).not.toBeInTheDocument();
   });
 });
