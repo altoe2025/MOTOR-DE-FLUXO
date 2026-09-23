@@ -104,6 +104,16 @@ O Ruff literal do plano (`servidor tests`) ainda aponta 298 achados legados;
 o escopo CI (`servidor tests/web_api`) passa, sem ignores adicionados. Nenhum
 número financeiro, regra do motor ou grade foi alterado. Sem publicação.
 
+## 2026-09-23 — Higiene do schema local do chat (MOT-93)
+
+**Sintoma.** O gate `git diff --check` contra a base identificou uma linha vazia extra no fim do JSON Schema do chat.
+
+**Causa.** A gravação do arquivo acrescentou uma quebra de linha além do terminador final.
+
+**O que foi feito.** Removida somente a linha vazia excedente. Sem alteração de comportamento; os 98 testes focados, typecheck e lint permanecem a evidência funcional anterior. Gate amplo ainda em verificação pelo executor principal.
+
+**O que isso invalida.** Nada nos contratos, resultados ou funcionalidades.
+
 ## 2026-09-23 — Persistência transacional e recuperação do chat, C1 (MOT-93)
 
 **Sintoma.** Conversas não tinham histórico local, controle de concorrência nem recuperação após interrupção.
