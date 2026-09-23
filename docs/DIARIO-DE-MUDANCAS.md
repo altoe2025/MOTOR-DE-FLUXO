@@ -73,6 +73,15 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-23 — Parser XLSX seguro portado (MOT-51)
+
+1. **Sintoma.** O destino não inspecionava nem convertia o XLSX canônico sem expor binário, XML ou metadados pessoais a camadas posteriores.
+2. **Causa.** O parser seguro estava somente na origem auditada `3999ae660fd9b6fd163d53edf264a178e8146a13`, com dependências e fixtures que não pertenciam ao worktree atual.
+3. **O que foi feito.** Foram fixadas `fflate@0.8.3`, `read-excel-file@9.3.10` e `saxen@11.1.1`; portados preflight ZIP/OOXML, parser de células, worker e fronteira `parseCanonicalXlsx`. O preflight aplica limites de 5 MiB, 25 MiB e 128 entradas, e rejeita OLE/criptografia, macros, links, fórmulas, merges, abas e cabeçalhos inválidos. O resultado é `ParsedImport` serializável, contendo somente layout, hash, tamanho e linhas; o worker é terminado no sucesso, erro ou cancelamento e ignora resposta tardia. Fixtures são sintéticas da origem auditada. Por instrução autorizada do Gabriel, esta tarefa foi executada por gpt-5.6-terra/high em substituição ao roteamento Luna/high; a revisão independente prevista continua em gpt-6-sol/medium.
+4. **O que isso invalida.** Invalida a ausência de parsing seguro no destino. Não autoriza persistência, preview, HTTP, execução, `ImportStudy`, repositório próprio ou alteração em `motor/`; não houve push, PR, merge ou deploy.
+
+---
+
 ## 2026-09-23 — Domínio canônico da importação portado (MOT-50)
 
 1. **Sintoma.** A base da Etapa 6 não possuía tipos, datas civis, decimais BRL ou normalização local para ler linhas do XLSX canônico.

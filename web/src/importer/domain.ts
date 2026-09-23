@@ -21,7 +21,9 @@ export type ImportErrorCode =
   | 'ENCRYPTED_FILE_NOT_ALLOWED'
   | 'ROW_LIMIT_EXCEEDED'
   | 'ZIP_ENTRY_LIMIT_EXCEEDED'
-  | 'UNCOMPRESSED_SIZE_LIMIT_EXCEEDED';
+  | 'UNCOMPRESSED_SIZE_LIMIT_EXCEEDED'
+  | 'INVALID_XLSX'
+  | 'WORKER_FAILURE';
 
 export type RawOperationCells = Record<
   'operacao_id' | 'cliente_nome' | 'classificacao_perfil' | 'direcao'
