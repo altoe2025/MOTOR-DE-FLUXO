@@ -214,6 +214,36 @@ passaram; o aviso de chunks grandes do build já existia.
 **O que isso invalida.** Nada nos resultados do motor, nos Perfis, nas execuções
 persistidas ou no pacote demonstrativo. A descrição de “repetição mediana” não é
 suportada pelo contrato atual e não deve ser usada para esta seleção.
+## 2026-09-23 — Projeção pura de comunicação com identidade das fontes (MOT-92)
+
+**Sintoma.** Os consumidores futuros precisavam obter uma única projeção dos
+resultados sem recalcular métricas nem associar valores a outra execução/repetição.
+
+**Causa.** O esboço síncrono da B4 não acomodava WebCrypto/validação assíncrona;
+também supunha uma comparação persistida que o Estudo V3 não possui.
+
+**O que foi feito.** `buildCommunicationDocument` agora projeta os snapshots da
+execução validada, a comparação pré-calculada recebida explicitamente e o estado
+publicado de um dia do Replay. Retorna Promise, clona antes de aguardar e congela a
+saída; data explícita ou `study.updatedAt`, sem relógio/I/O/cálculo financeiro.
+As decisões de interface e limites de confiança estão em
+`docs/frontend/etapa-6-b4-comunicacao.md`. IDs, repetição, contagem, fingerprints,
+seeds e totais do Replay são conferidos, preservando as strings decimais originais.
+TDD e revisão independente corrigiram a comparação apontando para si mesma e a
+divergência entre repetição rotulada e execução publicada. Re-revisão: duas
+regressões verdes. Ordem das chaves JSON, reload e retorno ao dia preservam SHA.
+Gate final: 95 testes Python normal e `-O`; 678 Vitest (81 arquivos, 93 testes de
+comunicação); TS, ESLint, build, Ruff, mypy do contrato, scanner (507 textos/32
+binários) e diff check verdes. O primeiro Vitest teve um timeout de rota durante
+concorrência alta; a suíte inteira passou com dois workers sem aumentar timeout.
+Mypy global conserva 13 erros preexistentes em `servidor/demo/generate_package.py`;
+o build conserva o warning de chunks >500 kB. Nenhum desvio da matriz Astra/high.
+
+**O que isso invalida.** Apenas a assinatura síncrona e a suposição de uma entidade
+de comparação persistida no esboço da B4. Não invalida números de simulação ou
+contratos existentes. Sem B5/B6, C3/chat, endpoint artificial, alteração de storage,
+ApplicationRepository ou motor; sem push, PR, merge ou deploy.
+
 ## 2026-09-23 — Contratos espelhados do Documento de Comunicação V1 (MOT-92)
 
 **Sintoma.** A B4 ainda não tinha contrato comum para transportar valores publicados
