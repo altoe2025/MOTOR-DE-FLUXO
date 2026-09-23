@@ -20,6 +20,14 @@ Replay. Esse resultado não foi aceito como percurso válido. O gate compartilha
 `executionGate.ts` consulta `ApiClient.getImportCatalog` antes de reservar prévia,
 diagnóstico ou retry, e antes de reconstruir Replay antigo. A proveniência
 `xlsx-operacoes` identifica importações inclusive após conversão para autoria.
+Na revisão A6, a edição de todos os campos demonstrou que a proveniência corrente
+podia ser completamente substituída. A derivação agora carrega o marcador imutável
+`derivedFromObservedCase.importedFromXlsx`, incluído no fingerprint e aceito pelo
+schema persistido. O E2E altera todos os oito campos, recarrega e confirma que o
+bloqueio permanece sem reserva/POST. A compatibilidade não exige reescrever
+documentos legados; nenhuma migração retroativa de autoria já salva foi executada.
+Além do status configurado, o gate valida todos os pares finalidade/direção com
+catálogo fictício nos testes: código ausente, direção ausente e par permitido.
 Catálogo indisponível ou não configurado bloqueia; revisão, confirmação do Caso,
 Perfil e Estudo continuam disponíveis. Sintético/demo permanece executável.
 Polling/cancelamento de job já iniciado não é nova execução e permanece disponível.

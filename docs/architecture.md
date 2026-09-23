@@ -222,10 +222,17 @@ o usuário confirma manualmente uma versão do Perfil, cria um Estudo e anexa o
 snapshot do Perfil como evidência. Selecionar o Caso como origem do Estudo preserva
 cada operação explícita: duas pontas do mesmo cliente não são pré-netadas pelo
 importador. Antes de executar prévia, diagnóstico, retry ou reconstruir Replay,
-`importer/executionGate.ts` identifica a proveniência `xlsx-operacoes` e consulta
+`importer/executionGate.ts` identifica a proveniência `xlsx-operacoes` ou a
+ancestralidade `derivedFromObservedCase.importedFromXlsx` e consulta
 o catálogo via `ApiClient`, com timeout/auth/schema existentes. Estado indisponível
 ou `NAO_CONFIGURADO` bloqueia antes da reserva/POST. A derivação para autoria
-preserva essa proveniência e o gate; sintético/demo não exige catálogo de importação.
+preserva o marcador de ancestralidade mesmo quando todos os campos ganham nova
+proveniência manual. Esse marcador opcional participa do source fingerprint e do
+schema persistido, sem invalidar documentos antigos. Sintético/demo não exige
+catálogo de importação. `CONFIGURADO` sozinho não libera a carteira: cada ordem
+precisa de um par `(finalidade, direcao)` presente nas alíquotas do catálogo antes
+da reserva/POST. Finalidade ou direção ausente falha fechado, sem citar dados da
+operação na mensagem pública.
 Revisão e confirmação local continuam livres. Cancelar ou acompanhar um job já
 iniciado permanece possível. Diagnóstico e Replay usam contratos e motor atuais,
 mas o percurso importado só pode avançar até eles com catálogo configurado.

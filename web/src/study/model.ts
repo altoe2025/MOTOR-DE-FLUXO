@@ -76,7 +76,7 @@ export type AuthoredPortfolioDefinition =
   | Readonly<{ kind: 'PARAMETRIC'; groups: readonly AuthoredGroup[] }>
   | Readonly<{
       kind: 'EXPLICIT_ORDERS';
-      derivedFromObservedCase?: Readonly<{ caseId: string; caseRevision: number }>;
+      derivedFromObservedCase?: Readonly<{ caseId: string; caseRevision: number; importedFromXlsx?: true }>;
       orders: readonly CanonicalAuthoredOrder[];
       provenanceByOrder: Readonly<Record<string, OrderFieldProvenance>>;
     }>;

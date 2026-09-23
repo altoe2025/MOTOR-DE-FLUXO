@@ -152,6 +152,38 @@ test('XLSX local → Caso → reload → Perfil manual → reload → Estudo man
   await testInfo.attach('import-privacy-summary', { contentType: 'application/json', path: privacyPath });
 });
 
+test('ancestralidade XLSX bloqueia autoria após editar todos os campos e recarregar', async ({ page }) => {
+  const requests = captureRequests(page);
+  const imported = await readAndConfirm(page);
+  await page.goto('/estudos');
+  await page.getByRole('button', { name: 'Novo estudo', exact: true }).click();
+  await expect(page).toHaveURL(/\/carteira\/[0-9a-f-]+$/);
+  const studyId = page.url().split('/').at(-1)!;
+  await page.getByRole('radio', { name: 'Caso observado', exact: true }).check();
+  await page.getByLabel('Caso confirmado').selectOption(imported.caseId);
+  await page.getByRole('button', { name: 'Usar caso confirmado' }).click();
+  await expect.poll(() => page.evaluate((id) => window.__MOTOR_E2E__!.studySource(id), studyId)).toBe('OBSERVED_CASE');
+  await page.getByRole('button', { name: 'Converter para autoria manual' }).click();
+  for (const [id, direction] of [['E2E-IN', 'OUT'], ['E2E-OUT', 'IN']] as const) {
+    for (const [field, value] of [
+      ['ID', `edited-${id}`], ['Cliente', `edited-client-${id}`], ['Dia conhecido', '1'],
+      ['Dia limite', '4'], ['Valor BRL', '120'], ['Finalidade', 'FINALIDADE_FICTICIA_EDITADA'],
+    ]) await page.getByLabel(`${field} da operação ${id}`, { exact: true }).fill(value!);
+    await page.getByLabel(`Direção da operação ${id}`).selectOption(direction);
+    await page.getByLabel(`EFX da operação ${id}`, { exact: true }).check();
+  }
+  await page.getByRole('button', { name: 'Salvar operações explícitas' }).click();
+  await expect.poll(() => page.evaluate((id) => window.__MOTOR_E2E__!.studySource(id), studyId)).toBe('AUTHORED');
+  await expect.poll(async () => JSON.stringify((await storage(page)).stores.studies)).toContain('FINALIDADE_FICTICIA_EDITADA');
+  await page.reload();
+  await expect(page.getByLabel('ID da operação edited-E2E-IN', { exact: true })).toHaveValue('edited-E2E-IN');
+  await page.getByRole('button', { name: 'Executar cenário atual' }).click();
+  await expect(page.getByRole('article').getByRole('alert')).toContainText('Catálogo da importação não configurado');
+  expect(await page.evaluate((id) => window.__MOTOR_E2E__!.studyExecutionStatuses(id), studyId)).toEqual([]);
+  expect(requests.filter((request) => /\/(?:previas|diagnosticos|replays)$/.test(request.url) && request.body !== null)).toHaveLength(0);
+  await assertPrivate(page, requests);
+});
+
 test('linha inválida e conflito bloqueiam publicação; correção, escolha e cancelamento preservam atomicidade', async ({ page }) => {
   const requests = captureRequests(page);
   const rows = [...normalRows.map((row) => [...row]), [...normalRows[0]!]];

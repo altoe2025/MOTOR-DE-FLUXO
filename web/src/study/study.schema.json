@@ -86,7 +86,8 @@
               "additionalProperties": false,
               "properties": {
                 "caseId": { "$ref": "#/$defs/Identifier" },
-                "caseRevision": { "type": "integer", "minimum": 1 }
+                "caseRevision": { "type": "integer", "minimum": 1 },
+                "importedFromXlsx": { "const": true }
               },
               "required": ["caseId", "caseRevision"]
             },

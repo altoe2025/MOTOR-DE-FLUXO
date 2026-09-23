@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { DiagnosticRequest, JobSnapshot } from '../api/client';
 import { ApiError } from '../api/errors';
+import { fictionalCatalog } from '../importer/__fixtures__/catalog';
 import { createStudy } from '../study/domain';
 import { makeScenarioDraft } from '../study/fixtures';
 import type { StudyDocument } from '../study/model';
@@ -151,13 +152,16 @@ async function reservedFixture() {
 }
 
 describe('executeStudyDiagnostic', () => {
-  it('recusa diagnóstico XLSX sem catálogo antes de reservar ou enviar job', async () => {
+  it.each([
+    { name: 'sem catálogo', getImportCatalog: undefined, message: 'Catálogo da importação indisponível' },
+    { name: 'catálogo configurado sem par', getImportCatalog: async () => fictionalCatalog(), message: 'par finalidade/direção' },
+  ])('recusa diagnóstico XLSX $name antes de reservar ou enviar job', async ({ getImportCatalog, message }) => {
     const { study, request } = await studyFixture(true);
     const authority = new AuthorityDouble(study);
     const submitDiagnostic = vi.fn().mockResolvedValue(snapshot('QUEUED', request));
     const options = { authority, scenarioId: SCENARIO_ID, buildRequest: async () => request,
-      api: { submitDiagnostic, getDiagnosticJob: vi.fn().mockResolvedValue(snapshot('FAILED', request)), getDiagnosticResult: vi.fn() } };
-    await expect(executeStudyDiagnostic(options)).rejects.toThrow('Catálogo da importação indisponível');
+      api: { submitDiagnostic, getDiagnosticJob: vi.fn().mockResolvedValue(snapshot('FAILED', request)), getDiagnosticResult: vi.fn(), ...(getImportCatalog === undefined ? {} : { getImportCatalog }) } };
+    await expect(executeStudyDiagnostic(options)).rejects.toThrow(message);
     expect(authority.edits).toEqual([]);
     expect(submitDiagnostic).not.toHaveBeenCalled();
   });

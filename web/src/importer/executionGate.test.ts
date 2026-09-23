@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { ApiClient, ImportCatalog } from '../api/client';
 import { ApiError } from '../api/errors';
-import { makeSyntheticSnapshot } from '../study/fixtures';
+import { FIXTURE_NOW, makeObservedCase, makeSyntheticSnapshot } from '../study/fixtures';
+import { authoredDefinitionFromObservedCase, resolvePortfolioSource } from '../preparation/resolvePortfolioSource';
+import { fictionalCatalog } from './__fixtures__/catalog';
 
 async function gate() { return import('./executionGate').catch(() => undefined); }
 function importedSnapshot() {
@@ -25,7 +27,10 @@ describe('gate de execução da importação', () => {
   });
   it('permite origem importada apenas após catálogo configurado pela porta autenticada', async () => {
     const module = await gate(); expect(module).toBeDefined();
-    const getImportCatalog: ApiClient['getImportCatalog'] = vi.fn(async () => ({ status: 'CONFIGURADO' }) as ImportCatalog);
+    const getImportCatalog: ApiClient['getImportCatalog'] = vi.fn(async () => fictionalCatalog([
+      { codigo: 'ANEXO_V_REMESSA_TERCEIRO', descricao: 'Fictícia OUT', aliquotas: [{ direcao: 'OUT', aliquota: '0' }] },
+      { codigo: 'ANEXO_V_DISPONIBILIDADE', descricao: 'Fictícia IN', aliquotas: [{ direcao: 'IN', aliquota: '0' }] },
+    ]));
     const signal = new AbortController().signal;
     await expect(module!.assertImportExecutionAvailable(importedSnapshot(), getImportCatalog, signal)).resolves.toBeUndefined();
     expect(getImportCatalog).toHaveBeenCalledWith(signal);
@@ -42,5 +47,38 @@ describe('gate de execução da importação', () => {
     const getImportCatalog = vi.fn(async () => { throw new Error('offline'); });
     await expect(module!.assertImportExecutionAvailable(makeSyntheticSnapshot(), getImportCatalog)).resolves.toBeUndefined();
     expect(getImportCatalog).not.toHaveBeenCalled();
+  });
+  it('mantém ancestralidade após substituir toda proveniência de campos e serializar autoria', async () => {
+    const fixture = makeObservedCase();
+    const original = { ...fixture, sourceManifest: { ...fixture.sourceManifest, adapterId: 'xlsx-canonical' } };
+    const definition = authoredDefinitionFromObservedCase(original);
+    const manual = { kind: 'USER_CORRECTED' as const, source: 'autoria manual', version: '1', actionId: 'correction', recordedAt: FIXTURE_NOW };
+    const reloaded = JSON.parse(JSON.stringify({
+      kind: 'AUTHORED', authoredPortfolioId: 'edited', definition: {
+        ...definition,
+        provenanceByOrder: Object.fromEntries(definition.orders.map((order) => [order.id, Object.fromEntries(Object.keys(order).map((field) => [field, manual]))])),
+      },
+    }));
+    const snapshot = await resolvePortfolioSource(reloaded, { getObservedCase: async () => null, preparePortfolio: async () => { throw new Error('não gerar'); }, now: () => FIXTURE_NOW });
+    expect(snapshot.provenance.every((item) => item.source === 'autoria manual')).toBe(true);
+    const module = await gate();
+    await expect(module!.assertImportExecutionAvailable(snapshot, async () => ({ ...fictionalCatalog(), status: 'NAO_CONFIGURADO' }))).rejects.toThrow('Catálogo da importação não configurado');
+  });
+  it.each([
+    { name: 'finalidade ausente', finalidades: [] },
+    { name: 'direção ausente', finalidades: [{ codigo: 'ANEXO_V_REMESSA_TERCEIRO', descricao: 'Fictícia', aliquotas: [{ direcao: 'IN' as const, aliquota: '0' }] }] },
+    { name: 'segundo par ausente', finalidades: [{ codigo: 'ANEXO_V_REMESSA_TERCEIRO', descricao: 'Fictícia', aliquotas: [{ direcao: 'OUT' as const, aliquota: '0' }] }] },
+  ])('bloqueia catálogo CONFIGURADO com $name', async ({ finalidades }) => {
+    const module = await gate();
+    await expect(module!.assertImportExecutionAvailable(importedSnapshot(), async () => fictionalCatalog(finalidades))).rejects.toThrow('par finalidade/direção');
+  });
+  it('não bloqueia autoria derivada de Caso demonstrativo sintético', async () => {
+    const fixture = makeObservedCase();
+    const demo = { ...fixture, sourceManifest: { ...fixture.sourceManifest, sourceKind: 'SYNTHETIC' as const, adapterId: 'demo-synthetic' } };
+    const snapshot = await resolvePortfolioSource({ kind: 'AUTHORED', authoredPortfolioId: 'demo', definition: authoredDefinitionFromObservedCase(demo) }, {
+      getObservedCase: async () => null, preparePortfolio: async () => { throw new Error('não gerar'); }, now: () => FIXTURE_NOW,
+    });
+    const module = await gate();
+    await expect(module!.assertImportExecutionAvailable(snapshot)).resolves.toBeUndefined();
   });
 });

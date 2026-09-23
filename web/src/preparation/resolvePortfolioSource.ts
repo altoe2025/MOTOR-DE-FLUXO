@@ -101,7 +101,12 @@ export function authoredDefinitionFromObservedCase(
 ): Extract<AuthoredPortfolioDefinition, { kind: 'EXPLICIT_ORDERS' }> {
   return {
     kind: 'EXPLICIT_ORDERS',
-    derivedFromObservedCase: { caseId: caseRecord.id, caseRevision: caseRecord.revision },
+    derivedFromObservedCase: {
+      caseId: caseRecord.id, caseRevision: caseRecord.revision,
+      ...((caseRecord.sourceManifest.adapterId === 'xlsx-canonical'
+        || caseRecord.orders.some((order) => order.provenance.some((item) => item.source === 'xlsx-operacoes')))
+        ? { importedFromXlsx: true as const } : {}),
+    },
     orders: observedOrders(caseRecord),
     provenanceByOrder: provenanceForObservedOrders(caseRecord),
   };

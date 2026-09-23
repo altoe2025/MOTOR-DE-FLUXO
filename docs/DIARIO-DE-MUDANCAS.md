@@ -73,6 +73,28 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-23 — Ancestralidade e pares executáveis na revisão A6 (MOT-61)
+
+**Sintoma.** A revisão independente reproduziu duas permissões indevidas: editar
+todos os campos da autoria apagava a identificação XLSX; catálogo configurado
+liberava finalidades/direções que não constavam de suas entradas.
+
+**Causa.** O gate consultava somente proveniência corrente dos campos e status
+global do catálogo, sem ancestralidade persistente nem validação por par.
+
+**O que foi feito.** Astra/high reproduziu quatro REDs unitários e o RED Chromium
+de edição integral/reload. A conversão do Caso importado marca sua ancestralidade
+em `derivedFromObservedCase.importedFromXlsx`, preservada pela autoria, schema e
+fingerprint. O gate consulta esse marcador e exige todos os pares do snapshot
+antes de reserva/POST. Testes usam catálogo completo explicitamente fictício;
+produção continua não configurada. Casos demo/sintéticos não ganham o bloqueio.
+Gates deste loop estão no relatório A6 e em `docs/testing.md`; C1 não foi alterada.
+
+**O que isso invalida.** Proveniência corrente não basta para afirmar origem
+imutável; `CONFIGURADO` não significa que toda carteira seja executável. Não houve
+migração retroativa de autoria anterior ao fix, alteração financeira ou catálogo
+regulatório fabricado. O aceite importado completo permanece condicionado.
+
 ## 2026-09-23 — Aceite local da importação e gate de execução (MOT-61)
 
 **Sintoma.** Faltava prova integrada XLSX→Caso→Perfil→Estudo, privacidade e

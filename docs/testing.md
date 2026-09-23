@@ -59,6 +59,25 @@ deste aceite local; não houve push, deploy ou regeneração da grade financeira
 
 ## Decisão
 
+### Revisão A6 — ancestralidade e catálogo por par
+
+Sobre `15f5eca` (C1 integrada), quatro testes RED comprovaram perda de origem após
+autoria integral e ausência de validação de finalidade/direção. O Chromium também
+reproduziu o primeiro defeito após edição dos oito campos e reload. Após correção:
+
+- 166 testes seletivos / 12 arquivos PASS, 40,76 s, 2 workers; inclui schema,
+  fingerprint, IndexedDB, execução/Replay e as três suítes C1 existentes.
+- Typecheck, lint, build produção e diff-check PASS; scanner 545 textos/32 binários.
+- E2E autoria integral/reload PASS 20,8 s; Replay sintético PASS 14,9 s.
+- Principal importado excedeu 30 s em uma rodada com compilação concorrente;
+  isolado passou 23,6 s (28,4 s de execução total), sem alteração de timeout.
+
+Catálogo dos testes é explicitamente fictício. Finalidade ausente, direção ausente
+e segundo par ausente bloqueiam antes de reserva/POST; pares presentes passam.
+O marcador de ancestralidade é persistido independentemente da proveniência
+corrente. Não houve migração retroativa de autorias salvas antes dessa correção.
+Python e a suíte global web não foram repetidos neste loop de front-end focado.
+
 ### Módulos testados
 
 Um arquivo de teste por módulo (ou por aspecto do módulo), espelhando

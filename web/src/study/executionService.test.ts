@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { PreviaRequest, PreviewEnvelope } from '../api/client';
 import { ApiError } from '../api/errors';
+import { fictionalCatalog } from '../importer/__fixtures__/catalog';
 import type { CompanyRecord, ObservedCase } from '../cases/domain';
 import type { OperationalProfileVersion } from '../profiles/domain';
 import { buildPreviewRequest, type PreviewRequestProvenance } from '../preparation/buildPreviewRequest';
@@ -160,7 +161,10 @@ function matchingEnvelope(input: PreviaRequest, executionId: string): PreviewEnv
 }
 
 describe('executeStudyScenario', () => {
-  it('recusa XLSX sem catálogo antes de reservar ou enviar prévia', async () => {
+  it.each([
+    { name: 'sem catálogo', getImportCatalog: undefined, message: 'Catálogo da importação indisponível' },
+    { name: 'catálogo configurado sem par', getImportCatalog: async () => fictionalCatalog(), message: 'par finalidade/direção' },
+  ])('recusa XLSX $name antes de reservar ou enviar prévia', async ({ getImportCatalog, message }) => {
     const subject = await setup();
     const imported = makeObservedSnapshot();
     imported.provenance = [{ kind: 'OBSERVED', source: 'xlsx-operacoes', version: '1.0.0', recordedAt: FIXTURE_NOW }];
@@ -169,9 +173,9 @@ describe('executeStudyScenario', () => {
     await subject.controller.flush();
     const savesBefore = subject.repository.saves.length;
     const runPreview = vi.fn(async (input: PreviaRequest) => matchingEnvelope(input, envelopeFixture.execution_id));
-    const result = await executeStudyScenario({ ...subject, scenarioId: edited.baseScenarioId, runPreview });
+    const result = await executeStudyScenario({ ...subject, scenarioId: edited.baseScenarioId, runPreview, ...(getImportCatalog === undefined ? {} : { getImportCatalog }) });
     expect(result.status).toBe('FAILED');
-    expect(result.error).toMatchObject({ message: expect.stringContaining('Catálogo da importação indisponível') });
+    expect(result.error).toMatchObject({ message: expect.stringContaining(message) });
     expect(runPreview).not.toHaveBeenCalled();
     expect(subject.repository.saves).toHaveLength(savesBefore);
     expect(subject.controller.snapshot.document!.executions).toEqual([]);
