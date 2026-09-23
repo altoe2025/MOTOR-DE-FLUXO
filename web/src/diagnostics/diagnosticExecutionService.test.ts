@@ -22,12 +22,14 @@ const RESERVATION_ID = '00000000-0000-4000-8000-000000000405';
 const TERMINAL_ID = '00000000-0000-4000-8000-000000000406';
 const NOW = '2026-09-20T12:00:00Z';
 
-async function studyFixture(): Promise<{ study: StudyDocument; request: DiagnosticRequest }> {
+async function studyFixture(imported = false): Promise<{ study: StudyDocument; request: DiagnosticRequest }> {
+  const baseScenario = makeScenarioDraft({ id: SCENARIO_ID });
+  if (imported) baseScenario.sourceSnapshot.provenance = [{ kind: 'OBSERVED', source: 'xlsx-operacoes', version: '1.0.0', recordedAt: NOW }];
   const study = await createStudy({
     id: STUDY_ID,
     ownerSub: OWNER,
     name: 'Diagnóstico',
-    baseScenario: makeScenarioDraft({ id: SCENARIO_ID }),
+    baseScenario,
     now: NOW,
   });
   const scenario = study.scenarios[0]!;
@@ -149,6 +151,16 @@ async function reservedFixture() {
 }
 
 describe('executeStudyDiagnostic', () => {
+  it('recusa diagnóstico XLSX sem catálogo antes de reservar ou enviar job', async () => {
+    const { study, request } = await studyFixture(true);
+    const authority = new AuthorityDouble(study);
+    const submitDiagnostic = vi.fn().mockResolvedValue(snapshot('QUEUED', request));
+    const options = { authority, scenarioId: SCENARIO_ID, buildRequest: async () => request,
+      api: { submitDiagnostic, getDiagnosticJob: vi.fn().mockResolvedValue(snapshot('FAILED', request)), getDiagnosticResult: vi.fn() } };
+    await expect(executeStudyDiagnostic(options)).rejects.toThrow('Catálogo da importação indisponível');
+    expect(authority.edits).toEqual([]);
+    expect(submitDiagnostic).not.toHaveBeenCalled();
+  });
   it('persiste somente reserva e terminal, sem snapshots de progresso', async () => {
     const { study, request } = await studyFixture();
     const authority = new AuthorityDouble(study);

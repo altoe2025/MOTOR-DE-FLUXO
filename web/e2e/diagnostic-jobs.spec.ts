@@ -56,7 +56,7 @@ test('two controlled jobs expose progress, cancel, idempotency, isolation and re
   await expect(first.getByRole('status')).toContainText('1 de 10');
   for (let index = 1; index < 10; index += 1) await release(first);
   await expect(first.getByRole('heading', { name: 'Diagnóstico concluído' })).toBeVisible();
-  await expect(first.getByText('10 repetições', { exact: false })).toBeVisible();
+  await expect(first.getByText('10 repetições', { exact: true })).toBeVisible();
   await expect(first.getByRole('heading', { name: 'Execução selecionada' })).toBeVisible();
 
   const submitted = JSON.parse(firstBody) as { idempotency_key: string };

@@ -13,6 +13,50 @@ detalhado na seção **Aceitação integrada da Etapa 5 — MOT-89**. A contagem
 abaixo prevalece para a branch `codex/frontend-etapa-5`; ela também não foi
 publicada ou mergeada.
 
+## Aceitação integrada da Etapa 6A — MOT-61
+
+O percurso `web/e2e/import-observed-case.spec.ts` lê XLSX no worker real,
+confirma Caso, recarrega, cria Perfil e Estudo por ações manuais e inspeciona
+requests e todas as stores IndexedDB. Linha inválida, conflito, correção,
+cancelamento, fórmula proibida, corrida CAS e isolamento de contas têm regressão.
+O catálogo real permanece `NAO_CONFIGURADO`: o aceite exige bloqueio de prévia,
+diagnóstico e Replay importados antes de publicar execução. Não se declara um
+percurso importado até Replay como aprovado. Demo/sintético conserva os percursos
+executáveis existentes. Detalhes e medição de 1.000 linhas estão em
+[`etapa-6a-aceitacao.md`](frontend/etapa-6a-aceitacao.md).
+
+Execute o gate de navegador sozinho no worktree: dois Playwright concorrentes
+compartilham porta, bundle e `test-results`, podendo apagar traces um do outro.
+O Vitest usa `--maxWorkers=2` também na CI, sem aumentar timeout. Evidências de
+cada rerun do Replay agora ficam em `test.info().outputPath`, sem sobrescrever
+os PNG/JSON históricos aceitos de MOT-89. A CI retém `web/test-results/` por 7 dias.
+
+O scanner inspeciona o conteúdo ZIP das fixtures XLSX em memória, com limite de
+4.096 entradas/64 MiB descompactados, além da inspeção binária existente. Não
+extrai arquivos e não abre exceção para segredos nos marcadores não-ZIP de teste.
+
+Gate local em 2026-09-23, candidato A6 sobre `9a60729`:
+
+| Verificação | Resultado |
+|---|---|
+| OpenAPI + TypeScript gerados | PASS, sem drift |
+| `python -m pytest -q` | 880 PASS, 2 SKIP; 178,65 s |
+| `python -O -m pytest -q` | 880 PASS, 2 SKIP; 405,25 s |
+| `python -m ruff check servidor tests/web_api` (CI) | PASS |
+| `python -m ruff check servidor tests` (literal do plano) | RED: 298 achados legados fora do escopo CI |
+| `python -m mypy servidor` | PASS, 43 arquivos; inclui correção B1 `9a60729` |
+| `npm --prefix web run test:unit -- --maxWorkers=2` | 832 PASS, 90 arquivos; 209,85 s |
+| typecheck / lint / build produção | PASS; warning de chunk grande preexistente |
+| `npm --prefix web run test:e2e` | 28 PASS; 5,4 min, Chromium local, um worker |
+| E2E principal + 1.000 linhas após materializar reports | 2 PASS; 37,0 s; JSONs presentes e sem sentinelas brutas/segredos |
+| scanner produção | PASS, 536 textos / 32 binários |
+| `git diff --check`, diff contratos e evidências MOT-89 | PASS, sem drift |
+
+O gate literal do plano mestre não é todo verde: o Ruff amplo exige reconciliação
+explícita pelo coordenador, não uma alegação de que os 298 achados desapareceram.
+Os dois skips Python são de symlink no Windows. Docker/Render/auth real ficam fora
+deste aceite local; não houve push, deploy ou regeneração da grade financeira.
+
 ## Decisão
 
 ### Módulos testados

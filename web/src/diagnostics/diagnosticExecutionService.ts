@@ -1,4 +1,5 @@
-import type { DiagnosticEnvelope, DiagnosticRequest, JobSnapshot } from '../api/client';
+import type { ApiClient, DiagnosticEnvelope, DiagnosticRequest, JobSnapshot } from '../api/client';
+import { assertImportExecutionAvailable } from '../importer/executionGate';
 import { validateDiagnosticEnvelope } from '../api/validators';
 import { ApiError } from '../api/errors';
 import type { DiagnosticExecutionRecord, StudyDocument } from '../study/model';
@@ -21,6 +22,7 @@ export type DiagnosticStudyAuthority = {
 };
 
 export type DiagnosticExecutionApi = Readonly<{
+  getImportCatalog?: ApiClient['getImportCatalog'];
   submitDiagnostic(input: DiagnosticRequest, signal?: AbortSignal): Promise<JobSnapshot>;
   getDiagnosticJob(jobId: string, signal?: AbortSignal): Promise<JobSnapshot>;
   getDiagnosticResult(jobId: string, signal?: AbortSignal): Promise<DiagnosticEnvelope>;
@@ -30,7 +32,7 @@ type DiagnosticCancellationApi = Pick<DiagnosticExecutionApi, 'getDiagnosticJob'
   cancelDiagnostic(jobId: string, signal?: AbortSignal): Promise<JobSnapshot>;
 }>;
 
-type DiagnosticRetryApi = Pick<DiagnosticExecutionApi, 'getDiagnosticJob' | 'getDiagnosticResult'> & Readonly<{
+type DiagnosticRetryApi = Pick<DiagnosticExecutionApi, 'getDiagnosticJob' | 'getDiagnosticResult' | 'getImportCatalog'> & Readonly<{
   retryDiagnostic(jobId: string, idempotencyKey: string, signal?: AbortSignal): Promise<JobSnapshot>;
 }>;
 
@@ -89,6 +91,8 @@ export async function executeStudyDiagnostic(
     let reservation = activeReservation(study, options.scenarioId);
     let reservedStudy = study;
     if (reservation === null) {
+      await assertImportExecutionAvailable(scenario.sourceSnapshot, options.api.getImportCatalog, signal);
+      if (!sessionIsCurrent(options.authority, ownerSub, epoch, signal)) return null;
       fallbackAttemptId = nextId();
       const request = await options.buildRequest({
         study,
@@ -259,6 +263,8 @@ export async function retryStudyDiagnostic(
       || original.jobId === null) {
       throw new Error('Execução diagnóstica não pode ser repetida.');
     }
+    await assertImportExecutionAvailable(original.sourceSnapshot, options.api.getImportCatalog, signal);
+    if (!sessionIsCurrent(options.authority, ownerSub, epoch, signal)) return null;
     const attemptId = nextId();
     const request = {
       ...structuredClone(original.requestSnapshot),
@@ -294,6 +300,7 @@ export async function retryStudyDiagnostic(
     scenarioId: reserved.scenarioId,
     api: {
       submitDiagnostic: async () => { throw new Error('Retry reservado não pode reenviar POST.'); },
+      ...(options.api.getImportCatalog === undefined ? {} : { getImportCatalog: options.api.getImportCatalog }),
       getDiagnosticJob: options.api.getDiagnosticJob,
       getDiagnosticResult: options.api.getDiagnosticResult,
     },

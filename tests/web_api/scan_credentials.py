@@ -7,7 +7,9 @@ import re
 import subprocess
 from collections.abc import Mapping
 from dataclasses import dataclass
+from io import BytesIO
 from pathlib import Path
+from zipfile import BadZipFile, ZipFile
 
 ROOT = Path(__file__).resolve().parents[2]
 PATTERNS = {
@@ -56,10 +58,35 @@ def find_secret_findings(files: Mapping[str, str]) -> list[SecretFinding]:
     return sorted(findings, key=lambda item: (item.path, item.kind))
 
 
-def find_binary_secret_findings(files: Mapping[str, bytes]) -> list[SecretFinding]:
+def find_binary_secret_findings(
+    files: Mapping[str, bytes], *, inspect_archives: bool = True
+) -> list[SecretFinding]:
     """Normaliza ASCII binário e UTF-16 explícito antes de procurar segredos."""
     findings: set[SecretFinding] = set()
     for path, content in files.items():
+        if inspect_archives and Path(path).suffix.lower() == ".xlsx" and content.startswith(b"PK"):
+            try:
+                with ZipFile(BytesIO(content)) as archive:
+                    entries = archive.infolist()
+                    budget = 64 * 1024 * 1024
+                    if len(entries) > 4096 or sum(item.file_size for item in entries) > budget:
+                        findings.add(SecretFinding(path, "archive-scan-limit"))
+                    else:
+                        for entry in entries:
+                            if entry.is_dir():
+                                continue
+                            with archive.open(entry) as source:
+                                expanded = source.read(budget + 1)
+                            budget -= len(expanded)
+                            if budget < 0:
+                                findings.add(SecretFinding(path, "archive-scan-limit"))
+                                break
+                            findings.update(find_binary_secret_findings(
+                                {f"{path}!{entry.filename}": expanded},
+                                inspect_archives=False,
+                            ))
+            except (BadZipFile, OSError, RuntimeError, NotImplementedError):
+                findings.add(SecretFinding(path, "archive-unreadable"))
         views = {content.decode("latin-1")}
         if content.startswith((b"\xff\xfe", b"\xfe\xff")):
             try:

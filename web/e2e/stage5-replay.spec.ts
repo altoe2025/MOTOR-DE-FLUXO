@@ -1,11 +1,11 @@
 import { expect, test, type Page } from '@playwright/test';
 import { writeFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 
 import type { ReplayDocument } from '../src/replay/domain';
 
 const PROFILE_SEED_STUDY = '00000000-0000-4000-8000-000000000902';
-const evidencePath = (name: string) => fileURLToPath(new URL(`../../docs/frontend/evidencias/${name}`, import.meta.url));
+// Fresh acceptance evidence belongs to this run; never overwrite accepted MOT-89 artifacts.
+const evidencePath = (name: string) => test.info().outputPath(name);
 
 test.setTimeout(120_000);
 

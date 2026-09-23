@@ -70,6 +70,18 @@ describe('ReplayPage', () => {
     mocks.buildReplay.mockResolvedValue(replayDocumentFixture());
   });
 
+  it('bloqueia Replay de uma execução XLSX antiga sem catálogo disponível', async () => {
+    const original = persistedStudy();
+    mocks.loadStudy.mockResolvedValue({ ...original, executions: original.executions.map((execution) => ({ ...execution,
+      sourceSnapshot: { ...execution.sourceSnapshot, provenance: [{ kind: 'OBSERVED', source: 'xlsx-operacoes', version: '1.0.0', recordedAt: '2026-09-23T12:00:00Z' }] },
+    })) });
+    render(<MemoryRouter initialEntries={['/estudos/study-1/replay?executionId=00000000-0000-4000-8000-000000000701']}>
+      <Routes><Route path="/estudos/:studyId/replay" element={<ReplayPage />} /></Routes>
+    </MemoryRouter>);
+    expect(await screen.findByText(/Catálogo da importação indisponível/)).toBeVisible();
+    expect(mocks.buildReplay).not.toHaveBeenCalled();
+  });
+
   it('reabre a execução pela URL e constrói o replay com o resultado persistido', async () => {
     render(<MemoryRouter initialEntries={['/estudos/study-1/replay?executionId=00000000-0000-4000-8000-000000000701']}>
       <Routes><Route path="/estudos/:studyId/replay" element={<ReplayPage />} /></Routes>

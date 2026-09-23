@@ -73,6 +73,37 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-23 — Aceite local da importação e gate de execução (MOT-61)
+
+**Sintoma.** Faltava prova integrada XLSX→Caso→Perfil→Estudo, privacidade e
+capacidade de 1.000 linhas. A primeira execução revelou que o Estudo importado
+ignorava o catálogo `NAO_CONFIGURADO`; o scanner não inspecionava segredos dentro
+do ZIP. O aceite visual também reproduziu overflow de um seletor de Perfil.
+
+**Causa.** As fronteiras tinham testes separados, mas a consulta de catálogo
+estava só na revisão. O scanner tratava XLSX como bytes compactados. O select com
+IDs longos conservava largura intrínseca, excedendo viewport 640 em zoom 200%.
+
+**O que foi feito.** Astra/high executou A6 com TDD e auditoria das fronteiras.
+Seis E2Es reais cobrem persistência manual, falhas, CAS, contas e inspeção de todas
+as stores/requests. Gate compartilhado usa a porta autenticada existente antes de
+prévia, diagnóstico, retry e Replay importados; sintético/demo segue executável.
+Scanner ZIP limitado em memória, CI com 2 workers Vitest e artifact E2E por 7 dias,
+selector de texto exato e CSS mínimo `max-width:100%` completam as correções.
+Reruns Replay usam output próprio e preservam byte a byte as evidências MOT-89.
+Medição local: 1.000 linhas em 351,7 ms no worker/1.370 ms até revisão,
+Caso 1.069.281 bytes; long tasks 265/352/98 ms, heap aproximado 50,4 MB.
+Comandos e resultados estão em `docs/testing.md`; trace e limites em
+`docs/frontend/etapa-6a-aceitacao.md`.
+
+**O que isso invalida.** Não é válido declarar importado→diagnóstico→Replay
+aceito com catálogo não configurado. O percurso importado termina em Estudo salvo
+com bloqueio explícito; execução completa aguarda catálogo legítimo. Importar
+1.000 linhas não amplia Replay: permanece a evidência independente 98×365.
+O Ruff literal do plano (`servidor tests`) ainda aponta 298 achados legados;
+o escopo CI (`servidor tests/web_api`) passa, sem ignores adicionados. Nenhum
+número financeiro, regra do motor ou grade foi alterado. Sem publicação.
+
 ## 2026-09-23 — Primeira Empresa e decisão informada de conflito (MOT-60)
 
 **Sintoma.** A revisão independente da interface encontrou três lacunas: uma conta sem Empresa não conseguia iniciar importação; a rota de uma Empresa permitia trocar o destino no seletor; e versões em conflito apareciam apenas como IDs, sem diferenças semânticas para embasar a escolha.

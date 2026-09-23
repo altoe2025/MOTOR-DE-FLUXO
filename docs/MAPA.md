@@ -38,6 +38,15 @@ make test          # a contagem vigente é registrada em docs/testing.md
 
 ## Onde está cada resposta
 
+Etapa 6A integrada localmente: o percurso real de importação e os limites estão em
+`docs/frontend/etapa-6a-aceitacao.md`; o teste reproduzível está em
+`web/e2e/import-observed-case.spec.ts`. Parser/worker/revisão/publicação vivem em
+`web/src/importer/`, sem repositório próprio. Catálogo autenticado em
+`servidor/catalogs/importacao.py` e `servidor/routes/importation.py`; produção
+continua `NAO_CONFIGURADO`. Scanner XLSX em
+`tests/web_api/scan_credentials.py`, regressões em `test_import_acceptance.py`.
+O limite de 1.000 linhas importadas não substitui o orçamento do Replay da Etapa 5.
+
 | Pergunta | Arquivo |
 |---|---|
 | Regras do repo, restrições, o que não mexer | `AGENTS.md` |

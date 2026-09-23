@@ -194,6 +194,7 @@ export function StudyPortfolioPage() {
           executionProvenance(context.study, context.scenario),
         ),
         runPreview: (input, signal) => api.runPreview(input, signal),
+        getImportCatalog: api.getImportCatalog,
       });
       const current = controller.snapshot.document;
       if (current !== null) setStudy(current);

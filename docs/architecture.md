@@ -197,3 +197,48 @@ Operação e contratos detalhados estão em
 [`docs/frontend/etapa-3-operacao.md`](frontend/etapa-3-operacao.md); a matriz de
 aceite está em
 [`docs/frontend/etapa-3-aceitacao.md`](frontend/etapa-3-aceitacao.md).
+
+## Importação integrada — Etapa 6A (MOT-61)
+
+Esta seção atualiza a fronteira histórica de produção do Caso citada acima.
+`/importar` e `/empresas/:companyId/importar` leem o layout
+`xlsx-operacoes/1.0.0` por ação explícita. Selecionar o arquivo não executa leitura.
+`workerClient` valida extensão e tamanho antes de obter o buffer; o worker faz
+preflight ZIP/OOXML limitado, rejeita fórmulas e estruturas proibidas e devolve
+somente linhas serializáveis e metadados. O layout admite até 1.000 operações.
+
+`ImportFlowController` mantém arquivo, células e nomes de origem apenas na sessão
+volátil. Comandos puros produzem revisão, identidade canônica, correções e
+conflitos explícitos. `publisher.confirmImport` revalida o Caso, projeta um nome
+fixo de fonte e auditoria canônica, redige células inválidas e chama uma única
+transação em `ApplicationRepository.confirmObservedCase`: Empresa, Caso, lotes,
+eventos e operação idempotente são gravados juntos ou não são gravados.
+CAS impede duas confirmações concorrentes do mesmo Caso. Banco e consultas são
+isolados por `projectRef` e `ownerSub`; a conta B pode conter sua própria
+demonstração sintética, mas não importações da conta A.
+
+Confirmar o Caso não cria Perfil, Estudo, prévia ou diagnóstico. Depois da recarga,
+o usuário confirma manualmente uma versão do Perfil, cria um Estudo e anexa o
+snapshot do Perfil como evidência. Selecionar o Caso como origem do Estudo preserva
+cada operação explícita: duas pontas do mesmo cliente não são pré-netadas pelo
+importador. Antes de executar prévia, diagnóstico, retry ou reconstruir Replay,
+`importer/executionGate.ts` identifica a proveniência `xlsx-operacoes` e consulta
+o catálogo via `ApiClient`, com timeout/auth/schema existentes. Estado indisponível
+ou `NAO_CONFIGURADO` bloqueia antes da reserva/POST. A derivação para autoria
+preserva essa proveniência e o gate; sintético/demo não exige catálogo de importação.
+Revisão e confirmação local continuam livres. Cancelar ou acompanhar um job já
+iniciado permanece possível. Diagnóstico e Replay usam contratos e motor atuais,
+mas o percurso importado só pode avançar até eles com catálogo configurado.
+
+O arquivo XLSX nunca é enviado ao FastAPI. Requests e todas as stores do IndexedDB
+são inspecionados no aceite Chromium em `web/e2e/import-observed-case.spec.ts`;
+`File`, `Blob`, `ArrayBuffer`, XML, assinatura ZIP, nome original, nomes/perfis
+brutos e célula inválida de correção são proibidos nessas fronteiras. Ordens
+canônicas e proveniência permitida são os dados que podem alimentar a execução.
+O scanner também examina conteúdo descomprimido das fixtures XLSX, em memória e
+com limite agregado de 64 MiB/4.096 entradas, sem extração para disco.
+
+Importar 1.000 linhas não promete executar 1.000 ordens no Replay. A Etapa 5
+registrou o limite efetivo de 98 ordens × 365 dias sob o teto de 500 entradas de
+proveniência do diagnóstico. O Caso de 1.000 linhas também ultrapassa 1 MiB de JSON;
+isso é armazenamento local, não autorização para aumentar limite de request.

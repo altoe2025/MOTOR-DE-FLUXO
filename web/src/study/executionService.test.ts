@@ -156,6 +156,22 @@ function matchingEnvelope(input: PreviaRequest, executionId: string): PreviewEnv
 }
 
 describe('executeStudyScenario', () => {
+  it('recusa XLSX sem catálogo antes de reservar ou enviar prévia', async () => {
+    const subject = await setup();
+    const imported = makeObservedSnapshot();
+    imported.provenance = [{ kind: 'OBSERVED', source: 'xlsx-operacoes', version: '1.0.0', recordedAt: FIXTURE_NOW }];
+    const edited = await updateScenario(subject.study, subject.study.baseScenarioId, { sourceSnapshot: imported }, FIXTURE_NOW);
+    subject.controller.edit(edited);
+    await subject.controller.flush();
+    const savesBefore = subject.repository.saves.length;
+    const runPreview = vi.fn(async (input: PreviaRequest) => matchingEnvelope(input, envelopeFixture.execution_id));
+    const result = await executeStudyScenario({ ...subject, scenarioId: edited.baseScenarioId, runPreview });
+    expect(result.status).toBe('FAILED');
+    expect(result.error).toMatchObject({ message: expect.stringContaining('Catálogo da importação indisponível') });
+    expect(runPreview).not.toHaveBeenCalled();
+    expect(subject.repository.saves).toHaveLength(savesBefore);
+    expect(subject.controller.snapshot.document!.executions).toEqual([]);
+  });
   it('faz flush de edição pendente antes de capturar snapshot e construir request', async () => {
     const subject = await setup();
     const current = subject.controller.snapshot.document!;
