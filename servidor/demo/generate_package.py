@@ -12,7 +12,9 @@ import json
 from collections import Counter
 from datetime import UTC, datetime
 from decimal import Decimal, localcontext
+from functools import partial
 from pathlib import Path
+from typing import Literal
 from uuid import UUID, uuid5
 
 from motor.arquetipos import TODOS as ARCHETYPES
@@ -28,6 +30,7 @@ from servidor.contracts.preparation import (
     EffectiveInput,
     EffectiveParticipant,
     PreparationRequest,
+    PreparationResponse,
     required_source_paths,
 )
 from servidor.contracts.replay import ReplayRequestV1
@@ -37,7 +40,7 @@ from servidor.motor_adapter import executar_previa
 from servidor.preparation import preparar_carteira
 from servidor.replay import construir_replay
 
-VERSION = "1.0.0"
+VERSION: Literal["1.0.0"] = "1.0.0"
 GENERATED_AT = "2026-09-23T12:00:00Z"
 CLOCK = datetime(2026, 9, 23, 12, tzinfo=UTC)
 BUILD_SHA = "5cb78f0b6ddd45b8b63f170153e6be8cd1928497"
@@ -51,7 +54,7 @@ MIX_LABELS = (
     ("psp_dominante", "PSP dominante"),
     ("outbound_extremo", "outbound extremo"),
 )
-COSTS = {
+COST_DECIMALS = {
     "iof_out": "0.035",
     "iof_in": "0.0038",
     "carry_cnr": "0.0004",
@@ -59,8 +62,8 @@ COSTS = {
     "custo_fixo_remessa": "0",
     "custo_oportunidade_aa": "0",
     "ptax": "5.40",
-    "iof_por_finalidade": [],
 }
+COSTS = {**COST_DECIMALS, "iof_por_finalidade": []}
 
 
 def _id(value: str) -> str:
@@ -274,7 +277,7 @@ def _effective(mix_name: str, profiles: list[dict]) -> EffectiveInput:
 
 
 def _preview_request(
-    *, effective: EffectiveInput, preparation: object, mix_name: str,
+    *, effective: EffectiveInput, preparation: PreparationResponse, mix_name: str,
     repetition_index: int, study_id: str, scenario_id: str,
 ) -> PreviaRequest:
     scenario = CenarioEntrada(
@@ -335,8 +338,7 @@ def _scenario_input_fingerprint(scenario: dict) -> str:
         },
         "premises": {
             "costs": {
-                **{key: canon_decimal(value) for key, value in COSTS.items()
-                    if key != "iof_por_finalidade"},
+                **{key: canon_decimal(value) for key, value in COST_DECIMALS.items()},
                 "iof_por_finalidade": [],
             },
             "windowDays": 7,
@@ -345,7 +347,10 @@ def _scenario_input_fingerprint(scenario: dict) -> str:
     })
 
 
-def _scenario(mix_name: str, label: str, effective: EffectiveInput, preparation: object) -> dict:
+def _scenario(
+    mix_name: str, label: str, effective: EffectiveInput,
+    preparation: PreparationResponse,
+) -> dict:
     scenario_id = _id(f"scenario:{mix_name}")
     source = {
         "source": {"kind": "SYNTHETIC", "recipe": {
@@ -420,7 +425,7 @@ def _diagnostic(
             study_id=UUID(study_id), scenario_id=UUID(scenario["id"]),
             scenario_revision=1, expected_build_sha=BUILD_SHA, input=prepared_input,
         ), build_sha=BUILD_SHA, relogio=lambda: CLOCK,
-            id_factory=lambda name=f"preparation:{mix_name}:{index}": UUID(_id(name)))
+            id_factory=partial(UUID, _id(f"preparation:{mix_name}:{index}")))
         preview_request = _preview_request(
             effective=prepared_input, preparation=preparation, mix_name=mix_name,
             repetition_index=index, study_id=study_id, scenario_id=scenario["id"],
@@ -475,7 +480,7 @@ def build_package() -> dict:
     profiles = [item[2] for item in trio]
     study_id = _id("study")
     scenarios = []
-    executions = []
+    executions: list[dict] = []
     replays = {}
     mixes = []
     for mix_name, label in MIX_LABELS:
@@ -486,7 +491,7 @@ def build_package() -> dict:
             study_id=UUID(study_id), scenario_id=UUID(_id(f"scenario:{mix_name}")),
             scenario_revision=1, expected_build_sha=BUILD_SHA, input=effective,
         ), build_sha=BUILD_SHA, relogio=lambda: CLOCK,
-            id_factory=lambda name=f"base-preparation-result:{mix_name}": UUID(_id(name)))
+            id_factory=partial(UUID, _id(f"base-preparation-result:{mix_name}")))
         if any(Decimal(item.cadence_monthly) > 4 for item in preparation.parameters):
             raise ValueError(f"Cadência mensal excede quatro ordens: {mix_name}")
         scenario = _scenario(mix_name, label, effective, preparation)
