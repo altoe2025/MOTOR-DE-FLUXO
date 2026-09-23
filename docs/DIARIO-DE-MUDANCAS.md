@@ -73,6 +73,16 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-23 — Higiene do schema local do chat (MOT-93)
+
+**Sintoma.** O gate `git diff --check` contra a base identificou uma linha vazia extra no fim do JSON Schema do chat.
+
+**Causa.** A gravação do arquivo acrescentou uma quebra de linha além do terminador final.
+
+**O que foi feito.** Removida somente a linha vazia excedente. Sem alteração de comportamento; os 98 testes focados, typecheck e lint permanecem a evidência funcional anterior. Gate amplo ainda em verificação pelo executor principal.
+
+**O que isso invalida.** Nada nos contratos, resultados ou funcionalidades.
+
 ## 2026-09-23 — Persistência transacional e recuperação do chat, C1 (MOT-93)
 
 **Sintoma.** Conversas não tinham histórico local, controle de concorrência nem recuperação após interrupção.
