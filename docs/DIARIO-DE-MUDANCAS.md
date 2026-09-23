@@ -73,6 +73,23 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-23 — Artefato demonstrativo com bytes canônicos após integração (MOT-91)
+
+**Sintoma.** Após integrar localmente A4 e B1, o teste determinístico do pacote
+demonstrativo falhou embora o conteúdo JSON fosse igual ao gerado.
+
+**Causa.** O checkout Windows converteu o artefato versionado para CRLF, enquanto o
+gerador canônico escreve LF; a prova byte a byte corretamente detectou a diferença.
+
+**O que foi feito.** `.gitattributes` fixa LF somente para
+`web/src/demo/generated/demo-study.v1.json`; o arquivo foi regenerado pelo gerador
+canônico. O teste isolado voltou a passar, seguido por 131 testes web integrados,
+9 testes Python normal e sob `-O`, typecheck, lint, build e scanner verdes.
+
+**O que isso invalida.** Invalida apenas o artefato com finais de linha dependentes
+do checkout. Não altera os dados sintéticos, o SHA lógico, `motor/`, resultados,
+contratos públicos, nem autoriza push, PR ou deploy.
+
 ## 2026-09-23 — Manifesto de lote vazio e confirmação sem operações (MOT-54/MOT-55)
 
 **Sintoma.** Um lote ativo sem linhas não aparecia no manifesto e um rascunho sem
