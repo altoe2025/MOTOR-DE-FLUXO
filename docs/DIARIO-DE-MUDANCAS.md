@@ -74,6 +74,31 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-24 — Endurecimento do certificado efêmero (MOT-97, revisão D3)
+
+**Sintoma.** Uma leitura de `WeakMap.get` confundia ausência de entrada com
+owner esperado `undefined`, permitindo pular a validação do builder para raw
+sem owner. `Object.freeze` não impede mutadores de `Map`/`Set`; o schema aberto
+de `PREVIEW.observedComparison` podia receber esses objetos.
+
+**Causa.** A checagem usava apenas igualdade do retorno de `WeakMap.get`; a
+fábrica não restringia a árvore a valores JSON/plain antes de certificar.
+
+**O que foi feito.** Na branch local `codex/mot97-validation-worker`, o
+certificado exige entrada real no `WeakMap` e owner esperado string válido. A
+fábrica rejeita owner ausente e não certifica `Map`, `Set`, `Date`, classe,
+getter ou ciclo, inclusive aninhados. Testes RED/GREEN cobrem raw sem owner e
+fingerprint adulterado, factory com owner ausente e PREVIEW exótico. Depois da
+correção, três séries consecutivas de 20 amostras passaram: abertura p95
+752/754/790 ms, Documento 222/209/223 ms, zero long tasks. Suíte web
+1.013/1.013, typecheck, lint, build, orçamento e 7 E2Es PASS. Sem push, PR,
+deploy ou alteração de Linear.
+
+**O que isso invalida.** A garantia anterior de que somente identidades
+imutáveis podiam ser certificadas dependia de duas condições ausentes; os
+resultados de desempenho anteriores ao endurecimento não servem como gate do
+estado atual. Aceite permanece local a Chromium Windows e à fixture medida.
+
 ## 2026-09-24 — Certificado efêmero e uma divisão na validação persistida (MOT-97, D3)
 
 **Sintoma.** O worker de sessão e o fatiamento cooperativo amplo não sustentaram

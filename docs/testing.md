@@ -5,7 +5,9 @@
 TDD cobre equivalência exata de issues entre validação raw e dividida,
 owner/fingerprints/envelope/terminal, snapshot anterior ao `await`, congelamento
 profundo, identidade não transferível por clone/spread/JSON/forja, documento
-idêntico e verificações de comparação/Replay/seleção. Suíte web: **1.011/1.011**
+idêntico e verificações de comparação/Replay/seleção. Revisão adicional cobre
+owner ausente e `PREVIEW.observedComparison` com `Map`, `Set`, `Date` ou protótipo
+exótico, nunca certificados. Suíte web: **1.013/1.013**
 em 116 arquivos; typecheck, lint e build PASS. Sete E2Es de
 apresentação/acessibilidade/visual PASS; três séries consecutivas de 20 amostras
 do gate de desempenho PASS, sem long tasks >200 ms. Valores e limitações em

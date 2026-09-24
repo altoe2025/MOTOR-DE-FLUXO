@@ -1,17 +1,46 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import demoJson from '../demo/generated/demo-study.v1.json';
+import referenceRequest from '../../../contracts/fixtures/reference-request.json';
+import referenceResult from '../../../contracts/fixtures/reference-result.json';
 import type { DemoStudyPackageV1 } from '../demo/domain';
 import { buildCommunicationDocument } from '../communication/buildCommunicationDocument';
 import { comparisonInput, observedInput } from '../communication/testFixtures';
 import { validateStoredStudy } from '../storage/migrations';
-import type { DeepMutable, DiagnosticExecutionRecord, StudyDocument } from './model';
-import { isCertifiedStudy } from './certifiedStudy';
+import { createStudy } from './domain';
+import { FIXTURE_NOW, FIXTURE_OWNER, makeScenarioDraft } from './fixtures';
+import type { DeepMutable, DiagnosticExecutionRecord, PreviaRequest, PreviewEnvelope, PreviewExecutionRecord, StudyDocument } from './model';
+import { isCertifiedStudy, validateAndCertifyStudy } from './certifiedStudy';
 import * as validation from './validation';
 
 async function certifiedInput() {
   const input = await observedInput();
   return { ...input, study: await validateStoredStudy(input.study, input.study.ownerSub) };
+}
+
+async function previewStudy(): Promise<DeepMutable<StudyDocument>> {
+  const study = await createStudy({ id: '00000000-0000-4000-8000-000000000020', ownerSub: FIXTURE_OWNER,
+    name: 'Estudo PREVIEW', baseScenario: makeScenarioDraft(), now: FIXTURE_NOW });
+  const scenario = study.scenarios[0]!;
+  const request = structuredClone(referenceRequest) as DeepMutable<PreviaRequest>;
+  const envelope = structuredClone(referenceResult) as DeepMutable<PreviewEnvelope>;
+  request.study_id = study.id;
+  request.scenario_id = scenario.id;
+  request.scenario_revision = scenario.revision;
+  envelope.execution_id = '00000000-0000-4000-8000-000000000030';
+  envelope.study_id = study.id;
+  envelope.scenario_id = scenario.id;
+  envelope.scenario_revision = scenario.revision;
+  envelope.input_snapshot = { cenario: structuredClone(request.cenario),
+    periodo: structuredClone(request.periodo), proveniencia: structuredClone(request.proveniencia) };
+  const execution: DeepMutable<PreviewExecutionRecord> = {
+    kind: 'PREVIEW', id: envelope.execution_id, scenarioId: scenario.id,
+    scenarioRevision: scenario.revision, inputFingerprint: scenario.inputFingerprint,
+    requestSnapshot: request, engineVersion: envelope.motor_build_sha,
+    contractVersion: envelope.api_version, status: 'SUCCEEDED', envelope,
+    observedComparison: null, createdAt: FIXTURE_NOW, finishedAt: FIXTURE_NOW,
+  };
+  return { ...structuredClone(study), executions: [execution] } as DeepMutable<StudyDocument>;
 }
 
 describe('certificado efêmero por identidade e divisão persistida', () => {
@@ -88,6 +117,35 @@ describe('certificado efêmero por identidade e divisão persistida', () => {
     }
     expect(isCertifiedStudy(forged, input.study.ownerSub)).toBe(false);
     await expect(buildCommunicationDocument({ ...input, study: forged })).rejects.toThrow('INVALID_STRUCTURE');
+  });
+
+  it('não confunde ausência de owner com identidade certificada', async () => {
+    const input = await observedInput();
+    const raw = structuredClone(input.study) as DeepMutable<StudyDocument>;
+    delete (raw as { ownerSub?: string }).ownerSub;
+    raw.scenarios[0]!.sourceSnapshot.sourceFingerprint = '0'.repeat(64);
+    expect(isCertifiedStudy(raw, undefined as unknown as string)).toBe(false);
+    await expect(buildCommunicationDocument({ ...input, study: raw })).rejects.toThrow('INVALID_STRUCTURE');
+    const result = await validateAndCertifyStudy(input.study, undefined as unknown as string);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.issues).toContainEqual(expect.objectContaining({ code: 'OWNER_MISMATCH' }));
+    expect(isCertifiedStudy(input.study, undefined as unknown as string)).toBe(false);
+  });
+
+  it('não certifica Map em PREVIEW.observedComparison nem exóticos aninhados', async () => {
+    const plain = await previewStudy();
+    expect((await validation.validateStudyDocument(plain, plain.ownerSub)).ok).toBe(true);
+    for (const exotic of [new Map([['x', 1]]), { nested: new Set([1]) },
+      { nested: new Date('2026-09-24T00:00:00Z') }, new (class Comparison { rows = []; })()]) {
+      const study = structuredClone(plain) as DeepMutable<StudyDocument>;
+      (study.executions[0] as DeepMutable<PreviewExecutionRecord>).observedComparison = exotic as never;
+      const result = await validateAndCertifyStudy(study, study.ownerSub);
+      expect(result.ok).toBe(false);
+      if (result.ok) expect(isCertifiedStudy(result.value, study.ownerSub)).toBe(false);
+    }
+    const withMap = structuredClone(plain) as DeepMutable<StudyDocument>;
+    (withMap.executions[0] as DeepMutable<PreviewExecutionRecord>).observedComparison = new Map() as never;
+    await expect(validateStoredStudy(withMap, withMap.ownerSub)).rejects.toThrow('INVALID_STRUCTURE');
   });
 
   it('preserva comparação, Replay e seleção obsoleta no builder certificado', async () => {

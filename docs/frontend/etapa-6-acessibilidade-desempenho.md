@@ -19,22 +19,27 @@ no Chromium Windows, 20 amostras por série:
 
 | Série | Abertura p95 | Documento p95 | Long tasks >200 ms | Validação persistida p95 | Segunda validação p95 |
 |---|---:|---:|---:|---:|---:|
-| 1 | 745 ms | 218 ms | 0 | 142 ms | <2 ms |
-| 2 | 792 ms | 224 ms | 0 | 160 ms | <2 ms |
-| 3 | 752 ms | 234 ms | 0 | 153 ms | <2 ms |
+| 1 | 752 ms | 222 ms | 0 | 157 ms | <2 ms |
+| 2 | 754 ms | 209 ms | 0 | 155 ms | <2 ms |
+| 3 | 790 ms | 223 ms | 0 | 169 ms | <2 ms |
 
 Os budgets permanecem abertura p95 ≤1.500 ms, Documento p95 ≤2.000 ms e zero
 long tasks >200 ms. O overhead isolado da cedência não foi causalmente estimado:
-o p95 da validação persistida variou de 142 a 160 ms entre as séries finais, enquanto a
+o p95 da validação persistida variou de 155 a 169 ms entre as séries finais, enquanto a
 segunda validação caiu a menos de 2 ms; carga do host e fixture podem influir.
 Build de produção e `measure_stage6.py --assert-budget` passaram; JS inicial
-326.838 bytes gzip e chunk lazy da apresentação 5.727 bytes gzip. Suíte web,
+327.105 bytes gzip e chunk lazy da apresentação 5.727 bytes gzip. Suíte web,
 typecheck, lint e E2Es de apresentação/acessibilidade/visual passaram. Isso é
 aceite **local**; Linux/CI, dispositivos diferentes, estudos maiores e revisão
 humana com leitor de tela permanecem pendentes.
 Uma sequência anterior de três séries com a mesma estratégia também passou,
-mas foi repetida integralmente após corrigir o mapeamento de `DataCloneError`
-para `INVALID_STRUCTURE` na entrada persistida não clonável.
+mas a medição foi repetida integralmente após endurecer o certificado. A
+consulta ao `WeakMap` agora exige chave registrada e owner esperado válido; sem
+isso, raw continua clone + validação. A fábrica só certifica árvore JSON de
+primitivos, arrays e objetos plain: `Map`, `Set`, `Date`, protótipos exóticos,
+getters e ciclos falham fechado, inclusive dentro de `PREVIEW.observedComparison`.
+As regras do validador não mudaram. A sequência anterior já havia sido repetida
+após corrigir `DataCloneError` para `INVALID_STRUCTURE` em entrada não clonável.
 
 ## Perfil e experimento de validação (2026-09-24)
 
