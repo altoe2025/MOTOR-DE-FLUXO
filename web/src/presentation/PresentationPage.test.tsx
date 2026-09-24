@@ -115,7 +115,7 @@ describe('núcleo não roteado do Painel A', () => {
     };
     render(<PresentationPage state={{ kind: 'ready', document: unavailable, selection: selection(unavailable) }} />);
     const term = screen.getAllByText(original.label).find((element) => element.tagName === 'DT');
-    expect(term).toBeDefined();
+    if (term === undefined) throw new Error(`Termo da métrica não encontrado: ${original.label}`);
     const definition = term.nextElementSibling;
     expect(definition?.tagName).toBe('DD');
     expect(definition).toHaveTextContent('Não disponível');
