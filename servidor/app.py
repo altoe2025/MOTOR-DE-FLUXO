@@ -26,7 +26,9 @@ from servidor.catalogs.product_help import (
     ProductHelpCatalogV1,
     load_product_help_catalog,
 )
+from servidor.chat.service import ChatProvider
 from servidor.config import Settings
+from servidor.contracts.chat import ChatRequestV1, ChatResponseV1
 from servidor.contracts.diagnostics import (
     DiagnosticEnvelope,
     DiagnosticRequest,
@@ -45,6 +47,7 @@ from servidor.errors import ApiFailure, entrada_invalida, failure_response
 from servidor.generate_reference_fixture import build_reference_request
 from servidor.preparation import preparar_carteira
 from servidor.routes import (
+    chat,
     diagnostics,
     examples,
     importation,
@@ -68,6 +71,7 @@ def create_app(
     settings: Settings | None = None,
     verifier: TokenVerifier | None = None,
     diagnostic_executor: DiagnosticExecutor | None = None,
+    chat_provider: ChatProvider | None = None,
 ) -> FastAPI:
     configured = settings or Settings()  # type: ignore[call-arg]
     owns_verifier = verifier is None
@@ -105,6 +109,7 @@ def create_app(
     )
     app.state.settings = configured
     app.state.token_verifier = configured_verifier
+    app.state.chat_provider = chat_provider if configured.chat_enabled else None
     app.state.preview_slot = threading.BoundedSemaphore(1)
 
     @app.middleware("http")
@@ -175,6 +180,7 @@ def create_app(
         )
 
     app.include_router(session.router)
+    app.include_router(chat.router)
     app.include_router(importation.router)
     app.include_router(product_help.router)
     app.include_router(examples.router)
@@ -202,6 +208,10 @@ def create_app(
 
 def create_schema_app() -> FastAPI:
     app = FastAPI(title="Motor de Fluxo API", version="1.0.0")
+
+    @app.post("/api/v1/chat", response_model=ChatResponseV1, responses=chat.CHAT_RESPONSES)
+    def chat_schema(_: SchemaBearer, request: ChatRequestV1) -> ChatResponseV1:
+        raise HTTPException(status_code=503, detail="CHAT_INDISPONIVEL")
 
     @app.get("/api/v1/health", response_model=HealthResponse)
     def health_schema() -> HealthResponse:

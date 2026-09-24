@@ -73,6 +73,32 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-23 — Contratos HTTP e configuração do chat, C3 (MOT-94)
+
+**Sintoma.** O shell e o histórico C1+C2 existiam, mas não havia contrato HTTP,
+configuração opcional ou fronteira de transporte validada para o chat.
+
+**Causa.** A API ainda não publicava a entrada/saída do chat nem uma porta de
+provider; ativação, segredos, limites e indisponibilidade não tinham contrato.
+
+**O que foi feito.** Na branch local `codex/mot94-c3-chat-contracts`, foram criados
+`servidor/contracts/chat.py`, `servidor/routes/chat.py` e as portas em
+`servidor/chat/`. Settings valida ativação, chave/modelo e orçamentos sem imprimir
+o segredo. A rota exige bearer, limita o corpo a 1 MiB durante a leitura, revalida
+o Documento de Comunicação e aceita 4.000 caracteres por pergunta e 98 mensagens
+anteriores, reservando pergunta/resposta na quota de 100. A quota de 20 conversas
+permanece no storage C1. Respostas de provider injetado têm limite 12.000; falhas
+retornam `CHAT_INDISPONIVEL` sanitizado. OpenAPI, tipos e validadores web foram
+regenerados, com testes TDD e revisão independente. Configuração e limites estão
+em `docs/frontend/etapa-6c-c3-contratos.md`; evidência dos gates em `docs/testing.md`.
+
+**O que isso invalida.** Nada dos números ou regras do motor. Esta entrega não
+encerra a MOT-94: não há provider real, ferramentas, resolução de citações nem
+políticas temáticas C4; somente `IN_SCOPE` de implementação injetada pode produzir
+resposta, e outras classificações falham fechado até C4. Sem provider injetado o
+chat permanece indisponível; health e demais APIs continuam funcionando. Sem
+push, PR, merge, deploy ou uso pago.
+
 ## 2026-09-23 — Ancestralidade e pares executáveis na revisão A6 (MOT-61)
 
 **Sintoma.** A revisão independente reproduziu duas permissões indevidas: editar

@@ -13,6 +13,51 @@ detalhado na seção **Aceitação integrada da Etapa 5 — MOT-89**. A contagem
 abaixo prevalece para a branch `codex/frontend-etapa-5`; ela também não foi
 publicada ou mergeada.
 
+## Contratos HTTP e configuração do chat — C3 / MOT-94
+
+Entrega local sobre `f22b70a`, na branch `codex/mot94-c3-chat-contracts`, em
+2026-09-23. Somente C3: não há provider real, ferramentas ou aceite temático C4.
+Contrato e limitações em [`etapa-6c-c3-contratos.md`](frontend/etapa-6c-c3-contratos.md).
+
+O ambiente Windows usa o Python do virtualenv `.venv-t5` existente; `python` nos
+comandos abaixo designa esse executável. `--basetemp` foi direcionado para um
+subdiretório exclusivo de `.pytest_cache/`, pois o temp global não era acessível
+no sandbox. Dependências web instaladas pelo lockfile, sem mudar versões.
+
+| Verificação | Resultado |
+|---|---|
+| Baseline auth + OpenAPI + comunicação | 97 PASS |
+| TDD Settings | 13 RED antes da implementação; 13 PASS depois |
+| TDD contratos chat | 26 RED antes da implementação; 26 PASS depois |
+| TDD transporte chat | 20 RED antes da rota/injeção; 20 PASS depois |
+| TDD validadores TypeScript | 3 RED sem exports; 3 PASS após regenerar |
+| `python -m pytest tests/web_api/test_chat_contracts.py tests/web_api/test_chat_http.py tests/web_api/test_config.py -q` | 59 PASS, 21,74 s |
+| Mesmo recorte com `python -O -m pytest` | 59 PASS, 37,92 s |
+| `python -m pytest -q` | 947 PASS, 2 SKIP; 215,07 s |
+| `python -O -m pytest -q` | 947 PASS, 2 SKIP; 301,00 s |
+| `python -m ruff check servidor tests/web_api` | PASS |
+| `python -m mypy servidor` | PASS, 50 arquivos |
+| `npm --prefix web run test:unit -- src/api src/chat --maxWorkers=2` | 101 PASS, 9 arquivos |
+| `npm --prefix web run test:unit -- --maxWorkers=2` isolado dos outros gates | 922 PASS, 99 arquivos; 186,14 s |
+| `npm --prefix web run typecheck` e `npm --prefix web run lint` | PASS |
+| `npm --prefix web run build` | PASS; aviso preexistente de chunks >500 kB |
+| `python -m tests.web_api.scan_credentials` | PASS; 572 textos, 32 binários |
+| OpenAPI + `npm --prefix web run generate:api` repetidos | 4 arquivos gerados idênticos byte a byte; nenhum schema/path anterior alterado semanticamente |
+| Revisão independente C3 | Nenhum achado material confirmado; não atesta C4–C6 |
+
+A primeira suíte web completa, concorrendo com gates Python/build, teve 920 PASS
+e dois timeouts de 5 s em `router.test.tsx`. A reexecução isolada do arquivo passou
+os 48 testes em 28,43 s, sem mudar código, testes ou timeout. A repetição completa
+sem os demais gates concorrentes passou os 922 testes em 186,14 s. A hipótese de
+contenção local é consistente com essas duas reexecuções; não houve correção de
+produto para os timeouts da primeira tentativa.
+
+Os testes HTTP bloqueiam conexões externas e usam somente provider fake injetado.
+O socket de loopback necessário ao event loop Windows continua permitido. Não há
+rede OpenAI nos testes, gasto ou alteração de recurso externo. Os warnings Python
+são deprecações Starlette/httpx/anyio já existentes e o aviso esperado de `-O`.
+Não foi executado um novo aceite browser, que pertence à integração C5–C6.
+
 ## Aceitação integrada da Etapa 6A — MOT-61
 
 O percurso `web/e2e/import-observed-case.spec.ts` lê XLSX no worker real,

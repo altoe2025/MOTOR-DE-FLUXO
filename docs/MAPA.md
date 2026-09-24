@@ -83,6 +83,7 @@ O limite de 1.000 linhas importadas não substitui o orçamento do Replay da Eta
 | Aceite, evidências visuais e limite efetivo da Etapa 5 | `docs/frontend/etapa-5-replay-aceitacao.md`, `docs/frontend/evidencias/mot89-*` |
 | Especificação e plano mestre da Etapa 6 — importação, chat, apresentação, relatório e Render | `docs/superpowers/specs/2026-09-23-frontend-etapa-6-comunicacao-publicacao-design.md`, `docs/superpowers/plans/2026-09-23-frontend-etapa-6-plano-mestre.md` |
 | Planos executáveis 6A–6D da Etapa 6 | `docs/superpowers/plans/2026-09-23-frontend-etapa-6a-importacao-plano.md`, `docs/superpowers/plans/2026-09-23-frontend-etapa-6b-demonstracao-comunicacao-plano.md`, `docs/superpowers/plans/2026-09-23-frontend-etapa-6c-chat-plano.md`, `docs/superpowers/plans/2026-09-23-frontend-etapa-6d-apresentacao-publicacao-plano.md` |
+| Contratos HTTP, limites e configuração do chat C3 (sem provider real C4) | `docs/frontend/etapa-6c-c3-contratos.md`, `servidor/contracts/chat.py`, `servidor/routes/chat.py`, `servidor/chat/service.py` |
 | IDs T0–T12 e auditoria de `50fc384`/`1270458` | seção "Rastreabilidade aprovada no Linear" e matriz da Task 0 no plano técnico v2 da Etapa 2 |
 | Importação de fontes reais e Caso Observado | `docs/superpowers/specs/2026-09-19-importacao-dados-reais-design-v2.md` |
 | Plano vigente do importador | `docs/superpowers/plans/2026-09-19-importacao-dados-reais-plano-tecnico-v2.md` |

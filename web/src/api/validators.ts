@@ -97,3 +97,5 @@ export const validateReplayRequest = ajv.compile({ $ref: 'https://motor-de-fluxo
 export const validateReplayDocument = ajv.compile({ $ref: 'https://motor-de-fluxo.local/contracts/schemas.json#/$defs/ReplayDocumentV1' });
 export const validateCatalogoImportacao = ajv.compile({ $ref: 'https://motor-de-fluxo.local/contracts/schemas.json#/$defs/CatalogoImportacao' });
 export const validateProductHelpCatalogV1 = ajv.compile({ $ref: 'https://motor-de-fluxo.local/contracts/schemas.json#/$defs/ProductHelpCatalogV1' });
+export const validateChatRequestV1 = ajv.compile({ $ref: 'https://motor-de-fluxo.local/contracts/schemas.json#/$defs/ChatRequestV1' });
+export const validateChatResponseV1 = ajv.compile({ $ref: 'https://motor-de-fluxo.local/contracts/schemas.json#/$defs/ChatResponseV1' });

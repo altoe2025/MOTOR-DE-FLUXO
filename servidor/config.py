@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
@@ -16,6 +16,7 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
         frozen=True,
+        hide_input_in_errors=True,
     )
 
     app_env: Literal["development", "test", "production"] = "development"
@@ -29,6 +30,11 @@ class Settings(BaseSettings):
     diagnostic_max_jobs_per_user: int = Field(default=3, ge=1)
     diagnostic_max_jobs_global: int = Field(default=32, ge=1)
     diagnostic_retention_seconds: int = Field(default=86400, ge=1)
+    chat_enabled: bool = False
+    openai_api_key: SecretStr | None = Field(default=None, repr=False, exclude=True)
+    openai_chat_model: str | None = None
+    openai_chat_timeout_seconds: float = Field(default=30, gt=0, allow_inf_nan=False)
+    openai_chat_max_output_tokens: int = Field(default=2048, ge=1, le=4096)
 
     @field_validator("supabase_allowed_user_ids", mode="before")
     @classmethod
@@ -46,6 +52,11 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_relationships(self) -> Settings:
+        if self.chat_enabled:
+            if self.openai_api_key is None or not self.openai_api_key.get_secret_value().strip():
+                raise ValueError("OPENAI_API_KEY é obrigatória quando CHAT_ENABLED=true")
+            if self.openai_chat_model is None or not self.openai_chat_model.strip():
+                raise ValueError("OPENAI_CHAT_MODEL é obrigatório quando CHAT_ENABLED=true")
         expected_issuer = f"{self.supabase_url}/auth/v1"
         if self.supabase_jwt_issuer != expected_issuer:
             raise ValueError(

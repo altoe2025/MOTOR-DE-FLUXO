@@ -33,6 +33,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/chat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Chat Schema */
+        post: operations["chat_schema_api_v1_chat_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/diagnosticos": {
         parameters: {
             query?: never;
@@ -369,6 +386,84 @@ export interface components {
              */
             ordens: components["schemas"]["OrdemEntrada"][];
         };
+        /** ChatAssistantHistoryItem */
+        ChatAssistantHistoryItem: {
+            /** Contextfingerprint */
+            contextFingerprint: string | null;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            role: "ASSISTANT";
+            /** Text */
+            text: string;
+        };
+        /** ChatCitation */
+        ChatCitation: {
+            /** Id */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "EVIDENCE" | "METRIC" | "LIMITATION" | "HELP";
+        };
+        /** ChatRequestV1 */
+        ChatRequestV1: {
+            /**
+             * Apiversion
+             * @constant
+             */
+            apiVersion: "1.0.0";
+            communication: components["schemas"]["CommunicationDocumentV1"] | null;
+            /** Conversationid */
+            conversationId: string;
+            /**
+             * History
+             * @description Mensagens anteriores; reserva pergunta e resposta na quota de 100.
+             */
+            history: (components["schemas"]["ChatUserHistoryItem"] | components["schemas"]["ChatAssistantHistoryItem"])[];
+            /** Message */
+            message: string;
+            /** Messageid */
+            messageId: string;
+            routeContext: components["schemas"]["RouteChatContext"];
+        };
+        /** ChatResponseV1 */
+        ChatResponseV1: {
+            /** Answer */
+            answer: string;
+            /**
+             * Apiversion
+             * @constant
+             */
+            apiVersion: "1.0.0";
+            /** Citations */
+            citations: components["schemas"]["ChatCitation"][];
+            /**
+             * Classification
+             * @enum {string}
+             */
+            classification: "IN_SCOPE" | "INSUFFICIENT_EVIDENCE" | "OUT_OF_SCOPE" | "MIXED";
+            /** Contextfingerprint */
+            contextFingerprint: string | null;
+            /** Limitationcodes */
+            limitationCodes: string[];
+            /** Messageid */
+            messageId: string;
+        };
+        /** ChatUserHistoryItem */
+        ChatUserHistoryItem: {
+            /** Contextfingerprint */
+            contextFingerprint: string | null;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            role: "USER";
+            /** Text */
+            text: string;
+        };
         /** CicloDTO */
         CicloDTO: {
             /** Alocacoes */
@@ -388,6 +483,172 @@ export interface components {
             direcao_residuo: "OUT" | "IN";
             /** Residuo */
             residuo: string;
+        };
+        /** CommunicationDocumentV1 */
+        CommunicationDocumentV1: {
+            /**
+             * Apiversion
+             * @constant
+             */
+            apiVersion: "1.0.0";
+            /** Assumptions */
+            assumptions: components["schemas"]["CommunicationFact"][];
+            comparison: components["schemas"]["CommunicationSection"] | null;
+            composition: components["schemas"]["CommunicationSection"];
+            /** Contextfingerprint */
+            contextFingerprint: string;
+            economics: components["schemas"]["CommunicationSection"];
+            /** Evidenceindex */
+            evidenceIndex: {
+                [key: string]: components["schemas"]["CommunicationEvidence"];
+            };
+            /** Executivemetrics */
+            executiveMetrics: components["schemas"]["CommunicationMetric"][];
+            /** Generatedat */
+            generatedAt: string;
+            /** Limitations */
+            limitations: components["schemas"]["CommunicationLimitation"][];
+            mechanism: components["schemas"]["CommunicationSection"];
+            /**
+             * Presentationversion
+             * @constant
+             */
+            presentationVersion: "1.0.0";
+            /** Provenance */
+            provenance: components["schemas"]["CommunicationFact"][];
+            replaySnapshot: components["schemas"]["CommunicationReplaySnapshot"] | null;
+            robustness: components["schemas"]["CommunicationSection"];
+            selection: components["schemas"]["CommunicationSelection"];
+            source: components["schemas"]["CommunicationSource"];
+            study: components["schemas"]["CommunicationStudy"];
+            /** Versions */
+            versions: components["schemas"]["CommunicationFact"][];
+        };
+        /** CommunicationEvidence */
+        CommunicationEvidence: {
+            /** Diagnosticexecutionid */
+            diagnosticExecutionId: string;
+            /** Path */
+            path: string;
+            /** Repetitionid */
+            repetitionId: string;
+            /** Scenarioid */
+            scenarioId: string;
+            /** Scenariorevision */
+            scenarioRevision: number;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "STUDY" | "DIAGNOSTIC" | "COMPARISON" | "REPLAY";
+            /** Sourceid */
+            sourceId: string;
+            /** Studyid */
+            studyId: string;
+            /** Value */
+            value: string | null;
+        };
+        /** CommunicationFact */
+        CommunicationFact: {
+            /** Code */
+            code: string;
+            /** Evidencerefs */
+            evidenceRefs: string[];
+            /** Label */
+            label: string;
+            /** Value */
+            value: string;
+        };
+        /** CommunicationLimitation */
+        CommunicationLimitation: {
+            /** Code */
+            code: string;
+            /** Evidencerefs */
+            evidenceRefs: string[];
+            /**
+             * Severity
+             * @enum {string}
+             */
+            severity: "INFO" | "WARNING";
+            /** Statement */
+            statement: string;
+        };
+        /** CommunicationMetric */
+        CommunicationMetric: {
+            /**
+             * Availability
+             * @enum {string}
+             */
+            availability: "AVAILABLE" | "UNAVAILABLE";
+            /** Code */
+            code: string;
+            /** Evidencerefs */
+            evidenceRefs: string[];
+            /** Label */
+            label: string;
+            /** Meaning */
+            meaning: string;
+            /**
+             * Unit
+             * @enum {string}
+             */
+            unit: "BRL" | "FRACTION" | "DAYS" | "COUNT" | "BPS" | "TEXT";
+            /** Value */
+            value: string | null;
+        };
+        /** CommunicationReplaySnapshot */
+        CommunicationReplaySnapshot: {
+            /** Day */
+            day: number;
+            /** Facts */
+            facts: components["schemas"]["CommunicationFact"][];
+            /** Metrics */
+            metrics: components["schemas"]["CommunicationMetric"][];
+        };
+        /** CommunicationSection */
+        CommunicationSection: {
+            /** Facts */
+            facts: components["schemas"]["CommunicationFact"][];
+            /** Metrics */
+            metrics: components["schemas"]["CommunicationMetric"][];
+            /** Title */
+            title: string;
+        };
+        /** CommunicationSelection */
+        CommunicationSelection: {
+            /** Comparisonexecutionid */
+            comparisonExecutionId: string | null;
+            /** Diagnosticexecutionid */
+            diagnosticExecutionId: string;
+            /** Repetitionid */
+            repetitionId: string;
+            /** Replayday */
+            replayDay: number | null;
+            /** Scenarioid */
+            scenarioId: string;
+            /** Scenariorevision */
+            scenarioRevision: number;
+        };
+        /** CommunicationSource */
+        CommunicationSource: {
+            /**
+             * Family
+             * @enum {string}
+             */
+            family: "OBSERVED" | "PROFILE_SIMULATION";
+            /** Label */
+            label: string;
+            /** Synthetic */
+            synthetic: boolean;
+        };
+        /** CommunicationStudy */
+        CommunicationStudy: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Revision */
+            revision: number;
         };
         /** CompositionDependencyAxis */
         CompositionDependencyAxis: {
@@ -1667,6 +1928,21 @@ export interface components {
             /** Volume Brl */
             volume_brl: string;
         };
+        /** RouteChatContext */
+        RouteChatContext: {
+            /** Diagnosticexecutionid */
+            diagnosticExecutionId: string | null;
+            /** Helpid */
+            helpId: string | null;
+            /** Replayday */
+            replayDay: number | null;
+            /** Routeid */
+            routeId: string;
+            /** Scenarioid */
+            scenarioId: string | null;
+            /** Studyid */
+            studyId: string | null;
+        };
         /** SessionResponse */
         SessionResponse: {
             /**
@@ -1792,6 +2068,72 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["CatalogoImportacao"];
                 };
+            };
+        };
+    };
+    chat_schema_api_v1_chat_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChatRequestV1"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatResponseV1"];
+                };
+            };
+            /** @description JSON ou Content-Length inválido (JSON_INVALIDO). */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bearer ausente ou inválido (SESSAO_INVALIDA). */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Usuário sem acesso (ACESSO_NAO_PERMITIDO). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Corpo excede 1 MiB (LIMITE_EXCEDIDO). */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Contrato ou documento inválido (ENTRADA_INVALIDA). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Chat desabilitado ou indisponível (CHAT_INDISPONIVEL). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
