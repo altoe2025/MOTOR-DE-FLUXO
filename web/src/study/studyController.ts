@@ -225,6 +225,14 @@ export class StudyController {
     return this.#installDemo('EXPLICIT_RESTORE');
   }
 
+  async demoInstallationStatus(): Promise<'INSTALLED' | 'REMOVED' | null> {
+    this.#assertOpen();
+    const { repository, epoch } = this.#session();
+    const status = await repository.getDemoInstallationStatus();
+    if (!this.#isCurrent(repository, epoch)) throw new StudyControllerSessionError();
+    return status;
+  }
+
   async #installDemo(mode: 'FIRST_EMPTY_SESSION' | 'EXPLICIT_RESTORE'): Promise<StudyDocument | null> {
     const { repository, epoch } = this.#session();
     const selectionEpoch = this.#selectionEpoch;

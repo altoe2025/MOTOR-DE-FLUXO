@@ -544,6 +544,13 @@ export class IndexedDbApplicationRepository implements ApplicationRepository {
     return this.#chat.deleteChatConversation(id, expectedRevision, operationId);
   }
 
+  async getDemoInstallationStatus(): Promise<'INSTALLED' | 'REMOVED' | null> {
+    const database = await this.#database();
+    const marker = await transactionResult(database, ['meta'], 'readonly', async (transaction) =>
+      readDemoMarker(await requestResult(transaction.objectStore('meta').get(DEMO_MARKER_KEY)), this.#ownerSub));
+    return marker?.status ?? null;
+  }
+
   async #database(): Promise<IDBDatabase> {
     if (this.#closed) throw new StorageClosedError();
     if (this.#databasePromise === null) {

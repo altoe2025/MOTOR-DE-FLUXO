@@ -61,6 +61,7 @@ function deferred<T>() {
 }
 
 class MemoryRepository implements ApplicationRepository {
+  async getDemoInstallationStatus(): Promise<null> { return null; }
   async listChatConversations(): Promise<never[]> { return []; }
   async getChatConversation(): Promise<null> { return null; }
   async saveChatConversation(): Promise<never> { throw new Error('Chat outside fixture scope'); }

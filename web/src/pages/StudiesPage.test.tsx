@@ -13,6 +13,7 @@ import { StudiesPage } from './StudiesPage';
 
 const controller = {
   listStudies: vi.fn<() => Promise<StudyDocument[]>>(),
+  demoInstallationStatus: vi.fn<() => Promise<'INSTALLED' | 'REMOVED' | null>>(),
   restoreDemoStudy: vi.fn<() => Promise<StudyDocument | null>>(),
   subscribe: () => () => undefined,
   snapshot: { document: null, status: 'IDLE', error: null as unknown },
@@ -35,6 +36,7 @@ async function study() {
 describe('StudiesPage demo recovery', () => {
   beforeEach(() => {
     controller.listStudies.mockResolvedValue([]);
+    controller.demoInstallationStatus.mockResolvedValue(null);
     controller.snapshot.error = null;
     controller.snapshot.status = 'IDLE';
     controller.restoreDemoStudy.mockReset();
@@ -66,8 +68,19 @@ describe('StudiesPage demo recovery', () => {
 
   it('não mostra recuperação de página vazia quando já existe um estudo', async () => {
     controller.listStudies.mockResolvedValue([await study()]);
+    controller.demoInstallationStatus.mockResolvedValue('INSTALLED');
     page();
     expect(await screen.findByRole('button', { name: 'Abrir Demonstração' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Carregar estudo demonstrativo' })).not.toBeInTheDocument();
+  });
+
+  it('oferece restauração após remoção mesmo quando há outro Estudo', async () => {
+    controller.listStudies.mockResolvedValue([await study()]);
+    controller.demoInstallationStatus.mockResolvedValue('REMOVED');
+    controller.restoreDemoStudy.mockResolvedValue(await study());
+    page();
+    await userEvent.click(await screen.findByRole('button', { name: 'Carregar estudo demonstrativo' }));
+    expect(controller.restoreDemoStudy).toHaveBeenCalledOnce();
+    expect(await screen.findByRole('heading', { name: 'Demonstração aberta' })).toBeInTheDocument();
   });
 });

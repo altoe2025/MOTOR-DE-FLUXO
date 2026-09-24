@@ -11,7 +11,7 @@ import hashlib
 import json
 from collections import Counter
 from datetime import UTC, datetime
-from decimal import Decimal, localcontext
+from decimal import Decimal
 from functools import partial
 from pathlib import Path
 from typing import Literal
@@ -129,7 +129,8 @@ def _company_case_profile(index: int) -> tuple[dict, dict, dict]:
         "id": _id(f"case-order:{index}:{position}"),
         "clientId": company_id, "direction": "OUT" if position < 2 else "IN",
         "knownDate": day, "deadlineDate": deadlines[position],
-        "valueBrl": "80000", "purposeCode": "ANEXO_V_DISPONIBILIDADE",
+        "valueBrl": "120000" if position == 2 else "60000",
+        "purposeCode": "ANEXO_V_DISPONIBILIDADE",
         "efxStatus": "NOT_COLLECTED", "provenance": [origin],
     } for position, day in enumerate(dates)]
     case = {
@@ -138,8 +139,8 @@ def _company_case_profile(index: int) -> tuple[dict, dict, dict]:
         "window": {"startDate": "2026-08-01", "endDate": "2026-08-30", "closingDate": "2026-08-30"},
         "orders": orders,
         "controlTotals": [
-            {"code": "GROSS_OUT_BRL", "valueBrl": "160000", "provenance": origin},
-            {"code": "GROSS_IN_BRL", "valueBrl": "80000", "provenance": origin},
+            {"code": "GROSS_OUT_BRL", "valueBrl": "120000", "provenance": origin},
+            {"code": "GROSS_IN_BRL", "valueBrl": "120000", "provenance": origin},
         ],
         "sourceManifest": {
             "adapterId": "demo-synthetic", "adapterVersion": VERSION,
@@ -168,10 +169,8 @@ def _company_case_profile(index: int) -> tuple[dict, dict, dict]:
             "endDate": "2026-08-30", "durationDays": 30,
         }],
     }
-    with localcontext() as context:
-        context.prec = 40
-        out_fraction = format(Decimal(2) / Decimal(3), "f")
-        in_fraction = format(Decimal(1) / Decimal(3), "f")
+    out_fraction = "0.5"
+    in_fraction = "0.5"
     selected = [{
         "caseId": case_id, "caseRevision": 1,
         "caseFingerprint": _hash({**case, "orders": sorted(orders, key=lambda order: order["id"])}),
@@ -192,12 +191,15 @@ def _company_case_profile(index: int) -> tuple[dict, dict, dict]:
         "compatibility": {"compatible": True, "blockers": [], "warnings": []},
         "coverage": coverage,
         "metrics": {
-            "volume": {"outBrl": available("160000"), "inBrl": available("80000"), "totalBrl": available("240000")},
+            "volume": {"outBrl": available("120000"), "inBrl": available("120000"), "totalBrl": available("240000")},
             "frequency": {"orderCount": available(3), "ordersPerCoveredDay": available("0.1"), "ordersPer30Days": available("3")},
-            "ticketsBrl": {key: available("80000") for key in ("min", "p25", "p50", "p75", "max")},
+            "ticketsBrl": {
+                key: available("120000" if key in ("p75", "max") else "60000")
+                for key in ("min", "p25", "p50", "p75", "max")
+            },
             "direction": available({
-                "out": {"volumeBrl": "160000", "fraction": out_fraction},
-                "in": {"volumeBrl": "80000", "fraction": in_fraction},
+                "out": {"volumeBrl": "120000", "fraction": out_fraction},
+                "in": {"volumeBrl": "120000", "fraction": in_fraction},
             }),
             "deadlineDays": {key: available("5") for key in ("p50ByCount", "p90ByCount", "p50ByVolume", "p90ByVolume")},
             "purposes": {

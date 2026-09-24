@@ -62,6 +62,7 @@ export type AppendProfileVersionMutation = Readonly<{
 }>;
 
 export interface ApplicationRepository {
+  getDemoInstallationStatus(): Promise<'INSTALLED' | 'REMOVED' | null>;
   listChatConversations(studyId: string | null): Promise<ChatConversation[]>;
   getChatConversation(id: string): Promise<ChatConversation | null>;
   saveChatConversation(input: CASMutation<ChatConversation>): Promise<ChatConversation>;

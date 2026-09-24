@@ -73,6 +73,31 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-23 — Perfis demonstrativos reutilizáveis e restauração visível (MOT-91)
+
+**Sintoma.** O aceite B6 reproduziu dois bloqueios: os 12 Perfis do pacote
+demonstrativo não podiam ser adicionados de volta pela ação guiada de composição;
+após remover o demo, a restauração sumia quando havia outro Estudo salvo.
+
+**Causa.** A receita de três ordens representava a fração OUT como 2/3 com 40
+casas decimais, acima do limite público de 12 casas do derivador de Perfil. A
+página de Estudos oferecia restauração somente quando a lista inteira estava
+vazia, embora o marker do demo estivesse `REMOVED`.
+
+**O que foi feito.** A receita sintética passou a usar duas ordens OUT de 60 mil
+e uma IN de 120 mil, com fração 0,5; o pacote foi regenerado byte a byte e
+validado pelo mesmo derivador usado na composição. O repositório expõe a leitura
+do marker de instalação à página; o botão aparece quando o demo não está
+instalado, mesmo com Estudo importado presente. Testes unitários e E2E cobrem
+ambas as regressões neste worktree local.
+
+**O que isso invalida.** Fingerprints de Casos, Perfis, Estudo e resultados do
+pacote demonstrativo anterior mudaram; ele permanece estritamente sintético e
+não calibrado. Nenhuma regra do Motor, taxa real ou métrica histórica da varredura
+foi alterada. A execução de hipótese criada a partir do pacote ainda depende de
+um servidor com seu SHA fixado; o aceite B6 registra esse limite em
+`docs/testing.md`. Sem push, PR, merge ou deploy.
+
 ## 2026-09-23 — Restrição temática, ferramentas e Responses API, C4 (MOT-94)
 
 **Sintoma.** Os contratos C3 já existiam, mas o chat não tinha provider real,
@@ -128,7 +153,6 @@ políticas temáticas C4; somente `IN_SCOPE` de implementação injetada pode pr
 resposta, e outras classificações falham fechado até C4. Sem provider injetado o
 chat permanece indisponível; health e demais APIs continuam funcionando. Sem
 push, PR, merge, deploy ou uso pago.
-
 ## 2026-09-23 — Ancestralidade e pares executáveis na revisão A6 (MOT-61)
 
 **Sintoma.** A revisão independente reproduziu duas permissões indevidas: editar

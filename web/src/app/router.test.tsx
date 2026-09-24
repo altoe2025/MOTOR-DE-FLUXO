@@ -66,6 +66,7 @@ function RouteSwitch({ to }: Readonly<{ to: string }>) {
 }
 
 class RepositoryDouble implements ApplicationRepository {
+  async getDemoInstallationStatus(): Promise<'REMOVED'> { return 'REMOVED'; }
   async listChatConversations(): Promise<never[]> { return []; }
   async getChatConversation(): Promise<null> { return null; }
   async saveChatConversation(): Promise<never> { throw new Error('Chat outside fixture scope'); }

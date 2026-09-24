@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { calculateOperationalProfile } from '../profiles/calculateOperationalProfile';
+import { validateOperationalProfile } from '../profiles/validation';
+import { deriveProfileMvpParticipant } from '../hypotheses/profileMvp';
 import { materializeCompositionDraft } from '../hypotheses/composition';
 import type { DemoStudyPackageV1 } from './domain';
 import generated from './generated/demo-study.v1.json';
@@ -14,6 +16,19 @@ function selectedReplay(packageValue: GeneratedPackage) {
 }
 
 describe('DemoStudyPackageV1', () => {
+  it('cada Perfil demonstrativo pode voltar à composição pelo derivador público', async () => {
+    for (const profile of generated.profiles) {
+      const validated = await validateOperationalProfile(profile);
+      expect(validated.ok, profile.id).toBe(true);
+      if (!validated.ok) continue;
+      const result = await deriveProfileMvpParticipant(validated.value, {
+        participantId: crypto.randomUUID(), generatorProfile: 'tesouraria_corporativa', seed: '13',
+        deadline: { mode: 'FIXED', days: 7 }, efx: false,
+        purposeOut: 'ANEXO_V_REMESSA_TERCEIRO', purposeIn: 'ANEXO_V_DISPONIBILIDADE',
+      }, profile.ownerSub);
+      expect(result.ok, profile.id).toBe(true);
+    }
+  });
   // Production break caught: generated data cannot cross the same validation boundary as user data.
   it('accepts the versioned synthetic package and every embedded document', async () => {
     const result = await validateDemoStudyPackage(generated);
