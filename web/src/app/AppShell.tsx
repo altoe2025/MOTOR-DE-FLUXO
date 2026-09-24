@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 import { ChatProvider } from '../chat/ChatProvider';
 import { ChatPanel } from '../chat/components/ChatPanel';
+import { selectionId } from '../chat/routeContext';
 import { useApiClient, useChatRepository } from './providers';
 import { useProductHelpCatalog } from '../help/HelpCatalogProvider';
 
@@ -19,10 +20,19 @@ export function AppShell() {
   const helpCatalog = useProductHelpCatalog();
   const location = useLocation();
   const studyId = /^\/(?:estudos|carteira)\/([^/]+)/.exec(location.pathname)?.[1];
+  const search = new URLSearchParams(location.search);
+  const onPresentation = location.pathname.endsWith('/apresentacao');
+  const scenarioId = selectionId(search.get(onPresentation ? 'cenario' : 'scenarioId'));
+  const executionId = selectionId(search.get(onPresentation ? 'execucao' : 'executionId'));
   const navigation = [...destinations, {
     to: studyId === undefined ? '/diagnostico' : `/estudos/${studyId}/diagnostico`,
     label: 'Diagnóstico',
   }];
+  if (studyId !== undefined && scenarioId !== null && executionId !== null
+    && (onPresentation || location.pathname.endsWith('/diagnostico'))) navigation.push({
+    to: `/estudos/${encodeURIComponent(studyId)}/apresentacao?cenario=${encodeURIComponent(scenarioId)}&execucao=${encodeURIComponent(executionId)}`,
+    label: 'Apresentar',
+  });
   return <ChatProvider key={userId} ownerSub={userId!} repository={chatRepository} client={apiClient} catalog={helpCatalog ?? null}>
     <div className="app-shell">
       <a className="skip-link" href="#main-content">Pular para o conteúdo</a>

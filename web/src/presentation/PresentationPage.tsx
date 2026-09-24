@@ -12,25 +12,25 @@ export type PresentationPageState =
   | Readonly<{ kind: 'loading' }>
   | Readonly<{ kind: 'missing'; onRegenerate: () => void }>
   | Readonly<{ kind: 'error'; message: string; onRetry: () => void }>
-  | Readonly<{ kind: 'ready'; document: CommunicationDocumentV1; selection: PresentationSelection }>;
+  | Readonly<{ kind: 'ready'; document: CommunicationDocumentV1; selection: PresentationSelection; scenarioName?: string }>;
 
 export function PresentationPage({ state }: Readonly<{ state: PresentationPageState }>) {
-  if (state.kind === 'loading') return <main className="presentation-page" aria-busy="true">
+  if (state.kind === 'loading') return <article className="presentation-page" aria-busy="true">
     <h1>Apresentação</h1><div role="status">Carregando documento de comunicação…</div>
-  </main>;
-  if (state.kind === 'missing') return <main className="presentation-page">
+  </article>;
+  if (state.kind === 'missing') return <article className="presentation-page">
     <h1>Apresentação</h1><p role="alert">Documento ausente para a seleção atual.</p>
     <button type="button" onClick={state.onRegenerate}>Regenerar documento</button>
-  </main>;
-  if (state.kind === 'error') return <main className="presentation-page">
+  </article>;
+  if (state.kind === 'error') return <article className="presentation-page">
     <h1>Apresentação</h1><p role="alert">{state.message}</p>
     <button type="button" onClick={state.onRetry}>Tentar novamente</button>
-  </main>;
-  if (!matchesPresentationSelection(state.document, state.selection)) return <main className="presentation-page">
+  </article>;
+  if (!matchesPresentationSelection(state.document, state.selection)) return <article className="presentation-page">
     <h1>Apresentação</h1><p role="alert">O documento não corresponde à seleção atual. Volte ao Estudo e selecione a execução novamente.</p>
-  </main>;
+  </article>;
   const { document } = state;
-  return <main className="presentation-page">
+  return <article className="presentation-page">
     <PresentationHeader document={document} />
     <ExecutiveSummary document={document} />
     <CompositionSection document={document} />
@@ -38,5 +38,5 @@ export function PresentationPage({ state }: Readonly<{ state: PresentationPageSt
     <ReplayHighlightsSection document={document} />
     <AssumptionsSection document={document} />
     <LimitationsSection document={document} />
-  </main>;
+  </article>;
 }

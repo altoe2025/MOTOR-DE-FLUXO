@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 
 import type { JobSnapshot } from '../api/client';
 import { useDiagnosticRuntime } from '../app/providers';
@@ -272,6 +272,9 @@ export function StudyDiagnosticPage() {
       {viewState === null ? null : <DiagnosticStatus state={viewState} {...(cancelInFlight ? {} : { onCancel: () => void cancel() })} onRetry={(attemptId) => void retry(attemptId)} />}
       <DiagnosticHistory executions={scenarioDiagnostics} />
       {envelope === null ? null : <>
+        <Link className="diagnostic-present-link" to={`/estudos/${encodeURIComponent(study.id)}/apresentacao?cenario=${encodeURIComponent(scenario.id)}&execucao=${encodeURIComponent(terminal!.id)}`}>
+          Apresentar esta execução
+        </Link>
         <DiagnosticDistribution statistics={envelope.statistics} repetitions={envelope.repetitions} economics={envelope.axes.economic_robustness} />
         <SelectedExecution envelope={envelope} replayHref={`/estudos/${study.id}/replay?executionId=${encodeURIComponent(terminal!.id)}`} />
         <DiagnosticAxesView axes={envelope.axes} consequences={envelope.consequences} limitations={envelope.limitations} />

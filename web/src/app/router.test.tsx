@@ -14,6 +14,7 @@ import { AuthProvider } from '../auth/AuthProvider';
 import type { AuthClient, AuthSession } from '../auth/types';
 import type { ApiClient, DiagnosticRequest, JobSnapshot } from '../api/client';
 import type { CompanyRecord, ObservedCase } from '../cases/domain';
+import { observedInput } from '../communication/testFixtures';
 import type { OperationalProfileVersion } from '../profiles/domain';
 import { DemoInstallSkippedError } from '../storage/errors';
 import type {
@@ -159,6 +160,29 @@ function diagnosticSnapshot(request: DiagnosticRequest, status: JobSnapshot['sta
 }
 
 describe('application routes', () => {
+  it('abre deep link completo da apresentação e mantém a seleção no retorno', async () => {
+    const input = await observedInput();
+    renderAppAt(`/estudos/${input.study.id}/apresentacao?cenario=${input.scenarioId}&execucao=${input.diagnosticExecutionId}#premissas`,
+      client(session(input.study.ownerSub)), new RepositoryDouble([], [], [], [input.study]));
+    expect(await screen.findByRole('heading', { level: 1, name: input.study.name })).toBeVisible();
+    expect(screen.getAllByRole('main')).toHaveLength(1);
+    expect(screen.getByRole('region', { name: 'Premissas e proveniência' })).toHaveAttribute('id', 'premissas');
+    expect(screen.getByRole('link', { name: 'Voltar ao diagnóstico' })).toHaveAttribute('href',
+      `/estudos/${input.study.id}/diagnostico?scenarioId=${input.scenarioId}&executionId=${input.diagnosticExecutionId}`);
+    expect(screen.getByRole('button', { name: 'Perguntar' })).toBeVisible();
+    expect(within(screen.getByRole('navigation', { name: 'Navegação principal' }))
+      .getByRole('link', { name: 'Apresentar' })).toHaveAttribute('href',
+      `/estudos/${input.study.id}/apresentacao?cenario=${input.scenarioId}&execucao=${input.diagnosticExecutionId}`);
+  });
+
+  it('não substitui seleção inválida por outra execução', async () => {
+    const input = await observedInput();
+    renderAppAt(`/estudos/${input.study.id}/apresentacao?cenario=${input.scenarioId}&execucao=ausente`,
+      client(session(input.study.ownerSub)), new RepositoryDouble([], [], [], [input.study]));
+    expect(await screen.findByRole('alert')).toHaveTextContent(/execução solicitada/);
+    expect(screen.queryByText('Economia simulada')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Selecionar no Estudo' })).toHaveAttribute('href', `/carteira/${input.study.id}`);
+  });
   it.each(['/empresas', '/empresas/acme/perfis', '/importar', '/estudos', '/carteira', '/diagnostico', '/comparar', '/replay'])
   ('offers the global chat on authenticated route %s', async (path) => {
     renderAppAt(path, client(session('user-a')), new RepositoryDouble());

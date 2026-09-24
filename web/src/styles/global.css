@@ -95,6 +95,33 @@ a { color: inherit; }
 .draft-card h2 { font-family: var(--font-heading); font-size: 1.5rem; margin: 0 0 var(--space-4); }
 .save-status { color: var(--muted); font-size: 0.875rem; margin: 0; }
 .session-loading { padding: var(--space-8); }
+.presentation-return { margin-bottom: var(--space-4); }
+.presentation-return a, .diagnostic-present-link { color: var(--accent); font-weight: 650; }
+.presentation-page { color: var(--ink); margin: 0 auto; max-width: 980px; min-width: 0; }
+.presentation-page > section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); margin: var(--space-6) 0; padding: clamp(20px, 3vw, 36px); scroll-margin-top: 24px; }
+.presentation-page h1, .presentation-page h2 { font-family: var(--font-heading); line-height: 1.12; }
+.presentation-page h1 { font-size: clamp(2.1rem, 4vw, 3.5rem); margin: var(--space-3) 0; overflow-wrap: anywhere; }
+.presentation-page h2 { border-bottom: 2px solid var(--accent); font-size: clamp(1.5rem, 2.4vw, 2rem); margin: 0 0 var(--space-5); padding-bottom: var(--space-3); }
+.presentation-page h3 { color: var(--accent); font-size: 1.05rem; margin: var(--space-5) 0 var(--space-3); }
+.presentation-header { background: var(--nav); border-radius: var(--radius); color: var(--on-nav); padding: clamp(24px, 4vw, 44px); }
+.presentation-header .eyebrow { color: #c9d7d1; }
+.presentation-header > p { line-height: 1.45; }
+.presentation-header dl { display: grid; gap: var(--space-3); grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); margin: var(--space-6) 0; }
+.presentation-header dt { color: #c9d7d1; font-size: .82rem; }
+.presentation-header dd { font-size: .93rem; margin: var(--space-1) 0 0; overflow-wrap: anywhere; }
+.presentation-header nav ul { display: flex; flex-wrap: wrap; gap: var(--space-2); list-style: none; margin: 0; padding: 0; }
+.presentation-header nav a { border: 1px solid #889c93; border-radius: var(--radius); color: var(--on-nav); display: inline-flex; padding: var(--space-2) var(--space-3); text-decoration: none; }
+.presentation-header nav a:hover { background: #3c4843; }
+.presentation-metrics, .presentation-facts { display: grid; gap: var(--space-3); grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); margin: 0; }
+.presentation-metrics > div, .presentation-facts > div { background: var(--canvas); border-left: 3px solid var(--accent); min-width: 0; padding: var(--space-3); }
+.presentation-metrics dt, .presentation-facts dt { color: var(--muted); font-size: .85rem; font-weight: 650; }
+.presentation-metrics dd, .presentation-facts dd { font-variant-numeric: tabular-nums; line-height: 1.4; margin: var(--space-2) 0 0; overflow-wrap: anywhere; }
+.presentation-metrics dd { font-size: 1.18rem; font-weight: 700; }
+.presentation-evidence { color: var(--muted); display: block; font-size: .72rem; font-weight: 400; line-height: 1.4; margin-top: var(--space-2); overflow-wrap: anywhere; }
+.presentation-page code { overflow-wrap: anywhere; }
+.presentation-page section > ul { line-height: 1.5; padding-left: var(--space-5); }
+.presentation-page section > ul li { margin: var(--space-2) 0; }
+@media (max-width: 760px) { .presentation-page > section { padding: var(--space-4); } .presentation-header { padding: var(--space-5); } }
 .study-list { display: grid; gap: var(--space-3); list-style: none; margin: var(--space-6) 0; padding: 0; }
 .list-toolbar { display: flex; justify-content: flex-end; margin-top: var(--space-4); }
 .study-list__item { align-items: center; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); display: flex; flex-wrap: wrap; gap: var(--space-3); padding: var(--space-3); }

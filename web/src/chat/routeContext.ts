@@ -33,10 +33,12 @@ export function routeChatContext(pathAndSearch: string): RouteChatContext | null
   const dayText = routeId === 'replay' ? url.searchParams.get('day') : null;
   const day = dayText !== null && /^(0|[1-9]\d*)$/.test(dayText) ? Number(dayText) : null;
   return { routeId, helpId: null, studyId,
-    scenarioId: routeId === 'diagnostic' ? selectionId(url.searchParams.get('scenarioId')) : null,
+    scenarioId: routeId === 'diagnostic' ? selectionId(url.searchParams.get('scenarioId'))
+      : routeId === 'presentation' ? selectionId(url.searchParams.get('cenario')) : null,
     diagnosticExecutionId: routeId === 'replay' || routeId === 'diagnostic'
       ? selectionId(url.searchParams.get('executionId'))
-      : routeId === 'comparison' ? selectionId(url.searchParams.get('hypothesisExecutionId')) : null,
+      : routeId === 'comparison' ? selectionId(url.searchParams.get('hypothesisExecutionId'))
+        : routeId === 'presentation' ? selectionId(url.searchParams.get('execucao')) : null,
     ...(routeId === 'comparison' ? { comparisonExecutionId: selectionId(url.searchParams.get('baseExecutionId')) } : {}),
     replayDay: day !== null && Number.isSafeInteger(day) ? day : null };
 }

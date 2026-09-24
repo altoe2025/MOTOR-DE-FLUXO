@@ -73,6 +73,27 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-24 — Painel A roteado e seleção explícita (MOT-96, D1)
+
+**Sintoma.** O núcleo da apresentação existia isolado, sem endereço de Estudo,
+seleção persistente, retorno ou contexto do chat.
+
+**Causa.** A aplicação e o fallback estático ainda não reconheciam a rota de
+apresentação; a página não carregava a execução escolhida do repositório local.
+
+**O que foi feito.** Nesta base local de `codex/frontend-etapa-6-planejamento`,
+`PresentationRoute` resolve Estudo, cenário e execução por identidade e owner,
+gera o mesmo `CommunicationDocumentV1`, oferece deep links às seis seções e
+retorno à seleção do diagnóstico. Shell, chat e servidor estático reconhecem
+somente a rota válida. Seleções ausentes, removidas ou incompatíveis mostram
+mensagem sem reaproveitar números. A página usa um único marco `main` do shell.
+Testes de rota, seleção, arquitetura de métricas e fallback estático passaram.
+Sem push, PR, merge ou deploy.
+
+**O que isso invalida.** A nota anterior de que o Painel A não tinha rota deixa
+de valer nesta base local. Não altera cálculo financeiro, medições históricas ou
+status de publicação; a impressão ainda depende da D2.
+
 ## 2026-09-24 — Núcleo isolado do Painel A (MOT-96, D1 parcial)
 
 **Sintoma.** O Documento de Comunicação V1 já era produzido, mas ainda não havia
