@@ -21,6 +21,12 @@ segunda dedução de netting dentro do cliente.
 
 ## Uso
 
+O piloto web pode ser empacotado em uma imagem Vite + FastAPI, com autenticação
+Supabase e execução sem root. O [guia Render free](docs/deploy-render.md) descreve
+build/smoke locais, configuração, cold start e rollback. `render.yaml` é apenas
+declarativo, com auto deploy desligado; nenhuma publicação foi executada pela
+MOT-98. O estado dos gates está em [docs/testing.md](docs/testing.md).
+
 ```bash
 make test       # pytest -q
 make exemplo    # python -m motor motor/cenarios/exemplo_amanda.yaml

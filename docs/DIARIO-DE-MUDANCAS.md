@@ -73,6 +73,30 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-24 — Blueprint Render free preparado sem publicação (MOT-98)
+
+**Sintoma.** O empacotamento local D4 (`1b69b8f`) não possuía declaração do destino
+Render nem procedimento revisável de configuração e rollback.
+
+**Causa.** A publicação ainda era somente planejamento; faltavam fronteiras
+explícitas entre build público, segredos de runtime e autorização externa.
+
+**O que foi feito.** D5 adiciona `render.yaml`: um Web Service Docker free,
+health `/api/v1/health`, auto deploy desligado, valores sensíveis com `sync: false`
+e nenhuma database, disco, cron ou worker externo. Testes estruturais passaram em
+RED/GREEN. `docs/deploy-render.md`, README e MAPA registram configuração, convite
+Supabase, callbacks, primeiro deploy futuro, cold start, logs, rollback e chat
+desativável. Referências oficiais do Render foram consultadas; nenhuma CLI Render
+estava disponível para validação remota. Revisão independente concluiu sem achados
+pendentes após corrigir contexto Python, CSP/Ajv e gate de drift na CI.
+
+**O que isso invalida.** Nada nas regras ou números do motor. Configuração
+preparada não é serviço publicado: criação/sincronização do Blueprint e chamadas
+pagas permanecem não executadas. Imagem Docker continua BLOCKED/NOT_RUN pelo erro
+local do daemon; MOT-98 permanece In Progress. O bundle estático excede o orçamento
+T7, registrado em `docs/testing.md` para MOT-97, sem implementar essa etapa.
+Nenhum push, PR, deploy ou recurso pago foi criado.
+
 ## 2026-09-24 — Contêiner único e CSP estrita do piloto (MOT-98)
 
 **Sintoma.** A base local `0fd484e` ainda não possuía empacotamento Vite/FastAPI,
