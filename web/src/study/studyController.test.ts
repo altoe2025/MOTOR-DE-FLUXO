@@ -282,7 +282,8 @@ describe('StudyController', () => {
     const original = await makeStudy();
     const repository = new RepositoryDouble(FIXTURE_OWNER, original);
     repository.studies = [original];
-    const subject = controller({ repositories: [repository] });
+    const scheduler = new ManualScheduler();
+    const subject = controller({ repositories: [repository], scheduler });
     await subject.switchSession(FIXTURE_OWNER);
     const installation = deferred<StudyDocument>();
     repository.installDemoImplementation = () => installation.promise;
@@ -293,6 +294,7 @@ describe('StudyController', () => {
     installation.resolve(await makeStudy(FIXTURE_OWNER, 'demo'));
     expect(await restoring).toBeNull();
     expect(subject.snapshot).toMatchObject({ status: 'DIRTY', document: edited });
+    expect(scheduler.pending.size).toBe(1);
     subject.close();
   });
 

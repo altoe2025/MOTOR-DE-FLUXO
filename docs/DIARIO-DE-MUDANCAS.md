@@ -74,6 +74,30 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-24 — Testes de restore e contexto diagnóstico estáveis (MOT-97, revisão D3)
+
+**Sintoma.** Após integração local, a suíte web falhou em três testes: status
+`SAVED` em vez de `DIRTY` após restore explícito, e dois timeouts de UI lazy.
+
+**Causa.** O teste de restore usava autosave real de 10 ms e aguardava a criação
+assíncrona de outro estudo após editar. Um atraso controlado de 25 ms reproduziu
+`SAVED`: o autosave completou, mas a edição foi preservada e o restore retornou
+`null`. Esse teste usa repositório duplo e não passa pelo certificado ou pela
+divisão cooperativa. Os outros dois testes tinham limites locais menores que o
+trabalho de fixture/renderização sob carga; isolados, ambos passaram.
+
+**O que foi feito.** O teste de restore usa `ManualScheduler` para manter o
+autosave pendente enquanto verifica que o restore não substitui a edição. Só os
+dois testes de UI afetados receberam limites locais compatíveis com os outros
+testes lazy do arquivo; timeout global e budgets de desempenho não mudaram.
+Vinte repetições isoladas do caso de restore, os três arquivos juntos (80 testes)
+e a suíte web completa (1.013 testes) passaram. Typecheck, lint e build passaram.
+Não houve mudança de runtime, push, PR ou deploy.
+
+**O que isso invalida.** O status `SAVED` observado não demonstrava uma regressão
+do certificado/yield: era o autosave legítimo avançando enquanto o teste
+aguardava. Nenhuma medição de desempenho ou regra de validação muda.
+
 ## 2026-09-24 — Endurecimento do certificado efêmero (MOT-97, revisão D3)
 
 **Sintoma.** Uma leitura de `WeakMap.get` confundia ausência de entrada com

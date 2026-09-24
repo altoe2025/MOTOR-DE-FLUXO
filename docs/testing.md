@@ -1,5 +1,15 @@
 # Testes
 
+## Corrida de autosave e timeouts locais — MOT-97 (2026-09-24)
+
+O teste de restore do `StudyController` agora controla o scheduler: um atraso
+de 25 ms reproduziu que o autosave de 10 ms muda legitimamente `DIRTY` para
+`SAVED` sem substituir a edição. Repetido 20 vezes isolado e junto aos outros
+dois arquivos afetados (80/80 PASS). Os testes de rota diagnóstica e publicação
+de contexto usam apenas limites locais maiores; nenhum timeout global ou budget
+foi alterado. Suíte web completa **1.013/1.013**, typecheck, lint e build PASS.
+Sem mudança de runtime.
+
 ## Certificado efêmero e divisão persistida — MOT-97 (2026-09-24)
 
 TDD cobre equivalência exata de issues entre validação raw e dividida,

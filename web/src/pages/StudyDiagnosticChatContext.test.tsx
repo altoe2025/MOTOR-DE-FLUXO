@@ -54,12 +54,12 @@ describe('diagnostic chat context', () => {
     render(<MemoryRouter initialEntries={[`/estudos/${input.study.id}/diagnostico?scenarioId=${input.scenarioId}&executionId=missing`]}>
       <Routes><Route path="/estudos/:studyId/diagnostico" element={<StudyDiagnosticPage />} /></Routes>
     </MemoryRouter>);
-    await waitFor(() => expect(mocks.publishCommunication).toHaveBeenCalledWith(null));
+    await waitFor(() => expect(mocks.publishCommunication).toHaveBeenCalledWith(null), { timeout: 5_000 });
     expect(await screen.findByText('A execução citada não está disponível neste Estudo.')).toBeVisible();
     expect(mocks.publishCommunication).not.toHaveBeenCalledWith(expect.objectContaining({
       diagnosticExecutionId: input.diagnosticExecutionId,
     }));
-  });
+  }, 15_000);
 
   it('reports the effective base scenario when the route has no scenario query', async () => {
     const study = await createStudy({ id: 'study-1', ownerSub: 'owner-a', name: 'Estudo',

@@ -546,7 +546,7 @@ describe('application routes', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Diagnóstico robusto' }, { timeout: 5000 })).toBeVisible();
     expect(await screen.findByText(/entrada fixa.*uma execução individual/i)).toBeVisible();
     expect(screen.getByTestId('location')).toHaveTextContent('/estudos/study-diagnostic/diagnostico');
-  });
+  }, 15_000);
 
   it('descarta load tardio do estudo anterior ao trocar a rota diagnóstica', async () => {
     const first = await createStudy({ id: 'study-first', ownerSub: 'user-a', name: 'Estudo anterior', baseScenario: makeScenarioDraft(), now: '2026-01-01T00:00:00Z' });
