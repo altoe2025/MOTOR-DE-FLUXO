@@ -73,6 +73,16 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-23 — Contrato HTTP e CAS inicial do chat, C5 (MOT-95)
+
+**Sintoma.** Comparação falhava na validação local antes do fetch; um conflito de revisão antes de gravar PENDING deixava a UI com snapshot antigo.
+
+**Causa.** O contexto local carregava `comparisonExecutionId`, proibido no HTTP estrito, e era copiado inteiro. O primeiro save não reconciliava falhas.
+
+**O que foi feito.** `chatService.ts` projeta os seis campos públicos do request e relê a conversa após falha no CAS inicial. Retry exige nova ação do usuário, sem HTTP automático. Regressões RED/GREEN usam `createApiClient` real com fetch fake. Commit local separado, sem push/PR/deploy.
+
+**O que isso invalida.** O gate anterior com transporte fake não demonstrava envio válido da comparação. Nenhuma regra financeira mudou.
+
 ## 2026-09-23 — Reconciliação e identidade de contexto do chat, C5 (MOT-95)
 
 **Sintoma.** Conflito de revisão na finalização podia deixar resposta PENDING e

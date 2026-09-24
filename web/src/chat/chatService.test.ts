@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import type { ApiClient, ChatRequest, ChatResponse } from '../api/client';
+import { createApiClient, type ApiClient, type ChatRequest, type ChatResponse } from '../api/client';
 import productHelp from '../../../servidor/catalogs/product_help.v1.json';
 import { validateProductHelpCatalog } from '../help/catalog';
 import { conversation, message } from './fixtures';
@@ -31,6 +31,25 @@ function fixture(initial = conversation({ messages: [] })) {
 }
 
 describe('chat send lifecycle', () => {
+  it('sends a comparison through the real HTTP validator without private selection fields', async () => {
+    const state = fixture(conversation({ studyId: 'study-1', messages: [] }));
+    const fetch = vi.fn(async (_url: RequestInfo | URL, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body)) as ChatRequest;
+      expect(body.routeContext).toEqual({ routeId: 'comparison', helpId: null, studyId: 'study-1',
+        scenarioId: null, diagnosticExecutionId: null, replayDay: null });
+      return new Response(JSON.stringify({ apiVersion: '1.0.0', messageId: body.messageId,
+        classification: 'IN_SCOPE', answer: 'Comparação disponível', citations: [],
+        contextFingerprint: null, limitationCodes: [] }), { status: 200,
+        headers: { 'Content-Type': 'application/json' } });
+    });
+    const client = createApiClient({ getAccessToken: async () => 'token', fetch });
+    const result = await sendChatMessage({ repository: state.repository, client, conversation: state.current,
+      question: 'Compare as execuções', communication: null, catalog,
+      routeContext: { routeId: 'comparison', helpId: null, studyId: 'study-1', scenarioId: null,
+        diagnosticExecutionId: null, comparisonExecutionId: 'base-1', replayDay: null } });
+    expect(fetch).toHaveBeenCalledOnce();
+    expect(result.messages.at(-1)).toMatchObject({ status: 'SUCCEEDED', text: 'Comparação disponível' });
+  });
   it('persists USER and PENDING before transport then replaces PENDING by CAS', async () => {
     const state = fixture();
     const completed = await sendChatMessage({ repository: state.repository, client: state.client,
@@ -40,6 +59,26 @@ describe('chat send lifecycle', () => {
     expect(completed.messages.map((item) => item.role)).toEqual(['USER', 'ASSISTANT']);
     expect(state.saved[0]?.messages[0]?.text).toBe('Como funciona?');
     expect(state.saved[0]?.messages.at(-1)?.status).toBe('PENDING');
+  });
+
+  it('reconciles an initial CAS conflict before HTTP so the unchanged question can be retried', async () => {
+    const state = fixture();
+    const stale = state.current;
+    await state.repository.saveChatConversation({ document: { ...stale, revision: stale.revision + 1,
+      title: 'Renomeada em outra aba' }, expectedRevision: stale.revision, operationId: 'other-first' });
+    const observed: ChatConversation[] = [];
+    await expect(sendChatMessage({ repository: state.repository, client: state.client,
+      conversation: stale, question: 'Pergunta ainda não enviada', routeContext, communication: null, catalog,
+      onSaved: (document) => observed.push(document) })).rejects.toThrow('REVISION_CONFLICT');
+    expect(state.repository.getChatConversation).toHaveBeenCalledWith(stale.id);
+    expect(observed.at(-1)).toMatchObject({ revision: stale.revision + 1, title: 'Renomeada em outra aba' });
+    expect(state.client.sendChatMessage).not.toHaveBeenCalled();
+    expect(state.current.messages).toEqual([]);
+    await sendChatMessage({ repository: state.repository, client: state.client,
+      conversation: observed.at(-1)!, question: 'Pergunta ainda não enviada',
+      routeContext, communication: null, catalog });
+    expect(state.client.sendChatMessage).toHaveBeenCalledOnce();
+    expect(state.current.messages[0]?.text).toBe('Pergunta ainda não enviada');
   });
 
   it('fails closed on a citation absent from the current catalog', async () => {

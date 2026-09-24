@@ -36,6 +36,14 @@ do comportamento antigo e depois voltou a GREEN. O recorte de chat, ajuda, API
 e páginas afetadas passou com **116 testes em 17 arquivos**; typecheck, lint e
 `git diff --check` passaram. O aceite em browser permanece em C6.
 
+Reauditoria C5/MOT-95: o teste integrado `chatService` → `createApiClient` →
+`fetch` fake reproduziu em RED a rejeição AJV de `comparisonExecutionId` antes do
+fetch; outra regressão reproduziu em RED a falta de releitura após conflito no
+CAS inicial. Após projetar o contexto HTTP e reconciliar a revisão, ambos
+passaram em GREEN, com retry apenas por nova ação do usuário. Recorte
+`src/chat src/help src/api/client.test.ts`: **109 PASS em 13 arquivos**;
+typecheck, lint e `git diff --check` também passaram.
+
 A suíte completa com a concorrência padrão chegou a 942 PASS e 1 falha no teste
 preexistente `studyController.test.ts::não substitui edição corrente quando
 restauração explícita termina`. Esse teste usa autosave real de 10 ms e observou

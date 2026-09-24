@@ -7,6 +7,10 @@ reutiliza a pergunta, cria um novo ID de resposta e não duplica o par anterior.
 Se uma aba altera a conversa entre PENDING e a finalização, o serviço relê a
 revisão vigente e finaliza apenas a sua pendência como FAILED, preservando as
 alterações concorrentes. A UI recebe o snapshot reconciliado para permitir retry.
+Se o CAS inicial falhar, a conversa vigente também é relida; a pergunta permanece
+no composer para envio explícito. O contexto local pode conter
+`comparisonExecutionId`, mas o request HTTP inclui só os seis campos públicos
+definidos no contrato `RouteChatContext`.
 
 O cliente valida o contrato antes e depois de `POST /api/v1/chat`, com timeout
 próprio de 45 segundos. A seleção de contexto envia apenas o item de ajuda, a

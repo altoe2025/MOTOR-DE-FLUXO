@@ -64,14 +64,26 @@ export async function sendChatMessage(input: Readonly<{
     classification: null, citations: [], contextFingerprint: fingerprint, createdAt: now() };
   const previous = retryIndex < 0 ? snapshot.messages : snapshot.messages.slice(0, retryIndex);
   const messages = retryIndex < 0 ? [...previous, user, pending] : [...previous, pending];
-  const persisted = await input.repository.saveChatConversation({ document: update(snapshot, messages),
-    expectedRevision: snapshot.revision, operationId: crypto.randomUUID() });
+  let persisted: ChatConversation;
+  try {
+    persisted = await input.repository.saveChatConversation({ document: update(snapshot, messages),
+      expectedRevision: snapshot.revision, operationId: crypto.randomUUID() });
+  } catch (error) {
+    try {
+      const current = await input.repository.getChatConversation(snapshot.id);
+      if (current !== null && current.ownerSub === snapshot.ownerSub && current.studyId === snapshot.studyId) {
+        input.onSaved?.(current);
+      }
+    } catch { /* Closed or unavailable storage cannot be reconciled here. */ }
+    throw error;
+  }
   input.onSaved?.(persisted);
   const history = previous.slice(0, retryIndex < 0 ? undefined : -1)
     .filter((item) => item.status === 'SUCCEEDED' && item.text.length > 0)
     .slice(-98).map((item) => ({ role: item.role, text: item.text, contextFingerprint: item.contextFingerprint }));
+  const { routeId, helpId, studyId, scenarioId, diagnosticExecutionId, replayDay } = input.routeContext;
   const request: ChatRequest = { apiVersion: '1.0.0', conversationId: snapshot.id, messageId: answerId,
-    message: question, routeContext: structuredClone(input.routeContext),
+    message: question, routeContext: { routeId, helpId, studyId, scenarioId, diagnosticExecutionId, replayDay },
     communication: input.communication === null ? null : structuredClone(input.communication) as ChatRequest['communication'],
     history };
   try {
