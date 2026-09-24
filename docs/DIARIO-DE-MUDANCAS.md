@@ -74,6 +74,24 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-24 — Finalidade deixa de bloquear importação observada (MOT-90)
+
+1. **Sintoma.** O percurso XLSX chegava até Caso, Perfil e Estudo, mas qualquer
+   execução descendente era bloqueada enquanto o catálogo permanecesse
+   `NAO_CONFIGURADO` ou não contivesse todos os pares finalidade/direção.
+2. **Causa.** A cautela de não inventar conteúdo regulatório foi implementada como
+   gate operacional, embora o motor já possua fallback de IOF por direção e o
+   cenário persista um snapshot próprio das premissas.
+3. **O que foi feito.** Gabriel aprovou o design que torna
+   `finalidade_codigo` opcional e não bloqueante. Foi registrada a especificação
+   `docs/superpowers/specs/2026-09-24-finalidade-opcional-importacao-design.md`.
+   Código e contratos ainda não foram alterados neste commit.
+4. **O que isso invalida.** Após a futura implementação, deixam de valer o gate
+   por `status=NAO_CONFIGURADO`, a exigência de par finalidade/direção para toda
+   ordem importada e o bloqueio correspondente no aceite local da Etapa 6. Até
+   essa implementação, o comportamento corrente continua sendo o documentado nas
+   especificações anteriores.
+
 ## 2026-09-24 — Revisão do aceite local e da lixeira (MOT-99 / D6)
 
 **Sintoma.** A lista principal ocultava Estudos excluídos, mas não havia
