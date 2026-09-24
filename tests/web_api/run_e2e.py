@@ -20,6 +20,7 @@ from servidor.auth import AuthenticatedUser, SessionInvalid
 from servidor.config import Settings
 from servidor.diagnostics.executor import DiagnosticExecutor
 from servidor.diagnostics.service import RepetitionTask, execute_repetition
+from tests.web_api.chat_e2e_provider import ControlledChatProvider
 from tests.web_api.measure_replay import measure_limit_replay
 
 CONTROLLED_TOKEN = "mot21-controlled-e2e-token"
@@ -142,6 +143,10 @@ def build_e2e_app(
         motor_build_sha=os.environ.get("MOT_E2E_BUILD_SHA") or _demo_build_sha(),
         web_dist_dir=ROOT / "web" / "dist",
         diagnostic_max_workers=diagnostic_max_workers,
+        chat_enabled=True,
+        openai_api_key="controlled-fake-provider-only",
+        openai_chat_model="controlled-fake",
+        openai_chat_timeout_seconds=2,
     )
     pool = diagnostic_worker_pool or ControlledDiagnosticPool()
     executor = DiagnosticExecutor(
@@ -152,10 +157,12 @@ def build_e2e_app(
         max_jobs_global=settings.diagnostic_max_jobs_global,
         retention_seconds=settings.diagnostic_retention_seconds,
     )
+    chat = ControlledChatProvider()
     app = create_app(
         settings=settings,
         verifier=ControlledVerifier(),
         diagnostic_executor=executor,
+        chat_provider=chat,
     )
     app.state.e2e_diagnostic_pool = pool
 
@@ -176,8 +183,18 @@ def build_e2e_app(
             "document": json.loads(document.model_dump_json()),
         }
 
-    control_routes = app.router.routes[-3:]
-    del app.router.routes[-3:]
+    @app.post("/__e2e__/chat/control", include_in_schema=False)
+    async def chat_control(payload: dict[str, str]) -> dict[str, int]:
+        chat.control(payload["mode"])
+        app.state.chat_provider = None if payload["mode"] == "disabled" else chat
+        return chat.snapshot()
+
+    @app.get("/__e2e__/chat/state", include_in_schema=False)
+    async def chat_state() -> dict[str, int]:
+        return chat.snapshot()
+
+    control_routes = app.router.routes[-5:]
+    del app.router.routes[-5:]
     app.router.routes[0:0] = control_routes
 
     return app

@@ -19,6 +19,7 @@ export function ChatComposer() {
   return <div className="chat-composer">
     <p className="chat-disclosure">Sua pergunta e o contexto relevante desta tela serão enviados à OpenAI.</p>
     {selectedHelp && <p className="chat-context-label">Contexto: {selectedHelp.label}</p>}
+    {chat.messageLimitReached && <p role="status">Limite de 100 mensagens atingido. Inicie uma nova conversa para continuar.</p>}
     {error && <p role="alert">Não foi possível enviar ou responder. Verifique o contexto e tente novamente.</p>}
     <form onSubmit={(event) => void send(event)}>
     <label htmlFor="chat-question">Sua pergunta</label>

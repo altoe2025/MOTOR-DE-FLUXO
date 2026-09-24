@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
 
 import { useStudyController } from '../app/providers';
 import { useOptionalChat } from '../chat/ChatProvider';
@@ -27,6 +27,7 @@ function sourceLabel(scenario: ScenarioDocument | undefined): string | null {
 }
 
 export function StudyComparisonPage() {
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const studyId = searchParams.get('studyId');
   const baseFromUrl = searchParams.get('baseExecutionId');
@@ -72,7 +73,7 @@ export function StudyComparisonPage() {
       }
     }).catch(() => { if (active) setError('Não foi possível abrir o estudo.'); });
     return () => { active = false; };
-  }, [controller, studyId, baseFromUrl, hypothesisFromUrl]);
+  }, [controller, studyId, baseFromUrl, hypothesisFromUrl, location.key]);
 
   const candidates = study?.executions.filter((item): item is DiagnosticExecutionRecord => {
     if (item.kind !== 'DIAGNOSTIC' || item.status !== 'SUCCEEDED' || item.envelope === null) return false;

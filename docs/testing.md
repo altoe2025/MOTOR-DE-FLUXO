@@ -65,6 +65,52 @@ reproduziu tela de login vazia e violação `script-src`; os schemas passam a se
 pré-compilados, mantendo a política sem `unsafe-eval`. O gate usa headers reais do
 backend e proíbe tráfego externo. O smoke da imagem continua independente desse
 smoke browser e ambos são necessários.
+## Aceite local do chat — C6 / MOT-95 (2026-09-24)
+
+Base `ab32cc4`, branch `codex/mot95-c6-chat-acceptance`, sem publicação. Matriz,
+correções e ressalvas: `docs/frontend/etapa-6c-aceitacao.md`.
+
+| Gate | Evidência |
+|---|---|
+| Baseline C5: chat + ajuda + cliente | 109 PASS em 13 arquivos; Windows exigiu `--maxWorkers=2 --testTimeout=15000` |
+| TDD quotas | 4 RED antes da correção; 16 PASS no recorte Provider/Panel/Quota após correção |
+| TDD restauração de citações | Replay e comparação reproduzidos em RED; 14 PASS nos dois arquivos após correção |
+| Python chat, provider e runner | 178 PASS, 1 SKIP (real opt-in explicitamente desabilitado), 99,07 s; antes dos 18 casos finais do scanner |
+| Privacidade e scanner novos | 18 testes de privacidade passaram no gate Python; scanner final: 46 PASS (inclui 18 casos posteriores ao gate) |
+| Python otimizado: privacidade/scanner/runner | 42 PASS no recorte inicial; scanner final reexecutado sob `-O`: 46 PASS |
+| Browser consolidado C6 | 15 PASS; 3,0 min |
+| Typecheck/lint web; Ruff/mypy servidor | PASS; mypy sem problemas em 54 arquivos |
+| Scanner código/bundle/maps + console observado | PASS, 607 textos/32 binários + 15 artefatos; canários privados ausentes |
+| Suíte unitária completa | 964 PASS em 107 arquivos; 384,36 s; `--maxWorkers=1 --testTimeout=15000` |
+| Build de produção com source maps | PASS (`npm --prefix web run build -- --sourcemap`); aviso preexistente de chunk >500 kB |
+| Revisão independente | Gaps de comparação, captura de zoom e scanner de dependências corrigidos; revisões focadas |
+
+A primeira execução completa com dois workers teve 963 PASS e a mesma falha
+preexistente de autosave de 10 ms documentada em C5 (`DIRTY` versus `SAVED`).
+O arquivo isolado passou com 24 testes sem alterar o controlador. O resultado
+da repetição completa com um worker está na tabela acima. Avisos de canvas do
+jsdom permanecem preexistentes.
+
+`web/e2e/stage6-chat.spec.ts` faz requests reais à API local com provider fake e
+IndexedDB real. O scanner também aceita artefatos observados:
+
+```powershell
+python -m tests.web_api.scan_credentials --runtime-artifact CAMINHO/browser-console.log --canary-manifest CAMINHO/privacy-canaries.json
+```
+
+Os dois arquivos são produzidos juntos no diretório `web/test-results` do teste
+XLSX/privacidade; `chat-200-percent.png` é produzido pelo teste de acessibilidade.
+Logs privados do backend são verificados com `caplog` em `test_chat_privacy.py`.
+Para inspecionar também bundle/source maps com os mesmos canários, passe cada
+arquivo como outro `--runtime-artifact`. O scanner padrão sempre percorre
+`web/dist` para padrões de segredo. Tokens de autenticação ficam somente no header
+da API; não no corpo, no input do provider ou nos logs.
+
+O teste real é manual opt-in, exige chave e modelo próprios e é bloqueado em CI.
+Não foi executado; todos os gates desta entrega mantêm `MOTOR_CHAT_REAL_OPT_IN=0`.
+As rotas Apresentação e impressão ainda não existem na base: sua verificação no
+browser permanece pendente da integração D e a MOT-95 não foi marcada Done.
+Nenhuma regra financeira JS foi adicionada ou alterada.
 
 ## Contexto
 

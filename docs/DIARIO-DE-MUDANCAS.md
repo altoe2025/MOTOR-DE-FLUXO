@@ -93,6 +93,31 @@ MOT-96. Não houve push, PR, merge ou deploy.
 **O que isso invalida.** Nada na aplicação roteada ou nas medições existentes. A
 MOT-96 continua em andamento; este commit não constitui aceite de deep link,
 fidelidade de PDF ou visual A4.
+## 2026-09-24 — Aceite local do chat contextual, C6 (MOT-95)
+
+**Sintoma.** C5 ainda não tinha aceite ponta a ponta de privacidade/browser. O
+painel não oferecia recuperação das quotas; citações para a mesma URL podiam
+manter seleção local diferente da citada; o composer saía da viewport no zoom.
+
+**Causa.** As quotas estavam restritas ao armazenamento/serviço, a restauração de
+seleção dependia só dos valores da URL e a altura fixa do painel escalava com o
+zoom. Os gates anteriores de unidade não percorriam essas interações no browser.
+
+**O que foi feito.** Na worktree isolada `9099`, branch local
+`codex/mot95-c6-chat-acceptance`, baseada em `ab32cc4`, foram adicionados provider
+fake controlável, aceite Playwright, scanner de artefatos canários e matriz de
+privacidade nas fronteiras HTTP/provider/log. Quotas ganharam nova conversa e
+exclusão explícita por CAS; citações restauram dia/par em novas navegações; painel
+respeita as bordas da viewport. As correções têm regressões RED→GREEN e revisão
+independente. Teste real opt-in criado, não executado. Resultados, comandos e
+limites em `docs/frontend/etapa-6c-aceitacao.md` e `docs/testing.md`. Sem chave real,
+chamada a provider externo, gasto, push, PR, merge ou deploy.
+
+**O que isso invalida.** A ausência de aceite browser/privacidade de C5 deixa de
+valer para as rotas implementadas nesta base. A MOT-95 continua In Progress:
+Apresentação/impressão não existem aqui e a presença/ausência do chat nessas rotas
+aguarda a integração D. Não invalida números financeiros, contratos C1–C5, schemas
+ou regras do motor; não demonstra comportamento semântico de um modelo real.
 
 ## 2026-09-23 — Contrato HTTP e CAS inicial do chat, C5 (MOT-95)
 
