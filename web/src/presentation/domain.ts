@@ -24,7 +24,7 @@ export function formatCommunicationMetric(metric: CommunicationMetric): string {
     case 'BRL': return formatMoney(metric.value);
     case 'FRACTION': return formatFraction(metric.value);
     case 'BPS': return formatBps(metric.value);
-    case 'DAYS': return `${metric.value} ${metric.value === '1' ? 'dia' : 'dias'}`;
+    case 'DAYS': return `${metric.value.replace('.', ',')} ${metric.value === '1' ? 'dia' : 'dias'}`;
     case 'COUNT': return metric.value;
     case 'TEXT': return metric.value;
   }

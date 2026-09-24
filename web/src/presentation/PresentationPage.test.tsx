@@ -46,7 +46,7 @@ describe('núcleo não roteado do Painel A', () => {
       ? { ...item, value: '-12345678901234567890.125' } : item) };
     render(<PresentationPage state={{ kind: 'ready', document: modified, selection: selection(modified) }} />);
     const row = screen.getByText('Economia simulada').closest('[data-evidence-refs]');
-    expect(row?.querySelector('dd')?.textContent).toBe('R$ -12.345.678.901.234.567.890,13');
+    expect(row?.querySelector('dd')?.firstChild?.textContent).toBe('R$ -12.345.678.901.234.567.890,13');
     expect(row).toHaveAttribute('data-evidence-refs', original.evidenceRefs.join(' '));
     expect(row).toHaveAttribute('data-source-ids', document.evidenceIndex[original.evidenceRefs[0]!]!.sourceId);
     const robustness = screen.getByRole('region', { name: 'Consequência econômica e comparação' });
@@ -103,6 +103,25 @@ describe('núcleo não roteado do Painel A', () => {
     expect(row).toHaveTextContent('Não disponível');
     expect(row).toHaveTextContent('Referência de evidência ausente');
     expect(row).not.toHaveTextContent('R$');
+  });
+
+  it('mantém indisponibilidade e fonte no dd da métrica correspondente', () => {
+    const original = document.executiveMetrics.find((item) => item.code === 'SAVINGS_BRL')!;
+    const unavailable = {
+      ...document,
+      executiveMetrics: document.executiveMetrics.map((item) => item.code === original.code
+        ? { ...item, availability: 'UNAVAILABLE' as const, value: null }
+        : item),
+    };
+    render(<PresentationPage state={{ kind: 'ready', document: unavailable, selection: selection(unavailable) }} />);
+    const term = screen.getAllByText(original.label).find((element) => element.tagName === 'DT');
+    expect(term).toBeDefined();
+    const definition = term.nextElementSibling;
+    expect(definition?.tagName).toBe('DD');
+    expect(definition).toHaveTextContent('Não disponível');
+    expect(definition).toHaveTextContent(original.meaning);
+    expect(definition?.querySelector('.presentation-evidence')).toHaveTextContent('Fonte:');
+    expect(definition?.parentElement?.querySelectorAll('dd')).toHaveLength(1);
   });
 
   it('explicita limitação sem evidência sem publicar a afirmação sem fonte', () => {

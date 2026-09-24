@@ -27,10 +27,12 @@ export function MetricList({ document, metrics }: DocumentProps & Readonly<{ met
     return <div key={metric.code}
     className="presentation-metric" data-testid="presentation-metric" {...evidenceAttributes(document, metric.evidenceRefs)}>
     <dt>{metric.label}</dt>
-    <dd>{sourced ? formatCommunicationMetric(metric) : 'Não disponível'}</dd>
-    {!sourced ? <p>Referência de evidência ausente no documento.</p>
-      : metric.availability === 'UNAVAILABLE' ? <p>{metric.meaning}</p> : null}
-    {sourced ? <Evidence document={document} refs={metric.evidenceRefs} /> : null}
+    <dd>
+      {sourced ? formatCommunicationMetric(metric) : 'Não disponível'}
+      {!sourced ? <p>Referência de evidência ausente no documento.</p>
+        : metric.availability === 'UNAVAILABLE' ? <p>{metric.meaning}</p> : null}
+      {sourced ? <Evidence document={document} refs={metric.evidenceRefs} /> : null}
+    </dd>
   </div>;
   })}</dl>;
 }
@@ -40,9 +42,11 @@ export function FactList({ document, facts }: DocumentProps & Readonly<{ facts: 
     const sourced = hasEvidence(document, fact.evidenceRefs);
     return <div key={fact.code}
     {...evidenceAttributes(document, fact.evidenceRefs)}>
-    <dt>{fact.label}</dt><dd>{sourced ? fact.value : 'Não disponível'}</dd>
-    {sourced ? <Evidence document={document} refs={fact.evidenceRefs} />
-      : <p>Referência de evidência ausente no documento.</p>}
+    <dt>{fact.label}</dt><dd>
+      {sourced ? fact.value : 'Não disponível'}
+      {sourced ? <Evidence document={document} refs={fact.evidenceRefs} />
+        : <p>Referência de evidência ausente no documento.</p>}
+    </dd>
   </div>;
   })}</dl>;
 }

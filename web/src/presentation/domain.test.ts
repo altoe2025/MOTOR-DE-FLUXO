@@ -14,6 +14,7 @@ describe('contrato de apresentação', () => {
     ['FRACTION', '0.5822', '58,22%'],
     ['BPS', '25.125', '25,13 bps'],
     ['DAYS', '1', '1 dia'],
+    ['DAYS', '1.5', '1,5 dias'],
     ['COUNT', '30', '30'],
     ['TEXT', '1.234', '1.234'],
     ['BRL', null, 'Não disponível'],
