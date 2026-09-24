@@ -17,6 +17,8 @@ function selection(value: CommunicationDocumentV1): PresentationSelection {
     studyId: value.study.id,
     scenarioId: value.selection.scenarioId,
     diagnosticExecutionId: value.selection.diagnosticExecutionId,
+    comparisonExecutionId: value.selection.comparisonExecutionId,
+    replayDay: value.selection.replayDay,
   };
 }
 
@@ -35,6 +37,8 @@ describe('núcleo não roteado do Painel A', () => {
     }
     expect(screen.getByText(document.source.label)).toBeInTheDocument();
     expect(screen.getByText('Caso observado')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Composição e mecanismo' }))
+      .toHaveTextContent('Caso observado');
     expect(screen.getByRole('navigation', { name: 'Seções da apresentação' })).toHaveAttribute('aria-label', 'Seções da apresentação');
     expect(screen.getByRole('link', { name: 'Premissas' })).toHaveAttribute('href', '#premissas');
     expect(screen.getByText(/Nenhum quadro do Replay/)).toBeInTheDocument();
@@ -134,6 +138,35 @@ describe('núcleo não roteado do Painel A', () => {
       .querySelector('[data-evidence-refs="DIAGNOSTIC:/ausente"]');
     expect(item).toHaveTextContent('Referência de evidência ausente');
     expect(item).not.toHaveTextContent('Limitação sentinela');
+  });
+
+  it('explica premissas e proveniência sem perder valor canônico ou IDs de fonte', () => {
+    const source = document.assumptions[0]!;
+    const costs = [
+      { ...source, code: 'COST.iof_out', label: 'iof_out', value: '0.035' },
+      { ...source, code: 'COST.carry_cnr', label: 'carry_cnr', value: '0.0004' },
+      { ...source, code: 'COST.spread_rail_bps', label: 'spread_rail_bps', value: '25' },
+    ];
+    const provenance = { ...source, code: 'SOURCE_PROVENANCE_0', label: 'SOURCE_PROVENANCE_0',
+      value: '{"kind":"SYNTHETIC","source":"receita-perfil","version":"1","recordedAt":"2026-09-23T12:00:00Z"}' };
+    const rendered = { ...document, assumptions: costs, provenance: [provenance], limitations: [{
+      code: 'COSTS_NOT_OBSERVED', severity: 'WARNING' as const,
+      statement: 'COST_PROVENANCE_IS_NOT_OBSERVED', evidenceRefs: source.evidenceRefs,
+    }] };
+    render(<PresentationPage state={{ kind: 'ready', document: rendered, selection: selection(rendered) }} />);
+    const assumptions = screen.getByRole('region', { name: 'Premissas e proveniência' });
+    expect(assumptions).toHaveTextContent('IOF de saída');
+    expect(assumptions).toHaveTextContent('3,50%');
+    expect(assumptions).toHaveTextContent('0.035');
+    expect(assumptions).toHaveTextContent('0,04%');
+    expect(assumptions).toHaveTextContent('25,00 bps');
+    expect(assumptions).toHaveTextContent('receita-perfil');
+    expect(assumptions).toHaveTextContent('Valor publicado');
+    const row = within(assumptions).getByText('IOF de saída').closest('[data-evidence-refs]');
+    expect(row).toHaveAttribute('data-evidence-refs', source.evidenceRefs.join(' '));
+    expect(row).toHaveAttribute('data-source-ids', document.evidenceIndex[source.evidenceRefs[0]!]!.sourceId);
+    expect(screen.getByRole('region', { name: 'Limitações e versões' }))
+      .toHaveTextContent('As premissas de custo não foram observadas na fonte');
   });
 
   it('mantém loading estável, oferece regeneração se ausente e limpa números em erro', () => {

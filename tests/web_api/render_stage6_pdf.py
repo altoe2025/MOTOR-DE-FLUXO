@@ -37,14 +37,16 @@ def inspect_pdf(pdf: Path, render_dir: Path, expected: list[str], expected_pages
                 raise ValueError(f"página {index + 1} em branco")
             texts.append(extracted)
             lines: list[tuple[float, ...]] = []
-            for block in page.get_text("dict")["blocks"]:
+            # The default extraction clips glyphs to the media box. Inspect the
+            # uncut geometry or a line crossing the edge can look valid here.
+            for block in page.get_text("dict", clip=pymupdf.INFINITE_RECT())["blocks"]:
                 if "lines" not in block:
                     continue
                 for line in block["lines"]:
                     if not any(span["text"].strip() for span in line["spans"]):
                         continue
                     bbox = tuple(line["bbox"])
-                    if bbox[0] < rect.x0 - 1 or bbox[1] < rect.y0 - 1 or bbox[2] > rect.x1 + 1 or bbox[3] > rect.y1 + 1:
+                    if bbox[0] < rect.x0 - 0.1 or bbox[1] < rect.y0 - 0.1 or bbox[2] > rect.x1 + 0.1 or bbox[3] > rect.y1 + 0.1:
                         raise ValueError(f"texto fora da página {index + 1}: {bbox}")
                     if any(_overlap_fraction(bbox, prior) > 0.3 for prior in lines):
                         raise ValueError(f"sobreposição de linhas na página {index + 1}: {bbox}")

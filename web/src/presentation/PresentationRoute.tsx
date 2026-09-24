@@ -7,6 +7,8 @@ import { selectionId } from '../chat/routeContext';
 import { buildCommunicationDocument } from '../communication/buildCommunicationDocument';
 import type { CommunicationDocumentV1 } from '../communication/domain';
 import { HELP_IDS } from '../help/helpIds';
+import { assertImportExecutionAvailable } from '../importer/executionGate';
+import { resolveReplayRequest } from '../replay/ReplayPage';
 import { PresentationPage } from './PresentationPage';
 import { resolvePresentationSelection } from './selection';
 import type { PresentationSectionId } from './domain';
@@ -30,11 +32,16 @@ export function PresentationRoute() {
   const [params] = useSearchParams();
   const scenarioId = selectionId(params.get('cenario'));
   const executionId = selectionId(params.get('execucao'));
-  const { ownerSub, controller } = useDiagnosticRuntime();
+  const comparisonText = params.get('comparacao');
+  const comparisonExecutionId = comparisonText === null ? null : selectionId(comparisonText);
+  const dayText = params.get('dia');
+  const replayDay = dayText === null ? null : /^(0|[1-9]\d*)$/.test(dayText) ? Number(dayText) : Number.NaN;
+  const { ownerSub, controller, client } = useDiagnosticRuntime();
   const chat = useOptionalChat();
   const publishCommunication = chat?.publishCommunication;
   const setScenarioId = chat?.setScenarioId;
   const setExecutionId = chat?.setDiagnosticExecutionId;
+  const setComparisonId = chat?.setComparisonExecutionId;
   const setHelpId = chat?.setHelpId;
   const location = useLocation();
   const identity = JSON.stringify([ownerSub, studyId, params.toString()]);
@@ -43,25 +50,45 @@ export function PresentationRoute() {
 
   useEffect(() => {
     let active = true;
+    const abort = new AbortController();
     setState({ identity, kind: 'loading' });
     publishCommunication?.(null);
     setScenarioId?.(scenarioId);
     setExecutionId?.(executionId);
-    if (studyId === undefined) return () => { active = false; };
+    setComparisonId?.(comparisonExecutionId);
+    if (studyId === undefined) return () => { active = false; abort.abort(); };
     void controller.loadStudy(studyId).then(async (study) => {
       if (!active) return;
-      const resolved = resolvePresentationSelection(study, ownerSub, scenarioId, executionId);
+      if ((comparisonText !== null && comparisonExecutionId === null)
+        || (dayText !== null && !Number.isSafeInteger(replayDay))) {
+        setState({ identity, kind: 'invalid', message: 'A seleção de comparação ou Replay na URL é inválida.' }); return;
+      }
+      const resolved = resolvePresentationSelection(study, ownerSub, scenarioId, executionId,
+        { comparisonExecutionId, replayDay });
       if (!resolved.ok) { setState({ identity, kind: 'invalid', message: resolved.reason }); return; }
-      const document = await buildCommunicationDocument(resolved.input);
+      let input = resolved.input;
+      if (replayDay !== null) {
+        const replayRequest = resolveReplayRequest(study!, ownerSub, executionId!);
+        if (!replayRequest.ok || replayRequest.scenarioId !== scenarioId) {
+          setState({ identity, kind: 'invalid', message: 'O Replay não corresponde à execução selecionada.' }); return;
+        }
+        const execution = study!.executions.find((item) => item.id === executionId)!;
+        if (execution.kind !== 'DIAGNOSTIC') throw new Error('Execução diagnóstica ausente.');
+        await assertImportExecutionAvailable(execution.sourceSnapshot, client.getImportCatalog, abort.signal);
+        const replay = await client.buildReplay(replayRequest.request, abort.signal);
+        input = { ...input, replay };
+      }
+      const document = await buildCommunicationDocument(input);
       if (!active) return;
       setState({ identity, kind: 'ready', document,
         scenarioName: study!.scenarios.find((item) => item.id === scenarioId)!.name });
-      publishCommunication?.(resolved.input);
+      publishCommunication?.(input);
     }).catch(() => {
       if (active) setState({ identity, kind: 'error', message: 'Não foi possível abrir o documento de comunicação.' });
     });
-    return () => { active = false; publishCommunication?.(null); };
-  }, [controller, executionId, identity, ownerSub, publishCommunication, retry, scenarioId, setExecutionId, setScenarioId, studyId]);
+    return () => { active = false; abort.abort(); publishCommunication?.(null); };
+  }, [client, comparisonExecutionId, comparisonText, controller, dayText, executionId, identity, ownerSub,
+    publishCommunication, replayDay, retry, scenarioId, setComparisonId, setExecutionId, setScenarioId, studyId]);
 
   useEffect(() => {
     const section = location.hash.slice(1) as PresentationSectionId;
@@ -82,5 +109,6 @@ export function PresentationRoute() {
     </Link>
   </nav><PresentationPage state={{ kind: 'ready', document: state.document, scenarioName: state.scenarioName, selection: {
     studyId: studyId!, scenarioId: scenarioId!, diagnosticExecutionId: executionId!,
+    comparisonExecutionId, replayDay,
   } }} /></>;
 }

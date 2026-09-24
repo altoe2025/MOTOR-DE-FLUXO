@@ -2,6 +2,21 @@
 
 ## Painel A e relatório local — D1/D2 / MOT-96 (2026-09-24)
 
+Revisão de auditoria na mesma base: `?comparacao=<execução base>` e
+`?dia=<dia>` preservam seleção explícita, inclusive juntos; valores inválidos
+produzem erro, sem substituição silenciosa. A apresentação traduz rótulos,
+unidades, receita e limitação de custo mantendo o valor publicado e IDs de
+fonte. O gate PDF lê geometria sem clipping antes de aceitar as páginas.
+Regressões finais: **119 PASS em 12 arquivos** focados de web, **5 PASS** no
+helper PDF (quatro cortes sentinela), TypeScript/ESLint/Ruff PASS e **2 PASS**
+no Playwright de apresentação. O PDF final tem **9 páginas A4**; PNGs das
+páginas 1, 8 e 9 foram revistos visualmente, sem corte ou sobreposição.
+Comandos: `npm --prefix web run test:unit -- src/presentation src/app/router.test.tsx src/chat/routeContext.test.ts src/chat/ChatProvider.test.tsx src/pages/StudyComparisonPage.test.tsx src/replay/ReplayPage.test.tsx`,
+`npm --prefix web run typecheck`, `npm --prefix web run lint`,
+`.venv\Scripts\python.exe -m pytest tests/web_api/test_render_stage6_pdf.py -q -p no:cacheprovider`
+e `npm --prefix web run test:e2e -- stage6-presentation.spec.ts`.
+PyMuPDF 1.28.2 permanece somente em `web-dev`. Nenhum deploy foi feito.
+
 Base `14aca31` com núcleo isolado; commits locais D1/D2, sem push, PR, merge,
 deploy, chamada paga ou alteração do motor financeiro. O Painel A consome o
 `CommunicationDocumentV1` da seleção explícita; a impressão usa o mesmo DOM e
@@ -16,7 +31,7 @@ geração no servidor.
 | Build de produção + smoke CSP | PASS com configuração pública sintética: login visível, zero violações e zero requests a provedores externos |
 | PyMuPDF | `render_stage6_pdf.py --check-only`: versão exata **1.28.2** |
 | Browser + PDF | **1 PASS** no Playwright: seleção, ajuda do chat por seção, modo impressão e snapshot IndexedDB preservado |
-| Extração e renderização do PDF | **8 páginas A4**, margens 12 mm; texto/IDs de fonte de todas as métricas publicados confrontados com o documento; todas as páginas renderizadas em PNG e inspecionadas, sem corte, página vazia ou sobreposição observada |
+| Extração e renderização do PDF inicial D2 | **8 páginas A4** antes da revisão textual; o gate atualizado acima gera 9 páginas e verifica geometria sem recorte |
 
 O teste é `npm --prefix web run test:e2e -- stage6-presentation.spec.ts` e salva
 PDF/PNGs apenas em `web/test-results` ignorado. No Windows, o runner local foi

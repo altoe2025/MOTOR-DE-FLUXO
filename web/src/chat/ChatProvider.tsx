@@ -78,11 +78,12 @@ export function ChatProvider({ ownerSub, repository, client, catalog = null, chi
   const routeContext = useMemo(() => baseContext === null ? null : {
     ...baseContext,
     helpId: selection.routeKey === routeKey ? selection.helpId : null,
-    replayDay: baseContext.routeId === 'replay' && selection.routeKey === routeKey && selection.replayDay !== undefined
+    replayDay: (baseContext.routeId === 'replay' || baseContext.routeId === 'presentation')
+      && selection.routeKey === routeKey && selection.replayDay !== undefined
       ? selection.replayDay : baseContext.replayDay,
     diagnosticExecutionId: selection.routeKey === routeKey && selection.executionId !== undefined
       ? selection.executionId : baseContext.diagnosticExecutionId,
-    ...(baseContext.routeId === 'comparison' ? { comparisonExecutionId:
+    ...(baseContext.routeId === 'comparison' || baseContext.routeId === 'presentation' ? { comparisonExecutionId:
       selection.routeKey === routeKey && selection.comparisonExecutionId !== undefined
         ? selection.comparisonExecutionId : baseContext.comparisonExecutionId ?? null } : {}),
     scenarioId: selection.routeKey === routeKey && selection.scenarioId !== undefined

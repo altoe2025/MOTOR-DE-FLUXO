@@ -25,6 +25,8 @@ describe('chat route context', () => {
     expect(routeChatContext('/estudos/s/diagnostico?scenarioId=base&executionId=run-1')?.diagnosticExecutionId).toBe('run-1');
     expect(routeChatContext('/estudos/s/apresentacao?cenario=base&execucao=run-1#premissas'))
       .toMatchObject({ routeId: 'presentation', studyId: 's', scenarioId: 'base', diagnosticExecutionId: 'run-1' });
+    expect(routeChatContext('/estudos/s/apresentacao?cenario=hyp&execucao=run-2&comparacao=run-1&dia=31'))
+      .toMatchObject({ routeId: 'presentation', comparisonExecutionId: 'run-1', replayDay: 31 });
     expect(routeChatContext('/comparar?studyId=s&baseExecutionId=base-1&hypothesisExecutionId=hyp-1'))
       .toMatchObject({ comparisonExecutionId: 'base-1', diagnosticExecutionId: 'hyp-1' });
     expect(routeChatContext('/comparar?studyId=s&baseExecutionId=%20&hypothesisExecutionId=hyp-1')?.comparisonExecutionId).toBeNull();

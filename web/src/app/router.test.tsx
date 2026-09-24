@@ -14,7 +14,7 @@ import { AuthProvider } from '../auth/AuthProvider';
 import type { AuthClient, AuthSession } from '../auth/types';
 import type { ApiClient, DiagnosticRequest, JobSnapshot } from '../api/client';
 import type { CompanyRecord, ObservedCase } from '../cases/domain';
-import { observedInput } from '../communication/testFixtures';
+import { comparisonInput, observedInput } from '../communication/testFixtures';
 import type { OperationalProfileVersion } from '../profiles/domain';
 import { DemoInstallSkippedError } from '../storage/errors';
 import type {
@@ -182,6 +182,25 @@ describe('application routes', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(/execução solicitada/);
     expect(screen.queryByText('Economia simulada')).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Selecionar no Estudo' })).toHaveAttribute('href', `/carteira/${input.study.id}`);
+  });
+  it('restaura comparação explicitamente selecionada no deep link da apresentação', async () => {
+    const input = await comparisonInput();
+    const hypothesis = input.study.executions.find((item) => item.id === input.comparisonExecutionId)!;
+    renderAppAt(`/estudos/${input.study.id}/apresentacao?cenario=${hypothesis.scenarioId}&execucao=${hypothesis.id}&comparacao=${input.diagnosticExecutionId}`,
+      client(session(input.study.ownerSub)), new RepositoryDouble([], [], [], [input.study]));
+    expect(await screen.findByRole('heading', { level: 1, name: input.study.name })).toBeVisible();
+    expect(screen.getByRole('region', { name: 'Consequência econômica e comparação' }))
+      .not.toHaveTextContent('Nenhuma comparação selecionada');
+    expect(screen.getByRole('region', { name: 'Consequência econômica e comparação' }))
+      .toHaveTextContent('base');
+  });
+
+  it('recusa comparação inválida na URL sem publicar resultado simples', async () => {
+    const input = await observedInput();
+    renderAppAt(`/estudos/${input.study.id}/apresentacao?cenario=${input.scenarioId}&execucao=${input.diagnosticExecutionId}&comparacao=ausente`,
+      client(session(input.study.ownerSub)), new RepositoryDouble([], [], [], [input.study]));
+    expect(await screen.findByRole('alert')).toHaveTextContent(/comparação solicitada/);
+    expect(screen.queryByText('Economia simulada')).not.toBeInTheDocument();
   });
   it.each(['/empresas', '/empresas/acme/perfis', '/importar', '/estudos', '/carteira', '/diagnostico', '/comparar', '/replay'])
   ('offers the global chat on authenticated route %s', async (path) => {

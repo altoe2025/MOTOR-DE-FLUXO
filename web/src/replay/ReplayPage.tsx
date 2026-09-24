@@ -204,6 +204,9 @@ function ReplayReady({ document, study, studyId, scenarioId, selected, initialDa
       <div><p className="eyebrow">{study.name}</p><h1 tabIndex={-1}>Fronteira Viva</h1>
         <p className="page-introduction">Replay determinístico da repetição selecionada · política {document.policy}</p></div>
       <Link to={`/estudos/${studyId}/diagnostico?scenarioId=${encodeURIComponent(scenarioId)}`}>Voltar ao diagnóstico</Link>
+      <Link to={`/estudos/${encodeURIComponent(studyId)}/apresentacao?cenario=${encodeURIComponent(scenarioId)}&execucao=${encodeURIComponent(document.diagnostic_execution_id)}&dia=${playback.day}`}>
+        Apresentar dia {playback.day}
+      </Link>
     </header>
     <section className="replay-selection" aria-label="Repetição exibida">
       <p>Replay mostra uma repetição específica do cenário, com as seeds planejadas; a distribuição reúne todas as repetições.</p>

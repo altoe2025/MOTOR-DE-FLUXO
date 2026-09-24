@@ -73,6 +73,33 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-24 — Reconciliação do Painel A e gate PDF (MOT-96, D1/D2)
+
+**Sintoma.** Deep links para a apresentação descartavam comparação e Replay;
+premissas e proveniência apareciam como códigos/JSON; o inspetor podia aceitar
+texto cortado na borda direita do PDF.
+
+**Causa.** A seleção da rota preenchia ambos os contextos opcionais com `null`;
+os fatos eram impressos literalmente; a extração padrão do PyMuPDF cortava
+glifos antes de medir suas caixas.
+
+**O que foi feito.** A rota aceita `comparacao` e `dia` explícitos, valida
+owner, cenário e execuções atuais, reconstrói a comparação pelo contrato
+existente e solicita Replay pelo mesmo pedido validado da página Fronteira
+Viva. Comparação e Replay oferecem a entrada “Apresentar”; chat e seleção do
+documento seguem o mesmo par/dia. A projeção textual explica receita,
+alíquotas, spread, período, origem e limitação de custos sem alterar o
+`CommunicationDocumentV1` nem seus IDs de evidência. O helper mede caixas de
+texto sem recorte; quatro PDFs sentinela provam rejeição nos lados e limites
+verticais. O browser cobre ausência, presença separada e presença conjunta de
+comparação/Replay. O PDF tem nove páginas A4, extraídas, renderizadas e
+inspecionadas visualmente. Gates e comandos em `docs/testing.md`.
+
+**O que isso invalida.** O aceite D1/D2 anterior só cobria diagnóstico
+simples e podia deixar passar texto cortado no PDF; as evidências de oito
+páginas e de seleção opcional sempre ausente deixam de valer. A aritmética e
+os resultados canônicos da simulação não mudaram. Sem push, PR ou deploy.
+
 ## 2026-09-24 — Relatório A4 do Painel A (MOT-96, D2)
 
 **Sintoma.** O Painel A navegável não oferecia impressão fiel, metadados de

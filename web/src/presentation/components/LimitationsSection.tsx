@@ -1,5 +1,6 @@
 import type { CommunicationDocumentV1 } from '../../communication/domain';
 import { FactList } from './DocumentItems';
+import { presentLimitation } from '../facts';
 
 export function LimitationsSection({ document }: Readonly<{ document: CommunicationDocumentV1 }>) {
   return <section id="limitacoes" aria-labelledby="limitacoes-title" data-route-id="presentation" data-help-id="page.apresentacao">
@@ -11,7 +12,8 @@ export function LimitationsSection({ document }: Readonly<{ document: Communicat
         return <li key={item.code}
         data-evidence-refs={item.evidenceRefs.join(' ')}
         data-source-ids={item.evidenceRefs.map((ref) => document.evidenceIndex[ref]?.sourceId ?? '').join(' ')}>
-        {sourced ? <><strong>{item.severity === 'WARNING' ? 'Atenção' : 'Informação'}:</strong> {item.statement}</>
+        {sourced ? <><strong>{item.severity === 'WARNING' ? 'Atenção' : 'Informação'}:</strong> {presentLimitation(item.code, item.statement)}
+          {presentLimitation(item.code, item.statement) !== item.statement ? <small className="presentation-fact-raw">Código publicado: <code>{item.statement}</code></small> : null}</>
           : 'Referência de evidência ausente no documento.'}
       </li>;
       })}</ul>}

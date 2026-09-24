@@ -42,12 +42,15 @@ MOT-96 / D1–D2 local: `web/src/presentation/PresentationRoute.tsx` carrega a s
 explícita do Estudo e constrói o `CommunicationDocumentV1` para o Painel A.
 `selection.ts` recusa owner, cenário ou execução incompatível;
 `web/src/app/router.tsx`, `AppShell.tsx` e `servidor/static.py` registram a rota
-`/estudos/:studyId/apresentacao?cenario=...&execucao=...`. As seções, formatter e
+`/estudos/:studyId/apresentacao?cenario=...&execucao=...`, com `comparacao=...`
+e `dia=...` opcionais e explícitos. Comparação e Replay oferecem links para
+essa seleção; `facts.ts` traduz os fatos publicados sem recomputá-los. As seções, formatter e
 testes de fidelidade vivem em `web/src/presentation/`. Chat e ajuda acompanham o
 fragmento da seção. `PrintActions.tsx`, `PrintMetadata.tsx` e
 `web/src/styles/print.css` imprimem o mesmo DOM em A4 pelo navegador, sem PDF no
 servidor. O aceite Playwright está em `web/e2e/stage6-presentation.spec.ts`; o
-inspector de oito páginas/PNG está em `tests/web_api/render_stage6_pdf.py`.
+inspetor de nove páginas/PNG está em `tests/web_api/render_stage6_pdf.py`;
+quatro regressões de corte estão em `test_render_stage6_pdf.py`.
 Resultados e limites estão em `docs/testing.md`. A rota é local, sem publicação.
 
 MOT-98 / D4: `Dockerfile`, `.dockerignore`, `requirements/web.lock` e

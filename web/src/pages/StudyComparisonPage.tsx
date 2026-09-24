@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useLocation, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
 
 import { useStudyController } from '../app/providers';
 import { useOptionalChat } from '../chat/ChatProvider';
@@ -117,7 +117,10 @@ export function StudyComparisonPage() {
       <label>Execução da hipótese<select value={hypothesisId} onChange={(event) => { setHypothesisId(event.target.value); setResult(null); }}><option value="">Selecione</option>{hypotheses.map(option)}</select></label>
       <Button disabled={baseId === '' || hypothesisId === '' || baseId === hypothesisId} onClick={compare}>Comparar</Button>
     </section>}
-    {result?.ok === true ? <><AskAboutThis helpId={HELP_IDS.COMPARISON_PAGE} contextKind="COMPARISON" />
+    {result?.ok === true ? <>{study !== null && selectedHypothesis !== undefined && baseId !== '' ? <Link
+      to={`/estudos/${encodeURIComponent(study.id)}/apresentacao?cenario=${encodeURIComponent(selectedHypothesis.scenarioId)}&execucao=${encodeURIComponent(selectedHypothesis.id)}&comparacao=${encodeURIComponent(baseId)}`}>
+      Apresentar comparação
+    </Link> : null}<AskAboutThis helpId={HELP_IDS.COMPARISON_PAGE} contextKind="COMPARISON" />
       <ScenarioComparison comparison={result.value} /></> : null}
   </article>;
 }

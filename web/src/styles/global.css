@@ -118,6 +118,7 @@ a { color: inherit; }
 .presentation-metrics dd, .presentation-facts dd { font-variant-numeric: tabular-nums; line-height: 1.4; margin: var(--space-2) 0 0; overflow-wrap: anywhere; }
 .presentation-metrics dd { font-size: 1.18rem; font-weight: 700; }
 .presentation-evidence { color: var(--muted); display: block; font-size: .72rem; font-weight: 400; line-height: 1.4; margin-top: var(--space-2); overflow-wrap: anywhere; }
+.presentation-fact-explanation, .presentation-fact-raw { color: var(--muted); display: block; font-size: .72rem; font-weight: 400; line-height: 1.4; margin-top: var(--space-1); overflow-wrap: anywhere; }
 .presentation-page code { overflow-wrap: anywhere; }
 .presentation-page section > ul { line-height: 1.5; padding-left: var(--space-5); }
 .presentation-page section > ul li { margin: var(--space-2) 0; }

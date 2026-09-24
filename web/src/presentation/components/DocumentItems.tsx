@@ -1,5 +1,6 @@
 import type { CommunicationDocumentV1, CommunicationFact, CommunicationMetric } from '../../communication/domain';
 import { formatCommunicationMetric } from '../domain';
+import { presentFact } from '../facts';
 
 type DocumentProps = Readonly<{ document: CommunicationDocumentV1 }>;
 
@@ -40,10 +41,14 @@ export function MetricList({ document, metrics }: DocumentProps & Readonly<{ met
 export function FactList({ document, facts }: DocumentProps & Readonly<{ facts: readonly CommunicationFact[] }>) {
   return <dl className="presentation-facts">{facts.map((fact) => {
     const sourced = hasEvidence(document, fact.evidenceRefs);
+    const presented = presentFact(fact);
     return <div key={fact.code}
     {...evidenceAttributes(document, fact.evidenceRefs)}>
-    <dt>{fact.label}</dt><dd>
-      {sourced ? fact.value : 'Não disponível'}
+    <dt>{presented.label}</dt><dd>
+      {sourced ? presented.value : 'Não disponível'}
+      {sourced && presented.explanation !== null ? <small className="presentation-fact-explanation">{presented.explanation}</small> : null}
+      {sourced && presented.value !== fact.value
+        ? <small className="presentation-fact-raw">Valor publicado: <code>{fact.value}</code></small> : null}
       {sourced ? <Evidence document={document} refs={fact.evidenceRefs} />
         : <p>Referência de evidência ausente no documento.</p>}
     </dd>
