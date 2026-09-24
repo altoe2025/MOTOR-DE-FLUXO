@@ -66,12 +66,34 @@ Atualizada em 2026-09-23, durante o planejamento da Etapa 6.
 | `codex/etapa-4-mvp` | MVP e Evolução B aceitos localmente até MOT-85; sem push/PR/merge/deploy | Codex |
 | `codex/fix-reconciliacao-decimal` | correção da aritmética exata dos mecanismos da análise, pronta para merge na `main` | Codex |
 | `codex/frontend-etapa-5` | MOT-86–MOT-89 concluídas e aceitas localmente; Replay Fronteira Viva funcional até o limite efetivo medido; sem push/PR/merge/deploy | Codex |
-| `codex/frontend-etapa-6-planejamento` | Etapas 6A e 6B concluídas localmente; 6C em execução, sem push, PR, merge ou deploy | Codex |
+| `codex/frontend-etapa-6-planejamento` | Etapas 6A/6B e D1/D2 da MOT-96 concluídas localmente; 6C tem aceite local separado; sem push, PR, merge ou deploy | Codex |
 
 Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+## 2026-09-24 — Relatório A4 do Painel A (MOT-96, D2)
+
+**Sintoma.** O Painel A navegável não oferecia impressão fiel, metadados de
+proveniência ou evidência de paginação.
+
+**Causa.** A página ainda não tinha ação de impressão, CSS paginado nem um gate
+que extraísse e renderizasse todas as páginas geradas pelo navegador.
+
+**O que foi feito.** Na base local de `codex/frontend-etapa-6-planejamento`, a
+ação “Salvar PDF” invoca a impressão nativa. O mesmo DOM semântico recebe estilo
+A4 retrato, margens de 12 mm e metadados de Estudo, cenário, execução,
+`generatedAt`, versão e build SHA, sem owner, sessão ou token. O teste Playwright
+confronta métricas, unidades e IDs de fonte com o Documento de Comunicação V1,
+confere que chat e controles desaparecem e que o snapshot local não muda. O
+helper com PyMuPDF 1.28.2 extrai texto, valida geometria/sobreposição e renderiza
+as oito páginas em PNG; todas foram inspecionadas visualmente. A dependência é
+somente do extra `web-dev`, não do lock de produção. Sem push, PR, merge ou deploy.
+
+**O que isso invalida.** O registro D1 de impressão pendente deixa de valer nesta
+base local. O teste não constitui aceite de acessibilidade/performance D3, build
+Docker D4 ou publicação D6; nenhum número da simulação foi recalculado.
 
 ## 2026-09-24 — Painel A roteado e seleção explícita (MOT-96, D1)
 

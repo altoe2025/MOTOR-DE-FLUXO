@@ -1,5 +1,40 @@
 # Testes
 
+## Painel A e relatório local — D1/D2 / MOT-96 (2026-09-24)
+
+Base `14aca31` com núcleo isolado; commits locais D1/D2, sem push, PR, merge,
+deploy, chamada paga ou alteração do motor financeiro. O Painel A consome o
+`CommunicationDocumentV1` da seleção explícita; a impressão usa o mesmo DOM e
+`window.print()`. O PDF é salvo pelo usuário no navegador, sem API de upload ou
+geração no servidor.
+
+| Gate | Evidência |
+|---|---|
+| Testes unitários de apresentação e rotas | **76 PASS em 7 arquivos**; incluem seleção inválida, métricas com fonte, indisponibilidade e marco `main` único |
+| Fallback estático | **41 PASS, 2 SKIP**; deep link e rejeição de paths parecidos |
+| TypeScript, ESLint, Ruff do helper | PASS |
+| Build de produção + smoke CSP | PASS com configuração pública sintética: login visível, zero violações e zero requests a provedores externos |
+| PyMuPDF | `render_stage6_pdf.py --check-only`: versão exata **1.28.2** |
+| Browser + PDF | **1 PASS** no Playwright: seleção, ajuda do chat por seção, modo impressão e snapshot IndexedDB preservado |
+| Extração e renderização do PDF | **8 páginas A4**, margens 12 mm; texto/IDs de fonte de todas as métricas publicados confrontados com o documento; todas as páginas renderizadas em PNG e inspecionadas, sem corte, página vazia ou sobreposição observada |
+
+O teste é `npm --prefix web run test:e2e -- stage6-presentation.spec.ts` e salva
+PDF/PNGs apenas em `web/test-results` ignorado. No Windows, o runner local foi
+executado com o servidor E2E iniciado separadamente e `MOT_REAL_AUTH_ONLY=1`,
+pois a espera de shutdown do `webServer` do Playwright não terminava após o teste.
+Isso não muda as asserções do browser. O helper também pode ser conferido com
+`.venv\\Scripts\\python.exe tests/web_api/render_stage6_pdf.py --check-only`.
+O primeiro comando pytest com `--basetemp .pytest_tmp` falhou porque o servidor
+E2E mantinha seu log aberto nessa pasta; a repetição com diretório separado
+`--basetemp .pytest_static_tmp` passou. Esse erro não veio do código testado.
+
+O gate D3 de acessibilidade, regressão visual e desempenho permanece próprio da
+MOT-97. O build local mostrou `PresentationRoute` 3,81 KiB gzip e chunk inicial
+`index` 395,46 KiB gzip; o segundo excede o orçamento D3 de 350 KiB e requer
+trabalho/medição próprios da MOT-97. O build/smoke Docker D4 segue bloqueado
+conforme seção MOT-98 abaixo;
+nenhum aceite publicado é inferido destes testes locais.
+
 ## Contêiner e Blueprint declarativo — D4/D5 / MOT-98
 
 Base `0fd484e` da branch `codex/frontend-etapa-6-planejamento`, implementação

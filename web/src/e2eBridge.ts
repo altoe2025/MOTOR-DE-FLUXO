@@ -44,7 +44,7 @@ export type MotorE2EBridge = Readonly<{
   purgeDemoForAcceptance(id: string): Promise<void>;
   projectDemoCommunication(input: Readonly<{
     studyId: string; scenarioId: string; diagnosticExecutionId: string;
-    comparisonExecutionId?: string; replayDay: number;
+    comparisonExecutionId?: string; replayDay: number | null;
   }>): Promise<CommunicationDocumentV1>;
   migrateLegacyStudy(raw: string): Promise<readonly string[]>;
   seedObservedCase(company: CompanyRecord, observedCase: ObservedCase): Promise<void>;
@@ -180,14 +180,15 @@ export function installE2EBridge(): void {
       const repository = new IndexedDbApplicationRepository({ projectRef: 'local', ownerSub: E2E_OWNER_SUB });
       try { await repository.purgeStudy(id); } finally { repository.close(); }
     },
-    async projectDemoCommunication(input: { studyId: string; scenarioId: string; diagnosticExecutionId: string; comparisonExecutionId?: string; replayDay: number }) {
+    async projectDemoCommunication(input: { studyId: string; scenarioId: string; diagnosticExecutionId: string; comparisonExecutionId?: string; replayDay: number | null }) {
       const repository = new IndexedDbApplicationRepository({ projectRef: 'local', ownerSub: E2E_OWNER_SUB });
       try {
         const study = await repository.getStudy(input.studyId);
         if (study === null) throw new Error('Estudo demonstrativo ausente.');
-        const replays = await demoMetadata<Record<string, ReplayDocument>>(`demo:replays:${study.id}`);
+        const replays = input.replayDay === null ? null
+          : await demoMetadata<Record<string, ReplayDocument>>(`demo:replays:${study.id}`);
         const replay = replays?.[input.scenarioId] ?? null;
-        if (replay === null) throw new Error('Replay demonstrativo ausente.');
+        if (input.replayDay !== null && replay === null) throw new Error('Replay demonstrativo ausente.');
         let comparison = null;
         if (input.comparisonExecutionId !== undefined) {
           const current = study.executions.find((item) => item.id === input.diagnosticExecutionId);

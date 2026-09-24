@@ -7,6 +7,7 @@ import { AppRoutes } from './app/router';
 import { AuthProvider } from './auth/AuthProvider';
 import './styles/tokens.css';
 import './styles/global.css';
+import './styles/print.css';
 
 const root = document.getElementById('root');
 

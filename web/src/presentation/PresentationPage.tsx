@@ -7,6 +7,8 @@ import { LimitationsSection } from './components/LimitationsSection';
 import { PresentationHeader } from './components/PresentationHeader';
 import { ReplayHighlightsSection } from './components/ReplayHighlightsSection';
 import { matchesPresentationSelection, type PresentationSelection } from './domain';
+import { PrintActions } from './PrintActions';
+import { PrintMetadata } from './PrintMetadata';
 
 export type PresentationPageState =
   | Readonly<{ kind: 'loading' }>
@@ -32,11 +34,14 @@ export function PresentationPage({ state }: Readonly<{ state: PresentationPageSt
   const { document } = state;
   return <article className="presentation-page">
     <PresentationHeader document={document} />
+    <PrintActions />
     <ExecutiveSummary document={document} />
     <CompositionSection document={document} />
     <ComparisonSection document={document} />
     <ReplayHighlightsSection document={document} />
     <AssumptionsSection document={document} />
     <LimitationsSection document={document} />
+    <PrintMetadata document={document} scenarioName={state.scenarioName ?? document.selection.scenarioId}
+      buildSha={import.meta.env.VITE_MOTOR_BUILD_SHA ?? ''} />
   </article>;
 }

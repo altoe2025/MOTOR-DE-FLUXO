@@ -38,13 +38,17 @@ make test          # a contagem vigente é registrada em docs/testing.md
 
 ## Onde está cada resposta
 
-MOT-96 / D1 local: `web/src/presentation/PresentationRoute.tsx` carrega a seleção
+MOT-96 / D1–D2 local: `web/src/presentation/PresentationRoute.tsx` carrega a seleção
 explícita do Estudo e constrói o `CommunicationDocumentV1` para o Painel A.
 `selection.ts` recusa owner, cenário ou execução incompatível;
 `web/src/app/router.tsx`, `AppShell.tsx` e `servidor/static.py` registram a rota
 `/estudos/:studyId/apresentacao?cenario=...&execucao=...`. As seções, formatter e
 testes de fidelidade vivem em `web/src/presentation/`. Chat e ajuda acompanham o
-fragmento da seção. A rota é local, sem publicação.
+fragmento da seção. `PrintActions.tsx`, `PrintMetadata.tsx` e
+`web/src/styles/print.css` imprimem o mesmo DOM em A4 pelo navegador, sem PDF no
+servidor. O aceite Playwright está em `web/e2e/stage6-presentation.spec.ts`; o
+inspector de oito páginas/PNG está em `tests/web_api/render_stage6_pdf.py`.
+Resultados e limites estão em `docs/testing.md`. A rota é local, sem publicação.
 
 MOT-98 / D4: `Dockerfile`, `.dockerignore`, `requirements/web.lock` e
 `requirements/build.lock` definem o empacotamento. `servidor/__main__.py` interpreta
