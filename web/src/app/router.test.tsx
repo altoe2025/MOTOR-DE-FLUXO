@@ -127,6 +127,7 @@ function renderAppAt(
     cancelDiagnostic: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
     retryDiagnostic: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
     buildReplay: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
+    sendChatMessage: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
   };
   return render(
     <AuthProvider client={authClient}>
@@ -557,6 +558,7 @@ describe('application routes', () => {
       cancelDiagnostic,
       retryDiagnostic: vi.fn(async () => { throw new Error('não chamado'); }),
       buildReplay: vi.fn(async () => { throw new Error('não chamado'); }),
+      sendChatMessage: vi.fn(async () => { throw new Error('não chamado'); }),
     };
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
     const user = userEvent.setup();

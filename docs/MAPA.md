@@ -94,6 +94,7 @@ de hipótese executada e preserva o bloqueio `NAO_CONFIGURADO` para Estudo impor
 | Planos executáveis 6A–6D da Etapa 6 | `docs/superpowers/plans/2026-09-23-frontend-etapa-6a-importacao-plano.md`, `docs/superpowers/plans/2026-09-23-frontend-etapa-6b-demonstracao-comunicacao-plano.md`, `docs/superpowers/plans/2026-09-23-frontend-etapa-6c-chat-plano.md`, `docs/superpowers/plans/2026-09-23-frontend-etapa-6d-apresentacao-publicacao-plano.md` |
 | Contratos HTTP, limites e configuração do chat C3 (sem provider real C4) | `docs/frontend/etapa-6c-c3-contratos.md`, `servidor/contracts/chat.py`, `servidor/routes/chat.py`, `servidor/chat/service.py` |
 | Provider Responses, política temática e ferramentas somente leitura C4 | `docs/frontend/etapa-6c-c4-provider.md`, `servidor/chat/openai_provider.py`, `servidor/chat/tools.py`, `servidor/chat/prompts.py` |
+| Cliente, contexto, citações e ajuda contextual C5 | `docs/frontend/etapa-6c-c5-cliente.md`, `web/src/chat/chatService.ts`, `web/src/chat/contextFragment.ts`, `web/src/chat/components/ChatCitation.tsx`, `web/src/help/AskAboutThis.tsx` |
 | IDs T0–T12 e auditoria de `50fc384`/`1270458` | seção "Rastreabilidade aprovada no Linear" e matriz da Task 0 no plano técnico v2 da Etapa 2 |
 | Importação de fontes reais e Caso Observado | `docs/superpowers/specs/2026-09-19-importacao-dados-reais-design-v2.md` |
 | Plano vigente do importador | `docs/superpowers/plans/2026-09-19-importacao-dados-reais-plano-tecnico-v2.md` |

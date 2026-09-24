@@ -3,7 +3,8 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 import { ChatProvider } from '../chat/ChatProvider';
 import { ChatPanel } from '../chat/components/ChatPanel';
-import { useChatRepository } from './providers';
+import { useApiClient, useChatRepository } from './providers';
+import { useProductHelpCatalog } from '../help/HelpCatalogProvider';
 
 const destinations = [
   { to: '/empresas', label: 'Empresas' },
@@ -14,13 +15,15 @@ const destinations = [
 export function AppShell() {
   const { userId, signOut } = useAuth();
   const chatRepository = useChatRepository();
+  const apiClient = useApiClient();
+  const helpCatalog = useProductHelpCatalog();
   const location = useLocation();
   const studyId = /^\/(?:estudos|carteira)\/([^/]+)/.exec(location.pathname)?.[1];
   const navigation = [...destinations, {
     to: studyId === undefined ? '/diagnostico' : `/estudos/${studyId}/diagnostico`,
     label: 'Diagnóstico',
   }];
-  return <ChatProvider key={userId} ownerSub={userId!} repository={chatRepository}>
+  return <ChatProvider key={userId} ownerSub={userId!} repository={chatRepository} client={apiClient} catalog={helpCatalog ?? null}>
     <div className="app-shell">
       <a className="skip-link" href="#main-content">Pular para o conteúdo</a>
       <aside className="sidebar">

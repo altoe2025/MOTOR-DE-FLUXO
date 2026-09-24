@@ -15,6 +15,8 @@ import { ReplayMetrics } from './components/ReplayMetrics';
 import { ReplayStage } from './components/ReplayStage';
 import { replayStateAt } from './state';
 import { useReplayPlayback } from './useReplayPlayback';
+import { AskAboutThis } from '../help/AskAboutThis';
+import { HELP_IDS } from '../help/helpIds';
 
 export type ReplayPublicErrorCode =
   | 'REPLAY_NAO_DISPONIVEL'
@@ -71,7 +73,7 @@ export function resolveReplayRequest(
 
 type LoadState =
   | Readonly<{ kind: 'LOADING' }>
-  | Readonly<{ kind: 'READY'; identity: string; document: ReplayDocument; studyName: string; scenarioId: string;
+  | Readonly<{ kind: 'READY'; identity: string; document: ReplayDocument; study: StudyDocument; scenarioId: string;
     selected: ReturnType<typeof describeSelectedRepetition> }>
   | Readonly<{ kind: 'ERROR'; code: ReplayPublicErrorCode; message: string; retryable: boolean }>;
 
@@ -134,7 +136,7 @@ export function ReplayPage() {
               message: 'O Replay não corresponde à repetição selecionada no diagnóstico.', retryable: false });
             return;
           }
-          setLoadState({ kind: 'READY', identity: routeIdentity, document, studyName: study.name,
+          setLoadState({ kind: 'READY', identity: routeIdentity, document, study,
             scenarioId: resolution.scenarioId, selected });
         }
       } catch (reason) {
@@ -150,7 +152,10 @@ export function ReplayPage() {
     return <p role="status">Reconstruindo Replay…</p>;
   }
   if (loadState.kind === 'ERROR') return <ReplayError state={loadState} studyId={studyId} onRetry={() => setRetryRevision((value) => value + 1)} />;
-  return <ReplayReady document={loadState.document} studyName={loadState.studyName} studyId={studyId!} scenarioId={loadState.scenarioId} selected={loadState.selected} />;
+  const dayText = searchParams.get('day');
+  const initialDay = dayText !== null && /^(0|[1-9]\d*)$/.test(dayText) ? Number(dayText) : 0;
+  return <ReplayReady document={loadState.document} study={loadState.study} studyId={studyId!} scenarioId={loadState.scenarioId}
+    selected={loadState.selected} initialDay={initialDay} />;
 }
 
 function ReplayError({ state, studyId, onRetry }: Readonly<{
@@ -170,26 +175,32 @@ function ReplayError({ state, studyId, onRetry }: Readonly<{
   </article>;
 }
 
-function ReplayReady({ document, studyName, studyId, scenarioId, selected }: Readonly<{
+function ReplayReady({ document, study, studyId, scenarioId, selected, initialDay }: Readonly<{
   document: ReplayDocument;
-  studyName: string;
+  study: StudyDocument;
   studyId: string;
   scenarioId: string;
   selected: ReturnType<typeof describeSelectedRepetition>;
+  initialDay: number;
 }>) {
-  const playback = useReplayPlayback(document);
+  const playback = useReplayPlayback(document, { initialDay });
   const chat = useOptionalChat();
   const setReplayDay = chat?.setReplayDay;
   const setScenarioId = chat?.setScenarioId;
+  const publishCommunication = chat?.publishCommunication;
   useEffect(() => { setReplayDay?.(playback.day); }, [setReplayDay, playback.day]);
   useEffect(() => { setScenarioId?.(scenarioId); }, [setScenarioId, scenarioId]);
+  useEffect(() => { publishCommunication?.({ study, scenarioId,
+    diagnosticExecutionId: document.diagnostic_execution_id, comparisonExecutionId: null,
+    replay: document, replayDay: playback.day });
+  }, [publishCommunication, study, scenarioId, document, playback.day]);
   const [sort, setSort] = useState<ReplaySort>('ARRIVAL');
   const state = replayStateAt(document, playback.day);
   const directDay = `Dia ${playback.day} de ${document.period.settlement_end_day}`;
   const phaseLabel = state.phase === 'WARMUP' ? 'Aquecimento' : state.phase === 'MEASUREMENT' ? 'Medição' : 'Liquidação';
   return <article className="replay-page">
     <header className="replay-titlebar">
-      <div><p className="eyebrow">{studyName}</p><h1 tabIndex={-1}>Fronteira Viva</h1>
+      <div><p className="eyebrow">{study.name}</p><h1 tabIndex={-1}>Fronteira Viva</h1>
         <p className="page-introduction">Replay determinístico da repetição selecionada · política {document.policy}</p></div>
       <Link to={`/estudos/${studyId}/diagnostico?scenarioId=${encodeURIComponent(scenarioId)}`}>Voltar ao diagnóstico</Link>
     </header>
@@ -199,7 +210,9 @@ function ReplayReady({ document, studyName, studyId, scenarioId, selected }: Rea
         <div><dt>Total executado</dt><dd>{selected.total} {selected.total === 1 ? 'repetição executada' : 'repetições executadas'}</dd></div>
         <div><dt>Critério de seleção</dt><dd>{selected.criterion}</dd></div></dl>
     </section>
+    <AskAboutThis helpId={HELP_IDS.SELECTED_REPETITION} contextKind="REPETITION" />
     <ReplayControls document={document} playback={playback} sort={sort} onSort={setSort} />
+    <AskAboutThis helpId={HELP_IDS.REPLAY} contextKind="REPLAY" />
     <p className="replay-live" aria-live="polite">{directDay} · {phaseLabel}</p>
     <ReplayMetrics document={document} state={state} />
     <ReplayStage document={document} state={state} sort={sort} transitionMode={playback.transitionMode} transitionKey={playback.transitionKey} />

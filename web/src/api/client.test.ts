@@ -3,9 +3,12 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { components } from './generated';
-import { createApiClient } from './client';
+import { createApiClient, type ChatRequest } from './client';
 import { ApiError } from './errors';
 import productHelp from '../../../servidor/catalogs/product_help.v1.json';
+import { buildCommunicationDocument } from '../communication/buildCommunicationDocument';
+import { observedInput } from '../communication/testFixtures';
+import { selectChatContext } from '../chat/contextFragment';
 
 const productHelpFixture = { ...productHelp, catalogVersion: 'a'.repeat(64) };
 
@@ -103,6 +106,40 @@ function jobSnapshotFixture(status: 'QUEUED' | 'RUNNING' | 'CANCEL_REQUESTED' = 
 }
 
 describe('typed API client', () => {
+  it('transports a validated canonical metric fragment and its fingerprint', async () => {
+    const full = await buildCommunicationDocument(await observedInput());
+    const fragment = await selectChatContext(full, { kind: 'METRIC', id: 'SAVINGS_BRL' });
+    const fetch = vi.fn(async (_path: RequestInfo | URL, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body)) as { communication: typeof fragment };
+      expect(body.communication?.contextFingerprint).toBe(fragment?.contextFingerprint);
+      expect(body.communication?.executiveMetrics.map((metric) => metric.code)).toEqual(['SAVINGS_BRL']);
+      return jsonResponse({ apiVersion: '1.0.0', messageId: 'reply-1', classification: 'IN_SCOPE',
+        answer: 'Economia simulada', citations: [{ kind: 'METRIC', id: 'SAVINGS_BRL' }],
+        contextFingerprint: fragment?.contextFingerprint, limitationCodes: [] });
+    });
+    const client = createApiClient({ getAccessToken: async () => 'token', fetch });
+    await expect(client.sendChatMessage({ apiVersion: '1.0.0', conversationId: 'conversation-1',
+      messageId: 'reply-1', message: 'Qual é a economia?',
+      routeContext: { routeId: 'diagnostic', helpId: null, studyId: full.study.id,
+        scenarioId: full.selection.scenarioId, diagnosticExecutionId: full.selection.diagnosticExecutionId,
+        replayDay: null }, communication: fragment as ChatRequest['communication'], history: [],
+    })).resolves.toMatchObject({ answer: 'Economia simulada' });
+  });
+
+  it('validates chat before fetch and rejects a mismatched response', async () => {
+    const response = { apiVersion: '1.0.0', messageId: 'other', classification: 'IN_SCOPE',
+      answer: 'Resposta', citations: [], contextFingerprint: null, limitationCodes: [] };
+    const fetch = vi.fn().mockResolvedValue(jsonResponse(response));
+    const client = createApiClient({ getAccessToken: async () => 'token', fetch });
+    const request = { apiVersion: '1.0.0' as const, conversationId: 'conversation-1', messageId: 'message-1',
+      message: 'Pergunta', routeContext: { routeId: 'studies', helpId: null, studyId: null,
+        scenarioId: null, diagnosticExecutionId: null, replayDay: null }, communication: null, history: [] };
+    await expect(client.sendChatMessage({ ...request, message: '' })).rejects.toMatchObject({ code: 'ENTRADA_CLIENTE_INVALIDA' });
+    expect(fetch).not.toHaveBeenCalled();
+    await expect(client.sendChatMessage(request)).rejects.toMatchObject({ code: 'RESPOSTA_INVALIDA' });
+    expect(fetch).toHaveBeenCalledWith('/api/v1/chat', expect.objectContaining({ method: 'POST' }));
+  });
+
   it('obtém e valida o catálogo de ajuda pela rota autenticada', async () => {
     const fetch = vi.fn().mockResolvedValue(jsonResponse(productHelpFixture));
     const client = createApiClient({ getAccessToken: async () => 'token', fetch });

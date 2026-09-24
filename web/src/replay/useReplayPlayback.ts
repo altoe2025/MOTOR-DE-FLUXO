@@ -26,11 +26,12 @@ export type ReplayPlayback = Readonly<{
 
 export function useReplayPlayback(
   document: ReplayDocument,
-  { intervalMs = 3_200 }: Readonly<{ intervalMs?: number }> = {},
+  { intervalMs = 3_200, initialDay = 0 }: Readonly<{ intervalMs?: number; initialDay?: number }> = {},
 ): ReplayPlayback {
   const lastDay = document.period.settlement_end_day;
+  const routeDay = Number.isSafeInteger(initialDay) && initialDay >= 0 && initialDay <= lastDay ? initialDay : 0;
   const identity = `${document.diagnostic_execution_id}:${document.result_fingerprint}`;
-  const [day, setDay] = useState(0);
+  const [day, setDay] = useState(routeDay);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeedState] = useState<ReplaySpeed>(1);
   const [replayRevision, setReplayRevision] = useState(0);
@@ -38,12 +39,12 @@ export function useReplayPlayback(
   const [transitionKey, setTransitionKey] = useState(0);
 
   useEffect(() => {
-    setDay(0);
+    setDay(routeDay);
     setPlaying(false);
     setReplayRevision(0);
     setTransitionMode('INSTANT');
     setTransitionKey(0);
-  }, [identity]);
+  }, [identity, routeDay]);
 
   useEffect(() => {
     if (!playing) return undefined;

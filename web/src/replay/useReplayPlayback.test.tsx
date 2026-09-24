@@ -10,6 +10,15 @@ describe('useReplayPlayback', () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
+  it('opens a cited day from the route and clamps an invalid day to the first frame', () => {
+    const replay = replayDocumentFixture();
+    const { result, rerender } = renderHook(({ initialDay }) => useReplayPlayback(replay, { initialDay }),
+      { initialProps: { initialDay: 1 } });
+    expect(result.current.day).toBe(1);
+    rerender({ initialDay: 99 });
+    expect(result.current.day).toBe(0);
+  });
+
   it('mantém o dia por 3,2 segundos na velocidade padrão', () => {
     const { result } = renderHook(() => useReplayPlayback(replayDocumentFixture()));
 

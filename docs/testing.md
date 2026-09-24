@@ -13,6 +13,30 @@ detalhado na seção **Aceitação integrada da Etapa 5 — MOT-89**. A contagem
 abaixo prevalece para a branch `codex/frontend-etapa-5`; ela também não foi
 publicada ou mergeada.
 
+## Cliente, evidências e ajuda contextual — C5 / MOT-95
+
+Entrega local sobre C4 em 2026-09-23. Implementa apenas C5; o aceite em browser e
+os testes adversariais de C6 seguem pendentes. Contrato e limites em
+[`etapa-6c-c5-cliente.md`](frontend/etapa-6c-c5-cliente.md).
+
+| Verificação | Resultado |
+|---|---|
+| Baseline focado antes da edição | 83 PASS |
+| TDD do cliente, fragmentos, citações e telas | RED/GREEN nos novos testes |
+| Recorte `src/chat src/help src/api/client.test.ts` e telas afetadas | 110 PASS, 17 arquivos |
+| `npm --prefix web run test:unit -- --maxWorkers=2` | **943 PASS, 106 arquivos**; 177,02 s |
+| `npm --prefix web run typecheck` | PASS |
+| `npm --prefix web run lint` | PASS |
+| `npm --prefix web run build` | PASS; aviso preexistente de chunks acima de 500 kB |
+
+A suíte completa com a concorrência padrão chegou a 942 PASS e 1 falha no teste
+preexistente `studyController.test.ts::não substitui edição corrente quando
+restauração explícita termina`. Esse teste usa autosave real de 10 ms e observou
+`SAVED` em vez de `DIRTY` sob carga; passou isoladamente (24 PASS) sem mudança de
+código. A repetição completa, sozinha e limitada a dois workers, passou. Não foi
+alterado o controlador fora do escopo C5. Os testes de C5 usam transporte fake;
+nenhuma chamada real ou paga foi feita.
+
 ## Provider Responses e política temática — C4 / MOT-94
 
 Candidato local sobre `21541ae`, branch `codex/mot94-c4-responses`, em 2026-09-23.

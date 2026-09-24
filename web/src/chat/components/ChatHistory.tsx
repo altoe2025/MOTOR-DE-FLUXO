@@ -1,10 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
 
 import type { ChatConversation } from '../domain';
+import type { CommunicationDocumentV1 } from '../../communication/domain';
+import type { ProductHelpCatalogV1 } from '../../help/catalog';
+import type { RouteChatContext } from '../routeContext';
+import { ChatCitation } from './ChatCitation';
 
-export function ChatHistory({ conversation, contextFingerprint }: Readonly<{
+export function ChatHistory({ conversation, contextFingerprint, catalog = null, communication = null,
+  sentContext = null, routeContext, onRetry }: Readonly<{
   conversation: ChatConversation | null;
   contextFingerprint: string | null;
+  catalog?: ProductHelpCatalogV1 | null;
+  communication?: CommunicationDocumentV1 | null;
+  sentContext?: CommunicationDocumentV1 | null;
+  routeContext?: RouteChatContext | null;
+  onRetry?(assistantId: string): void;
 }>) {
   const latest = conversation?.messages.at(-1) ?? null;
   const previous = useRef<{ conversationId: string | null; messageId: string | null; status: string | null }>({ conversationId: null, messageId: null, status: null });
@@ -29,10 +39,19 @@ export function ChatHistory({ conversation, contextFingerprint }: Readonly<{
           <strong>{item.role === 'USER' ? 'Você' : 'Assistente'}</strong>
           <p>{item.text || (item.status === 'PENDING' ? 'Respondendo…' : 'Resposta indisponível.')}</p>
           {item.status === 'FAILED' && <span>Falha ao responder. Tente novamente.</span>}
+          {item.status === 'FAILED' && index === conversation.messages.length - 1 && onRetry
+            && <button type="button" onClick={() => onRetry(item.id)}>Tentar novamente</button>}
+          {item.status === 'SUCCEEDED' && item.citations.length > 0 && routeContext && <nav aria-label="Fontes da resposta"><ul>
+            {item.citations.map((citation) => <li key={`${citation.kind}:${citation.id}`}>
+              <ChatCitation citation={citation} fingerprint={item.contextFingerprint} catalog={catalog}
+                document={sentContext?.contextFingerprint === item.contextFingerprint ? sentContext : communication}
+                route={routeContext} />
+            </li>)}
+          </ul></nav>}
         </article>
       </li>)}
     </ol>
-    {latest?.contextFingerprint !== null && latest?.contextFingerprint !== contextFingerprint
+    {latest !== null && latest !== undefined && latest.contextFingerprint !== null && latest.contextFingerprint !== contextFingerprint
       && <p className="chat-context-divider">Contexto anterior</p>}
     <div className="visually-hidden" aria-live="polite" aria-atomic="true">{announcement}</div>
   </>;

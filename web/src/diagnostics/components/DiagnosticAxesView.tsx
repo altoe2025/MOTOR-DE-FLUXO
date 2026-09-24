@@ -7,6 +7,8 @@ import {
   type MetricUnit,
 } from '../presentation';
 import { ChartWithTable } from './EChart';
+import { AskAboutThis } from '../../help/AskAboutThis';
+import { HELP_IDS } from '../../help/helpIds';
 
 type DiagnosticEnvelope = NonNullable<DiagnosticExecutionRecord['envelope']>;
 type AxisCode = DiagnosticEnvelope['consequences'][number]['axis'];
@@ -126,7 +128,9 @@ export function DiagnosticAxesView({ axes, consequences, limitations }: Readonly
       <DistributionAxisTable economics={axes.economic_robustness} />
     </AxisSection>
     <AxisSection id="axis-operational" title="7. Perfil operacional da carteira" question="Qual foi a carga operacional observada na execução?" axis="OPERATIONAL_PROFILE" axisKey="operational_profile" rows={operational} {...common} />
-    <section className="diagnostic-card" aria-labelledby="all-limitations-heading"><h2 id="all-limitations-heading">Limitações do diagnóstico</h2>{limitations.length === 0 ? <p>Nenhuma limitação registrada.</p> : <ul>{limitations.map((item) => <li key={item.code}><strong>{item.code}</strong> ({item.severity}) — {item.condition}<EvidenceRefs refs={item.evidence_refs} /></li>)}</ul>}</section>
+    <section className="diagnostic-card" aria-labelledby="all-limitations-heading"><h2 id="all-limitations-heading">Limitações do diagnóstico</h2>
+      <AskAboutThis helpId={HELP_IDS.DIAGNOSTIC_PAGE} contextKind="LIMITATIONS" />
+      {limitations.length === 0 ? <p>Nenhuma limitação registrada.</p> : <ul>{limitations.map((item) => <li key={item.code}><strong>{item.code}</strong> ({item.severity}) — {item.condition}<EvidenceRefs refs={item.evidence_refs} /></li>)}</ul>}</section>
   </div>;
 }
 

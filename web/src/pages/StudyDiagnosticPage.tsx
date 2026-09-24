@@ -95,6 +95,7 @@ export function StudyDiagnosticPage() {
   const chat = useOptionalChat();
   const setChatScenarioId = chat?.setScenarioId;
   const setChatExecutionId = chat?.setDiagnosticExecutionId;
+  const publishCommunication = chat?.publishCommunication;
   const heading = useRef<HTMLHeadingElement>(null);
   const resumedAttempts = useRef(new Set<string>());
   const mounted = useRef(true);
@@ -246,6 +247,11 @@ export function StudyDiagnosticPage() {
   const chatExecutionId = study?.id === studyId ? terminal?.id ?? null : null;
   useEffect(() => { setChatScenarioId?.(chatScenarioId); }, [setChatScenarioId, chatScenarioId]);
   useEffect(() => { setChatExecutionId?.(chatExecutionId); }, [setChatExecutionId, chatExecutionId]);
+  useEffect(() => {
+    publishCommunication?.(study !== null && scenario !== null && terminal !== null
+      ? { study, scenarioId: scenario.id, diagnosticExecutionId: terminal.id,
+        comparisonExecutionId: null, replay: null, replayDay: null } : null);
+  }, [publishCommunication, study, scenario, terminal]);
   return <article className="diagnostic-page">
     <p className="eyebrow">Estudo {study?.name ?? ''}</p>
     <h1 ref={heading} tabIndex={-1}>Diagnóstico robusto</h1>

@@ -8,7 +8,7 @@ export function ChatPanel() {
   const chat = useChat();
   const opener = useRef<HTMLButtonElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
-  useEffect(() => { if (chat.open) heading.current?.focus(); }, [chat.open]);
+  useEffect(() => { if (chat.open && chat.focusComposerToken === 0) heading.current?.focus(); }, [chat.open, chat.focusComposerToken]);
   if (chat.routeContext === null) return null;
   function close() { chat.hide(); opener.current?.focus(); }
   return <>
@@ -26,7 +26,9 @@ export function ChatPanel() {
         </li>)}</ul>
       </nav>
       <button type="button" disabled={chat.loading || chat.error} onClick={() => void chat.newConversation()}>Nova conversa</button>
-      <ChatHistory conversation={chat.activeConversation} contextFingerprint={chat.contextFingerprint} />
+      <ChatHistory conversation={chat.activeConversation} contextFingerprint={chat.sentContext?.contextFingerprint ?? chat.contextFingerprint}
+        catalog={chat.catalog} communication={chat.communication} sentContext={chat.sentContext} routeContext={chat.routeContext}
+        onRetry={(id) => { void chat.send('', id).catch(() => undefined); }} />
       <ChatComposer />
     </aside>}
   </>;

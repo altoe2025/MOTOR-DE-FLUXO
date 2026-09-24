@@ -2,6 +2,13 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { useLocation } from 'react-router-dom';
 
 import type { ApplicationRepository } from '../storage/applicationRepository';
+import type { ApiClient } from '../api/client';
+import { buildCommunicationDocument, type CommunicationInput } from '../communication/buildCommunicationDocument';
+import type { CommunicationDocumentV1 } from '../communication/domain';
+import type { ProductHelpCatalogV1 } from '../help/catalog';
+import type { HelpId } from '../help/helpIds';
+import { sendChatMessage } from './chatService';
+import { communicationMatchesRoute, selectChatContext, type ChatIntent } from './contextFragment';
 import type { ChatConversation } from './domain';
 import { recoverInterruptedConversation } from './repository';
 import { routeChatContext, type RouteChatContext } from './routeContext';
@@ -15,11 +22,22 @@ type ChatState = Readonly<{
   error: boolean;
   loading: boolean;
   open: boolean;
+  busy: boolean;
+  canSend: boolean;
+  catalog: ProductHelpCatalogV1 | null;
+  communication: CommunicationDocumentV1 | null;
+  sentContext: CommunicationDocumentV1 | null;
+  focusComposerToken: number;
+  intent: ChatIntent | null;
   show(): void;
   hide(): void;
   selectConversation(id: string): void;
   newConversation(): Promise<void>;
   beginRequest(): AbortSignal;
+  send(question: string, retryAssistantId?: string): Promise<void>;
+  cancel(): void;
+  askAbout(helpId: HelpId, metricId?: string, contextKind?: 'REPLAY' | 'REPETITION' | 'LIMITATIONS'): void;
+  publishCommunication(input: CommunicationInput | null): void;
   setHelpId(helpId: string | null): void;
   setReplayDay(day: number | null): void;
   setDiagnosticExecutionId(id: string | null): void;
@@ -35,9 +53,11 @@ export function useChat(): ChatState {
 
 export function useOptionalChat(): ChatState | null { return useContext(Context); }
 
-export function ChatProvider({ ownerSub, repository, children }: Readonly<{
+export function ChatProvider({ ownerSub, repository, client, catalog = null, children }: Readonly<{
   ownerSub: string;
   repository: ChatRepository;
+  client?: Pick<ApiClient, 'sendChatMessage'>;
+  catalog?: ProductHelpCatalogV1 | null;
   children: ReactNode;
 }>) {
   const location = useLocation();
@@ -67,12 +87,24 @@ export function ChatProvider({ ownerSub, repository, children }: Readonly<{
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadedScope, setLoadedScope] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const busyRef = useRef(false);
+  const [focusComposerToken, setFocusComposerToken] = useState(0);
+  const [intent, setIntent] = useState<ChatIntent | null>(null);
+  const [publication, setPublication] = useState<{ routeKey: string; document: CommunicationDocumentV1 } | null>(null);
+  const [sentPublication, setSentPublication] = useState<{ routeKey: string; document: CommunicationDocumentV1 } | null>(null);
+  const publicationToken = useRef(0);
+  const routeKeyRef = useRef(routeKey);
+  routeKeyRef.current = routeKey;
   const request = useRef<AbortController | null>(null);
   const requestConversationId = useRef<string | null>(null);
   const creating = useRef(false);
   const recovering = useRef(new Set<string>());
   const reopenPending = useRef(new Set<string>());
   const generation = useRef(0);
+  const communication = publication?.routeKey === routeKey && communicationMatchesRoute(publication.document, routeContext)
+    ? publication.document : null;
+  const sentContext = sentPublication?.routeKey === routeKey ? sentPublication.document : null;
 
   useEffect(() => {
     const currentGeneration = ++generation.current;
@@ -84,6 +116,10 @@ export function ChatProvider({ ownerSub, repository, children }: Readonly<{
     creating.current = false;
     recovering.current.clear();
     reopenPending.current.clear();
+    setPublication(null);
+    setSentPublication(null);
+    setIntent(null);
+    publicationToken.current += 1;
     if (!routeAvailable) return;
     void repository.listChatConversations(studyId).then((rows) => {
       if (generation.current !== currentGeneration) return;
@@ -155,8 +191,58 @@ export function ChatProvider({ ownerSub, repository, children }: Readonly<{
     executionId: current.routeKey === routeKey ? current.executionId : undefined,
     scenarioId: id,
   })), [routeKey]);
+  const publishCommunication = useCallback((input: CommunicationInput | null) => {
+    const token = ++publicationToken.current;
+    setPublication(null);
+    if (input === null) return;
+    const selectedRoute = routeKey;
+    void buildCommunicationDocument(input).then((document) => {
+      if (publicationToken.current !== token || routeKeyRef.current !== selectedRoute) return;
+      setPublication({ routeKey: selectedRoute, document });
+    }).catch(() => { if (publicationToken.current === token) setPublication(null); });
+  }, [routeKey]);
+  const askAbout = useCallback((helpId: HelpId, metricId?: string, contextKind?: 'REPLAY' | 'REPETITION' | 'LIMITATIONS') => {
+    setHelpId(helpId);
+    setIntent(metricId !== undefined ? { kind: 'METRIC', id: metricId }
+      : contextKind !== undefined ? { kind: contextKind } : { kind: 'HELP', id: helpId });
+    setOpen(true);
+    setFocusComposerToken((value) => value + 1);
+  }, [setHelpId]);
   const visibleConversations = conversations.filter((row) => row.ownerSub === ownerSub && row.studyId === studyId);
   const activeConversation = visibleConversations.find((row) => row.id === activeId) ?? null;
+  const cancel = useCallback(() => request.current?.abort(), []);
+  const send = useCallback(async (question: string, retryAssistantId?: string) => {
+    if (busyRef.current || activeConversation === null || routeContext === null || catalog === null || client === undefined) {
+      throw new Error('Chat indisponível neste contexto.');
+    }
+    busyRef.current = true; setBusy(true);
+    const controller = new AbortController();
+    request.current = controller;
+    requestConversationId.current = activeConversation.id;
+    const currentGeneration = generation.current;
+    const selectedScope = scope;
+    const selectedRoute = routeKey;
+    const selectedIntent: ChatIntent = intent ?? (routeContext.routeId === 'comparison' ? { kind: 'COMPARISON' }
+      : routeContext.routeId === 'replay' ? { kind: 'REPLAY' } : { kind: 'BROAD' });
+    const applySaved = (document: ChatConversation) => {
+      if (generation.current !== currentGeneration || selectedScope !== scope
+        || document.ownerSub !== ownerSub || document.studyId !== studyId) return;
+      setConversations((rows) => rows.map((row) => row.id === document.id && row.revision <= document.revision ? document : row));
+    };
+    try {
+      const fragment = await selectChatContext(communication, selectedIntent);
+      if (controller.signal.aborted || generation.current !== currentGeneration) throw new Error('Envio cancelado.');
+      if (fragment !== null && routeKeyRef.current === selectedRoute) setSentPublication({ routeKey: selectedRoute, document: fragment });
+      await sendChatMessage({ repository, client, conversation: activeConversation, question,
+        ...(retryAssistantId === undefined ? {} : { retryAssistantId }),
+        routeContext, communication: fragment, catalog, signal: controller.signal, onSaved: applySaved });
+      setIntent(null);
+      setHelpId(null);
+    } finally {
+      if (request.current === controller) { request.current = null; requestConversationId.current = null; }
+      busyRef.current = false; setBusy(false);
+    }
+  }, [activeConversation, catalog, client, communication, intent, ownerSub, repository, routeContext, routeKey, scope, studyId, setHelpId]);
   useEffect(() => {
     if (!open || activeConversation === null || !activeConversation.messages.some((item) => item.status === 'PENDING')) return;
     if (requestConversationId.current === activeConversation.id
@@ -181,8 +267,10 @@ export function ChatProvider({ ownerSub, repository, children }: Readonly<{
       });
   }, [activeConversation, open, ownerSub, repository, studyId]);
   const value: ChatState = { routeContext, contextFingerprint, conversations: visibleConversations, activeConversation,
-    error, loading, open, show: () => setOpen(true), hide: () => setOpen(false),
-    selectConversation: setActiveId, newConversation, beginRequest,
+    error, loading, open, busy, canSend: !loading && !error && activeConversation !== null && client !== undefined && catalog !== null,
+    catalog, communication, sentContext, focusComposerToken, intent,
+    show: () => setOpen(true), hide: () => setOpen(false),
+    selectConversation: setActiveId, newConversation, beginRequest, send, cancel, askAbout, publishCommunication,
     setHelpId, setReplayDay, setDiagnosticExecutionId, setScenarioId,
   };
   return <Context.Provider value={value}>{children}</Context.Provider>;

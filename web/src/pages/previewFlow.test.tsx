@@ -69,6 +69,7 @@ function api(runPreview: ApiClient['runPreview'] = async (input) => matchingEnve
     cancelDiagnostic: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
     retryDiagnostic: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
     buildReplay: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
+    sendChatMessage: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
   };
 }
 

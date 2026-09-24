@@ -1,6 +1,7 @@
 import type { components } from './generated';
 import { ApiError, type ApiErrorField } from './errors';
 import { validateProductHelpCatalog, type ProductHelpCatalogV1 } from '../help/catalog';
+import { validateCommunicationDocument } from '../communication/validation';
 import {
   validatePreparationRequest,
   validatePreparationResponse,
@@ -13,6 +14,8 @@ import {
   validateReplayDocument,
   validateReplayRequest,
   validateCatalogoImportacao,
+  validateChatRequestV1,
+  validateChatResponseV1,
 } from './validators';
 
 export type PreviaRequest = components['schemas']['PreviaRequest'];
@@ -26,6 +29,8 @@ export type JobSnapshot = components['schemas']['JobSnapshot'];
 export type ReplayRequest = components['schemas']['ReplayRequestV1'];
 export type ReplayDocument = components['schemas']['ReplayDocumentV1'];
 export type ImportCatalog = components['schemas']['CatalogoImportacao'];
+export type ChatRequest = components['schemas']['ChatRequestV1'];
+export type ChatResponse = components['schemas']['ChatResponseV1'];
 
 type FetchLike = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
@@ -41,6 +46,7 @@ export type ApiClient = {
   cancelDiagnostic(jobId: string, signal?: AbortSignal): Promise<JobSnapshot>;
   retryDiagnostic(jobId: string, idempotencyKey: string, signal?: AbortSignal): Promise<JobSnapshot>;
   buildReplay(input: ReplayRequest, signal?: AbortSignal): Promise<ReplayDocument>;
+  sendChatMessage(input: ChatRequest, signal?: AbortSignal): Promise<ChatResponse>;
 };
 
 type ErrorDocument = {
@@ -115,14 +121,16 @@ export function createApiClient({
   getAccessToken,
   fetch: fetchImplementation = globalThis.fetch.bind(globalThis),
   timeoutMs = 30_000,
+  chatTimeoutMs = 45_000,
   onUnauthorized,
 }: {
   getAccessToken(): Promise<string | null>;
   fetch?: FetchLike;
   timeoutMs?: number;
+  chatTimeoutMs?: number;
   onUnauthorized?(): void | Promise<void>;
 }): ApiClient {
-  async function request(path: string, init: RequestInit, signal?: AbortSignal): Promise<unknown> {
+  async function request(path: string, init: RequestInit, signal?: AbortSignal, timeoutOverrideMs = timeoutMs): Promise<unknown> {
     const token = await getAccessToken();
     if (token === null) {
       throw new ApiError({ status: 401, code: 'SESSAO_INVALIDA', message: 'Entre novamente para continuar.' });
@@ -136,7 +144,7 @@ export function createApiClient({
     const timeout = globalThis.setTimeout(() => {
       timeoutExpired = true;
       controller.abort();
-    }, timeoutMs);
+    }, timeoutOverrideMs);
 
     try {
       const response = await fetchImplementation(path, {
@@ -170,7 +178,7 @@ export function createApiClient({
         throw new ApiError({
           status: 0,
           code: 'TEMPO_ESGOTADO',
-          message: 'A espera de 30 segundos foi encerrada. O motor pode continuar processando no servidor.',
+          message: 'O tempo de espera pela resposta foi encerrado.',
         });
       }
       if (signal?.aborted === true) {
@@ -184,6 +192,25 @@ export function createApiClient({
   }
 
   return {
+    async sendChatMessage(input, signal) {
+      if (!validateChatRequestV1(input)
+        || (input.communication !== null && (
+          !(await validateCommunicationDocument(input.communication)).ok
+          || input.routeContext.studyId !== input.communication.study.id
+          || input.routeContext.scenarioId !== input.communication.selection.scenarioId
+          || input.routeContext.diagnosticExecutionId !== input.communication.selection.diagnosticExecutionId
+          || input.routeContext.replayDay !== input.communication.selection.replayDay
+        )) || new TextEncoder().encode(JSON.stringify(input)).byteLength > 1_048_576) {
+        throw new ApiError({ status: 0, code: 'ENTRADA_CLIENTE_INVALIDA', message: 'O contexto do chat não passou pela validação local.' });
+      }
+      const document = await request('/api/v1/chat', { method: 'POST',
+        headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input) }, signal, chatTimeoutMs);
+      if (!validateChatResponseV1(document)) throw invalidResponse(200);
+      const response = document as ChatResponse;
+      if (response.messageId !== input.messageId
+        || response.contextFingerprint !== (input.communication?.contextFingerprint ?? null)) throw invalidResponse(200);
+      return deepFreeze(document as ChatResponse);
+    },
     async getReferenceExample(signal) {
       const document = await request('/api/v1/examples/reference', { method: 'GET' }, signal);
       if (!validateReferenceExample(document)) throw invalidResponse(200);

@@ -9,6 +9,8 @@ import { isProfileMvpScenario } from '../hypotheses/hypothesis';
 import type { DiagnosticExecutionRecord, ScenarioDocument, StudyDocument } from '../study/model';
 import { Button } from '../ui/Button';
 import { InlineNotice } from '../ui/InlineNotice';
+import { AskAboutThis } from '../help/AskAboutThis';
+import { HELP_IDS } from '../help/helpIds';
 
 function current(execution: DiagnosticExecutionRecord, scenario: ScenarioDocument): boolean {
   return execution.scenarioRevision === scenario.revision
@@ -30,6 +32,7 @@ export function StudyComparisonPage() {
   const chat = useOptionalChat();
   const setChatScenarioId = chat?.setScenarioId;
   const setChatExecutionId = chat?.setDiagnosticExecutionId;
+  const publishCommunication = chat?.publishCommunication;
   const heading = useRef<HTMLHeadingElement>(null);
   const [study, setStudy] = useState<StudyDocument | null>(null);
   const [baseId, setBaseId] = useState('');
@@ -60,6 +63,13 @@ export function StudyComparisonPage() {
   const selectedHypothesis = study?.id === studyId ? hypotheses.find((item) => item.id === hypothesisId) : undefined;
   useEffect(() => { setChatScenarioId?.(selectedHypothesis?.scenarioId ?? null); }, [setChatScenarioId, selectedHypothesis?.scenarioId]);
   useEffect(() => { setChatExecutionId?.(selectedHypothesis?.id ?? null); }, [setChatExecutionId, selectedHypothesis?.id]);
+  useEffect(() => {
+    publishCommunication?.(study !== null && result?.ok === true && selectedHypothesis !== undefined && baseId !== ''
+      ? { study, scenarioId: selectedHypothesis.scenarioId, diagnosticExecutionId: selectedHypothesis.id,
+        comparisonExecutionId: baseId,
+        comparison: { baseExecutionId: baseId, hypothesisExecutionId: selectedHypothesis.id, value: result.value },
+        replay: null, replayDay: null } : null);
+  }, [publishCommunication, study, result, selectedHypothesis, baseId]);
   const compare = () => {
     const left = base.find((item) => item.id === baseId);
     const right = hypotheses.find((item) => item.id === hypothesisId);
@@ -84,6 +94,7 @@ export function StudyComparisonPage() {
       <label>Execução da hipótese<select value={hypothesisId} onChange={(event) => { setHypothesisId(event.target.value); setResult(null); }}><option value="">Selecione</option>{hypotheses.map(option)}</select></label>
       <Button disabled={baseId === '' || hypothesisId === '' || baseId === hypothesisId} onClick={compare}>Comparar</Button>
     </section>}
-    {result?.ok === true ? <ScenarioComparison comparison={result.value} /> : null}
+    {result?.ok === true ? <><AskAboutThis helpId={HELP_IDS.COMPARISON_PAGE} />
+      <ScenarioComparison comparison={result.value} /></> : null}
   </article>;
 }

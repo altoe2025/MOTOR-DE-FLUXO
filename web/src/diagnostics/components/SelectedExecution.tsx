@@ -3,6 +3,8 @@ import { ComparisonSummary } from '../../ui/ComparisonSummary';
 import { CostTable } from '../../ui/CostTable';
 import { Link } from 'react-router-dom';
 import { describeSelectedRepetition } from '../selectedRepetition';
+import { AskAboutThis } from '../../help/AskAboutThis';
+import { HELP_IDS } from '../../help/helpIds';
 
 type DiagnosticEnvelope = NonNullable<DiagnosticExecutionRecord['envelope']>;
 type SelectedExecutionProps = Readonly<{
@@ -29,7 +31,16 @@ export function SelectedExecution({ envelope, replayHref }: SelectedExecutionPro
       <div><dt>Fingerprint de proveniência</dt><dd>{selectedExecution.provenance_fingerprint}</dd></div>
     </dl>
     <p>Uma repetição é uma realização do cenário com seeds planejadas. O Replay mostra apenas esta repetição, não a distribuição inteira.</p>
+    <AskAboutThis helpId={HELP_IDS.SELECTED_REPETITION} contextKind="REPETITION" />
     {replayHref === undefined ? null : <Link className="button-link" to={replayHref}>Abrir Replay · Fronteira Viva</Link>}
-    {hasCanonicalResult ? <><ComparisonSummary envelope={selectedExecution} /><CostTable envelope={selectedExecution} /></> : null}
+    {hasCanonicalResult ? <>
+      <div className="chat-metric-actions" aria-label="Perguntas sobre métricas principais">
+        <AskAboutThis helpId={HELP_IDS.DIAGNOSTIC_PAGE} metricId="BASELINE_BRL" label="Perguntar sobre custo baseline" />
+        <AskAboutThis helpId={HELP_IDS.DIAGNOSTIC_PAGE} metricId="NETTED_BRL" label="Perguntar sobre custo netado" />
+        <AskAboutThis helpId={HELP_IDS.DIAGNOSTIC_PAGE} metricId="SAVINGS_BRL" label="Perguntar sobre economia" />
+        <AskAboutThis helpId={HELP_IDS.DIAGNOSTIC_PAGE} metricId="NETABILITY" label="Perguntar sobre netabilidade" />
+      </div>
+      <ComparisonSummary envelope={selectedExecution} /><CostTable envelope={selectedExecution} />
+    </> : null}
   </section>;
 }

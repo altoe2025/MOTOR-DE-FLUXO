@@ -73,6 +73,26 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-23 — Cliente, evidências e ajuda contextual, C5 (MOT-95)
+
+**Sintoma.** O chat C1–C4 persistia conversas e atendia na API, mas o cliente
+ainda não enviava perguntas, não montava evidências por contexto nem permitia
+navegar pelas citações da resposta.
+
+**Causa.** O transporte tipado, a seleção do fragmento, o lifecycle de envio e os
+acionadores de contexto são a etapa C5, posterior aos contratos e ao provider.
+
+**O que foi feito.** Neste worktree local sobre C4, `web/src/api/client.ts` ganhou
+envio/validação e timeout do chat; `web/src/chat/` ganhou serviço com CAS, retry,
+cancelamento, fragmentação e citações navegáveis; telas de diagnóstico, comparação,
+Replay, composição e importação receberam **Perguntar sobre isto**. Testes de
+unidade e documentação foram adicionados. Nenhum push, PR, merge ou deploy foi
+feito; a C6 permanece pendente.
+
+**O que isso invalida.** A afirmação de que o cliente só tem shell passivo do chat
+deixa de valer neste worktree. O aceite em browser, a privacidade adversarial da C6
+e o comportamento de um provider real não foram validados por esta entrega.
+
 ## 2026-09-23 — Reconciliação das expectativas E2E após B5/B6 (MOT-92)
 
 **Sintoma.** A suíte Playwright integrada esperava que uma sessão expirada ainda
@@ -174,7 +194,6 @@ não calibrado. Nenhuma regra do Motor, taxa real ou métrica histórica da varr
 foi alterada. A execução de hipótese criada a partir do pacote ainda depende de
 um servidor com seu SHA fixado; o aceite B6 registra esse limite em
 `docs/testing.md`. Sem push, PR, merge ou deploy.
-
 ## 2026-09-23 — Restrição temática, ferramentas e Responses API, C4 (MOT-94)
 
 **Sintoma.** Os contratos C3 já existiam, mas o chat não tinha provider real,
