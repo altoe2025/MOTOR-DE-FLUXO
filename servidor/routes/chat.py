@@ -59,6 +59,7 @@ async def create_chat(request: Request, _: CurrentUser) -> ChatResponseV1:
     provider = request.app.state.chat_provider if configured.chat_enabled else None
     try:
         return await respond(source, provider=provider,
+                             catalog=request.app.state.product_help_catalog,
                              timeout_seconds=configured.openai_chat_timeout_seconds)
     except Exception as error:
         raise ApiFailure(503, "CHAT_INDISPONIVEL", "O chat está indisponível.") from error

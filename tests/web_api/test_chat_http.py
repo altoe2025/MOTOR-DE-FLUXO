@@ -19,6 +19,7 @@ AUTH = {"Authorization": "Bearer valid-token"}
 @pytest.fixture(autouse=True)
 def no_network(monkeypatch):
     original_connect = socket.socket.connect
+    original_getaddrinfo = socket.getaddrinfo
 
     def local_event_loop_only(sock, address):
         # Windows asyncio creates its wakeup socket pair via loopback.
@@ -28,8 +29,15 @@ def no_network(monkeypatch):
 
     def forbidden(*args, **kwargs):
         raise AssertionError("chat contract tests must never connect to a network")
+
+    def local_dns_only(host, *args, **kwargs):
+        if host not in {"127.0.0.1", "::1", "localhost"}:
+            raise AssertionError("chat tests must never resolve external DNS")
+        return original_getaddrinfo(host, *args, **kwargs)
+
     monkeypatch.setattr(socket.socket, "connect", local_event_loop_only)
     monkeypatch.setattr(socket, "create_connection", forbidden)
+    monkeypatch.setattr(socket, "getaddrinfo", local_dns_only)
 
 
 class FakeProvider:
@@ -53,8 +61,9 @@ class FakeProvider:
         service = import_module("servidor.chat.service")
         if self.answer_data is not None:
             return service.ProviderAnswer.model_construct(**self.answer_data)
-        return service.ProviderAnswer(answer="Economia compara os custos do modelo.",
-                                      citations=[], limitationCodes=[])
+        return service.ProviderAnswer(answer="A importação revisa uma planilha local.",
+                                      citations=[{"kind": "HELP", "id": "page.importacao"}],
+                                      limitationCodes=[])
 
 
 def app(provider=None, enabled=True, timeout=30):
@@ -88,7 +97,8 @@ def test_injected_provider_receives_validated_context_and_returns_correlated_res
     assert response.status_code == 200
     assert response.json() == {
         "apiVersion": "1.0.0", "messageId": "message-1", "classification": "IN_SCOPE",
-        "answer": "Economia compara os custos do modelo.", "citations": [],
+        "answer": "A importação revisa uma planilha local.",
+        "citations": [{"kind": "HELP", "id": "page.importacao"}],
         "contextFingerprint": source["communication"]["contextFingerprint"],
         "limitationCodes": [],
     }
@@ -99,8 +109,8 @@ def test_injected_provider_receives_validated_context_and_returns_correlated_res
     assert "runtime-secret" not in caplog.text + response.text
 
 
-@pytest.mark.parametrize("enabled,provider", [(True, None), (False, FakeProvider())])
-def test_missing_provider_and_disabled_chat_fail_closed(enabled, provider):
+@pytest.mark.parametrize("enabled,provider", [(False, None), (False, FakeProvider())])
+def test_disabled_chat_fails_closed(enabled, provider):
     with TestClient(app(provider, enabled)) as client:
         response = client.post("/api/v1/chat", json=payload(), headers=AUTH)
     assert response.status_code == 503
@@ -124,12 +134,15 @@ def test_failure_timeout_and_invalid_provider_output_are_sanitized(fake, caplog)
 
 
 @pytest.mark.parametrize("classification", ["OUT_OF_SCOPE", "MIXED", "INSUFFICIENT_EVIDENCE"])
-def test_unimplemented_scope_policies_fail_closed_until_c4(classification):
+def test_c4_scope_policies_are_applied_by_server(classification):
     fake = FakeProvider(classification=classification)
     with TestClient(app(fake)) as client:
         response = client.post("/api/v1/chat", json=payload(), headers=AUTH)
-    assert response.status_code == 503
-    assert [call[0] for call in fake.calls] == ["classify"]
+    assert response.status_code == 200
+    assert response.json()["classification"] == classification
+    assert [call[0] for call in fake.calls] == (
+        ["classify", "answer"] if classification == "MIXED" else ["classify"]
+    )
 
 
 @pytest.mark.parametrize("headers", [{}, {"content-length": "1"}])

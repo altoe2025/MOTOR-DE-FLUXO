@@ -1,1 +1,1 @@
-"""Optional chat ports. The real provider and thematic policies belong to C4."""
+"""Optional stateless chat with a closed set of local read-only capabilities."""

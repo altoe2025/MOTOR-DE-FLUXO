@@ -73,6 +73,36 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-23 — Restrição temática, ferramentas e Responses API, C4 (MOT-94)
+
+**Sintoma.** Os contratos C3 já existiam, mas o chat não tinha provider real,
+política para questões externas/mistas ou leitura fundamentada das fontes.
+
+**Causa.** C3 entregou apenas a fronteira HTTP e as portas; classificação,
+allowlist, citações e lifecycle do transporte eram a Task C4 separada.
+
+**O que foi feito.** Na branch local `codex/mot94-c4-responses`, sobre `21541ae`,
+`servidor/chat/` ganhou adaptador HTTP Responses stateless (`store: false`), schemas
+estritos, classificação em duas fases, recusa fixa server-side e seis ferramentas
+de leitura sobre catálogo/snapshot validados. O loop admite quatro funções e duas
+rodadas, correlaciona `call_id`, preserva reasoning e rejeita capacidades/argumentos
+desconhecidos. Citações precisam existir no contexto e, no provider real, terem
+sido lidas por ferramenta nesta pergunta. Erros/refusal/incompletude são
+sanitizados; insuficiência tem mensagem explícita; timeout cobre todo o percurso.
+A factory cria/fecha seu cliente somente com chat habilitado; startup não faz
+requisição. Revisão independente encontrou fatos de seções inacessíveis; a
+regressão de quatro seções foi RED/GREEN e `consultar_premissas` passou a expô-los.
+Gates: 1.030 PASS e 2 SKIP normal e `-O`; Ruff, mypy (54 arquivos), typecheck,
+101 testes web API/chat e scanner de credenciais PASS. Detalhes em
+`docs/frontend/etapa-6c-c4-provider.md` e `docs/testing.md`. Testes usam exclusivamente
+transporte/provider fake, com rede externa e DNS externo bloqueados.
+
+**O que isso invalida.** Substitui a limitação C3 de provider ausente e classificação
+não implementada; não altera contratos HTTP ou números/regras do Motor. C5/C6 não
+foram executadas. Testes fake não atestam qualidade semântica real, validade
+regulatória ou autenticidade do snapshot do navegador. Sem chave real, chamada
+paga, push, PR, merge ou deploy; candidato local preservado para auditoria.
+
 ## 2026-09-23 — Contratos HTTP e configuração do chat, C3 (MOT-94)
 
 **Sintoma.** O shell e o histórico C1+C2 existiam, mas não havia contrato HTTP,

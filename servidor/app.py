@@ -95,9 +95,18 @@ def create_app(
             periodo=fixture.periodo,
             proveniencia=fixture.proveniencia,
         )
+        owned_chat_provider = None
         try:
+            if configured.chat_enabled and chat_provider is None:
+                from servidor.chat.openai_provider import OpenAIChatProvider
+
+                owned_chat_provider = OpenAIChatProvider(configured)
+                app.state.chat_provider = owned_chat_provider
             yield
         finally:
+            if owned_chat_provider is not None:
+                await owned_chat_provider.aclose()
+                app.state.chat_provider = None
             executor.close()
             if owns_verifier and isinstance(configured_verifier, JWKSTokenVerifier):
                 configured_verifier.close()

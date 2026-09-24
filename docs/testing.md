@@ -13,6 +13,50 @@ detalhado na seção **Aceitação integrada da Etapa 5 — MOT-89**. A contagem
 abaixo prevalece para a branch `codex/frontend-etapa-5`; ela também não foi
 publicada ou mergeada.
 
+## Provider Responses e política temática — C4 / MOT-94
+
+Candidato local sobre `21541ae`, branch `codex/mot94-c4-responses`, em 2026-09-23.
+Somente C4, com 83 testes Python adicionais; C5/C6 não implementadas neste recorte.
+Arquitetura, fontes oficiais e limites em
+[`etapa-6c-c4-provider.md`](frontend/etapa-6c-c4-provider.md).
+
+O Python é o virtualenv `.venv-t5` existente, somente usado como runtime;
+`--basetemp=.pytest_cache/c4-*` isola os temporários dentro deste worktree.
+Dependências web vieram do lockfile via cache local (`npm ci --offline --ignore-scripts`).
+
+| Verificação | Resultado |
+|---|---|
+| Baseline C3 chat + configuração | 59 PASS; 23,56 s |
+| TDD política/ferramentas | 34 RED + 4 testes já verdes antes da implementação; 38 PASS depois |
+| TDD provider Responses | 26 RED antes do adaptador; 26 PASS depois |
+| TDD factory/lifecycle | 1 RED sem criação automática; GREEN após integrar lifespan |
+| TDD estado contraditório `IN_SCOPE` + insuficiência | 1 RED; GREEN normalizando resposta server-side |
+| Revisão independente + TDD fatos de seções | 1 achado P2 confirmado; 4 RED/GREEN, sem ampliar allowlist |
+| `python -m pytest -q --basetemp=.pytest_cache/c4-full-normal` | **1.030 PASS, 2 SKIP**; 191,00 s |
+| `python -O -m pytest -q --basetemp=.pytest_cache/c4-full-optimized` | **1.030 PASS, 2 SKIP**; 190,03 s |
+| `python -m ruff check servidor tests/web_api` | PASS |
+| `python -m mypy servidor` | PASS; 54 arquivos |
+| `npm --prefix web run typecheck` | PASS |
+| `npm --prefix web run test:unit -- src/api src/chat --maxWorkers=2` | 101 PASS; 9 arquivos, 50,01 s |
+| `python -m tests.web_api.scan_credentials` | PASS; 570 textos e 32 binários no momento da verificação, sem bundle novo |
+| `git diff --check` | PASS |
+
+Cobertura nova: schemas fechados com campos required; recusa fixa sem `answer`;
+MIXED e insuficiência; resolução de evidências/citações/limitações; seis leituras;
+valores decimais e fonte sintética preservados; escopo por snapshot; `call_id`,
+reasoning, quatro funções/duas rodadas; IDs repetidos; argumentos malformados;
+HTTP/refusal/incompleto/timeout e sanitização de logs/resposta; lifecycle e segredo
+server-side. Nenhum teste usa transporte HTTP externo. Conexões/DNS externos estão
+bloqueados; apenas o loopback usado pelo event loop Windows é permitido.
+
+A matriz adversarial contém clima, política, instruções para ignorar regras,
+base64, troca de idioma, pedidos de web/edição e conteúdo malicioso em evidência e
+histórico. Classificações fake são oráculos de teste: comprovam barreiras e
+protocolo, não acurácia do modelo real nem fidelidade semântica de respostas MIXED.
+Fingerprint e resolução de IDs não autenticam fontes recebidas do navegador.
+Avisos são os preexistentes Starlette/httpx/anyio e o esperado sob `-O`.
+Sem chamada real/paga, chave real, browser C5/C6, push, PR, merge ou deploy.
+
 ## Contratos HTTP e configuração do chat — C3 / MOT-94
 
 Entrega local sobre `f22b70a`, na branch `codex/mot94-c3-chat-contracts`, em

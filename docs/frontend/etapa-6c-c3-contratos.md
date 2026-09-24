@@ -1,5 +1,9 @@
 # Etapa 6C / C3 — contratos e configuração do chat (MOT-94)
 
+**Registro histórico da C3.** A implementação C4 posterior mantém estes contratos
+HTTP e substitui as limitações de provider/política descritas abaixo. Estado vigente
+em [`etapa-6c-c4-provider.md`](etapa-6c-c4-provider.md).
+
 Entrega local sobre `f22b70a`, limitada à C3. A MOT-94 permanece In Progress:
 provider OpenAI, políticas temáticas, ferramentas e validação das referências das
 citações são C4; envio pelo painel é C5. Não há chamada real, recurso pago ou
