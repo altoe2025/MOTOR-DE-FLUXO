@@ -1,26 +1,13 @@
-import Ajv2020 from 'ajv/dist/2020.js';
-import addFormats from 'ajv-formats';
+import { validateSchema } from '../generated/validators/demo.js';
 import Decimal from 'decimal.js';
 
-import httpSchemas from '../api/schemas.json';
 import { validateDiagnosticEnvelope, validateDiagnosticRequest, validateReplayDocument } from '../api/validators';
-import observedCaseSchema from '../cases/observedCase.schema.json';
 import { validateObservedCase } from '../cases/validation';
-import operationalProfileSchema from '../profiles/operationalProfile.schema.json';
 import { validateOperationalProfile } from '../profiles/validation';
-import studySchema from '../study/study.schema.json';
 import { canonical } from '../study/fingerprints';
 import { validateStudyDocument } from '../study/validation';
-import type { DemoPackageValidation, DemoStudyPackageV1 } from './domain';
-import packageSchema from './demoStudyPackage.schema.json';
+import type { DemoPackageValidation } from './domain';
 
-const ajv = new Ajv2020({ allErrors: true, strict: true });
-addFormats(ajv);
-ajv.addSchema(httpSchemas);
-ajv.addSchema(observedCaseSchema);
-ajv.addSchema(operationalProfileSchema);
-ajv.addSchema(studySchema);
-const validateSchema = ajv.compile<DemoStudyPackageV1>(packageSchema);
 const LABELS = [
   'equilibrado', 'retail pesado', 'corporativo pesado',
   'PSP dominante', 'outbound extremo',

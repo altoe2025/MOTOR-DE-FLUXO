@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Annotated, Literal
 from uuid import UUID
@@ -48,6 +49,25 @@ class Settings(BaseSettings):
     def normalize_urls(cls, value: str) -> str:
         if not value.startswith("https://") or value != value.rstrip("/"):
             raise ValueError("URL deve usar https e não terminar com barra")
+        return value
+
+    @field_validator("supabase_url")
+    @classmethod
+    def validate_supabase_origin(cls, value: str) -> str:
+        # A URL pública também entra na CSP: aceite somente uma origem HTTPS,
+        # sem credenciais, paths, curingas ou caracteres de sintaxe do cabeçalho.
+        match = re.fullmatch(r"https://([A-Za-z0-9.-]+)(?::([0-9]{1,5}))?", value)
+        message = "SUPABASE_URL deve ser uma origem HTTPS válida, sem credenciais ou caminho"
+        if match is None:
+            raise ValueError(message)
+        hostname, port = match.groups()
+        if len(hostname) > 253 or any(
+            re.fullmatch(r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?", label) is None
+            for label in hostname.split(".")
+        ):
+            raise ValueError(message)
+        if port is not None and not 1 <= int(port) <= 65535:
+            raise ValueError(message)
         return value
 
     @model_validator(mode="after")

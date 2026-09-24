@@ -1,11 +1,8 @@
-import Ajv2020 from 'ajv/dist/2020.js';
+import { validateShape } from '../generated/validators/communication.js';
 
 import type { CommunicationDocumentV1 } from './domain';
-import schema from './communicationDocument.schema.json';
 import { fingerprintCommunicationDocument } from './evidence';
 
-const ajv = new Ajv2020({ allErrors: true, strict: true });
-const validateShape = ajv.compile<CommunicationDocumentV1>(schema);
 const decimal = /^-?(0|[1-9][0-9]*)(\.[0-9]+)?$/;
 
 /** Rejects calendar overflow as well as non-UTC and malformed RFC3339 strings. */

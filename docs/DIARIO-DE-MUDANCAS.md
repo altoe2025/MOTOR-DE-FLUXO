@@ -144,6 +144,31 @@ feito; a C6 permanece pendente.
 **O que isso invalida.** A afirmação de que o cliente só tem shell passivo do chat
 deixa de valer neste worktree. O aceite em browser, a privacidade adversarial da C6
 e o comportamento de um provider real não foram validados por esta entrega.
+## 2026-09-24 — Contêiner único e CSP estrita do piloto (MOT-98)
+
+**Sintoma.** A base local `0fd484e` ainda não possuía empacotamento Vite/FastAPI,
+entrypoint configurável para a porta da hospedagem ou política de segurança do
+browser. Headers estritos revelaram compilação dinâmica Ajv antes do login.
+
+**Causa.** O entrypoint fixava loopback/8000; dependências só tinham lock de dev.
+Os validadores do frontend chamavam `ajv.compile` no browser, incompatível com
+`script-src 'self'`. A primeira allowlist Docker também omitia `motor/analise`.
+
+**O que foi feito.** Na worktree isolada `codex/mot98-container-render`, D4 inclui
+entrypoint puro, headers/CSP, locks com hashes, Docker multi-stage sem root,
+contexto por allowlist e smoke sintético read-only com limpeza restrita. A revisão
+ganhou regressões para importação a partir do contexto e login Chromium sob os
+headers reais. Os validadores Ajv passam a ser gerados antes do runtime, com
+schemas e APIs preservados; não se libera `unsafe-eval`. Configuração C3/C4 e
+autenticação são mantidas, sem chamadas pagas. Detalhes e evidências em
+`docs/testing.md`; plano D4/D5 executado sem MOT-96/MOT-97.
+
+**O que isso invalida.** Invalida considerar o frontend compatível com CSP estrita
+apenas pelos testes HTTP. Não altera simulação, métricas ou premissas. Docker
+Desktop está bloqueado por erro local de `sailor-ingest.sock`: o build real falhou
+por pipe `dockerDesktopLinuxEngine` ausente; smoke da imagem é NOT_RUN. Gates
+locais independentes não representam aceite da imagem nem publicação. MOT-98
+permanece In Progress; sem deploy, push ou PR.
 
 ## 2026-09-23 — Reconciliação das expectativas E2E após B5/B6 (MOT-92)
 
