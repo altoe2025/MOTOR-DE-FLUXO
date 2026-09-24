@@ -84,8 +84,10 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
    cenário persista um snapshot próprio das premissas.
 3. **O que foi feito.** Gabriel aprovou o design que torna
    `finalidade_codigo` opcional e não bloqueante. Foi registrada a especificação
-   `docs/superpowers/specs/2026-09-24-finalidade-opcional-importacao-design.md`.
-   Código e contratos ainda não foram alterados neste commit.
+   `docs/superpowers/specs/2026-09-24-finalidade-opcional-importacao-design.md` e
+   o plano TDD/paralelizável
+   `docs/superpowers/plans/2026-09-24-finalidade-opcional-importacao-plano.md`.
+   Código e contratos ainda não foram alterados nesses commits.
 4. **O que isso invalida.** Após a futura implementação, deixam de valer o gate
    por `status=NAO_CONFIGURADO`, a exigência de par finalidade/direção para toda
    ordem importada e o bloqueio correspondente no aceite local da Etapa 6. Até
