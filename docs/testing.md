@@ -1,5 +1,16 @@
 # Testes
 
+## Perfil da validação — MOT-97 (2026-09-24)
+
+O experimento de worker de sessão foi revertido porque duas séries de 20 amostras
+excederam o p95 de abertura de 1.500 ms (1.968 e 2.629 ms), apesar de zero long
+tasks >200 ms; três séries anteriores tinham passado. Permanecem as marcas das
+fases de leitura persistida e builder e sua coleta no teste de desempenho. Ver
+[`etapa-6-acessibilidade-desempenho.md`](frontend/etapa-6-acessibilidade-desempenho.md).
+Não há aceite novo de desempenho nesta branch.
+No estado revertido, `typecheck`, `lint` e 43 testes focados nas duas fronteiras
+passaram; o gate de 20 amostras falhou com 20 long tasks >200 ms.
+
 ## Acessibilidade, regressão visual e desempenho — D3 / MOT-97 (2026-09-24)
 
 Gates novos em `web/e2e/stage6-{accessibility,visual,performance}.spec.ts` e

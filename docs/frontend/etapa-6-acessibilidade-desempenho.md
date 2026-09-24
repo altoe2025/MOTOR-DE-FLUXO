@@ -1,5 +1,48 @@
 # Etapa 6D / MOT-97 — acessibilidade, visual e desempenho
 
+## Perfil e experimento de validação (2026-09-24)
+
+O perfil de fases isolou duas validações completas de `StudyDocument` no fluxo
+medido: a leitura persistida e o builder do Documento de Comunicação. Antes da
+mudança, duas séries de 20 amostras registraram respectivamente 1 e 3 long tasks
+de abertura acima de 200 ms (204 ms e 210–223 ms). A validação persistida levou
+70–137 ms por chamada e a validação no builder 70–138 ms. Esses tempos podiam
+somar-se ao restante da abertura no main thread.
+
+O experimento executou o mesmo `validateStudyDocument` num worker, sem afrouxar
+invariantes. Um worker novo por validação zerou as long tasks numa série de 20,
+mas elevou a abertura p95 a **1.682 ms**, acima do limite de 1.500 ms. Um segundo
+experimento reutilizou um worker pré-aquecido por sessão autenticada. O protocolo
+devolvia apenas `{ok,issues}`, com snapshot anterior ao primeiro `await`, IDs
+internos, cancelamento, descarte de resposta tardia e falha fechada. Testes de
+equivalência e ciclo de vida passaram; o E2E de apresentação também passou após
+impedir que IDs internos consumissem o UUID do diagnóstico.
+
+| Série de 20, worker de sessão | Abertura p95 | Long tasks >200 ms | Gate |
+|---|---:|---:|---|
+| 1 | 1.239 ms | 0 | PASS |
+| 2 | 1.236 ms | 0 | PASS |
+| 3 | 1.208 ms | 0 | PASS |
+| 4 | 1.968 ms | 0 | FAIL |
+| 5, repetição sem gates concorrentes | 2.629 ms | 0 | FAIL |
+
+Na série 3, startup do worker até READY teve p95 de 167 ms, snapshot de entrada
+14,7 ms e `postMessage` 5,9 ms. Na série 4, as três fases subiram junto com a
+abertura; a série 5 confirmou que não era só concorrência dos gates. O worker
+retirou trabalho pesado da main thread, mas **não estabilizou** o orçamento de
+abertura. Conforme o critério de parada da MOT-97, a implementação do worker
+foi revertida integralmente. Esta branch conserva apenas marcas de fase e coleta
+de profiling; a validação segue no main thread, com os mesmos invariantes.
+
+Após a reversão, uma nova série de 20 amostras registrou abertura p95 de
+1.139 ms, mas **20 long tasks >200 ms** (gate FAIL); validação do builder p95
+146,7 ms e da leitura persistida p95 153,1 ms. O perfil permanece útil para
+investigar a variabilidade, mas não constitui correção.
+
+Não há aceite de desempenho para a estabilização. Os resultados são locais ao
+Chromium Windows e à fixture de 12 participantes; Linux/CI, outros dispositivos
+e revisão humana com leitor de tela permanecem pendentes.
+
 Estado local em 2026-09-24: os gates automatizados foram implementados no worktree
 `codex/mot97-stage6-quality`. O aceite visual **Linux/CI ainda não foi executado**:
 as sete baselines revisadas aqui são específicas de Chromium no Windows. Não há

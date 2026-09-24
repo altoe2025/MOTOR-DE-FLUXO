@@ -348,11 +348,15 @@ export async function validateStoredStudy(
   value: unknown,
   ownerSub: string,
 ): Promise<StudyDocument> {
+  performance.clearMarks('mot97:stored-study:start');
+  performance.mark('mot97:stored-study:start');
   if (isRecord(value) && typeof value.schemaVersion === 'string'
     && value.schemaVersion !== '3.0.0') {
     throw new SchemaUnsupportedError(`StudyDocument ${value.schemaVersion} não suportado.`);
   }
   const validation = await validateStudyDocument(value, ownerSub);
+  performance.clearMarks('mot97:stored-study:validated');
+  performance.mark('mot97:stored-study:validated');
   if (!validation.ok) {
     throw new DocumentCorruptError(
       `StudyDocument persistido inválido: ${validation.issues.map((issue) => issue.code).join(', ')}.`,

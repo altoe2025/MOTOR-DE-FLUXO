@@ -63,6 +63,9 @@ test('20 warm samples stay inside presentation and interaction budgets', async (
   const openingMs: number[] = [];
   const sectionMs: number[] = [];
   const documentMs: number[] = [];
+  const phaseMs: Record<string, number[]> = {
+    snapshot: [], studyValidation: [], projection: [], documentValidation: [], storedStudyValidation: [],
+  };
   let maxCls = 0;
   let longTasksOver200 = 0;
   const longTaskDurations: number[] = [];
@@ -94,6 +97,24 @@ test('20 warm samples stay inside presentation and interaction budgets', async (
       return { duration: ended - started, started, ended };
     }, { studyId: study.id, scenarioId: scenario.id, diagnosticExecutionId: diagnostic.id, replayDay: null });
     documentMs.push(generated.duration);
+    const phases = await page.evaluate(() => {
+      const latest = (name: string) => performance.getEntriesByName(`mot97:${name}`, 'mark').at(-1)?.startTime;
+      const difference = (start: string, end: string) => {
+        const from = latest(start);
+        const to = latest(end);
+        return from === undefined || to === undefined ? null : to - from;
+      };
+      return {
+        snapshot: difference('communication:start', 'communication:snapshot'),
+        studyValidation: difference('communication:snapshot', 'communication:study-validated'),
+        projection: difference('communication:study-validated', 'communication:projected'),
+        documentValidation: difference('communication:projected', 'communication:validated'),
+        storedStudyValidation: difference('stored-study:start', 'stored-study:validated'),
+      };
+    });
+    for (const [name, duration] of Object.entries(phases)) {
+      if (duration !== null) phaseMs[name]!.push(duration);
+    }
     await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
     const interactionTasks = await page.evaluate(({ section, generated }) => window.__stage6Vitals!.longTasks
       .filter((task) => task.duration > 200)
@@ -114,6 +135,7 @@ test('20 warm samples stay inside presentation and interaction budgets', async (
     opening_ms: openingMs,
     section_ms: sectionMs,
     document_ms: documentMs,
+    phase_ms: phaseMs,
     long_tasks_over_200_ms: longTasksOver200,
     long_task_durations_ms: longTaskDurations,
     long_task_phases: longTaskPhases,

@@ -67,11 +67,38 @@ Atualizada em 2026-09-23, durante o planejamento da Etapa 6.
 | `codex/fix-reconciliacao-decimal` | correção da aritmética exata dos mecanismos da análise, pronta para merge na `main` | Codex |
 | `codex/frontend-etapa-5` | MOT-86–MOT-89 concluídas e aceitas localmente; Replay Fronteira Viva funcional até o limite efetivo medido; sem push/PR/merge/deploy | Codex |
 | `codex/frontend-etapa-6-planejamento` | Etapas 6A/6B e D1/D2 da MOT-96 concluídas localmente; 6C tem aceite local separado; sem push, PR, merge ou deploy | Codex |
+| `codex/mot97-validation-worker` | profiling MOT-97; experimento de worker revertido por orçamento instável; sem push, PR, merge ou deploy | Codex |
 
 Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+## 2026-09-24 — Perfil de validação e worker revertido (MOT-97, D3)
+
+**Sintoma.** O gate de 20 amostras oscilava entre zero e long tasks de abertura
+acima de 200 ms, apesar dos pontos de cedência adicionados ao builder.
+
+**Causa.** A leitura persistida e o builder executam o validador completo de
+`StudyDocument` no main thread. No perfil local, cada validação levou 70–138 ms;
+as fases podem somar-se ao trabalho de abertura.
+
+**O que foi feito.** Na branch local `codex/mot97-validation-worker`, foram
+adicionadas marcas de fase e coleta no gate de desempenho. Um worker novo por
+pedido eliminou as long tasks, mas elevou a abertura p95 a 1.682 ms. Um worker
+pré-aquecido por sessão passou três séries de 20 amostras (p95 1.239, 1.236 e
+1.208 ms, zero long tasks), porém falhou em duas séries seguintes (p95 1.968 e
+2.629 ms, zero long tasks). Conforme o critério de parada, **todo o worker e a
+integração foram revertidos**. Resta apenas profiling, sem alteração da validação
+funcional. No estado revertido, novo gate registrou abertura p95 1.139 ms e
+20 long tasks >200 ms; typecheck, lint e 43 testes focados passaram. Detalhes em
+`docs/frontend/etapa-6-acessibilidade-desempenho.md`.
+Sem push, PR, merge, deploy ou alteração de Linear.
+
+**O que isso invalida.** Três séries verdes não demonstram estabilização neste
+runner Windows. O aceite de desempenho para o experimento não foi obtido;
+baselines Linux/CI e leitor de tela humano continuam pendentes. Nenhuma métrica
+financeira muda.
 
 ## 2026-09-24 — Escape local no chat não modal (MOT-97, revisão D3)
 

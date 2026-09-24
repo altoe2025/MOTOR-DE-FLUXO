@@ -168,10 +168,16 @@ function checkComparison(input: CommunicationInput, selected: DiagnosticExecutio
 
 /** Pure projection: async only for validation/hashing; no I/O or financial arithmetic. */
 export async function buildCommunicationDocument(input: CommunicationInput): Promise<CommunicationDocumentV1> {
+  performance.clearMarks('mot97:communication:start');
+  performance.mark('mot97:communication:start');
   input = structuredClone(input); // Detach before the first await.
+  performance.clearMarks('mot97:communication:snapshot');
+  performance.mark('mot97:communication:snapshot');
   // Give paint and input a task boundary between independent validation stages.
   await new Promise<void>((resolve) => setTimeout(resolve, 0));
   await assertValidStudy(input.study);
+  performance.clearMarks('mot97:communication:study-validated');
+  performance.mark('mot97:communication:study-validated');
   await new Promise<void>((resolve) => setTimeout(resolve, 0));
   const execution = diagnostic(input.study, input.diagnosticExecutionId);
   requireCondition(execution.scenarioId === input.scenarioId, 'Cenário diverge da execução selecionada.');
@@ -289,7 +295,11 @@ export async function buildCommunicationDocument(input: CommunicationInput): Pro
     study: { id: input.study.id, name: input.study.name, revision: input.study.revision }, selection, source,
     executiveMetrics, composition, mechanism, economics, robustness, comparison, replaySnapshot, assumptions, provenance, limitations, versions, evidenceIndex };
   const document = { ...projection, contextFingerprint: await fingerprintCommunicationDocument(projection) };
+  performance.clearMarks('mot97:communication:projected');
+  performance.mark('mot97:communication:projected');
   await new Promise<void>((resolve) => setTimeout(resolve, 0));
   await assertValidCommunicationDocument(document);
+  performance.clearMarks('mot97:communication:validated');
+  performance.mark('mot97:communication:validated');
   return deepFreeze(document);
 }
