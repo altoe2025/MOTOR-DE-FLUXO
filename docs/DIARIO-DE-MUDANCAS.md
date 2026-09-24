@@ -74,6 +74,22 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-24 — Estudos excluídos deixam a lista principal (MOT-99)
+
+**Sintoma.** Depois de excluir um estudo, a tela principal de Estudos continuava
+mostrando o cartão com os rótulos “Na lixeira” e “Restaurar”.
+
+**Causa.** A lista principal renderizava indiscriminadamente todos os documentos
+recebidos do repositório, inclusive os que tinham `deletedAt` preenchido.
+
+**O que foi feito.** `StudyList` passou a renderizar e a calcular o estado vazio
+somente com estudos ativos. Um teste RED/GREEN cobre uma lista mista e garante que
+o estudo excluído e sua ação de restauração não aparecem na tela principal. A
+exclusão continua sendo lógica no armazenamento; nenhum dado foi apagado.
+
+**O que isso invalida.** Apenas a apresentação anterior que misturava lixeira e
+estudos ativos. Estudos excluídos permanecem preservados localmente.
+
 ## 2026-09-24 — Testes de restore e contexto diagnóstico estáveis (MOT-97, revisão D3)
 
 **Sintoma.** Após integração local, a suíte web falhou em três testes: status
@@ -97,7 +113,6 @@ Não houve mudança de runtime, push, PR ou deploy.
 **O que isso invalida.** O status `SAVED` observado não demonstrava uma regressão
 do certificado/yield: era o autosave legítimo avançando enquanto o teste
 aguardava. Nenhuma medição de desempenho ou regra de validação muda.
-
 ## 2026-09-24 — Endurecimento do certificado efêmero (MOT-97, revisão D3)
 
 **Sintoma.** Uma leitura de `WeakMap.get` confundia ausência de entrada com
