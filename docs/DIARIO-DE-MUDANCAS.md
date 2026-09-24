@@ -73,6 +73,27 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-24 — Núcleo isolado do Painel A (MOT-96, D1 parcial)
+
+**Sintoma.** O Documento de Comunicação V1 já era produzido, mas ainda não havia
+componentes próprios para uma leitura executiva contínua.
+
+**Causa.** A apresentação da Etapa 6D não tinha um consumidor visual isolado do
+contrato de comunicação.
+
+**O que foi feito.** Na branch local `codex/frontend-etapa-6-planejamento`, foram
+adicionados domínio, formatter de métricas, página não roteada, cabeçalho, seis
+seções e testes sob `web/src/presentation/`. Cada métrica mantém as referências e
+IDs de fonte do documento; seleção divergente e referência ausente não exibem
+valores reaproveitados. A revisão preservou motivo e fonte dentro da definição
+semântica e alinhou dias fracionários ao formato decimal canônico. A integração de
+rota, shell, estilos, servidor, impressão e PDF fica para as próximas partes da
+MOT-96. Não houve push, PR, merge ou deploy.
+
+**O que isso invalida.** Nada na aplicação roteada ou nas medições existentes. A
+MOT-96 continua em andamento; este commit não constitui aceite de deep link,
+fidelidade de PDF ou visual A4.
+
 ## 2026-09-23 — Contrato HTTP e CAS inicial do chat, C5 (MOT-95)
 
 **Sintoma.** Comparação falhava na validação local antes do fetch; um conflito de revisão antes de gravar PENDING deixava a UI com snapshot antigo.
