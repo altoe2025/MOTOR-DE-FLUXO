@@ -73,6 +73,36 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-23 — Gate B6 de demonstração e comunicação (MOT-92)
+
+**Sintoma.** B1–B5 tinham testes por camada, mas faltava prova de primeiro acesso,
+restauração com Estudo importado presente e igualdade da projeção de comunicação
+com Diagnóstico/Replay. A tentativa de comparar dois mixes prontos mostrou
+incompatibilidade de seeds e entradas; a de executar hipótese nova revelou
+dependência do SHA do pacote e dois erros de agregação em sementes testadas.
+
+**Causa.** O pacote demo fixa o SHA de motor usado ao gerá-lo. O servidor E2E
+usava sempre o HEAD atual; os cinco mixes são realizações independentes, enquanto
+a comparação exige seeds pareadas e proveniência de mudanças. O teste integrado
+e as condições de versão ainda não estavam explícitos.
+
+**O que foi feito.** O E2E B6 percorre instalação, reload, remoção/restauração,
+XLSX real até Estudo com bloqueio `NAO_CONFIGURADO`, cinco cenários, repetição,
+Replay, hipótese guiada, comparação incompatível coerente com a regra e catálogo
+de ajuda. Extrai o `CommunicationDocumentV1` persistido e confere métricas,
+rótulos, fingerprints e evidências. O runner aceita SHA, porta e saída isolados;
+`docs/testing.md` registra comandos, 4/4 E2E, 879/879 web, 888/888 Python
+(2 skips), lint, typecheck, build, Ruff e mypy. Nenhum catálogo fictício entrou
+na execução importada. Sem push, PR, merge ou deploy.
+
+**O que isso invalida.** A afirmação de que os cinco mixes prontos podem ser
+comparados numericamente entre si não procede no contrato vigente; a projeção
+omite comparação incompatível e a tela explica a causa. O gate B6 não prova
+diagnóstico de hipótese nova: além da exigência de SHA, duas tentativas com
+entradas geradas falharam em invariantes do Motor/diagnóstico, registradas em
+`docs/testing.md`. Esses limites pedem decisão e trabalho próprios antes de
+declarar aceite completo dessa parte. Nenhuma regra financeira foi alterada.
+
 ## 2026-09-23 — Perfis demonstrativos reutilizáveis e restauração visível (MOT-91)
 
 **Sintoma.** O aceite B6 reproduziu dois bloqueios: os 12 Perfis do pacote

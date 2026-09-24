@@ -47,6 +47,14 @@ continua `NAO_CONFIGURADO`. Scanner XLSX em
 `tests/web_api/scan_credentials.py`, regressões em `test_import_acceptance.py`.
 O limite de 1.000 linhas importadas não substitui o orçamento do Replay da Etapa 5.
 
+Etapa 6B B6 local: aceite reproduzível em
+`web/e2e/stage6-demo-communication.spec.ts`, projeção de comunicação testável
+em `web/src/e2eBridge.ts`, instalação/restauração em `web/src/pages/StudiesPage.tsx`
+e pacote sintético em `servidor/demo/generate_package.py`/
+`web/src/demo/generated/demo-study.v1.json`. Comandos, evidências e limites
+de versão/comparação estão em `docs/testing.md`, seção "Aceitação local da
+Etapa 6B". O teste preserva o bloqueio `NAO_CONFIGURADO` para Estudo importado.
+
 | Pergunta | Arquivo |
 |---|---|
 | Regras do repo, restrições, o que não mexer | `AGENTS.md` |

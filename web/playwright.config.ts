@@ -1,6 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const localBaseUrl = 'http://127.0.0.1:8021';
+const localPort = process.env.MOT_E2E_PORT ?? '8021';
+const localBaseUrl = `http://127.0.0.1:${localPort}`;
 const realBaseUrl = process.env.MOT_REAL_AUTH_BASE_URL;
 const runLocalServer = process.env.MOT_REAL_AUTH_ONLY !== '1';
 const localPython = process.env.MOT_E2E_PYTHON ?? (process.env.CI === 'true'
@@ -12,6 +13,7 @@ const localPythonCommand = localPython.includes(' ') ? `"${localPython}"` : loca
 
 export default defineConfig({
   testDir: './e2e',
+  outputDir: process.env.MOT_E2E_OUTPUT_DIR ?? 'test-results',
   fullyParallel: false,
   retries: 0,
   workers: 1,
@@ -23,7 +25,7 @@ export default defineConfig({
   projects: [
     {
       name: 'local',
-      testMatch: /(?:foundation|study-.*|company-profiles|diagnostic-jobs|stage2-regression|stage4-(?:mvp|evolution-b)|stage5-replay|import-observed-case)\.spec\.ts/,
+      testMatch: /(?:foundation|study-.*|company-profiles|diagnostic-jobs|stage2-regression|stage4-(?:mvp|evolution-b)|stage5-replay|import-observed-case|stage6-demo-communication)\.spec\.ts/,
       use: { ...devices['Desktop Chrome'] },
     },
     {

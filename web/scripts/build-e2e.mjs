@@ -4,7 +4,7 @@ import { dirname, resolve } from 'node:path';
 
 const webRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const repositoryRoot = resolve(webRoot, '..');
-const buildSha = execFileSync('git', ['rev-parse', 'HEAD'], {
+const buildSha = process.env.MOT_E2E_BUILD_SHA ?? execFileSync('git', ['rev-parse', 'HEAD'], {
   cwd: repositoryRoot,
   encoding: 'utf8',
 }).trim();

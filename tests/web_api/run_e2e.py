@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 from collections import deque
 from concurrent.futures import Future
@@ -140,7 +141,7 @@ def build_e2e_app(
         supabase_url="https://e2e.invalid",
         supabase_jwt_issuer="https://e2e.invalid/auth/v1",
         supabase_allowed_user_ids=frozenset({CONTROLLED_USER_ID, CONTROLLED_USER_ID_B}),
-        motor_build_sha=_head_sha(),
+        motor_build_sha=os.environ.get("MOT_E2E_BUILD_SHA") or _head_sha(),
         web_dist_dir=ROOT / "web" / "dist",
         diagnostic_max_workers=diagnostic_max_workers,
     )
@@ -186,7 +187,9 @@ def build_e2e_app(
 
 def main() -> None:
     app = build_e2e_app()
-    config = uvicorn.Config(app, host="127.0.0.1", port=8021, access_log=False)
+    config = uvicorn.Config(
+        app, host="127.0.0.1", port=int(os.environ.get("MOT_E2E_PORT", "8021")), access_log=False
+    )
     server = uvicorn.Server(config)
 
     @app.post("/__e2e__/shutdown", include_in_schema=False)
