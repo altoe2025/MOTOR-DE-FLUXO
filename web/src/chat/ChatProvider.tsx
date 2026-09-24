@@ -42,7 +42,7 @@ type ChatState = Readonly<{
   send(question: string, retryAssistantId?: string): Promise<void>;
   cancel(): void;
   askAbout(helpId: HelpId, metricId?: string, contextKind?: 'REPLAY' | 'REPETITION' | 'LIMITATIONS' | 'COMPARISON'): void;
-  publishCommunication(input: CommunicationInput | null): void;
+  publishCommunication(input: CommunicationInput | null, validatedDocument?: CommunicationDocumentV1): void;
   setHelpId(helpId: string | null): void;
   setReplayDay(day: number | null): void;
   setDiagnosticExecutionId(id: string | null): void;
@@ -262,11 +262,18 @@ export function ChatProvider({ ownerSub, repository, client, catalog = null, chi
     comparisonExecutionId: current.routeKey === routeKey ? current.comparisonExecutionId : undefined,
     scenarioId: id,
   })), [routeKey]);
-  const publishCommunication = useCallback((input: CommunicationInput | null) => {
+  const publishCommunication = useCallback((input: CommunicationInput | null, validatedDocument?: CommunicationDocumentV1) => {
     const token = ++publicationToken.current;
     setPublication(null);
     if (input === null) return;
     const selectedRoute = routeKey;
+    if (validatedDocument !== undefined) {
+      if (validatedDocument.study.id !== input.study.id
+        || validatedDocument.selection.scenarioId !== input.scenarioId
+        || validatedDocument.selection.diagnosticExecutionId !== input.diagnosticExecutionId) return;
+      if (routeKeyRef.current === selectedRoute) setPublication({ routeKey: selectedRoute, document: validatedDocument });
+      return;
+    }
     void buildCommunicationDocument(input).then((document) => {
       if (publicationToken.current !== token || routeKeyRef.current !== selectedRoute) return;
       setPublication({ routeKey: selectedRoute, document });

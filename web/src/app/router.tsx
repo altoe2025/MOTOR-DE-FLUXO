@@ -3,19 +3,20 @@ import { Navigate, Route, Routes, useParams } from 'react-router-dom';
 
 import { useAuth } from '../auth/AuthProvider';
 import { CallbackPage, LoginPage, PasswordPage } from '../auth/AuthPages';
-import { CompaniesPage } from '../companies/CompaniesPage';
-import { CompanyCasesPage } from '../companies/CompanyCasesPage';
-import { CompanyPage } from '../companies/CompanyPage';
-import { CompanyProfilesPage } from '../companies/CompanyProfilesPage';
-import { ImportFlowPage } from '../importer/components/ImportFlowPage';
-import { CompanyStudiesPage } from '../companies/CompanyStudiesPage';
-import { PortfolioPage } from '../pages/PortfolioPage';
-import { PreviewPage } from '../pages/PreviewPage';
-import { StudiesPage } from '../pages/StudiesPage';
-import { StudyPortfolioPage } from '../pages/StudyPortfolioPage';
-import { StudyComparisonPage } from '../pages/StudyComparisonPage';
 import { EmptyState } from '../ui/EmptyState';
-import { AppShell } from './AppShell';
+
+const AppShell = lazy(async () => ({ default: (await import('./AppShell')).AppShell }));
+const CompaniesPage = lazy(async () => ({ default: (await import('../companies/CompaniesPage')).CompaniesPage }));
+const CompanyCasesPage = lazy(async () => ({ default: (await import('../companies/CompanyCasesPage')).CompanyCasesPage }));
+const CompanyPage = lazy(async () => ({ default: (await import('../companies/CompanyPage')).CompanyPage }));
+const CompanyProfilesPage = lazy(async () => ({ default: (await import('../companies/CompanyProfilesPage')).CompanyProfilesPage }));
+const ImportFlowPage = lazy(async () => ({ default: (await import('../importer/components/ImportFlowPage')).ImportFlowPage }));
+const CompanyStudiesPage = lazy(async () => ({ default: (await import('../companies/CompanyStudiesPage')).CompanyStudiesPage }));
+const PortfolioPage = lazy(async () => ({ default: (await import('../pages/PortfolioPage')).PortfolioPage }));
+const PreviewPage = lazy(async () => ({ default: (await import('../pages/PreviewPage')).PreviewPage }));
+const StudiesPage = lazy(async () => ({ default: (await import('../pages/StudiesPage')).StudiesPage }));
+const StudyPortfolioPage = lazy(async () => ({ default: (await import('../pages/StudyPortfolioPage')).StudyPortfolioPage }));
+const StudyComparisonPage = lazy(async () => ({ default: (await import('../pages/StudyComparisonPage')).StudyComparisonPage }));
 
 const StudyDiagnosticPage = lazy(async () => {
   const module = await import('../pages/StudyDiagnosticPage');
@@ -65,7 +66,7 @@ function ProtectedShell() {
   const { status } = useAuth();
   if (status === 'loading') return <p className="session-loading" role="status">Verificando sessão…</p>;
   if (status !== 'authenticated') return <Navigate to="/login" replace state={{ expired: status === 'expired' }} />;
-  return <AppShell />;
+  return <Suspense fallback={<p className="session-loading" role="status">Carregando área protegida…</p>}><AppShell /></Suspense>;
 }
 
 function LegacyStudyRedirect() {

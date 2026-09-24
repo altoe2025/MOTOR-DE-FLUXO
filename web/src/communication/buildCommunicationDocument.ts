@@ -169,7 +169,10 @@ function checkComparison(input: CommunicationInput, selected: DiagnosticExecutio
 /** Pure projection: async only for validation/hashing; no I/O or financial arithmetic. */
 export async function buildCommunicationDocument(input: CommunicationInput): Promise<CommunicationDocumentV1> {
   input = structuredClone(input); // Detach before the first await.
+  // Give paint and input a task boundary between independent validation stages.
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
   await assertValidStudy(input.study);
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
   const execution = diagnostic(input.study, input.diagnosticExecutionId);
   requireCondition(execution.scenarioId === input.scenarioId, 'Cenário diverge da execução selecionada.');
   const envelope = execution.envelope;
@@ -286,6 +289,7 @@ export async function buildCommunicationDocument(input: CommunicationInput): Pro
     study: { id: input.study.id, name: input.study.name, revision: input.study.revision }, selection, source,
     executiveMetrics, composition, mechanism, economics, robustness, comparison, replaySnapshot, assumptions, provenance, limitations, versions, evidenceIndex };
   const document = { ...projection, contextFingerprint: await fingerprintCommunicationDocument(projection) };
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
   await assertValidCommunicationDocument(document);
   return deepFreeze(document);
 }

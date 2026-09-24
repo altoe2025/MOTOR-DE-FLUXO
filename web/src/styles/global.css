@@ -96,7 +96,7 @@ a { color: inherit; }
 .save-status { color: var(--muted); font-size: 0.875rem; margin: 0; }
 .session-loading { padding: var(--space-8); }
 .presentation-return { margin-bottom: var(--space-4); }
-.presentation-return a, .diagnostic-present-link { color: var(--accent); font-weight: 650; }
+.presentation-return a, .diagnostic-present-link { align-items: center; color: var(--accent); display: inline-flex; font-weight: 650; min-height: 32px; }
 .presentation-page { color: var(--ink); margin: 0 auto; max-width: 980px; min-width: 0; }
 .presentation-page > section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); margin: var(--space-6) 0; padding: clamp(20px, 3vw, 36px); scroll-margin-top: 24px; }
 .presentation-page h1, .presentation-page h2 { font-family: var(--font-heading); line-height: 1.12; }

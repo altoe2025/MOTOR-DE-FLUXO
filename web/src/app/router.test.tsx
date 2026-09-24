@@ -164,7 +164,7 @@ describe('application routes', () => {
     const input = await observedInput();
     renderAppAt(`/estudos/${input.study.id}/apresentacao?cenario=${input.scenarioId}&execucao=${input.diagnosticExecutionId}#premissas`,
       client(session(input.study.ownerSub)), new RepositoryDouble([], [], [], [input.study]));
-    expect(await screen.findByRole('heading', { level: 1, name: input.study.name })).toBeVisible();
+    expect(await screen.findByRole('heading', { level: 1, name: input.study.name }, { timeout: 5_000 })).toBeVisible();
     expect(screen.getAllByRole('main')).toHaveLength(1);
     expect(screen.getByRole('region', { name: 'Premissas e proveniência' })).toHaveAttribute('id', 'premissas');
     expect(screen.getByRole('link', { name: 'Voltar ao diagnóstico' })).toHaveAttribute('href',
@@ -173,7 +173,7 @@ describe('application routes', () => {
     expect(within(screen.getByRole('navigation', { name: 'Navegação principal' }))
       .getByRole('link', { name: 'Apresentar' })).toHaveAttribute('href',
       `/estudos/${input.study.id}/apresentacao?cenario=${input.scenarioId}&execucao=${input.diagnosticExecutionId}`);
-  });
+  }, 15_000);
 
   it('não substitui seleção inválida por outra execução', async () => {
     const input = await observedInput();
@@ -188,12 +188,12 @@ describe('application routes', () => {
     const hypothesis = input.study.executions.find((item) => item.id === input.comparisonExecutionId)!;
     renderAppAt(`/estudos/${input.study.id}/apresentacao?cenario=${hypothesis.scenarioId}&execucao=${hypothesis.id}&comparacao=${input.diagnosticExecutionId}`,
       client(session(input.study.ownerSub)), new RepositoryDouble([], [], [], [input.study]));
-    expect(await screen.findByRole('heading', { level: 1, name: input.study.name })).toBeVisible();
+    expect(await screen.findByRole('heading', { level: 1, name: input.study.name }, { timeout: 5_000 })).toBeVisible();
     expect(screen.getByRole('region', { name: 'Consequência econômica e comparação' }))
       .not.toHaveTextContent('Nenhuma comparação selecionada');
     expect(screen.getByRole('region', { name: 'Consequência econômica e comparação' }))
       .toHaveTextContent('base');
-  });
+  }, 15_000);
 
   it('recusa comparação inválida na URL sem publicar resultado simples', async () => {
     const input = await observedInput();

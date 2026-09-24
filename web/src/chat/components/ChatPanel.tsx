@@ -10,6 +10,16 @@ export function ChatPanel() {
   const heading = useRef<HTMLHeadingElement>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   useEffect(() => { if (chat.open && chat.focusComposerToken === 0) heading.current?.focus(); }, [chat.open, chat.focusComposerToken]);
+  useEffect(() => {
+    if (!chat.open) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      chat.hide();
+      opener.current?.focus();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [chat]);
   if (chat.routeContext === null) return null;
   function close() { setDeleteId(null); chat.hide(); opener.current?.focus(); }
   return <>

@@ -82,7 +82,7 @@ export function PresentationRoute() {
       if (!active) return;
       setState({ identity, kind: 'ready', document,
         scenarioName: study!.scenarios.find((item) => item.id === scenarioId)!.name });
-      publishCommunication?.(input);
+      publishCommunication?.(input, document);
     }).catch(() => {
       if (active) setState({ identity, kind: 'error', message: 'Não foi possível abrir o documento de comunicação.' });
     });
