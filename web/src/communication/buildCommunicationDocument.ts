@@ -1,6 +1,7 @@
 import { validateReplayDocument } from '../api/validators';
 import { compareCompositionInputs, hasCanonicalComparisonMetricIdentity, mvpDiagnosticIncompatibility, type MvpComparison } from '../hypotheses/comparison';
 import { deepFreeze, PROFILE_MVP_EXAMPLE_ID } from '../study/domain';
+import { isCertifiedStudy } from '../study/certifiedStudy';
 import { canonical } from '../study/fingerprints';
 import type { DiagnosticEnvelope, DiagnosticExecutionRecord, StudyDocument } from '../study/model';
 import { assertValidStudy } from '../study/validation';
@@ -170,12 +171,14 @@ function checkComparison(input: CommunicationInput, selected: DiagnosticExecutio
 export async function buildCommunicationDocument(input: CommunicationInput): Promise<CommunicationDocumentV1> {
   performance.clearMarks('mot97:communication:start');
   performance.mark('mot97:communication:start');
-  input = structuredClone(input); // Detach before the first await.
+  const { study, ...otherInput } = input;
+  const certified = isCertifiedStudy(study, study.ownerSub);
+  input = { ...structuredClone(otherInput), study: certified ? study : structuredClone(study) }; // Detach before the first await.
   performance.clearMarks('mot97:communication:snapshot');
   performance.mark('mot97:communication:snapshot');
   // Give paint and input a task boundary between independent validation stages.
   await new Promise<void>((resolve) => setTimeout(resolve, 0));
-  await assertValidStudy(input.study);
+  if (!certified) await assertValidStudy(input.study);
   performance.clearMarks('mot97:communication:study-validated');
   performance.mark('mot97:communication:study-validated');
   await new Promise<void>((resolve) => setTimeout(resolve, 0));

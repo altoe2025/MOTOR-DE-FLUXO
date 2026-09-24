@@ -224,9 +224,10 @@ export function validateExecutionRecord(
   return { ok: true, value: execution };
 }
 
-export async function validateStudyDocument(
+async function validateStudyDocumentCore(
   value: unknown,
   expectedOwnerSub?: string,
+  yieldBeforeExecutions = false,
 ): Promise<StudyValidation<StudyDocument>> {
   if (!validateStudyV3Schema(value)) {
     return { ok: false, issues: (validateStudyV3Schema.errors ?? []).map(structuralIssue) };
@@ -299,6 +300,7 @@ export async function validateStudyDocument(
       ));
     }
   }
+  if (yieldBeforeExecutions) await new Promise<void>((resolve) => setTimeout(resolve, 0));
   const executionIds = value.executions.map((execution) => execution.id);
   if (new Set(executionIds).size !== executionIds.length) {
     issues.push(issue('/executions', 'DUPLICATE_ID', 'Identificador de execução repetido.'));
@@ -346,6 +348,21 @@ export async function validateStudyDocument(
     }
   }
   return issues.length === 0 ? { ok: true, value } : { ok: false, issues };
+}
+
+export function validateStudyDocument(
+  value: unknown,
+  expectedOwnerSub?: string,
+): Promise<StudyValidation<StudyDocument>> {
+  return validateStudyDocumentCore(value, expectedOwnerSub);
+}
+
+/** The persisted-read path alone yields one macrotask before execution checks. */
+export function validateStudyDocumentWithExecutionYield(
+  value: unknown,
+  expectedOwnerSub: string,
+): Promise<StudyValidation<StudyDocument>> {
+  return validateStudyDocumentCore(value, expectedOwnerSub, true);
 }
 
 export async function assertValidStudy(

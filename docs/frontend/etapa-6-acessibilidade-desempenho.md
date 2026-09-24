@@ -1,5 +1,41 @@
 # Etapa 6D / MOT-97 — acessibilidade, visual e desempenho
 
+## Estabilização local com certificado efêmero e uma cedência (2026-09-24)
+
+Após os experimentos revertidos abaixo, a leitura persistida passou a clonar o
+`StudyDocument` antes do primeiro `await`, executar **todas** as regras do mesmo
+validador com owner explícito e ceder exatamente uma macrotask entre a fase de
+fingerprints e a verificação das execuções. Só depois de validação integral o
+snapshot é congelado profundamente e sua identidade entra num `WeakMap` privado.
+Não há marcador público, cache persistente ou validação removida. O builder só
+reutiliza essa identidade imutável: clona os outros inputs, omite a segunda
+validação integral do estudo certificado e mantém seleção, referências,
+comparação, Replay, fingerprints e validação final do documento. Raw, clones,
+spread, JSON e objetos forjados seguem clone + validação integral. O validador
+raw original conserva a API e não recebe a cedência.
+
+Três séries **consecutivas finais**, sem mudança de implementação entre elas, passaram
+no Chromium Windows, 20 amostras por série:
+
+| Série | Abertura p95 | Documento p95 | Long tasks >200 ms | Validação persistida p95 | Segunda validação p95 |
+|---|---:|---:|---:|---:|---:|
+| 1 | 745 ms | 218 ms | 0 | 142 ms | <2 ms |
+| 2 | 792 ms | 224 ms | 0 | 160 ms | <2 ms |
+| 3 | 752 ms | 234 ms | 0 | 153 ms | <2 ms |
+
+Os budgets permanecem abertura p95 ≤1.500 ms, Documento p95 ≤2.000 ms e zero
+long tasks >200 ms. O overhead isolado da cedência não foi causalmente estimado:
+o p95 da validação persistida variou de 142 a 160 ms entre as séries finais, enquanto a
+segunda validação caiu a menos de 2 ms; carga do host e fixture podem influir.
+Build de produção e `measure_stage6.py --assert-budget` passaram; JS inicial
+326.838 bytes gzip e chunk lazy da apresentação 5.727 bytes gzip. Suíte web,
+typecheck, lint e E2Es de apresentação/acessibilidade/visual passaram. Isso é
+aceite **local**; Linux/CI, dispositivos diferentes, estudos maiores e revisão
+humana com leitor de tela permanecem pendentes.
+Uma sequência anterior de três séries com a mesma estratégia também passou,
+mas foi repetida integralmente após corrigir o mapeamento de `DataCloneError`
+para `INVALID_STRUCTURE` na entrada persistida não clonável.
+
 ## Perfil e experimento de validação (2026-09-24)
 
 O perfil de fases isolou duas validações completas de `StudyDocument` no fluxo
@@ -31,15 +67,15 @@ Na série 3, startup do worker até READY teve p95 de 167 ms, snapshot de entrad
 abertura; a série 5 confirmou que não era só concorrência dos gates. O worker
 retirou trabalho pesado da main thread, mas **não estabilizou** o orçamento de
 abertura. Conforme o critério de parada da MOT-97, a implementação do worker
-foi revertida integralmente. Esta branch conserva apenas marcas de fase e coleta
-de profiling; a validação segue no main thread, com os mesmos invariantes.
+foi revertida integralmente. Naquele commit restaram apenas marcas de fase e
+coleta de profiling; a validação continuou no main thread, com os mesmos invariantes.
 
 Após a reversão, uma nova série de 20 amostras registrou abertura p95 de
 1.139 ms, mas **20 long tasks >200 ms** (gate FAIL); validação do builder p95
 146,7 ms e da leitura persistida p95 153,1 ms. O perfil permanece útil para
 investigar a variabilidade, mas não constitui correção.
 
-Não há aceite de desempenho para a estabilização. Os resultados são locais ao
+Não houve aceite de desempenho para o experimento de worker. Os resultados são locais ao
 Chromium Windows e à fixture de 12 participantes; Linux/CI, outros dispositivos
 e revisão humana com leitor de tela permanecem pendentes.
 

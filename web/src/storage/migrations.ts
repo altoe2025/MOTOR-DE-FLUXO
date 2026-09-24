@@ -8,7 +8,7 @@ import type {
   StudyDocument,
   PreviewExecutionRecord,
 } from '../study/model';
-import { validateStudyDocument } from '../study/validation';
+import { validateAndCertifyStudy } from '../study/certifiedStudy';
 import type { ApplicationRepository } from './applicationRepository';
 import {
   DocumentCorruptError,
@@ -354,7 +354,15 @@ export async function validateStoredStudy(
     && value.schemaVersion !== '3.0.0') {
     throw new SchemaUnsupportedError(`StudyDocument ${value.schemaVersion} não suportado.`);
   }
-  const validation = await validateStudyDocument(value, ownerSub);
+  let validation;
+  try {
+    validation = await validateAndCertifyStudy(value, ownerSub);
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'DataCloneError') {
+      throw new DocumentCorruptError('StudyDocument persistido inválido: INVALID_STRUCTURE.');
+    }
+    throw error;
+  }
   performance.clearMarks('mot97:stored-study:validated');
   performance.mark('mot97:stored-study:validated');
   if (!validation.ok) {

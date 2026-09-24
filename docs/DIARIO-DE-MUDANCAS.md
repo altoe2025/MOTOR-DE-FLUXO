@@ -67,12 +67,42 @@ Atualizada em 2026-09-23, durante o planejamento da Etapa 6.
 | `codex/fix-reconciliacao-decimal` | correção da aritmética exata dos mecanismos da análise, pronta para merge na `main` | Codex |
 | `codex/frontend-etapa-5` | MOT-86–MOT-89 concluídas e aceitas localmente; Replay Fronteira Viva funcional até o limite efetivo medido; sem push/PR/merge/deploy | Codex |
 | `codex/frontend-etapa-6-planejamento` | Etapas 6A/6B e D1/D2 da MOT-96 concluídas localmente; 6C tem aceite local separado; sem push, PR, merge ou deploy | Codex |
-| `codex/mot97-validation-worker` | profiling MOT-97; experimento de worker revertido por orçamento instável; sem push, PR, merge ou deploy | Codex |
+| `codex/mot97-validation-worker` | MOT-97: profiling e estabilização local por certificado efêmero + uma cedência; worker revertido; sem push, PR, merge ou deploy | Codex |
 
 Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+## 2026-09-24 — Certificado efêmero e uma divisão na validação persistida (MOT-97, D3)
+
+**Sintoma.** O worker de sessão e o fatiamento cooperativo amplo não sustentaram
+o orçamento de abertura; omitir só a segunda validação ainda deixou uma long
+task de 202 ms numa das séries.
+
+**Causa.** A leitura persistida continuava fazendo uma sequência longa de
+validação estrutural, fingerprints e execuções na mesma abertura; o builder
+repetia a validação integral de um estudo recém-validado.
+
+**O que foi feito.** Na branch local `codex/mot97-validation-worker`, a leitura
+agora clona antes do primeiro `await`, valida todas as regras com owner explícito,
+cede uma macrotask antes das execuções, congela profundamente e certifica apenas
+a identidade do snapshot num `WeakMap` privado. O builder omite a segunda
+validação integral apenas dessa identidade imutável; os outros inputs e todas
+as verificações restantes permanecem. Raw, clones e objetos forjados continuam
+validados. Três séries consecutivas finais de 20 amostras passaram: abertura p95
+745/792/752 ms, Documento 218/224/234 ms e zero long tasks em todas. Uma
+sequência anterior também passou; a medição final foi repetida após preservar
+`INVALID_STRUCTURE` para entradas persistidas não clonáveis.
+Suíte web 1.011 testes, typecheck, lint, build, sete E2Es e orçamento de bundle
+passaram. Detalhes e limites em
+`docs/frontend/etapa-6-acessibilidade-desempenho.md`. Sem push, PR, merge,
+deploy ou alteração de Linear.
+
+**O que isso invalida.** A conclusão anterior de que não havia estabilização
+local possível com escopo estreito foi superada pela combinação das duas medidas.
+O aceite ainda não vale para Linux/CI, dispositivos ou estudos maiores; não há
+aceite publicado. Nenhuma métrica financeira muda.
 
 ## 2026-09-24 — Perfil de validação e worker revertido (MOT-97, D3)
 

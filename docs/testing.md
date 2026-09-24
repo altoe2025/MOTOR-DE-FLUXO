@@ -1,5 +1,17 @@
 # Testes
 
+## Certificado efêmero e divisão persistida — MOT-97 (2026-09-24)
+
+TDD cobre equivalência exata de issues entre validação raw e dividida,
+owner/fingerprints/envelope/terminal, snapshot anterior ao `await`, congelamento
+profundo, identidade não transferível por clone/spread/JSON/forja, documento
+idêntico e verificações de comparação/Replay/seleção. Suíte web: **1.011/1.011**
+em 116 arquivos; typecheck, lint e build PASS. Sete E2Es de
+apresentação/acessibilidade/visual PASS; três séries consecutivas de 20 amostras
+do gate de desempenho PASS, sem long tasks >200 ms. Valores e limitações em
+[`etapa-6-acessibilidade-desempenho.md`](frontend/etapa-6-acessibilidade-desempenho.md).
+O aceite segue local ao Chromium Windows.
+
 ## Perfil da validação — MOT-97 (2026-09-24)
 
 O experimento de worker de sessão foi revertido porque duas séries de 20 amostras
@@ -7,7 +19,7 @@ excederam o p95 de abertura de 1.500 ms (1.968 e 2.629 ms), apesar de zero long
 tasks >200 ms; três séries anteriores tinham passado. Permanecem as marcas das
 fases de leitura persistida e builder e sua coleta no teste de desempenho. Ver
 [`etapa-6-acessibilidade-desempenho.md`](frontend/etapa-6-acessibilidade-desempenho.md).
-Não há aceite novo de desempenho nesta branch.
+Naquele commit ainda não havia aceite novo de desempenho.
 No estado revertido, `typecheck`, `lint` e 43 testes focados nas duas fronteiras
 passaram; o gate de 20 amostras falhou com 20 long tasks >200 ms.
 
