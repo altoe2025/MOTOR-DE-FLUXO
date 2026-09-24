@@ -1,0 +1,111 @@
+# Caso 7 — prioridade sob concorrência: várias ordens da MESMA direção abertas
+# ao mesmo tempo, para conferir se o EDF (earliest deadline first) está
+# escolhendo certo quem recebe o caixa primeiro.
+#
+# janela_dias bem maior que o horizonte para que TODO fechamento seja causado
+# por vencimento, nunca pela janela — dá pra prever à mão, igual ao
+# cenario_temporal.yaml.
+#
+# Três aglomerados:
+#   A) 3 OUT simultâneos (out1 40/dl12, out2 30/dl6, out3 50/dl3) vs 1 IN
+#      cobrindo em partes ao longo de 3 fechamentos — testa EDF no lado OUT.
+#   B) 2 IN simultâneos com folgas diferentes (in3 30/dl12, in4 25/dl9) vs o
+#      resto de out1 — testa EDF no lado IN.
+#   C) EMPATE proposital: out4 e out5, os dois 20/dl16 — só o id desempata.
+#      out6 (20/dl18) fica de fora do fechamento por ter folga.
+#   D) 3 IN simultâneos (in8 35/dl20 urgente, in7 25/dl21, in6 45/dl25 folgado)
+#      vs out7 — testa EDF no lado IN de novo, com 3 concorrentes.
+#
+# PREVISÃO (saldo pendente entre parênteses; ordem de cobertura = EDF, ou
+# seja (dia_limite, id) crescente):
+#
+#   dia  3 (out3 e in1 vencem): abertas OUT=[out3(50,dl3), out2(30,dl6), out1(40,dl12)], IN=[in1(35)]
+#     bruto_out 120 / bruto_in 35 -> casado 35, resíduo 15 OUT
+#     cobertura: out3 recebe os 35 inteiros (é o mais urgente) -> pendente 15
+#     out2 e out1 recebem ZERO aqui, mesmo out2 vencendo antes de out1.
+#     out3 vence hoje com 15 pendentes -> REMETIDO 15. out2 e out1 sobrevivem.
+#     alocações: out3 CASADO 35 | in1 CASADO 35 | out3 REMETIDO 15
+#
+#   dia  6 (out2 e in2 vencem): abertas OUT=[out2(30,dl6), out1(40,dl12)], IN=[in2(20)]
+#     bruto_out 70 / bruto_in 20 -> casado 20, resíduo 10 OUT
+#     out2 recebe os 20 (é o mais urgente agora) -> pendente 10; out1 recebe 0.
+#     out2 vence hoje -> REMETIDO 10. out1 sobrevive intacto (40, dl12).
+#     alocações: out2 CASADO 20 | in2 CASADO 20 | out2 REMETIDO 10
+#
+#   dia  9 (in4 vence; in3 já conhecida desde o dia 8): abertas OUT=[out1(40,dl12)],
+#     IN=[in4(25,dl9), in3(30,dl12)]
+#     bruto_out 40 / bruto_in 55 -> casado 40, resíduo 0
+#     cobertura do lado IN (EDF): in4 primeiro (mais urgente) recebe 25 inteiros
+#     -> zera; sobram 15 de casado para in3 -> in3 fica com 15 pendentes.
+#     out1 recebe os 40 inteiros -> zera e sai. in4 vence hoje já zerada.
+#     in3 NÃO vence hoje (dl12) -> continua aberta com 15.
+#     alocações: out1 CASADO 40 | in4 CASADO 25 | in3 CASADO 15
+#
+#   dia 12 (in3 vence, sozinha): abertas = {in3(15, dl12)}
+#     bruto_out 0 / bruto_in 15 -> casado 0, resíduo 15 IN
+#     alocações: in3 REMETIDO 15
+#
+#   dia 16 (out4, out5 e in5 vencem; out6 só tem folga até o dia 18):
+#     abertas OUT=[out4(20,dl16), out5(20,dl16), out6(20,dl18)], IN=[in5(25)]
+#     desempate out4 x out5: MESMO dia_limite -> ordem alfabética do id decide,
+#     "out4" < "out5", então out4 é atendida primeiro.
+#     bruto_out 60 / bruto_in 25 -> casado 25, resíduo 15 OUT
+#     out4 recebe 20 inteiros (zera); sobram 5 de casado -> out5 recebe 5 e
+#     fica com 15 pendentes; out6 recebe 0 e nem é tocada.
+#     out4 e out5 vencem hoje: out4 já zerada; out5 tem 15 pendentes -> REMETIDO 15.
+#     out6 NÃO vence (dl18) -> sobrevive intacta (20).
+#     alocações: out4 CASADO 20 | out5 CASADO 5 | in5 CASADO 25 | out5 REMETIDO 15
+#
+#   dia 18 (out6 vence, sozinha): abertas = {out6(20, dl18)}
+#     bruto_out 20 / bruto_in 0 -> casado 0, resíduo 20 OUT
+#     alocações: out6 REMETIDO 20
+#
+#   dia 20 (in8 e out7 vencem; in7 e in6 já conhecidas desde o dia 19):
+#     abertas OUT=[out7(50,dl20)], IN=[in8(35,dl20), in7(25,dl21), in6(45,dl25)]
+#     bruto_out 50 / bruto_in 105 -> casado 50, resíduo 0
+#     cobertura IN (EDF): in8 primeiro (mais urgente) recebe 35 inteiros -> zera;
+#     sobram 15 de casado -> in7 recebe 15 e fica com 10 pendentes; in6 recebe 0.
+#     out7 recebe os 50 inteiros -> zera. in8 vence hoje já zerada.
+#     in7 NÃO vence (dl21); in6 NÃO vence (dl25) -> ambas sobrevivem.
+#     alocações: out7 CASADO 50 | in8 CASADO 35 | in7 CASADO 15
+#
+#   dia 21 (in7 vence, sozinha): abertas = {in7(10,dl21), in6(45,dl25)}
+#     bruto_out 0 / bruto_in 55 -> casado 0, resíduo 10 IN
+#     alocações: in7 REMETIDO 10 (in6 continua aberta, intacta, com 45)
+#
+#   dia 25 (fim do horizonte E dia_limite de in6): abertas = {in6(45,dl25)}
+#     bruto_out 0 / bruto_in 45 -> casado 0, resíduo 45 IN
+#     alocações: in6 REMETIDO 45
+#
+# Total: 9 ciclos. Casado = 2x(35+20+40+25+50) = 340 (as duas pernas contam).
+# Remetido = 15+10+15+15+20+10+45 = 130. 340+130 = 470 = soma de todas as
+# ordens (230 OUT + 240 IN). Netabilidade = 340/470 = 72,34%.
+
+janela_dias: 100
+horizonte_dias: 25
+
+custo:
+  iof_out: "0.035"
+  iof_in: "0.0038"
+  carry_cnr: "0.0004"
+  spread_rail_bps: "0"
+  custo_fixo_remessa: "0"
+  custo_oportunidade_aa: "0"
+  ptax: "5.40"
+
+ordens:
+  - { id: "out1", cliente_id: "cliente-out1", direcao: "OUT", valor_brl: "40", dia_conhecida: 0,  dia_limite: 12, eh_efx: false, finalidade: "x" }
+  - { id: "out2", cliente_id: "cliente-out2", direcao: "OUT", valor_brl: "30", dia_conhecida: 0,  dia_limite: 6,  eh_efx: false, finalidade: "x" }
+  - { id: "out3", cliente_id: "cliente-out3", direcao: "OUT", valor_brl: "50", dia_conhecida: 0,  dia_limite: 3,  eh_efx: false, finalidade: "x" }
+  - { id: "in1",  cliente_id: "cliente-in1",  direcao: "IN",  valor_brl: "35", dia_conhecida: 3,  dia_limite: 3,  eh_efx: false, finalidade: "x" }
+  - { id: "in2",  cliente_id: "cliente-in2",  direcao: "IN",  valor_brl: "20", dia_conhecida: 6,  dia_limite: 6,  eh_efx: false, finalidade: "x" }
+  - { id: "in3",  cliente_id: "cliente-in3",  direcao: "IN",  valor_brl: "30", dia_conhecida: 8,  dia_limite: 12, eh_efx: false, finalidade: "x" }
+  - { id: "in4",  cliente_id: "cliente-in4",  direcao: "IN",  valor_brl: "25", dia_conhecida: 9,  dia_limite: 9,  eh_efx: false, finalidade: "x" }
+  - { id: "out4", cliente_id: "cliente-out4", direcao: "OUT", valor_brl: "20", dia_conhecida: 13, dia_limite: 16, eh_efx: false, finalidade: "x" }
+  - { id: "out5", cliente_id: "cliente-out5", direcao: "OUT", valor_brl: "20", dia_conhecida: 13, dia_limite: 16, eh_efx: false, finalidade: "x" }
+  - { id: "out6", cliente_id: "cliente-out6", direcao: "OUT", valor_brl: "20", dia_conhecida: 13, dia_limite: 18, eh_efx: false, finalidade: "x" }
+  - { id: "in5",  cliente_id: "cliente-in5",  direcao: "IN",  valor_brl: "25", dia_conhecida: 16, dia_limite: 16, eh_efx: false, finalidade: "x" }
+  - { id: "in6",  cliente_id: "cliente-in6",  direcao: "IN",  valor_brl: "45", dia_conhecida: 19, dia_limite: 25, eh_efx: false, finalidade: "x" }
+  - { id: "in7",  cliente_id: "cliente-in7",  direcao: "IN",  valor_brl: "25", dia_conhecida: 19, dia_limite: 21, eh_efx: false, finalidade: "x" }
+  - { id: "in8",  cliente_id: "cliente-in8",  direcao: "IN",  valor_brl: "35", dia_conhecida: 19, dia_limite: 20, eh_efx: false, finalidade: "x" }
+  - { id: "out7", cliente_id: "cliente-out7", direcao: "OUT", valor_brl: "50", dia_conhecida: 20, dia_limite: 20, eh_efx: false, finalidade: "x" }
