@@ -66,12 +66,35 @@ Atualizada em 2026-09-23, durante o planejamento da Etapa 6.
 | `codex/etapa-4-mvp` | MVP e Evolução B aceitos localmente até MOT-85; sem push/PR/merge/deploy | Codex |
 | `codex/fix-reconciliacao-decimal` | correção da aritmética exata dos mecanismos da análise, pronta para merge na `main` | Codex |
 | `codex/frontend-etapa-5` | MOT-86–MOT-89 concluídas e aceitas localmente; Replay Fronteira Viva funcional até o limite efetivo medido; sem push/PR/merge/deploy | Codex |
-| `codex/frontend-etapa-6-planejamento` | Etapa 6A e 6B em execução local; B6 corrigida no worktree isolado, sem push, PR, merge ou deploy | Codex |
+| `codex/frontend-etapa-6-planejamento` | Etapas 6A e 6B concluídas localmente; 6C em execução, sem push, PR, merge ou deploy | Codex |
 
 Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+## 2026-09-23 — Reconciliação das expectativas E2E após B5/B6 (MOT-92)
+
+**Sintoma.** A suíte Playwright integrada esperava que uma sessão expirada ainda
+visse a Carteira até clicar em executar e que uma segunda conta não tivesse nenhum
+Estudo. O produto já redirecionava imediatamente ao login e instalava o Estudo
+demonstrativo sintético por conta.
+
+**Causa.** As asserções de `foundation.spec.ts` e `study-concurrency.spec.ts`
+continuaram descrevendo estados anteriores ao catálogo autenticado B5 e à
+instalação automática do demo B1/B6.
+
+**O que foi feito.** O teste de sessão expirada passou a exigir o redirecionamento
+imediato e a mensagem de expiração. O teste de isolamento passou a admitir somente
+o demo canônico na conta B, mantendo a exigência de ausência do Estudo privado da
+conta A. Ambos foram reproduzidos em RED antes do ajuste e passaram isoladamente.
+
+**O que isso invalida.** Invalida apenas as duas expectativas E2E antigas; não
+altera autenticação, isolamento, instalação do demo, regras financeiras ou dados.
+O primeiro gate integral revelou a asserção de isolamento; o segundo passou esse
+caso e teve um timeout de 30,9 s no fluxo XLSX durante trabalho paralelo, que
+passou isolado em 24,0 s. A suíte integral ainda será repetida sem contenção antes
+do aceite final. Sem push, PR, merge ou deploy.
 
 ## 2026-09-23 — Correção dos três bloqueios da revisão B6 (MOT-91/MOT-92)
 

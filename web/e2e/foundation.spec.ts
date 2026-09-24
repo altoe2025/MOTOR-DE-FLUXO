@@ -90,7 +90,7 @@ test('login, portfolio, preview and expired session remain usable at acceptance 
 
   await page.evaluate(() => localStorage.setItem('motor-fluxo:e2e-session', 'expired'));
   await page.goto('/carteira');
-  await page.getByRole('button', { name: 'Executar exemplo de referência' }).click();
+  await expect(page).toHaveURL(/\/login$/);
   await expect(page.getByText(/Sua sessão expirou/)).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath('sessao-expirada-1280x800.png'), fullPage: true });
 });

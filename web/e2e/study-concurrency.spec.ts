@@ -56,7 +56,7 @@ test('two tabs expose CAS conflict while a second account stays isolated', async
   await pageB.evaluate(() => localStorage.setItem('motor-fluxo:e2e-account', 'b'));
   await pageB.reload();
   await pageB.goto('/estudos');
-  await expect(pageB.getByText('Nenhum estudo salvo nesta conta.')).toBeVisible();
+  await expect(pageB.getByRole('button', { name: 'Abrir Estudo demonstrativo sintético' })).toBeVisible();
   await expect(pageB.getByText(/Edição da aba [AB]/)).toHaveCount(0);
 
   await pageB.evaluate(() => localStorage.setItem('motor-fluxo:e2e-account', 'a'));

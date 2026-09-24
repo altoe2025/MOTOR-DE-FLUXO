@@ -161,6 +161,17 @@ passaram isoladamente na porta padrão 8021. A falha de sessão expirada em
 na execução completa passaram isoladamente em 8021. A suíte global não foi
 declarada verde por esse resultado; B6 4/4 foi confirmado separadamente.
 
+Após integrar B6 sobre C1–C4, o gate B6 repetiu **4/4 PASS em 1,1 min** sem
+override de SHA. Duas expectativas antigas do Playwright foram reconciliadas com
+o comportamento vigente: sessão expirada redireciona imediatamente ao login
+(RED antes, **1/1 PASS** depois) e a segunda conta recebe apenas seu demo canônico,
+sem enxergar o Estudo privado da conta A (RED antes, **1/1 PASS** depois). A
+primeira execução integral teve 32/33 por essa expectativa de isolamento. A
+segunda passou esse caso e teve 32/33 porque o fluxo XLSX excedeu o timeout global
+em 0,9 s enquanto C5 executava em paralelo; o mesmo fluxo passou isolado em 24,0 s
+(**1/1 PASS**). Por isso, esta evidência fecha B6, mas não declara ainda o gate
+Playwright integral verde; ele será repetido sem contenção antes do aceite final.
+
 ## Aceitação integrada da Etapa 6A — MOT-61
 
 O percurso `web/e2e/import-observed-case.spec.ts` lê XLSX no worker real,
