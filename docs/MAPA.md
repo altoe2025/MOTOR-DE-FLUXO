@@ -38,6 +38,17 @@ make test          # a contagem vigente é registrada em docs/testing.md
 
 ## Onde está cada resposta
 
+MOT-99 / D6 local: `web/e2e/stage6-acceptance.spec.ts` integra XLSX observado,
+cinco mixes demonstrativos, Diagnóstico, Replay, chat, Painel A, PDF e falhas
+controladas. O smoke `web/e2e/stage6-render-smoke.spec.ts` é opt-in e não foi
+executado; `web/scripts/run-real-e2e.mjs --render` exige aprovação explícita,
+URL HTTPS onrender.com e credenciais efêmeras. Operação, matriz de aceite e
+proveniência dos artifacts: `docs/frontend/etapa-6-operacao.md`,
+`docs/frontend/etapa-6-aceitacao.md` e
+`docs/frontend/evidencias/etapa-6/README.md`. O catálogo XLSX
+`NAO_CONFIGURADO`, o visual Linux e a imagem Docker impedem declarar aceite
+local integral; publicação segue NOT_RUN.
+
 MOT-96 / D1–D2 local: `web/src/presentation/PresentationRoute.tsx` carrega a seleção
 explícita do Estudo e constrói o `CommunicationDocumentV1` para o Painel A.
 `selection.ts` recusa owner, cenário ou execução incompatível;
@@ -129,6 +140,7 @@ de hipótese executada e preserva o bloqueio `NAO_CONFIGURADO` para Estudo impor
 | Operar o Replay Fronteira Viva da Etapa 5 | `docs/frontend/etapa-5-replay-operacao.md` |
 | Aceite, evidências visuais e limite efetivo da Etapa 5 | `docs/frontend/etapa-5-replay-aceitacao.md`, `docs/frontend/evidencias/mot89-*` |
 | Especificação e plano mestre da Etapa 6 — importação, chat, apresentação, relatório e Render | `docs/superpowers/specs/2026-09-23-frontend-etapa-6-comunicacao-publicacao-design.md`, `docs/superpowers/plans/2026-09-23-frontend-etapa-6-plano-mestre.md` |
+| Operação, aceite e evidências locais da Etapa 6 (MOT-99) | `docs/frontend/etapa-6-operacao.md`, `docs/frontend/etapa-6-aceitacao.md`, `docs/frontend/evidencias/etapa-6/README.md` |
 | Planos executáveis 6A–6D da Etapa 6 | `docs/superpowers/plans/2026-09-23-frontend-etapa-6a-importacao-plano.md`, `docs/superpowers/plans/2026-09-23-frontend-etapa-6b-demonstracao-comunicacao-plano.md`, `docs/superpowers/plans/2026-09-23-frontend-etapa-6c-chat-plano.md`, `docs/superpowers/plans/2026-09-23-frontend-etapa-6d-apresentacao-publicacao-plano.md` |
 | Contratos HTTP, limites e configuração do chat C3 (sem provider real C4) | `docs/frontend/etapa-6c-c3-contratos.md`, `servidor/contracts/chat.py`, `servidor/routes/chat.py`, `servidor/chat/service.py` |
 | Provider Responses, política temática e ferramentas somente leitura C4 | `docs/frontend/etapa-6c-c4-provider.md`, `servidor/chat/openai_provider.py`, `servidor/chat/tools.py`, `servidor/chat/prompts.py` |

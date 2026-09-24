@@ -74,6 +74,32 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-24 — Aceite local separado da publicação (MOT-99 / D6)
+
+**Sintoma.** A Etapa 6 tinha provas separadas de importação, demonstração, chat,
+apresentação, PDF e contêiner, mas faltava um percurso transversal que mostrasse
+explicitamente o que ainda impede o piloto publicado.
+
+**Causa.** O catálogo de finalidades do XLSX continua `NAO_CONFIGURADO`, então
+um Estudo observado importado não pode reservar diagnóstico. As imagens visuais
+revisadas são Windows; o runner Linux e a imagem Docker não foram executados
+neste host. A URL Render também não existe nesta tarefa.
+
+**O que foi feito.** No worktree `codex/mot99-local-acceptance-implementation`,
+`stage6-acceptance.spec.ts` percorre importação real até o bloqueio, cinco mixes
+demonstrativos, reconciliação entre Diagnóstico/Replay/chat/Painel A/PDF,
+deep links, reload, privacidade, troca de conta e falhas locais. O smoke
+`stage6-render-smoke.spec.ts` fica isolado em projeto opt-in; o runner exige
+autorização explícita, URL HTTPS e credenciais efêmeras antes de abrir o browser.
+Operação, matriz, artifacts e gate foram documentados em `docs/frontend/`,
+`docs/testing.md` e `docs/MAPA.md`. Nenhum Render, Supabase ou OpenAI real foi
+chamado; não houve push, PR ou deploy. A MOT-99 permanece em progresso.
+
+**O que isso invalida.** Passar nos testes demonstrativos não prova que o
+percurso observado chega a um relatório. `LOCAL_ACCEPTANCE=FAIL` enquanto o
+catálogo e os gates locais pendentes não forem resolvidos;
+`PUBLISHED_ACCEPTANCE=NOT_RUN` até publicação autorizada e smoke HTTPS.
+
 ## 2026-09-24 — Estudos excluídos deixam a lista principal (MOT-99)
 
 **Sintoma.** Depois de excluir um estudo, a tela principal de Estudos continuava

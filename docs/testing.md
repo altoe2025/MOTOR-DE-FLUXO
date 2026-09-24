@@ -1,5 +1,35 @@
 # Testes
 
+## Aceite local Etapa 6 — D6 / MOT-99 (2026-09-24)
+
+No worktree isolado baseado em `723461c` mais a correção de Estudos excluídos
+`aa9ad9f`, o gate local passou: `pytest -q` e `python -O -m pytest -q`
+**1.174 passed / 3 skipped** cada; Vitest **1.014/1.014** em 116 arquivos
+(`--maxWorkers=1 --testTimeout=15000`); Playwright Chromium Windows local
+**62/62** em 8,6 min, incluindo **5/5** casos transversais novos de D6.
+`typecheck`, ESLint, build de produção, Ruff, mypy, scanner de credenciais
+(697 textos, 39 binários, zero artefatos runtime), smoke CSP com configuração
+pública sintética e orçamento de 20 amostras passaram. O orçamento mediu zero
+long tasks >200 ms, CLS máximo 0,046, 327.625 bytes gzip iniciais e 5.797
+bytes gzip no chunk lazy do Painel A. O teste de PDF A4 também renderizou e
+conferiu métricas e fingerprint do documento demonstrativo.
+
+Primeiras tentativas não são apagadas: Vitest teve 1 timeout de 5 s sob carga
+paralela; pytest teve 2 falhas porque o venv novo não tinha o pacote instalado
+em modo editable; ambas as suítes passaram após execução sequencial e correção
+do ambiente. O smoke CSP falhou quando coincidiu com a reconstrução de `dist`
+e depois sobre um bundle sem configuração pública sintética; reconstruído com
+valores de exemplo e repetido isoladamente, passou sem requests externos.
+
+**LOCAL_ACCEPTANCE=FAIL; PUBLISHED_ACCEPTANCE=NOT_RUN.** Os gates verdes não
+removem o bloqueio funcional do catálogo de importação `NAO_CONFIGURADO`: o
+Estudo observado não pode produzir Diagnóstico/Replay/PDF. As sete baselines
+visuais Linux não foram geradas nem revistas neste host; Docker CLI/daemon
+indisponível impede o smoke da imagem. Nenhum Render, Supabase real, provider
+real, deploy ou convite foi usado. Matriz e evidências:
+[`etapa-6-aceitacao.md`](frontend/etapa-6-aceitacao.md) e
+[`evidencias/etapa-6/README.md`](frontend/evidencias/etapa-6/README.md).
+
 ## Corrida de autosave e timeouts locais — MOT-97 (2026-09-24)
 
 O teste de restore do `StudyController` agora controla o scheduler: um atraso

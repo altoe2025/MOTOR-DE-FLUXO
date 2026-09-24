@@ -17,6 +17,7 @@
     "lint": "eslint .",
     "test:e2e": "node scripts/build-e2e.mjs && playwright test --project=local",
     "test:e2e:real": "node scripts/run-real-e2e.mjs",
+    "test:e2e:render": "node scripts/run-real-e2e.mjs --render",
     "test:csp": "node scripts/smoke-csp.mjs",
     "typecheck": "tsc -b --pretty false",
     "test:unit": "vitest run"
