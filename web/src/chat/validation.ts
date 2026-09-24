@@ -1,11 +1,6 @@
-import Ajv2020 from 'ajv/dist/2020.js';
-import addFormats from 'ajv-formats';
+import { validateSchema } from '../generated/validators/chat.js';
 import type { ChatConversation } from './domain';
-import schema from './chat.schema.json';
 
-const ajv = new Ajv2020({ allErrors: true, strict: true });
-addFormats(ajv);
-const validateSchema = ajv.compile<ChatConversation>(schema);
 type Validation = { ok: true; value: ChatConversation }
   | { ok: false; code: 'INVALID_DOCUMENT' | 'OWNER_MISMATCH' };
 

@@ -38,6 +38,18 @@ make test          # a contagem vigente é registrada em docs/testing.md
 
 ## Onde está cada resposta
 
+MOT-98 / D4: `Dockerfile`, `.dockerignore`, `requirements/web.lock` e
+`requirements/build.lock` definem o empacotamento. `servidor/__main__.py` interpreta
+HOST/PORT e `servidor/security_headers.py` define a política do browser.
+`scripts/smoke_container.py` verifica a imagem local; os contratos vivem em
+`tests/web_api/test_container_contract.py`, `test_security_headers.py`,
+`test_server_entrypoint.py` e `test_smoke_container.py`.
+Validadores browser são pré-compilados por `web/scripts/generate-validators.mjs`,
+com saída em `web/src/generated/validators/`; smoke da CSP em
+`web/scripts/smoke-csp.mjs` (`npm --prefix web run test:csp`).
+Evidências e bloqueios locais: seção MOT-98 de `docs/testing.md`.
+Aceite publicado continua NOT_RUN.
+
 Etapa 6A integrada localmente: o percurso real de importação e os limites estão em
 `docs/frontend/etapa-6a-aceitacao.md`; o teste reproduzível está em
 `web/e2e/import-observed-case.spec.ts`. Parser/worker/revisão/publicação vivem em

@@ -39,7 +39,7 @@ jobs:
         run: |
           python -m servidor.export_openapi
           npm --prefix web run generate:api
-          git diff --exit-code -- contracts web/src/api/generated.ts web/src/api/schemas.json web/src/api/validators.ts
+          git diff --exit-code -- contracts web/src/api/generated.ts web/src/api/schemas.json web/src/api/validators.ts web/src/generated/validators
 
       - name: Verify Python
         run: |

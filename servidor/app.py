@@ -57,6 +57,7 @@ from servidor.routes import (
     replay,
     session,
 )
+from servidor.security_headers import security_headers
 from servidor.static import install_static_routes
 
 _LOGGER = logging.getLogger("servidor.http")
@@ -120,6 +121,7 @@ def create_app(
     app.state.token_verifier = configured_verifier
     app.state.chat_provider = chat_provider if configured.chat_enabled else None
     app.state.preview_slot = threading.BoundedSemaphore(1)
+    browser_headers = security_headers(configured)
 
     @app.middleware("http")
     async def trace_request(request: Request, call_next):
@@ -132,6 +134,7 @@ def create_app(
                 request,
                 ApiFailure(500, "ERRO_INTERNO", "Ocorreu um erro interno."),
             )
+        response.headers.update(browser_headers)
         response.headers["X-Request-ID"] = str(request.state.request_id)
         if request.url.path.startswith("/api/v1/") and request.url.path != "/api/v1/health":
             response.headers["Cache-Control"] = "no-store"

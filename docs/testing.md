@@ -1,5 +1,71 @@
 # Testes
 
+## Contêiner e Blueprint declarativo — D4/D5 / MOT-98
+
+Base `0fd484e` da branch `codex/frontend-etapa-6-planejamento`, implementação
+isolada em `codex/mot98-container-render` (2026-09-24). Sem deploy, push, PR,
+chamada paga, alteração da simulação ou dependência da MOT-96/MOT-97.
+Guia de comandos/configuração: [deploy-render.md](deploy-render.md).
+
+| Gate | Evidência |
+|---|---|
+| Baseline configuração + estáticos | 51 PASS, 2 SKIP (symlinks no Windows) |
+| TDD runtime/headers | RED confirmado; 119 PASS, 2 SKIP com regressões de auth/config/static |
+| TDD Blueprint | 2 RED por arquivo ausente; 2 PASS depois |
+| TDD empacotamento/smoke | RED inicial e RED específico `motor.analise` ausente; 20 PASS após correções |
+| Suíte Python completa | **1.097 PASS, 2 SKIP**, 480,96 s; warnings preexistentes Starlette/httpx/anyio |
+| Gates D4/D5 sob `python -O` | **67 PASS**, 65,65 s; aviso esperado sobre asserts de bibliotecas |
+| Lock de produção | Instalação com hashes em Python 3.12.14 limpo: 24 dependências; pacote 0.1.0 instalado sem resolver extras |
+| Resolução Linux do lock | Mesmas 24 versões para Linux x86_64 / Python 3.12; não substitui instalação na imagem |
+| Smoke HTTP nativo | PASS: health, SPA, assets, 404, autenticação, headers; não é evidência Docker |
+| Ajv standalone | 134 testes focados PASS; paridade de erros API inclusive schemaPath aninhado; sem geração dinâmica no browser |
+| Frontend completo, sem builds concorrentes nesta task | **927 PASS em 101 arquivos**, `--maxWorkers=1`, 467,05 s |
+| Build Vite + typecheck + geração | PASS; `check:validators` consistente e contratos públicos sem drift |
+| Smoke Chromium CSP | PASS no bundle final: login visível, headers reais, zero violações ou chamadas a provedores |
+| Análise estática | Ruff PASS; mypy 55 arquivos PASS; ESLint PASS |
+| Build/smoke Docker | **BLOCKED / NOT_RUN**; daemon indisponível, detalhes abaixo |
+| Scanner com arquivos novos staged | PASS; 611 textos e 32 binários no momento do gate |
+| Validação Blueprint | 2 PASS offline; CLI Render não instalada; nenhum recurso criado |
+| Aceite publicado | **NOT_RUN**; MOT-99, depende de autorização externa |
+
+O comando `python scripts/smoke_container.py --image motor-de-fluxo:etapa-6`
+também retornou `container_smoke=FAIL (diagnostic payload suppressed)` antes de
+criar contêiner, pois o daemon não estava disponível.
+
+O comando real `docker build ... -t motor-de-fluxo:etapa-6 .` terminou com
+`failed to connect to the docker API at npipe:////./pipe/dockerDesktopLinuxEngine`
+e `The system cannot find the file specified`. Docker Desktop foi iniciado
+localmente e falhou em `initializing Ingest server`, no socket
+`sailor-ingest.sock`: `The file cannot be accessed by the system`. Não houve
+reset, remoção de dados Docker ou alteração de configuração global. Não há daemon
+alternativo no Ubuntu/WSL. Portanto a instalação Linux, execução não-root,
+filesystem read-only e scanner **dentro da imagem** ainda precisam do build/smoke
+real; testes estruturais e smoke nativo não substituem esse gate. MOT-98 permanece
+**In Progress** até essa evidência estar disponível.
+
+O bundle final tem `index-BVl3ZYV-.js` com 3.098,18 kB brutos / 378,53 kB gzip
+(aproximadamente 369,7 KiB gzip), além do chunk Supabase de 55,36 kB gzip.
+A pré-compilação troca código gerado em runtime por código estático: cumpre CSP,
+mas aumenta o bundle. O orçamento T7 de 350 KiB por rota pública **não está
+aprovado** aqui; code splitting/otimização permanecem na MOT-97, sem ampliar D4.
+Esta tarefa não declara o gate global de desempenho nem aceite da Etapa 6.
+
+Uma execução ampla do frontend sob carga concorrente mostrou três falhas
+relacionadas a timing (autosave de 10 ms e limites de espera). Duas reproduções
+focadas passaram. Os testes de timing não foram alterados; após estabilizar a
+geração, a execução integral serial passou.
+
+A revisão independente encontrou duas regressões reais: omissão de
+`motor/analise` no contexto e bloqueio do Ajv pela CSP estrita. A primeira ganhou
+teste de importação a partir do contexto isolado, com sentinelas de dados/segredos
+excluídas. O gate de regeneração da CI inclui também os validadores novos,
+impedindo testar artefatos regenerados enquanto a imagem empacota uma versão
+obsoleta. Para a segunda, o smoke Chromium `npm --prefix web run test:csp`
+reproduziu tela de login vazia e violação `script-src`; os schemas passam a ser
+pré-compilados, mantendo a política sem `unsafe-eval`. O gate usa headers reais do
+backend e proíbe tráfego externo. O smoke da imagem continua independente desse
+smoke browser e ambos são necessários.
+
 ## Contexto
 
 Reconferido em 2026-09-20 no candidato local `03e87b8` da branch

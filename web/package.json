@@ -12,9 +12,12 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "generate:api": "node scripts/generate-api.mjs",
+    "generate:validators": "node scripts/generate-validators.mjs",
+    "check:validators": "node scripts/generate-validators.mjs --check",
     "lint": "eslint .",
     "test:e2e": "node scripts/build-e2e.mjs && playwright test --project=local",
     "test:e2e:real": "node scripts/run-real-e2e.mjs",
+    "test:csp": "node scripts/smoke-csp.mjs",
     "typecheck": "tsc -b --pretty false",
     "test:unit": "vitest run"
   },

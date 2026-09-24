@@ -1,15 +1,8 @@
-import Ajv2020, { type ErrorObject, type ValidateFunction } from 'ajv/dist/2020.js';
-import addFormats from 'ajv-formats';
+import type { ErrorObject } from 'ajv';
+import { validateSchema } from '../generated/validators/profiles.js';
 
-import observedCaseSchema from '../cases/observedCase.schema.json';
-import type { OperationalProfileVersion, ProfileValidation, ProfileValidationIssue } from './domain';
+import type { ProfileValidation, ProfileValidationIssue } from './domain';
 import { fingerprintOperationalProfile, fingerprintProfileSelection } from './fingerprints';
-import operationalProfileSchema from './operationalProfile.schema.json';
-
-const ajv = new Ajv2020({ allErrors: true, strict: true });
-addFormats(ajv);
-ajv.addSchema(observedCaseSchema);
-const validateSchema: ValidateFunction<OperationalProfileVersion> = ajv.compile(operationalProfileSchema);
 
 function schemaIssue(error: ErrorObject): ProfileValidationIssue {
   return {
