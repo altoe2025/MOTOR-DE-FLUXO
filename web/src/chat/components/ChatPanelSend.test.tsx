@@ -23,6 +23,7 @@ function setup(deferCreate = false) {
   let releaseCreate: (() => void) | undefined;
   const createGate = new Promise<void>((resolve) => { releaseCreate = resolve; });
   const repository = {
+    deleteChatConversation: async () => undefined,
     listChatConversations: vi.fn(async () => current === null ? [] : [current]),
     getChatConversation: vi.fn(async () => current),
     saveChatConversation: vi.fn(async ({ document, expectedRevision }: { document: ChatConversation; expectedRevision: number }) => {
@@ -49,6 +50,7 @@ describe('chat panel send', () => {
     const user = userEvent.setup();
     let current: ChatConversation | null = null;
     const repository = {
+      deleteChatConversation: async () => undefined,
       listChatConversations: async () => current === null ? [] : [current],
       getChatConversation: async () => current,
       saveChatConversation: async ({ document, expectedRevision }: { document: ChatConversation; expectedRevision: number }) => {

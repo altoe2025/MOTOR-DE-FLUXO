@@ -13,7 +13,7 @@ import type { ChatConversation } from './domain';
 import { recoverInterruptedConversation } from './repository';
 import { routeChatContext, type RouteChatContext } from './routeContext';
 
-type ChatRepository = Pick<ApplicationRepository, 'listChatConversations' | 'getChatConversation' | 'saveChatConversation'>;
+type ChatRepository = Pick<ApplicationRepository, 'listChatConversations' | 'getChatConversation' | 'saveChatConversation' | 'deleteChatConversation'>;
 type ChatState = Readonly<{
   routeContext: RouteChatContext | null;
   contextFingerprint: string | null;
@@ -24,6 +24,10 @@ type ChatState = Readonly<{
   open: boolean;
   busy: boolean;
   canSend: boolean;
+  managing: boolean;
+  actionError: string | null;
+  conversationLimitReached: boolean;
+  messageLimitReached: boolean;
   catalog: ProductHelpCatalogV1 | null;
   communication: CommunicationDocumentV1 | null;
   sentContext: CommunicationDocumentV1 | null;
@@ -33,6 +37,7 @@ type ChatState = Readonly<{
   hide(): void;
   selectConversation(id: string): void;
   newConversation(): Promise<void>;
+  deleteConversation(id: string): Promise<void>;
   beginRequest(): AbortSignal;
   send(question: string, retryAssistantId?: string): Promise<void>;
   cancel(): void;
@@ -91,6 +96,8 @@ export function ChatProvider({ ownerSub, repository, client, catalog = null, chi
   const [activeId, setActiveId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [error, setError] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [managing, setManaging] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadedScope, setLoadedScope] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -119,6 +126,8 @@ export function ChatProvider({ ownerSub, repository, client, catalog = null, chi
     setConversations([]);
     setActiveId(null);
     setError(false);
+    setActionError(null);
+    setManaging(false);
     setLoading(true);
     setLoadedScope(null);
     creating.current = false;
@@ -146,9 +155,21 @@ export function ChatProvider({ ownerSub, repository, client, catalog = null, chi
 
   useEffect(() => () => { request.current?.abort(); }, []);
 
+  const refreshConversations = useCallback(async (currentGeneration: number) => {
+    const rows = await repository.listChatConversations(studyId);
+    if (generation.current !== currentGeneration) return [];
+    const owned = rows.filter((row) => row.ownerSub === ownerSub && row.studyId === studyId);
+    setConversations(owned);
+    setActiveId((id) => owned.some((row) => row.id === id) ? id : owned[0]?.id ?? null);
+    return owned;
+  }, [ownerSub, repository, studyId]);
+
   const newConversation = useCallback(async () => {
-    if (routeContext === null || creating.current) return;
+    if (routeContext === null || creating.current || busyRef.current || loading || error
+      || conversations.length >= 20) return;
     creating.current = true;
+    setManaging(true);
+    setActionError(null);
     const now = new Date().toISOString();
     const document: ChatConversation = {
       schemaVersion: '1.0.0', id: crypto.randomUUID(), ownerSub, studyId,
@@ -162,13 +183,43 @@ export function ChatProvider({ ownerSub, repository, client, catalog = null, chi
       setConversations((rows) => [saved, ...rows]);
       setActiveId(saved.id);
     } catch {
-      if (generation.current === currentGeneration) setError(true);
-    } finally { creating.current = false; }
-  }, [ownerSub, repository, routeContext, studyId]);
+      if (generation.current !== currentGeneration) return;
+      let quotaReached = false;
+      try { quotaReached = (await refreshConversations(currentGeneration)).length >= 20; } catch { /* Keep the readable history. */ }
+      if (generation.current === currentGeneration && !quotaReached) {
+        setActionError('Não foi possível criar a conversa. Tente novamente.');
+      }
+    } finally {
+      if (generation.current === currentGeneration) { creating.current = false; setManaging(false); }
+    }
+  }, [ownerSub, repository, routeContext, studyId, loading, error, conversations.length, refreshConversations]);
+
+  const deleteConversation = useCallback(async (id: string) => {
+    const document = conversations.find((row) => row.id === id && row.ownerSub === ownerSub && row.studyId === studyId);
+    if (document === undefined || creating.current || busyRef.current || loading || error) return;
+    creating.current = true;
+    setManaging(true);
+    setActionError(null);
+    const currentGeneration = generation.current;
+    try {
+      await repository.deleteChatConversation(document.id, document.revision, crypto.randomUUID());
+      if (generation.current !== currentGeneration) return;
+      setConversations((rows) => rows.filter((row) => row.id !== document.id));
+      setActiveId((current) => current === document.id ? conversations.find((row) => row.id !== document.id)?.id ?? null : current);
+    } catch {
+      if (generation.current !== currentGeneration) return;
+      try { await refreshConversations(currentGeneration); } catch { /* Keep the readable history. */ }
+      if (generation.current === currentGeneration) {
+        setActionError('Não foi possível excluir a conversa. Confira o histórico atualizado e tente novamente.');
+      }
+    } finally {
+      if (generation.current === currentGeneration) { creating.current = false; setManaging(false); }
+    }
+  }, [conversations, ownerSub, studyId, loading, error, repository, refreshConversations]);
 
   useEffect(() => {
-    if (open && !loading && loadedScope === scope && !error && conversations.length === 0) void newConversation();
-  }, [open, loading, loadedScope, scope, error, conversations.length, newConversation]);
+    if (open && !loading && loadedScope === scope && !error && actionError === null && conversations.length === 0) void newConversation();
+  }, [open, loading, loadedScope, scope, error, actionError, conversations.length, newConversation]);
 
   const beginRequest = useCallback(() => {
     request.current?.abort();
@@ -229,9 +280,10 @@ export function ChatProvider({ ownerSub, repository, client, catalog = null, chi
   }, [setHelpId]);
   const visibleConversations = conversations.filter((row) => row.ownerSub === ownerSub && row.studyId === studyId);
   const activeConversation = visibleConversations.find((row) => row.id === activeId) ?? null;
+  const messageLimitReached = activeConversation !== null && activeConversation.messages.length > 98;
   const cancel = useCallback(() => request.current?.abort(), []);
   const send = useCallback(async (question: string, retryAssistantId?: string) => {
-    if (busyRef.current || activeConversation === null || routeContext === null || catalog === null || client === undefined) {
+    if (busyRef.current || creating.current || activeConversation === null || routeContext === null || catalog === null || client === undefined) {
       throw new Error('Chat indisponível neste contexto.');
     }
     busyRef.current = true; setBusy(true);
@@ -286,10 +338,11 @@ export function ChatProvider({ ownerSub, repository, client, catalog = null, chi
       });
   }, [activeConversation, open, ownerSub, repository, studyId]);
   const value: ChatState = { routeContext, contextFingerprint: currentContextFingerprint, conversations: visibleConversations, activeConversation,
-    error, loading, open, busy, canSend: !loading && !error && activeConversation !== null && client !== undefined && catalog !== null,
+    error, loading, open, busy, managing, actionError, conversationLimitReached: visibleConversations.length >= 20, messageLimitReached,
+    canSend: !loading && !error && !managing && !messageLimitReached && activeConversation !== null && client !== undefined && catalog !== null,
     catalog, communication, sentContext, focusComposerToken, intent,
     show: () => setOpen(true), hide: () => setOpen(false),
-    selectConversation: setActiveId, newConversation, beginRequest, send, cancel, askAbout, publishCommunication,
+    selectConversation: setActiveId, newConversation, deleteConversation, beginRequest, send, cancel, askAbout, publishCommunication,
     setHelpId, setReplayDay, setDiagnosticExecutionId, setComparisonExecutionId, setScenarioId,
   };
   return <Context.Provider value={value}>{children}</Context.Provider>;

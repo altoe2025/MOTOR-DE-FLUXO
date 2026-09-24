@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { useOptionalChat } from '../chat/ChatProvider';
 
 import type { ReplayRequest } from '../api/client';
@@ -89,6 +89,7 @@ function errorState(reason: unknown): Extract<LoadState, { kind: 'ERROR' }> {
 }
 
 export function ReplayPage() {
+  const location = useLocation();
   const { studyId } = useParams();
   const [searchParams] = useSearchParams();
   const executionId = searchParams.get('executionId');
@@ -154,7 +155,7 @@ export function ReplayPage() {
   if (loadState.kind === 'ERROR') return <ReplayError state={loadState} studyId={studyId} onRetry={() => setRetryRevision((value) => value + 1)} />;
   const dayText = searchParams.get('day');
   const initialDay = dayText !== null && /^(0|[1-9]\d*)$/.test(dayText) ? Number(dayText) : 0;
-  return <ReplayReady document={loadState.document} study={loadState.study} studyId={studyId!} scenarioId={loadState.scenarioId}
+  return <ReplayReady key={location.key} document={loadState.document} study={loadState.study} studyId={studyId!} scenarioId={loadState.scenarioId}
     selected={loadState.selected} initialDay={initialDay} />;
 }
 

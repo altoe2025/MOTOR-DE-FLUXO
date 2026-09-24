@@ -31,6 +31,7 @@ function Controls() {
 
 function setup(ownerSub = 'owner-a', records: ChatConversation[] = []) {
   const repository = {
+    deleteChatConversation: async () => undefined,
     listChatConversations: vi.fn(async (studyId: string | null) => records.filter((row) => row.studyId === studyId)),
     getChatConversation: vi.fn(async (id: string) => records.find((row) => row.id === id) ?? null),
     saveChatConversation: vi.fn(async ({ document }: { document: ChatConversation }) => document),
@@ -151,6 +152,7 @@ describe('session chat shell', () => {
     // A keyed provider is remounted by ApplicationProviders when ownerSub changes.
     rerender(<MemoryRouter initialEntries={['/estudos/study-a/diagnostico']}>
       <ChatProvider key="owner-b" ownerSub="owner-b" repository={{
+        deleteChatConversation: async () => undefined,
         listChatConversations: async () => [], getChatConversation: async () => null,
         saveChatConversation: async ({ document }) => document,
       }}><ChatPanel /><Controls /></ChatProvider>

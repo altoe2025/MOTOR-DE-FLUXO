@@ -79,6 +79,18 @@ describe('resolução local do Replay', () => {
 });
 
 describe('ReplayPage', () => {
+  it('restores a cited day on repeated navigation to the same URL after local scrubbing', async () => {
+    const url = '/estudos/study-1/replay?executionId=00000000-0000-4000-8000-000000000701&day=1';
+    const router = createMemoryRouter([{ path: '/estudos/:studyId/replay', element: <ReplayPage /> }], { initialEntries: [url] });
+    render(<RouterProvider router={router} />);
+    await screen.findByRole('heading', { name: 'Fronteira Viva' });
+    expect(screen.getByRole('slider', { name: 'Selecionar dia' })).toHaveValue('1');
+    for (let i = 0; i < 2; i += 1) {
+      fireEvent.change(screen.getByRole('slider', { name: 'Selecionar dia' }), { target: { value: '2' } });
+      await act(async () => { await router.navigate(url + '#replay-journal-day-1'); });
+      await waitFor(() => expect(screen.getByRole('slider', { name: 'Selecionar dia' })).toHaveValue('1'));
+    }
+  });
   it.each([
     ['execução inválida', 'Execução inválida'],
     ['troca de Estudo', 'Outro Estudo'],
@@ -87,7 +99,7 @@ describe('ReplayPage', () => {
       ? new Promise<StudyDocument | null>(() => undefined) : persistedStudy());
     mocks.buildReplay.mockResolvedValue(replayDocumentFixture());
     render(<MemoryRouter initialEntries={['/estudos/study-1/replay?executionId=00000000-0000-4000-8000-000000000701']}>
-      <ChatProvider ownerSub="owner-1" repository={{ listChatConversations: async () => [], getChatConversation: async () => null,
+      <ChatProvider ownerSub="owner-1" repository={{ deleteChatConversation: async () => undefined, listChatConversations: async () => [], getChatConversation: async () => null,
         saveChatConversation: async ({ document }) => document }}>
         <Routes><Route path="/estudos/:studyId/replay" element={<ReplayPage />} /></Routes>
         <ReplayNavigation /><ChatDayProbe />
@@ -108,7 +120,7 @@ describe('ReplayPage', () => {
     mocks.loadStudy.mockResolvedValue(persistedStudy());
     mocks.buildReplay.mockResolvedValue(replayDocumentFixture());
     render(<MemoryRouter initialEntries={['/estudos/study-1/replay?executionId=00000000-0000-4000-8000-000000000701']}>
-      <ChatProvider ownerSub="owner-1" repository={{ listChatConversations: async () => [], getChatConversation: async () => null,
+      <ChatProvider ownerSub="owner-1" repository={{ deleteChatConversation: async () => undefined, listChatConversations: async () => [], getChatConversation: async () => null,
         saveChatConversation: async ({ document }) => document }}>
         <Routes><Route path="/estudos/:studyId/replay" element={<ReplayPage />} /></Routes><ChatDayProbe />
       </ChatProvider>

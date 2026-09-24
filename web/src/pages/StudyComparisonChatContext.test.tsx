@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
+import { createMemoryRouter, MemoryRouter, RouterProvider } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 
 import { comparisonInput } from '../communication/testFixtures';
@@ -21,6 +21,17 @@ vi.mock('../chat/ChatProvider', () => ({ useOptionalChat: () => ({
 }) }));
 
 describe('comparison communication context', () => {
+  it('restores the cited pair when navigating again to the same URL after changing the local selection', async () => {
+    const input = await comparisonInput();
+    mocks.loadStudy.mockResolvedValue(input.study);
+    const url = `/comparar?studyId=${input.study.id}&baseExecutionId=${input.diagnosticExecutionId}&hypothesisExecutionId=${input.comparisonExecutionId}`;
+    const router = createMemoryRouter([{ path: '/comparar', element: <StudyComparisonPage /> }], { initialEntries: [url] });
+    render(<RouterProvider router={router} />);
+    await waitFor(() => expect(screen.getByLabelText('Execução da hipótese')).toHaveValue(input.comparisonExecutionId));
+    fireEvent.change(screen.getByLabelText('Execução da hipótese'), { target: { value: '' } });
+    await act(async () => { await router.navigate(url); });
+    await waitFor(() => expect(screen.getByLabelText('Execução da hipótese')).toHaveValue(input.comparisonExecutionId));
+  });
   it('publishes the selected comparison only after explicit calculation', async () => {
     const user = userEvent.setup();
     const input = await comparisonInput();

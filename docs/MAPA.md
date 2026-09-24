@@ -38,6 +38,15 @@ make test          # a contagem vigente é registrada em docs/testing.md
 
 ## Onde está cada resposta
 
+Etapa 6C C6 local (MOT-95): matriz browser/privacidade, correções de quota,
+restauração de citações e limite de aceite em `docs/frontend/etapa-6c-aceitacao.md`.
+Percurso em `web/e2e/stage6-chat.spec.ts`, fake em
+`tests/web_api/chat_e2e_provider.py`, matriz adversarial em
+`tests/web_api/test_chat_privacy.py` e scanner em `tests/web_api/scan_credentials.py`.
+A MOT-95 continua In Progress até verificar chat nas futuras rotas Apresentação e
+impressão; essas rotas não existem na base `ab32cc4`. Teste real opt-in criado e
+não executado. Não houve push/PR/deploy nem alteração financeira.
+
 Etapa 6A integrada localmente: o percurso real de importação e os limites estão em
 `docs/frontend/etapa-6a-aceitacao.md`; o teste reproduzível está em
 `web/e2e/import-observed-case.spec.ts`. Parser/worker/revisão/publicação vivem em
