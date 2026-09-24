@@ -3,25 +3,22 @@ import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-const approved = process.env.MOT_STAGE6_RENDER_APPROVED === '1';
-const email = process.env.MOT_STAGE6_RENDER_EMAIL;
-const password = process.env.MOT_STAGE6_RENDER_PASSWORD;
-const baseUrl = process.env.MOT_STAGE6_RENDER_BASE_URL;
-const enabled = approved && email !== undefined && password !== undefined
-  && baseUrl !== undefined && /^https:\/\/[^/]+\.onrender\.com\/?$/.test(baseUrl);
+import { assertCompletedChatExchange, requireRenderSmokeConfig } from '../scripts/render-smoke-gate.mjs';
+import { allHelpIds } from '../src/help/helpIds';
+
+const renderConfig = requireRenderSmokeConfig(process.env);
 const xlsx = readFileSync(fileURLToPath(new URL('../src/importer/__fixtures__/valid-minimal.xlsx', import.meta.url)));
 const python = process.env.MOT_STAGE6_PDF_PYTHON ?? process.env.MOT_E2E_PYTHON
   ?? (process.platform === 'win32' ? '.venv\\Scripts\\python.exe' : '.venv/bin/python');
 
 test.beforeEach(() => {
-  test.skip(!enabled, 'Smoke publicado exige autorização explícita, URL HTTPS e credenciais efêmeras.');
   test.setTimeout(240_000); // Inclui um cold start legítimo do plano gratuito.
 });
 
 async function login(page: import('@playwright/test').Page) {
   await page.goto('/login', { waitUntil: 'domcontentloaded', timeout: 120_000 });
-  await page.getByLabel('E-mail').fill(email!);
-  await page.getByLabel('Senha').fill(password!);
+  await page.getByLabel('E-mail').fill(renderConfig.email);
+  await page.getByLabel('Senha').fill(renderConfig.password);
   await page.getByRole('button', { name: 'Entrar' }).click();
   await expect(page).toHaveURL(/\/carteira$/, { timeout: 90_000 });
 }
@@ -52,9 +49,25 @@ test('HTTPS, login, demonstração, chat real, apresentação, PDF e deep links'
   await expect(page.getByRole('region', { name: 'Resumo executivo' })).toBeVisible();
   await page.getByRole('button', { name: 'Perguntar', exact: true }).click();
   const panel = page.getByRole('dialog', { name: 'Chat', exact: true });
-  await panel.getByLabel('Sua pergunta').fill('Qual é a origem sintética deste estudo?');
+  await panel.getByLabel('Sua pergunta').fill('Qual é a economia BRL desta execução e qual evidência sustenta esse valor?');
+  const chatResponse = page.waitForResponse((item) => item.url().endsWith('/api/v1/chat')
+    && item.request().method() === 'POST', { timeout: 90_000 });
   await panel.getByRole('button', { name: 'Enviar', exact: true }).click();
-  await expect(panel.getByRole('list', { name: 'Mensagens da conversa' }).locator('article')).toHaveCount(2, { timeout: 60_000 });
+  const completed = await chatResponse;
+  expect(completed.status()).toBe(200);
+  const responseBody = await completed.json() as { messageId?: string };
+  expect(responseBody.messageId).toMatch(/^[0-9a-f-]+$/);
+  const assistantArticle = panel.getByRole('list', { name: 'Mensagens da conversa' })
+    .locator(`article[data-chat-role="ASSISTANT"][data-chat-status="SUCCEEDED"][data-chat-message-id="${responseBody.messageId}"]`);
+  await expect(assistantArticle).toBeVisible({ timeout: 90_000 });
+  const assistant = {
+    role: await assistantArticle.getAttribute('data-chat-role'),
+    status: await assistantArticle.getAttribute('data-chat-status'),
+    text: await assistantArticle.locator('p').first().innerText(),
+    citationCount: await assistantArticle.getByRole('navigation', { name: 'Fontes da resposta' }).getByRole('link').count(),
+  };
+  assertCompletedChatExchange({ status: completed.status(), request: completed.request().postDataJSON(),
+    response: responseBody, assistant, knownHelpIds: allHelpIds });
   await panel.getByRole('button', { name: 'Fechar chat' }).click();
   await page.emulateMedia({ media: 'print' });
   await expect(page.locator('.sidebar')).toBeHidden();

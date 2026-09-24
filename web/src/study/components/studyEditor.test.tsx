@@ -323,4 +323,21 @@ describe('StudyList', () => {
     expect(screen.queryByText('Estudo excluído')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Restaurar Estudo excluído' })).not.toBeInTheDocument();
   });
+
+  it('permite abrir a lixeira por teclado e restaurar sem abrir o estudo excluído', async () => {
+    const active = await study();
+    const deleted = { ...active, id: '00000000-0000-4000-8000-000000000101',
+      name: 'Estudo excluído', deletedAt: '2026-09-24T12:00:00Z' };
+    const onRestore = vi.fn(); const onOpen = vi.fn();
+    render(<StudyList studies={[active, deleted]} selectedId={null} onCreate={vi.fn()} onOpen={onOpen}
+      onRename={vi.fn()} onDuplicate={vi.fn()} onRestore={onRestore} onDelete={vi.fn()} />);
+    const user = userEvent.setup();
+    screen.getByRole('button', { name: 'Lixeira de estudos' }).focus();
+    await user.keyboard('{Enter}');
+    expect(screen.getByRole('list', { name: 'Lixeira de estudos' })).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Abrir Estudo excluído' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Restaurar Estudo excluído' }));
+    expect(onRestore).toHaveBeenCalledWith(deleted);
+    expect(onOpen).not.toHaveBeenCalled();
+  });
 });

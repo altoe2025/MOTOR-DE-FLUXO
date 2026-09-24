@@ -6,6 +6,7 @@ Este guia descreve a branch local MOT-99 baseada em `723461c`. O produto ainda n
 
 1. Faça login. Em **Estudos**, o primeiro acesso local instala o **Estudo demonstrativo sintético**. Ele contém cinco composições recalculadas com o motor vigente; os números são sintéticos e não calibrados para uma carteira real.
 2. Abra um cenário, o Diagnóstico, a repetição representativa no Replay e **Apresentar esta execução**. O Painel A aceita cenário e execução explícitos na URL; comparação e dia do Replay são opcionais. **Salvar PDF** usa a impressão do navegador e o mesmo documento exibido.
+   Para recuperar um Estudo comum excluído, abra **Lixeira de estudos** na lista de Estudos, escolha **Restaurar**, volte à lista e abra o mesmo Estudo. A lixeira é acessível por teclado; exclusão não altera sua identidade ou fonte.
 3. Para uma fonte observada, use **Importar**, escolha a Empresa, selecione o XLSX canônico, aceite o contrato de operações explícitas, revise as linhas e confirme o Caso. Depois crie uma versão de Perfil e anexe-a manualmente a um Estudo. O XLSX bruto fica no navegador; Caso, Empresa, Perfil e Estudo persistem no IndexedDB da conta.
 4. Na configuração atual, o catálogo de finalidades da importação está `NAO_CONFIGURADO`. A execução do Estudo derivado do XLSX é bloqueada antes de reservar diagnóstico. Assim, a jornada observada ainda não chega a Comparação, Replay, Painel A ou PDF numérico. Não use um Estudo demonstrativo como substituto dessa evidência.
 5. O botão **Perguntar** abre o chat contextual. Antes do envio, a interface informa que pergunta e contexto selecionado serão enviados à OpenAI quando o provider real estiver configurado. Falha, timeout ou chat desabilitado não apagam o Estudo; a tentativa pode ser repetida manualmente.
@@ -24,6 +25,7 @@ npm --prefix web run test:e2e -- stage6-acceptance.spec.ts
 npm --prefix web run test:e2e -- stage6-chat.spec.ts stage6-demo-communication.spec.ts stage6-presentation.spec.ts
 npm --prefix web run typecheck
 npm --prefix web run lint
+npm --prefix web run test:render-gate
 python -m tests.web_api.scan_credentials
 ```
 
@@ -33,6 +35,6 @@ As imagens de referência visual atualmente revisadas são `*-local-win32.png`. 
 
 ## Smoke HTTPS futuro
 
-`web/e2e/stage6-render-smoke.spec.ts` é separado do projeto Playwright local e não roda na CI comum. Depois de uma publicação expressamente autorizada, defina no ambiente protegido `MOT_STAGE6_RENDER_APPROVED=1`, `MOT_STAGE6_RENDER_BASE_URL` com a URL HTTPS `*.onrender.com`, `MOT_STAGE6_RENDER_EMAIL` e `MOT_STAGE6_RENDER_PASSWORD` efêmera. Execute `npm --prefix web run test:e2e:render` em máquina com Chromium e Python/PyMuPDF. O runner recusa ausência desses dados antes de abrir o browser. O smoke usa XLSX sintético e uma pergunta sintética; nenhum arquivo real ou segredo deve entrar em logs ou evidências.
+`web/e2e/stage6-render-smoke.spec.ts` é separado do projeto Playwright local e não roda na CI comum. Depois de uma publicação expressamente autorizada, defina no ambiente protegido `MOT_STAGE6_RENDER_APPROVED=1`, `MOT_STAGE6_RENDER_BASE_URL` com a origem HTTPS `*.onrender.com` (somente raiz, sem path, porta, query ou credenciais na URL), `MOT_STAGE6_RENDER_EMAIL` e `MOT_STAGE6_RENDER_PASSWORD` efêmera e não vazios. Execute `npm --prefix web run test:e2e:render` em máquina com Chromium e Python/PyMuPDF. Runner e spec usam o mesmo guard; configuração inválida falha antes de abrir o browser, sem skip verde. O smoke só aceita POST chat 200, mensagem ASSISTANT terminal SUCCEEDED, fingerprint, classificação IN_SCOPE, citações verificáveis e texto/fontes renderizados. O smoke usa XLSX sintético e uma pergunta sintética; nenhum arquivo real ou segredo deve entrar em logs ou evidências.
 
 Registre commit, deploy ID, horário, duração do primeiro health, screenshots e PDF anonimizado somente após a execução real. Um primeiro acesso lento após inatividade é esperado no plano gratuito; não adicione ping de keep-alive. Se a imagem não responder, verifique saúde, variáveis de runtime e logs sem payload; rollback por deploy/commit autorizado está em `docs/deploy-render.md`. Enquanto não houver URL e autorização, `PUBLISHED_ACCEPTANCE=NOT_RUN`.

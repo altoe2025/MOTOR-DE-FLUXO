@@ -74,6 +74,32 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-24 — Revisão do aceite local e da lixeira (MOT-99 / D6)
+
+**Sintoma.** A lista principal ocultava Estudos excluídos, mas não havia
+caminho para sua lixeira; `onRestore` ficava inacessível. O smoke opt-in podia
+aceitar ausência de provider como resultado verde ou ignorar configuração
+inválida. A reconciliação local do chat não verificava o documento enviado.
+
+**Causa.** O filtro `deletedAt === null` era aplicado antes de renderizar todas
+as ações. Runner e spec usavam guards diferentes; o smoke aguardava apenas
+dois artigos de chat, sem conferir HTTP, estado terminal nem citações.
+
+**O que foi feito.** A lista ganhou vista de lixeira no mesmo fluxo, operável
+por teclado, com restauração de Estudo comum e reabertura com ID/fonte
+preservados. Um guard puro único valida URL/credenciais para runner e spec;
+testes Node locais exercitam 503, timeout, provider ausente, fingerprint e
+citações inválidos. O smoke não executado exige resposta POST 200, ASSISTANT
+SUCCEEDED identificada por mensagem e conteúdo/fontes renderizados. O E2E
+local compara o request do chat com a seleção, métricas, evidências e
+fingerprint do Documento de Comunicação esperado. As baselines Windows de
+Estudos e chat foram revistas para a nova entrada de lixeira. Sem Render,
+push, PR ou deploy.
+
+**O que isso invalida.** Ocultar da lista principal não bastava para declarar
+exclusão reversível; dois artigos de chat não demonstravam provider real
+concluído. `LOCAL_ACCEPTANCE=FAIL` e `PUBLISHED_ACCEPTANCE=NOT_RUN` permanecem.
+
 ## 2026-09-24 — Aceite local separado da publicação (MOT-99 / D6)
 
 **Sintoma.** A Etapa 6 tinha provas separadas de importação, demonstração, chat,

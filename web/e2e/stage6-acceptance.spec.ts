@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { strToU8, unzipSync, zipSync } from 'fflate';
 
+import type { ChatRequest } from '../src/api/client';
 import { formatCommunicationMetric } from '../src/presentation/domain';
 import { formatFraction, formatMoney } from '../src/presentation/format';
 
@@ -91,6 +92,31 @@ test('XLSX observado chega a Caso, Perfil e Estudo, mas o catálogo pendente imp
   await expect(page.getByText(/não existe ou pertence a outra conta/)).toBeVisible();
 });
 
+test('estudo comum excluído sai da lista, restaura pela lixeira e reabre com a mesma identidade', async ({ page }) => {
+  await page.goto('/estudos');
+  await page.getByRole('button', { name: 'Novo estudo', exact: true }).click();
+  await expect(page).toHaveURL(/\/carteira\/[0-9a-f-]+$/);
+  const studyUrl = page.url();
+  const studyId = studyUrl.split('/').at(-1)!;
+  const sourceBefore = await page.evaluate((id) => window.__MOTOR_E2E__!.studySource(id), studyId);
+  await page.goto('/estudos');
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.getByRole('button', { name: 'Excluir Novo estudo' }).click();
+  await expect(page.getByRole('button', { name: 'Abrir Novo estudo' })).toHaveCount(0);
+  const trash = page.getByRole('button', { name: 'Lixeira de estudos' });
+  await trash.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('list', { name: 'Lixeira de estudos' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Abrir Novo estudo' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Restaurar Novo estudo' }).focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('button', { name: 'Restaurar Novo estudo' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Voltar aos estudos' }).click();
+  await page.getByRole('button', { name: 'Abrir Novo estudo' }).click();
+  await expect(page).toHaveURL(studyUrl);
+  expect(await page.evaluate((id) => window.__MOTOR_E2E__!.studySource(id), studyId)).toBe(sourceBefore);
+});
+
 test('cinco mixes demonstrativos reconciliam diagnóstico, Replay, chat, Painel A e PDF', async ({ page }, testInfo) => {
   test.setTimeout(150_000);
   const study = await demo(page);
@@ -129,10 +155,29 @@ test('cinco mixes demonstrativos reconciliam diagnóstico, Replay, chat, Painel 
   await page.reload();
   await expect(page).toHaveURL(/#resumo$/);
   await expect(page.getByRole('region', { name: 'Resumo executivo' })).toContainText(formatMoney(first.savingsBrl));
+  const document = await page.evaluate((input) => window.__MOTOR_E2E__!.projectDemoCommunication(input), {
+    studyId: study.id, scenarioId: first.scenarioId, diagnosticExecutionId: first.id, replayDay: 31,
+  });
   const inScope = await chat(page, 'Explique a economia selecionada.');
   expect(inScope.response.status()).toBe(200);
+  const sent = inScope.response.request().postDataJSON() as ChatRequest;
+  expect(sent.routeContext).toMatchObject({ studyId: study.id, scenarioId: first.scenarioId,
+    diagnosticExecutionId: first.id, replayDay: 31 });
+  expect(sent.communication).not.toBeNull();
+  if (sent.communication === null) throw new Error('Chat sem CommunicationDocumentV1.');
+  expect(sent.communication.study).toEqual(document.study);
+  expect(sent.communication.selection).toEqual(document.selection);
+  expect(sent.communication.source).toEqual(document.source);
+  expect(sent.communication.contextFingerprint).toBe(document.contextFingerprint);
+  for (const field of ['executiveMetrics', 'composition', 'mechanism', 'economics',
+    'robustness', 'comparison', 'replaySnapshot', 'limitations', 'evidenceIndex'] as const) {
+    expect(sent.communication[field]).toEqual(document[field]);
+  }
+  expect(sent.communication.executiveMetrics.find((metric) => metric.code === 'SAVINGS_BRL')?.value).toBe(first.savingsBrl);
+  expect(sent.communication.executiveMetrics.find((metric) => metric.code === 'NETABILITY')?.value).toBe(first.netability);
   const answer = await inScope.response.json() as { classification: string; contextFingerprint: string; answer: string };
   expect(answer.classification).toBe('IN_SCOPE');
+  expect(answer.contextFingerprint).toBe(document.contextFingerprint);
   await expect(inScope.panel).toContainText(answer.answer);
   await inScope.panel.getByRole('button', { name: 'Fechar chat' }).click();
   expect(answer.contextFingerprint).toMatch(/^[0-9a-f]{64}$/);
@@ -144,9 +189,6 @@ test('cinco mixes demonstrativos reconciliam diagnóstico, Replay, chat, Painel 
   expect(refused).toMatchObject({ classification: 'OUT_OF_SCOPE', answer: REFUSAL });
   await outside.panel.getByRole('button', { name: 'Fechar chat' }).click();
 
-  const document = await page.evaluate((input) => window.__MOTOR_E2E__!.projectDemoCommunication(input), {
-    studyId: study.id, scenarioId: first.scenarioId, diagnosticExecutionId: first.id, replayDay: 31,
-  });
   await page.emulateMedia({ media: 'print' });
   await expect(page.locator('.sidebar')).toBeHidden();
   await expect(page.getByRole('button', { name: 'Perguntar', exact: true })).toBeHidden();

@@ -127,6 +127,7 @@ a { color: inherit; }
 .list-toolbar { display: flex; justify-content: flex-end; margin-top: var(--space-4); }
 .study-list__item { align-items: center; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); display: flex; flex-wrap: wrap; gap: var(--space-3); padding: var(--space-3); }
 .study-list__open { background: transparent; border: 0; color: var(--ink); cursor: pointer; display: grid; flex: 1; gap: var(--space-1); min-width: 0; padding: var(--space-2); text-align: left; }
+.study-list__open:not(button) { cursor: default; }
 .study-list__actions, .source-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .study-list__open span, .study-list__open small { color: var(--muted); }
 .study-list__open[aria-current='true'] { background: #e8f0ed; border-radius: var(--radius); }

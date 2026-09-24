@@ -1,5 +1,21 @@
 # Testes
 
+## Revisão local da Etapa 6 — MOT-99 (2026-09-24)
+
+RED/GREEN: lixeira por teclado e restauração (`StudyList`), estado/ID terminal
+do ASSISTANT (`ChatHistory`) e guard puro compartilhado do smoke Render. O
+guard local rejeita URL com path/porta, credenciais vazias, 503, timeout,
+provider ausente, classificação fora de escopo, fingerprint/citação forjados
+ou resposta não terminal; **4/4 testes Node PASS**, sem rede. Os dois arquivos
+unitários afetados passaram **16/16**. E2E local de aceitação/chat passou
+**21/21**; visual Windows acusou a nova entrada da lixeira, e apenas as
+baselines `demo-local-win32.png` e `chat-local-win32.png` foram atualizadas
+após inspeção. Aceitação + visual sem modo update passaram **8/8**.
+O E2E complementar de demonstração e acessibilidade passou **7/7**.
+`typecheck`, ESLint e build de produção PASS. O smoke Render continua
+**NOT_RUN**; o catálogo XLSX `NAO_CONFIGURADO`, Linux visual e Docker image
+smoke mantêm **LOCAL_ACCEPTANCE=FAIL**.
+
 ## Aceite local Etapa 6 — D6 / MOT-99 (2026-09-24)
 
 No worktree isolado baseado em `723461c` mais a correção de Estudos excluídos

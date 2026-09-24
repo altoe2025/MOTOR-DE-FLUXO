@@ -1,18 +1,12 @@
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
+import { requireRenderSmokeConfig } from './render-smoke-gate.mjs';
+
 const webRoot = fileURLToPath(new URL('..', import.meta.url));
 const render = process.argv.includes('--render');
 if (render) {
-  const url = process.env.MOT_STAGE6_RENDER_BASE_URL;
-  let parsed;
-  try { parsed = new URL(url); } catch { throw new Error('MOT_STAGE6_RENDER_BASE_URL deve ser uma URL HTTPS explícita.'); }
-  if (process.env.MOT_STAGE6_RENDER_APPROVED !== '1'
-    || parsed.protocol !== 'https:' || parsed.username || parsed.password || parsed.search || parsed.hash
-    || !parsed.hostname.endsWith('.onrender.com')
-    || !process.env.MOT_STAGE6_RENDER_EMAIL || !process.env.MOT_STAGE6_RENDER_PASSWORD) {
-    throw new Error('Smoke Render requer aprovação explícita, URL onrender.com HTTPS e credenciais efêmeras no ambiente.');
-  }
+  requireRenderSmokeConfig(process.env);
 }
 const result = spawnSync(
   process.execPath,

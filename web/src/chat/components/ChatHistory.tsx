@@ -35,7 +35,7 @@ export function ChatHistory({ conversation, contextFingerprint, catalog = null, 
       {conversation.messages.map((item, index) => <li key={item.id}>
         {index > 0 && conversation.messages[index - 1]?.contextFingerprint !== item.contextFingerprint
           && <p className="chat-context-divider">Contexto alterado</p>}
-        <article className="chat-message">
+        <article className="chat-message" data-chat-role={item.role} data-chat-status={item.status} data-chat-message-id={item.id}>
           <strong>{item.role === 'USER' ? 'Você' : 'Assistente'}</strong>
           <p>{item.text || (item.status === 'PENDING' ? 'Respondendo…' : 'Resposta indisponível.')}</p>
           {item.status === 'FAILED' && <span>Falha ao responder. Tente novamente.</span>}

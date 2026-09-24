@@ -9,9 +9,10 @@
 | Requisito | Evidência local | Estado |
 |---|---|---|
 | XLSX → Caso → Empresa → Perfil → Estudo | `stage6-acceptance.spec.ts` e `import-observed-case.spec.ts`; dados brutos ausentes de requests | PASS |
+| Estudo comum excluído → lixeira → restaurar → reabrir | `StudyList` mantém lista principal limpa, botão de lixeira operável por teclado e E2E preserva ID e origem | PASS local |
 | Estudo observado → diagnóstico, Replay, Painel A, PDF | gate `NAO_CONFIGURADO` bloqueia antes de reserva/POST; nenhuma execução nasce | BLOCKED |
 | Cinco mixes demonstrativos | cinco cenários e envelopes atuais, origem `synthetic=true`, fingerprint e repetição conferidos | PASS |
-| Valores entre Diagnóstico, Replay, chat, apresentação e PDF | `CommunicationDocumentV1`, evidências e métricas conferidos no browser e no PDF de nove páginas para a demonstração | PASS local |
+| Valores entre Diagnóstico, Replay, chat, apresentação e PDF | request do chat confrontado com seleção, métricas, evidências e fingerprint do `CommunicationDocumentV1` esperado; valores conferidos no browser e PDF de nove páginas | PASS local |
 | Reload e deep links | rota de apresentação com seleção explícita, execução em IndexedDB e fragmento de seção sobrevivem à recarga | PASS local |
 | Falhas e isolamento | XLSX inválido; storage indisponível; job remoto expirado com execução local; offline após carregar; chat desabilitado, timeout, citação inválida e transporte indisponível; troca A/B | PASS local |
 | Acessibilidade, orçamento e visual Windows | gates D3 no Playwright local completo e documento `etapa-6-acessibilidade-desempenho.md` | PASS local medido na fixture demonstrativa |
@@ -37,6 +38,6 @@ em execução permanece NOT_RUN até autorização própria.
 
 ## Gate e falhas conhecidas
 
-O roteiro de reprodução está em `etapa-6-operacao.md`, e o índice dos artefatos está em `evidencias/etapa-6/README.md`. O teste opt-in `stage6-render-smoke.spec.ts` foi criado e **não executado**; só um smoke HTTPS posterior, com autorização e credenciais efêmeras, poderá mudar o status publicado.
+O roteiro de reprodução está em `etapa-6-operacao.md`, e o índice dos artefatos está em `evidencias/etapa-6/README.md`. O teste opt-in `stage6-render-smoke.spec.ts` foi criado e **não executado**; o guard puro compartilhado com o runner tem testes locais para configuração inválida, 503, timeout, provider ausente, citação forjada, fingerprint e mensagem não terminal. Só um smoke HTTPS posterior, com autorização e credenciais efêmeras, poderá mudar o status publicado.
 
 Na primeira rodada de baseline deste worktree, 11/13 E2Es focados passaram. O caso preexistente de CAS entre duas abas excedeu o timeout de 30 s sob carga; o teste de PDF falhou por um Python incompleto herdado do checkout anterior. Um ambiente Python isolado com o lock do repo foi preparado depois. O run completo subsequente passou **62/62 E2Es locais**, inclusive ambos os casos. Python normal e `-O` passaram **1.174/1.174** cada, com três skips; web unit passou **1.014/1.014**. Detalhes e tentativas intermediárias estão em `docs/testing.md`. Essas falhas iniciais não são apagadas da evidência.

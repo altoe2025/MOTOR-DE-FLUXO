@@ -25,4 +25,14 @@ describe('chat announcements', () => {
     rerender(<ChatHistory conversation={{ ...record, messages: [message(), { ...pending, text: 'Resposta pronta', status: 'SUCCEEDED' }] }} contextFingerprint={null} />);
     expect(screen.getByText('Resposta pronta', { selector: '[aria-live="polite"]' })).toBeInTheDocument();
   });
+
+  it('expõe status terminal da resposta renderizada para o smoke sem confundir texto PENDING', () => {
+    const assistant = message({ id: 'answer', role: 'ASSISTANT', text: 'Resposta pronta', status: 'SUCCEEDED' });
+    const record = conversation({ messages: [message(), assistant] });
+    render(<ChatHistory conversation={record} contextFingerprint={null} />);
+    const article = screen.getByText('Resposta pronta', { selector: 'p' }).closest('article');
+    expect(article).toHaveAttribute('data-chat-role', 'ASSISTANT');
+    expect(article).toHaveAttribute('data-chat-status', 'SUCCEEDED');
+    expect(article).toHaveAttribute('data-chat-message-id', 'answer');
+  });
 });
