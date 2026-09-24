@@ -2,6 +2,11 @@
 
 ## Painel A e relatório local — D1/D2 / MOT-96 (2026-09-24)
 
+Correção de contagem na receita demonstrativa: `composition` inclui uma linha
+total com `participant_id: null`; o texto apresenta 12 participantes. RED/GREEN
+unitário, TypeScript, ESLint e Playwright/PDF de apresentação **2 PASS**
+reconfirmados em 2026-09-24. A projeção não altera o documento canônico.
+
 Revisão de auditoria na mesma base: `?comparacao=<execução base>` e
 `?dia=<dia>` preservam seleção explícita, inclusive juntos; valores inválidos
 produzem erro, sem substituição silenciosa. A apresentação traduz rótulos,

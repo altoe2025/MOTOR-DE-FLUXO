@@ -41,11 +41,16 @@ export function presentFact(fact: CommunicationFact): PresentedFact {
           && typeof source.recipe === 'object' && !Array.isArray(source.recipe)) {
           const recipe = source.recipe as Record<string, unknown>;
           if (typeof recipe.exampleId === 'string' && typeof recipe.generatorVersion === 'string'
-            && Array.isArray(recipe.composition) && Array.isArray(recipe.seeds)) return {
-            label: fact.label,
-            value: `Receita sintética ${recipe.exampleId} · gerador ${recipe.generatorVersion} · ${recipe.composition.length} participantes · ${recipe.seeds.length} sementes`,
-            explanation: 'A receita e suas sementes identificam a geração desta carteira.',
-          };
+            && Array.isArray(recipe.composition) && Array.isArray(recipe.seeds)) {
+            const participants = recipe.composition.filter((entry: unknown) => entry !== null
+              && typeof entry === 'object' && !Array.isArray(entry)
+              && typeof (entry as Record<string, unknown>).participant_id === 'string').length;
+            return {
+              label: fact.label,
+              value: `Receita sintética ${recipe.exampleId} · gerador ${recipe.generatorVersion} · ${participants} participantes · ${recipe.seeds.length} sementes`,
+              explanation: 'A receita e suas sementes identificam a geração desta carteira.',
+            };
+          }
         }
       }
     } catch { /* Keep the published value if its shape is unknown. */ }

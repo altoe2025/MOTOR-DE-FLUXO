@@ -73,6 +73,22 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-24 — Linha total da receita não é participante (MOT-96)
+
+**Sintoma.** O Painel A exibia 13 participantes para a receita demonstrativa
+de 12 clientes.
+
+**Causa.** A receita traz uma linha agregada com `participant_id: null`, e a
+projeção textual contava todas as linhas de `composition`.
+
+**O que foi feito.** `web/src/presentation/facts.ts` conta apenas linhas com
+`participant_id` de participante. O teste unitário inclui a linha total, e o
+Playwright confere “12 participantes” no Painel e no texto do PDF A4.
+
+**O que isso invalida.** A contagem “13 participantes” dos PDFs locais
+anteriores não representa clientes; métricas financeiras e valores canônicos
+não mudaram. Sem push, PR ou deploy.
+
 ## 2026-09-24 — Reconciliação do Painel A e gate PDF (MOT-96, D1/D2)
 
 **Sintoma.** Deep links para a apresentação descartavam comparação e Replay;

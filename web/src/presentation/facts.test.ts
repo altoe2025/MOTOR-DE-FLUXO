@@ -5,7 +5,7 @@ import { presentFact } from './facts';
 describe('receita de origem na apresentação', () => {
   it('resume a receita sintética sem alterar o JSON canônico publicado', () => {
     const fact: CommunicationFact = { code: 'SOURCE', label: 'Origem da carteira',
-      value: '{"kind":"SYNTHETIC","recipe":{"exampleId":"perfil-operacional-mvp","generatorVersion":"dimensionamento-v1","composition":[{},{}],"seeds":["1","2"]}}',
+      value: '{"kind":"SYNTHETIC","recipe":{"exampleId":"perfil-operacional-mvp","generatorVersion":"dimensionamento-v1","composition":[{"participant_id":"cliente-1","total_brl":"100"},{"participant_id":"cliente-2","total_brl":"200"},{"participant_id":null,"total_brl":"300"}],"seeds":["1","2"]}}',
       evidenceRefs: ['STUDY:/source'] };
     expect(presentFact(fact)).toEqual({ label: 'Origem da carteira',
       value: 'Receita sintética perfil-operacional-mvp · gerador dimensionamento-v1 · 2 participantes · 2 sementes',

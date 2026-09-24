@@ -29,6 +29,7 @@ test('deep link e relatório A4 conservam a publicação e ocultam controles', a
   await expect(page.getByRole('region', { name: 'Resumo executivo' })).toContainText(formatMoney(diagnostic.savingsBrl));
   await expect(page.getByRole('region', { name: 'Composição e mecanismo' }))
     .toContainText('Receita sintética perfil-operacional-mvp');
+  await expect(page.getByRole('region', { name: 'Composição e mecanismo' })).toContainText('12 participantes');
   await page.getByRole('button', { name: 'Perguntar', exact: true }).click();
   const chat = page.getByRole('dialog', { name: 'Chat', exact: true });
   await expect(chat.locator('.chat-context-label')).toHaveText('Contexto: Apresentação');
@@ -60,6 +61,7 @@ test('deep link e relatório A4 conservam a publicação e ocultam controles', a
     '--expect', scenario.name, '--expect', diagnostic.id, '--expect', 'Resumo executivo',
     '--expect', 'Premissas e proveniência', '--expect', 'Limitações e versões',
     '--expect', 'Receita sintética perfil-operacional-mvp',
+    '--expect', '12 participantes',
     '--expect', 'IOF de saída', '--expect', '3,50%', '--expect', '0,04%',
     '--expect', '25,00 bps', '--expect', 'As premissas de custo não foram observadas na fonte'], {
     cwd: '..', encoding: 'utf8', timeout: 30_000,
