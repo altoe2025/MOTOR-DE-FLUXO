@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest';
-import { render, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -33,6 +33,32 @@ describe('diagnostic chat context', () => {
       scenarioId: input.scenarioId, diagnosticExecutionId: input.diagnosticExecutionId,
       comparisonExecutionId: null, replay: null, replayDay: null,
     })));
+  });
+
+  it('reopens the cited execution even when a newer execution exists for the same scenario', async () => {
+    const input = await observedInput();
+    input.study.executions.push({ ...structuredClone(input.execution), id: '70000000-0000-4000-8000-000000000001' });
+    mocks.loadStudy.mockResolvedValue(input.study);
+    render(<MemoryRouter initialEntries={[`/estudos/${input.study.id}/diagnostico?scenarioId=${input.scenarioId}&executionId=${input.diagnosticExecutionId}`]}>
+      <Routes><Route path="/estudos/:studyId/diagnostico" element={<StudyDiagnosticPage />} /></Routes>
+    </MemoryRouter>);
+    await waitFor(() => expect(mocks.publishCommunication).toHaveBeenCalledWith(expect.objectContaining({
+      diagnosticExecutionId: input.diagnosticExecutionId,
+    })));
+  });
+
+  it('does not publish a newer execution when the cited execution is missing', async () => {
+    const input = await observedInput();
+    mocks.publishCommunication.mockClear();
+    mocks.loadStudy.mockResolvedValue(input.study);
+    render(<MemoryRouter initialEntries={[`/estudos/${input.study.id}/diagnostico?scenarioId=${input.scenarioId}&executionId=missing`]}>
+      <Routes><Route path="/estudos/:studyId/diagnostico" element={<StudyDiagnosticPage />} /></Routes>
+    </MemoryRouter>);
+    await waitFor(() => expect(mocks.publishCommunication).toHaveBeenCalledWith(null));
+    expect(await screen.findByText('A execução citada não está disponível neste Estudo.')).toBeVisible();
+    expect(mocks.publishCommunication).not.toHaveBeenCalledWith(expect.objectContaining({
+      diagnosticExecutionId: input.diagnosticExecutionId,
+    }));
   });
 
   it('reports the effective base scenario when the route has no scenario query', async () => {

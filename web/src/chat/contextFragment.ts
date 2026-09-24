@@ -13,6 +13,7 @@ export function communicationMatchesRoute(document: CommunicationDocumentV1, rou
   return route !== null && route.studyId === document.study.id
     && route.scenarioId === document.selection.scenarioId
     && route.diagnosticExecutionId === document.selection.diagnosticExecutionId
+    && (route.comparisonExecutionId ?? null) === document.selection.comparisonExecutionId
     && route.replayDay === document.selection.replayDay;
 }
 

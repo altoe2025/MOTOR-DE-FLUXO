@@ -72,18 +72,26 @@ export function citationDestination(citation: Citation, fingerprint: string | nu
   }
   const execution = document.selection.diagnosticExecutionId;
   const study = document.study.id;
-  const diagnostic = `/estudos/${encodeURIComponent(study)}/diagnostico?scenarioId=${encodeURIComponent(document.selection.scenarioId)}`;
+  const diagnostic = `/estudos/${encodeURIComponent(study)}/diagnostico?scenarioId=${encodeURIComponent(document.selection.scenarioId)}`
+    + `&executionId=${encodeURIComponent(execution)}`;
   const replay = `/estudos/${encodeURIComponent(study)}/replay?executionId=${encodeURIComponent(execution)}`
     + (document.selection.replayDay === null ? '' : `&day=${document.selection.replayDay}#replay-journal-day-${document.selection.replayDay}`);
-  const comparison = `/comparar?studyId=${encodeURIComponent(study)}`;
+  const comparison = document.selection.comparisonExecutionId === null ? null
+    : `/comparar?studyId=${encodeURIComponent(study)}`
+      + `&baseExecutionId=${encodeURIComponent(document.selection.comparisonExecutionId)}`
+      + `&hypothesisExecutionId=${encodeURIComponent(execution)}`;
   if (citation.kind === 'EVIDENCE') {
     const evidence = Object.hasOwn(document.evidenceIndex, citation.id) ? document.evidenceIndex[citation.id] : undefined;
     return { label: citation.id, href: evidence === undefined ? null : evidence.source === 'REPLAY' ? replay
-      : evidence.source === 'COMPARISON' ? comparison : diagnostic };
+      : evidence.source === 'COMPARISON' ? comparison
+        : evidence.source === 'DIAGNOSTIC' && evidence.diagnosticExecutionId !== execution ? null : diagnostic };
   }
   if (citation.kind === 'LIMITATION') {
     const item = document.limitations.find((candidate) => candidate.code === citation.id);
-    return { label: item?.statement ?? citation.id, href: item === undefined ? null : `${diagnostic}#all-limitations-heading` };
+    const source = item?.evidenceRefs.map((ref) => document.evidenceIndex[ref]?.source);
+    return { label: item?.statement ?? citation.id, href: item === undefined || source?.length === 0 ? null
+      : source?.every((kind) => kind === 'COMPARISON') ? (comparison === null ? null : `${comparison}#comparison-limitations-title`)
+        : source?.every((kind) => kind === 'DIAGNOSTIC') ? `${diagnostic}#all-limitations-heading` : null };
   }
   const sections = [document.composition, document.mechanism, document.economics, document.robustness];
   const metric = [...document.executiveMetrics, ...sections.flatMap((section) => section.metrics),

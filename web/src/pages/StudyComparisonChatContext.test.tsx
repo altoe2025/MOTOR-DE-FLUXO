@@ -11,12 +11,13 @@ import { StudyComparisonPage } from './StudyComparisonPage';
 const mocks = vi.hoisted(() => {
   const loadStudy = vi.fn();
   return { loadStudy, controller: { loadStudy }, publishCommunication: vi.fn(),
-    setScenarioId: vi.fn(), setDiagnosticExecutionId: vi.fn() };
+    setScenarioId: vi.fn(), setDiagnosticExecutionId: vi.fn(), askAbout: vi.fn() };
 });
 vi.mock('../app/providers', () => ({ useStudyController: () => mocks.controller }));
 vi.mock('../chat/ChatProvider', () => ({ useOptionalChat: () => ({
   publishCommunication: mocks.publishCommunication, setScenarioId: mocks.setScenarioId,
-  setDiagnosticExecutionId: mocks.setDiagnosticExecutionId,
+  setDiagnosticExecutionId: mocks.setDiagnosticExecutionId, askAbout: mocks.askAbout,
+  routeContext: { routeId: 'comparison' },
 }) }));
 
 describe('comparison communication context', () => {
@@ -33,6 +34,30 @@ describe('comparison communication context', () => {
     await waitFor(() => expect(mocks.publishCommunication).toHaveBeenCalledWith(expect.objectContaining({
       study: expect.objectContaining({ id: input.study.id }), comparisonExecutionId: base.id,
       diagnosticExecutionId: input.comparisonExecutionId,
+    })));
+  });
+
+  it('opens the comparison question with a comparison intent', async () => {
+    const user = userEvent.setup();
+    const input = await comparisonInput();
+    mocks.loadStudy.mockResolvedValue(input.study);
+    render(<MemoryRouter initialEntries={[`/comparar?studyId=${input.study.id}`]}><StudyComparisonPage /></MemoryRouter>);
+    await user.selectOptions(await screen.findByLabelText('Execução base'), input.diagnosticExecutionId);
+    await user.selectOptions(screen.getByLabelText('Execução da hipótese'), input.comparisonExecutionId!);
+    await user.click(screen.getByRole('button', { name: 'Comparar' }));
+    await user.click(screen.getAllByRole('button', { name: 'Perguntar sobre isto' })[0]!);
+    expect(mocks.askAbout).toHaveBeenLastCalledWith(expect.any(String), undefined, 'COMPARISON');
+  });
+
+  it('reconstructs the cited base and hypothesis from validated URL selections', async () => {
+    const input = await comparisonInput();
+    mocks.loadStudy.mockResolvedValue(input.study);
+    render(<MemoryRouter initialEntries={[`/comparar?studyId=${input.study.id}&baseExecutionId=${input.diagnosticExecutionId}&hypothesisExecutionId=${input.comparisonExecutionId}`]}>
+      <StudyComparisonPage /></MemoryRouter>);
+    await waitFor(() => expect(screen.getByLabelText('Execução base')).toHaveValue(input.diagnosticExecutionId));
+    expect(screen.getByLabelText('Execução da hipótese')).toHaveValue(input.comparisonExecutionId);
+    await waitFor(() => expect(mocks.publishCommunication).toHaveBeenCalledWith(expect.objectContaining({
+      comparisonExecutionId: input.diagnosticExecutionId, diagnosticExecutionId: input.comparisonExecutionId,
     })));
   });
 });

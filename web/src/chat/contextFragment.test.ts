@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { buildCommunicationDocument } from '../communication/buildCommunicationDocument';
-import { observedInput } from '../communication/testFixtures';
+import { comparisonInput, observedInput } from '../communication/testFixtures';
 import { validateCommunicationDocument } from '../communication/validation';
 import { communicationMatchesRoute, selectChatContext } from './contextFragment';
 
@@ -35,6 +35,23 @@ describe('minimal chat context', () => {
       replayDay: null };
     expect(communicationMatchesRoute(document, route)).toBe(true);
     expect(communicationMatchesRoute(document, { ...route, scenarioId: 'another-scenario' })).toBe(false);
+  });
+
+  it('distinguishes a comparison pair and a Replay day on the same route', async () => {
+    const input = await comparisonInput();
+    const hypothesis = input.study.executions.find((item) => item.id === input.comparisonExecutionId)!;
+    const document = await buildCommunicationDocument({ ...input, scenarioId: hypothesis.scenarioId,
+      diagnosticExecutionId: hypothesis.id, comparisonExecutionId: input.diagnosticExecutionId });
+    const route = { routeId: 'comparison', helpId: null, studyId: document.study.id,
+      scenarioId: document.selection.scenarioId, diagnosticExecutionId: document.selection.diagnosticExecutionId,
+      comparisonExecutionId: document.selection.comparisonExecutionId, replayDay: null };
+    expect(communicationMatchesRoute(document, route)).toBe(true);
+    expect(communicationMatchesRoute(document, { ...route, comparisonExecutionId: 'different-base' })).toBe(false);
+    expect(communicationMatchesRoute(document, { ...route, replayDay: 2 })).toBe(false);
+    const fragment = await selectChatContext(document, { kind: 'COMPARISON' });
+    expect(fragment?.comparison?.metrics.length).toBeGreaterThan(0);
+    expect(fragment?.executiveMetrics).toEqual([]);
+    expect(Object.values(fragment?.evidenceIndex ?? {}).every((item) => item.source === 'COMPARISON')).toBe(true);
   });
 
   it('sends only published limitations and their evidence for a limitation question', async () => {

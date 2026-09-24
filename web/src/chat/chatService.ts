@@ -5,7 +5,7 @@ import type { ApplicationRepository } from '../storage/applicationRepository';
 import type { ChatConversation, ChatMessage } from './domain';
 import type { RouteChatContext } from './routeContext';
 
-type ChatRepository = Pick<ApplicationRepository, 'saveChatConversation'>;
+type ChatRepository = Pick<ApplicationRepository, 'saveChatConversation' | 'getChatConversation'>;
 type ChatClient = Pick<ApiClient, 'sendChatMessage'>;
 
 function now(): string { return new Date().toISOString(); }
@@ -87,11 +87,24 @@ export async function sendChatMessage(input: Readonly<{
     return final;
   } catch (error) {
     try {
-      const failed = await input.repository.saveChatConversation({ expectedRevision: persisted.revision,
-        operationId: crypto.randomUUID(), document: update(persisted, persisted.messages.map((item) => item.id === answerId
-          ? { ...item, status: 'FAILED' } : item)) });
-      input.onSaved?.(failed);
-    } catch { /* A competing CAS or closed session owns the current state. */ }
+      let current = persisted;
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        const answer = current.messages.find((item) => item.id === answerId);
+        if (answer?.status !== 'PENDING') { input.onSaved?.(current); break; }
+        try {
+          const failed = await input.repository.saveChatConversation({ expectedRevision: current.revision,
+            operationId: crypto.randomUUID(), document: update(current, current.messages.map((item) => item.id === answerId
+              ? { ...item, status: 'FAILED' } : item)) });
+          input.onSaved?.(failed);
+          break;
+        } catch {
+          const latest = await input.repository.getChatConversation(snapshot.id);
+          if (latest === null || latest.ownerSub !== snapshot.ownerSub || latest.studyId !== snapshot.studyId) break;
+          current = latest;
+          input.onSaved?.(latest);
+        }
+      }
+    } catch { /* Closed or unavailable storage cannot be reconciled here. */ }
     throw error;
   }
 }

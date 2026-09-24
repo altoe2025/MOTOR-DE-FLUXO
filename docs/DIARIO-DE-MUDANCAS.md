@@ -73,6 +73,27 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-23 — Reconciliação e identidade de contexto do chat, C5 (MOT-95)
+
+**Sintoma.** Conflito de revisão na finalização podia deixar resposta PENDING e
+impedir retry; troca de seleção na mesma URL não marcava contexto anterior; CTA de
+comparação enviava ajuda genérica; citações podiam abrir outra execução ou par.
+
+**Causa.** O serviço ignorava a segunda falha de CAS; a UI confundia último
+fragmento enviado com seleção atual; a intenção e os links não carregavam a
+identidade completa das execuções.
+
+**O que foi feito.** Nesta worktree local, releitura e CAS sobre a revisão vigente
+preservam alterações concorrentes e deixam a resposta própria retryable; a
+seleção atual controla o marcador de contexto, mantendo o fragmento histórico para
+citações. Comparação usa intenção própria; links carregam execução diagnóstica ou
+par base/hipótese e as páginas validam a seleção antes de exibir resultados.
+Regressões RED/GREEN, typecheck e lint acompanham a correção. Sem push, PR ou deploy.
+
+**O que isso invalida.** Links antigos sem identidade de execução não garantiam
+reabrir os valores citados. Uma referência cuja seleção não possa ser reconstruída
+aparece indisponível; não se escolhe outra execução automaticamente.
+
 ## 2026-09-23 — Cliente, evidências e ajuda contextual, C5 (MOT-95)
 
 **Sintoma.** O chat C1–C4 persistia conversas e atendia na API, mas o cliente

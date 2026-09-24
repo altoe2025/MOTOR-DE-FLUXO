@@ -19,6 +19,7 @@ describe('historical citation', () => {
         scenarioId: document.selection.scenarioId, diagnosticExecutionId: document.selection.diagnosticExecutionId,
         replayDay: null }} /></MemoryRouter>);
     expect(await screen.findByRole('link', { name: 'Economia simulada' })).toHaveAttribute('href',
-      `/estudos/${document.study.id}/diagnostico?scenarioId=${document.selection.scenarioId}#selected-execution-heading`);
+      `/estudos/${document.study.id}/diagnostico?scenarioId=${document.selection.scenarioId}`
+      + `&executionId=${document.selection.diagnosticExecutionId}#selected-execution-heading`);
   });
 });

@@ -4,6 +4,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import type { JobSnapshot } from '../api/client';
 import { useDiagnosticRuntime } from '../app/providers';
 import { useOptionalChat } from '../chat/ChatProvider';
+import { selectionId } from '../chat/routeContext';
 import type { FieldProvenance } from '../cases/domain';
 import { buildDiagnosticRequest, DiagnosticRequestBuildError } from '../diagnostics/buildDiagnosticRequest';
 import { DiagnosticAxesView } from '../diagnostics/components/DiagnosticAxesView';
@@ -90,7 +91,9 @@ export function StudyDiagnosticPage() {
   const { studyId } = useParams();
   const [searchParams] = useSearchParams();
   const requestedScenarioId = searchParams.get('scenarioId');
-  const screenIdentity = `${studyId ?? ''}:${requestedScenarioId ?? ''}`;
+  const rawExecutionId = searchParams.get('executionId');
+  const requestedExecutionId = selectionId(rawExecutionId);
+  const screenIdentity = `${studyId ?? ''}:${requestedScenarioId ?? ''}:${rawExecutionId ?? ''}`;
   const { controller, client } = useDiagnosticRuntime();
   const chat = useOptionalChat();
   const setChatScenarioId = chat?.setScenarioId;
@@ -129,9 +132,15 @@ export function StudyDiagnosticPage() {
       }
       const selectedId = requestedScenarioId ?? loaded.baseScenarioId;
       const selected = loaded.scenarios.find((item) => item.id === selectedId);
-      setViewState(selected === undefined
-        ? { kind: 'UNAVAILABLE', reason: 'O cenário solicitado não existe neste estudo.' }
-        : persistedState(latestDiagnostic(loaded, selected)));
+      if (selected === undefined) setViewState({ kind: 'UNAVAILABLE', reason: 'O cenário solicitado não existe neste estudo.' });
+      else if (rawExecutionId !== null) {
+        const cited = selectionId(rawExecutionId) === null ? undefined : diagnosticsForScenario(loaded, selected).find((item) =>
+          item.id === requestedExecutionId && item.status === 'SUCCEEDED' && item.envelope !== null
+          && isCurrentForScenario(item, selected));
+        setViewState(cited === undefined
+          ? { kind: 'UNAVAILABLE', reason: 'A execução citada não está disponível neste Estudo.' }
+          : persistedState(cited));
+      } else setViewState(persistedState(latestDiagnostic(loaded, selected)));
     }).catch(() => {
       if (active && mounted.current) setViewState({ kind: 'UNAVAILABLE', reason: 'Não foi possível abrir o estudo.' });
     });
@@ -145,7 +154,7 @@ export function StudyDiagnosticPage() {
       }
     });
     return () => { active = false; mounted.current = false; unsubscribe(); };
-  }, [controller, requestedScenarioId, screenIdentity, studyId]);
+  }, [controller, requestedScenarioId, requestedExecutionId, rawExecutionId, screenIdentity, studyId]);
 
   const selectedScenarioId = requestedScenarioId ?? study?.baseScenarioId;
   const scenario = study?.scenarios.find((item) => item.id === selectedScenarioId) ?? null;
@@ -203,12 +212,12 @@ export function StudyDiagnosticPage() {
   }, [complete, controller, effectiveCount, runInProgress, scenario, study, trackedApi]);
 
   useEffect(() => {
-    if (study === null || scenario === null || runInProgress) return;
+    if (study === null || scenario === null || runInProgress || rawExecutionId !== null) return;
     const latest = latestDiagnostic(study, scenario);
     if (latest?.status !== 'QUEUED' || resumedAttempts.current.has(latest.attemptId)) return;
     resumedAttempts.current.add(latest.attemptId);
     void run();
-  }, [run, runInProgress, scenario, study]);
+  }, [run, runInProgress, scenario, study, rawExecutionId]);
 
   const cancel = async () => {
     if (scenario === null || cancelInFlightRef.current) return;
@@ -240,8 +249,10 @@ export function StudyDiagnosticPage() {
   };
 
   const scenarioDiagnostics = study === null || scenario === null ? [] : diagnosticsForScenario(study, scenario);
-  const terminal = scenario === null ? null : [...scenarioDiagnostics].reverse().find((item) =>
-    item.status === 'SUCCEEDED' && item.envelope !== null && isCurrentForScenario(item, scenario)) ?? null;
+  const terminal = scenario === null || (rawExecutionId !== null && requestedExecutionId === null) ? null
+    : [...scenarioDiagnostics].reverse().find((item) =>
+    item.status === 'SUCCEEDED' && item.envelope !== null && isCurrentForScenario(item, scenario)
+      && (requestedExecutionId === null || item.id === requestedExecutionId)) ?? null;
   const envelope = terminal?.envelope ?? null;
   const chatScenarioId = study?.id === studyId ? scenario?.id ?? null : null;
   const chatExecutionId = study?.id === studyId ? terminal?.id ?? null : null;

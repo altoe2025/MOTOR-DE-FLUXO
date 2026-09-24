@@ -36,11 +36,12 @@ type ChatState = Readonly<{
   beginRequest(): AbortSignal;
   send(question: string, retryAssistantId?: string): Promise<void>;
   cancel(): void;
-  askAbout(helpId: HelpId, metricId?: string, contextKind?: 'REPLAY' | 'REPETITION' | 'LIMITATIONS'): void;
+  askAbout(helpId: HelpId, metricId?: string, contextKind?: 'REPLAY' | 'REPETITION' | 'LIMITATIONS' | 'COMPARISON'): void;
   publishCommunication(input: CommunicationInput | null): void;
   setHelpId(helpId: string | null): void;
   setReplayDay(day: number | null): void;
   setDiagnosticExecutionId(id: string | null): void;
+  setComparisonExecutionId(id: string | null): void;
   setScenarioId(id: string | null): void;
 }>;
 const Context = createContext<ChatState | null>(null);
@@ -64,8 +65,10 @@ export function ChatProvider({ ownerSub, repository, client, catalog = null, chi
   const routeKey = location.pathname + location.search;
   const baseContext = useMemo(() => routeChatContext(routeKey), [routeKey]);
   const [selection, setSelection] = useState<{ routeKey: string; helpId: string | null; replayDay: number | null | undefined;
-    executionId: string | null | undefined; scenarioId: string | null | undefined }>({
-    routeKey, helpId: null, replayDay: undefined, executionId: undefined, scenarioId: undefined,
+    executionId: string | null | undefined; comparisonExecutionId: string | null | undefined;
+    scenarioId: string | null | undefined }>({
+    routeKey, helpId: null, replayDay: undefined, executionId: undefined, comparisonExecutionId: undefined,
+    scenarioId: undefined,
   });
   const routeContext = useMemo(() => baseContext === null ? null : {
     ...baseContext,
@@ -74,6 +77,9 @@ export function ChatProvider({ ownerSub, repository, client, catalog = null, chi
       ? selection.replayDay : baseContext.replayDay,
     diagnosticExecutionId: selection.routeKey === routeKey && selection.executionId !== undefined
       ? selection.executionId : baseContext.diagnosticExecutionId,
+    ...(baseContext.routeId === 'comparison' ? { comparisonExecutionId:
+      selection.routeKey === routeKey && selection.comparisonExecutionId !== undefined
+        ? selection.comparisonExecutionId : baseContext.comparisonExecutionId ?? null } : {}),
     scenarioId: selection.routeKey === routeKey && selection.scenarioId !== undefined
       ? selection.scenarioId : baseContext.scenarioId,
   }, [baseContext, routeKey, selection]);
@@ -105,6 +111,8 @@ export function ChatProvider({ ownerSub, repository, client, catalog = null, chi
   const communication = publication?.routeKey === routeKey && communicationMatchesRoute(publication.document, routeContext)
     ? publication.document : null;
   const sentContext = sentPublication?.routeKey === routeKey ? sentPublication.document : null;
+  const currentContextFingerprint = sentContext !== null && communicationMatchesRoute(sentContext, routeContext)
+    ? sentContext.contextFingerprint : contextFingerprint;
 
   useEffect(() => {
     const currentGeneration = ++generation.current;
@@ -171,24 +179,35 @@ export function ChatProvider({ ownerSub, repository, client, catalog = null, chi
   const setHelpId = useCallback((helpId: string | null) => setSelection((current) => ({
     routeKey, helpId, replayDay: current.routeKey === routeKey ? current.replayDay : undefined,
     executionId: current.routeKey === routeKey ? current.executionId : undefined,
+    comparisonExecutionId: current.routeKey === routeKey ? current.comparisonExecutionId : undefined,
     scenarioId: current.routeKey === routeKey ? current.scenarioId : undefined,
   })), [routeKey]);
   const setReplayDay = useCallback((day: number | null) => setSelection((current) => ({
     routeKey, helpId: current.routeKey === routeKey ? current.helpId : null,
     replayDay: day !== null && Number.isSafeInteger(day) && day >= 0 ? day : null,
     executionId: current.routeKey === routeKey ? current.executionId : undefined,
+    comparisonExecutionId: current.routeKey === routeKey ? current.comparisonExecutionId : undefined,
     scenarioId: current.routeKey === routeKey ? current.scenarioId : undefined,
   })), [routeKey]);
   const setDiagnosticExecutionId = useCallback((id: string | null) => setSelection((current) => ({
     routeKey, helpId: current.routeKey === routeKey ? current.helpId : null,
     replayDay: current.routeKey === routeKey ? current.replayDay : undefined,
     executionId: id,
+    comparisonExecutionId: current.routeKey === routeKey ? current.comparisonExecutionId : undefined,
+    scenarioId: current.routeKey === routeKey ? current.scenarioId : undefined,
+  })), [routeKey]);
+  const setComparisonExecutionId = useCallback((id: string | null) => setSelection((current) => ({
+    routeKey, helpId: current.routeKey === routeKey ? current.helpId : null,
+    replayDay: current.routeKey === routeKey ? current.replayDay : undefined,
+    executionId: current.routeKey === routeKey ? current.executionId : undefined,
+    comparisonExecutionId: id,
     scenarioId: current.routeKey === routeKey ? current.scenarioId : undefined,
   })), [routeKey]);
   const setScenarioId = useCallback((id: string | null) => setSelection((current) => ({
     routeKey, helpId: current.routeKey === routeKey ? current.helpId : null,
     replayDay: current.routeKey === routeKey ? current.replayDay : undefined,
     executionId: current.routeKey === routeKey ? current.executionId : undefined,
+    comparisonExecutionId: current.routeKey === routeKey ? current.comparisonExecutionId : undefined,
     scenarioId: id,
   })), [routeKey]);
   const publishCommunication = useCallback((input: CommunicationInput | null) => {
@@ -201,7 +220,7 @@ export function ChatProvider({ ownerSub, repository, client, catalog = null, chi
       setPublication({ routeKey: selectedRoute, document });
     }).catch(() => { if (publicationToken.current === token) setPublication(null); });
   }, [routeKey]);
-  const askAbout = useCallback((helpId: HelpId, metricId?: string, contextKind?: 'REPLAY' | 'REPETITION' | 'LIMITATIONS') => {
+  const askAbout = useCallback((helpId: HelpId, metricId?: string, contextKind?: 'REPLAY' | 'REPETITION' | 'LIMITATIONS' | 'COMPARISON') => {
     setHelpId(helpId);
     setIntent(metricId !== undefined ? { kind: 'METRIC', id: metricId }
       : contextKind !== undefined ? { kind: contextKind } : { kind: 'HELP', id: helpId });
@@ -266,12 +285,12 @@ export function ChatProvider({ ownerSub, repository, client, catalog = null, chi
         }
       });
   }, [activeConversation, open, ownerSub, repository, studyId]);
-  const value: ChatState = { routeContext, contextFingerprint, conversations: visibleConversations, activeConversation,
+  const value: ChatState = { routeContext, contextFingerprint: currentContextFingerprint, conversations: visibleConversations, activeConversation,
     error, loading, open, busy, canSend: !loading && !error && activeConversation !== null && client !== undefined && catalog !== null,
     catalog, communication, sentContext, focusComposerToken, intent,
     show: () => setOpen(true), hide: () => setOpen(false),
     selectConversation: setActiveId, newConversation, beginRequest, send, cancel, askAbout, publishCommunication,
-    setHelpId, setReplayDay, setDiagnosticExecutionId, setScenarioId,
+    setHelpId, setReplayDay, setDiagnosticExecutionId, setComparisonExecutionId, setScenarioId,
   };
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }

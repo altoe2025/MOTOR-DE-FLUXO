@@ -4,6 +4,7 @@ export type RouteChatContext = Readonly<{
   studyId: string | null;
   scenarioId: string | null;
   diagnosticExecutionId: string | null;
+  comparisonExecutionId?: string | null;
   replayDay: number | null;
 }>;
 
@@ -32,7 +33,14 @@ export function routeChatContext(pathAndSearch: string): RouteChatContext | null
   const dayText = routeId === 'replay' ? url.searchParams.get('day') : null;
   const day = dayText !== null && /^(0|[1-9]\d*)$/.test(dayText) ? Number(dayText) : null;
   return { routeId, helpId: null, studyId,
-    scenarioId: routeId === 'diagnostic' ? url.searchParams.get('scenarioId') : null,
-    diagnosticExecutionId: routeId === 'replay' ? url.searchParams.get('executionId') : null,
+    scenarioId: routeId === 'diagnostic' ? selectionId(url.searchParams.get('scenarioId')) : null,
+    diagnosticExecutionId: routeId === 'replay' || routeId === 'diagnostic'
+      ? selectionId(url.searchParams.get('executionId'))
+      : routeId === 'comparison' ? selectionId(url.searchParams.get('hypothesisExecutionId')) : null,
+    ...(routeId === 'comparison' ? { comparisonExecutionId: selectionId(url.searchParams.get('baseExecutionId')) } : {}),
     replayDay: day !== null && Number.isSafeInteger(day) ? day : null };
+}
+
+export function selectionId(value: string | null): string | null {
+  return value !== null && value.length <= 128 && /^[A-Za-z0-9._~-]+$/.test(value) ? value : null;
 }

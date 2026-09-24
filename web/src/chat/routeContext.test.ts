@@ -22,6 +22,10 @@ describe('chat route context', () => {
     expect(routeChatContext('/estudos/s/diagnostico?scenarioId=base')).toMatchObject({ scenarioId: 'base', diagnosticExecutionId: null, replayDay: null });
     expect(routeChatContext('/estudos/s/replay?executionId=run&day=4')).toMatchObject({ diagnosticExecutionId: 'run', replayDay: 4 });
     expect(routeChatContext('/estudos/s/replay?executionId=run&day=-1')?.replayDay).toBeNull();
+    expect(routeChatContext('/estudos/s/diagnostico?scenarioId=base&executionId=run-1')?.diagnosticExecutionId).toBe('run-1');
+    expect(routeChatContext('/comparar?studyId=s&baseExecutionId=base-1&hypothesisExecutionId=hyp-1'))
+      .toMatchObject({ comparisonExecutionId: 'base-1', diagnosticExecutionId: 'hyp-1' });
+    expect(routeChatContext('/comparar?studyId=s&baseExecutionId=%20&hypothesisExecutionId=hyp-1')?.comparisonExecutionId).toBeNull();
   });
 
   it.each(['/login', '/auth/callback', '/auth/definir-senha', '/estudos/s/imprimir', '/estudos/s/print'])

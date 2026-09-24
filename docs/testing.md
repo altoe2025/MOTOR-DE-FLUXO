@@ -29,6 +29,13 @@ os testes adversariais de C6 seguem pendentes. Contrato e limites em
 | `npm --prefix web run lint` | PASS |
 | `npm --prefix web run build` | PASS; aviso preexistente de chunks acima de 500 kB |
 
+Revisão local C5/MOT-95 em 2026-09-23: regressões RED reproduziram a pendência
+após CAS, o CTA sem intenção de comparação, links sem IDs e a não restauração das
+seleções. A regressão de seleção na mesma URL foi confirmada por mutação temporária
+do comportamento antigo e depois voltou a GREEN. O recorte de chat, ajuda, API
+e páginas afetadas passou com **116 testes em 17 arquivos**; typecheck, lint e
+`git diff --check` passaram. O aceite em browser permanece em C6.
+
 A suíte completa com a concorrência padrão chegou a 942 PASS e 1 falha no teste
 preexistente `studyController.test.ts::não substitui edição corrente quando
 restauração explícita termina`. Esse teste usa autosave real de 10 ms e observou
