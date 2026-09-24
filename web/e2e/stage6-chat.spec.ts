@@ -48,8 +48,8 @@ async function conversations(page: Page): Promise<ChatConversation[]> {
   }, OWNER);
 }
 // Arrange quota boundaries directly in IDB; sends/reloads still traverse the real repository.
-async function seedQuota(page: Page, count: number, messageCount: number) {
-  await page.evaluate(async ({ owner, count, messageCount }) => {
+async function seedQuota(page: Page, count: number, messageCount: number, withHelpCitation = false) {
+  await page.evaluate(async ({ owner, count, messageCount, withHelpCitation }) => {
     const db = await new Promise<IDBDatabase>((resolve) => {
       const request = indexedDB.open(`motor-fluxo:app:v2:local:${owner}`); request.onsuccess = () => resolve(request.result);
     });
@@ -62,11 +62,13 @@ async function seedQuota(page: Page, count: number, messageCount: number) {
         const document: ChatConversation = { schemaVersion: '1.0.0', id: `quota-${index}`, ownerSub: owner, studyId: null,
           title: `Conversa ${index}`, revision: 1, createdAt: now, updatedAt: now,
           messages: Array.from({ length: messageCount }, (_, offset) => ({ id: `msg-${offset}`, role: offset % 2 ? 'ASSISTANT' : 'USER',
-            text: `Histórico ${offset}`, status: 'SUCCEEDED', classification: offset % 2 ? 'IN_SCOPE' : null, citations: [], contextFingerprint: null, createdAt: now })) };
+            text: `Histórico ${offset}`, status: 'SUCCEEDED', classification: offset % 2 ? 'IN_SCOPE' : null,
+            citations: withHelpCitation && offset === messageCount - 1 ? [{ kind: 'HELP', id: 'page.importacao' }] : [],
+            contextFingerprint: null, createdAt: now })) };
         store.put({ conversation_id: document.id, owner_sub: owner, study_key: 'null', updated_at: now, document });
       }
     }); db.close();
-  }, { owner: OWNER, count, messageCount });
+  }, { owner: OWNER, count, messageCount, withHelpCitation });
 }
 
 test.beforeEach(async ({ page, context }) => {
@@ -222,9 +224,32 @@ test('quotas de 100 mensagens e 20 conversas oferecem saída sem apagar históri
   await panel(page).getByRole('button', { name: 'Nova conversa', exact: true }).click();
   await expect(panel(page).getByLabel('Sua pergunta')).toBeEnabled();
   expect((await conversations(page)).some((item) => item.messages.length === 100)).toBe(true);
-  await seedQuota(page, 20, 0); await page.reload(); await open(page);
+  await page.setViewportSize({ width: 1280, height: 960 });
+  await seedQuota(page, 20, 8, true); await page.reload(); await open(page);
   await expect(panel(page)).toContainText('20 conversas');
   expect(await conversations(page)).toHaveLength(20);
+  await expect(messages(page).locator('article')).toHaveCount(8);
+  const historySize = await messages(page).evaluate((element) => ({ visible: element.clientHeight, content: element.scrollHeight }));
+  expect(historySize.visible).toBeGreaterThan(0);
+  expect(historySize.content).toBeGreaterThan(historySize.visible);
+  const citation = panel(page).getByRole('navigation', { name: 'Fontes da resposta' }).getByRole('link', { name: 'Importação' });
+  await panel(page).getByRole('navigation', { name: 'Conversas do chat' }).getByRole('button').last().focus();
+  await page.keyboard.press('Tab');
+  await expect(panel(page).getByRole('button', { name: 'Excluir conversa', exact: true })).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(citation).toBeFocused();
+  await expect(citation).toBeInViewport();
+  for (const { width, height, zoom } of [{ width: 1280, height: 960, zoom: '2' }, { width: 375, height: 667, zoom: '1' }]) {
+    await page.setViewportSize({ width, height });
+    await page.evaluate((value) => { document.documentElement.style.zoom = value; }, zoom);
+    expect(await messages(page).evaluate((element) => element.clientHeight)).toBeGreaterThan(0);
+    await citation.scrollIntoViewIfNeeded();
+    await expect(citation).toBeInViewport();
+    await panel(page).getByLabel('Sua pergunta').focus();
+    await expect(panel(page).getByLabel('Sua pergunta')).toBeInViewport();
+  }
+  await page.setViewportSize({ width: 1280, height: 960 });
+  await page.evaluate(() => { document.documentElement.style.zoom = '1'; });
   await panel(page).getByRole('button', { name: 'Excluir conversa', exact: true }).click();
   await panel(page).getByRole('button', { name: 'Confirmar exclusão', exact: true }).click();
   await expect.poll(async () => (await conversations(page)).length).toBe(19);

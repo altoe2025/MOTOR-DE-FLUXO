@@ -32,7 +32,7 @@ a { color: inherit; }
 .chat-panel nav ul { display: grid; gap: var(--space-1); }
 .chat-panel nav button { text-align: left; width: 100%; }
 .chat-panel nav button[aria-current='true'] { background: #e8f0ed; }
-.chat-messages { flex: 1; overflow-y: auto; }
+.chat-messages { flex: 1; min-height: 8rem; overflow-y: auto; }
 .chat-message { border-bottom: 1px solid var(--border); padding: var(--space-3) 0; }
 .chat-message p { margin: var(--space-1) 0; overflow-wrap: anywhere; white-space: pre-wrap; }
 .chat-context-divider { border-top: 1px dashed var(--border); color: var(--muted); font-size: 0.875rem; margin: var(--space-3) 0; padding-top: var(--space-2); }

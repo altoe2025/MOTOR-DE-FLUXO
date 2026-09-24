@@ -73,6 +73,25 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-24 — Histórico inacessível com 20 conversas, C6 (MOT-95)
+
+**Sintoma.** Com a quota de 20 conversas ocupada e uma conversa contendo mensagens,
+o histórico e suas fontes ficavam fora do alcance visual; o contêiner media zero
+pixels de altura no Chromium a 1280×960.
+
+**Causa.** A lista de conversas crescia no painel flexível e `.chat-messages`,
+configurado com `flex: 1` e rolagem própria, encolhia até zero. O teste anterior
+usava 20 conversas vazias e não observava o histórico.
+
+**O que foi feito.** Na branch local `codex/mot95-c6-chat-acceptance`, o histórico
+ganhou altura mínima de `8rem`. O percurso Playwright agora preenche as 20 conversas
+com mensagens e fonte de ajuda, verifica altura e rolagem, alcança a fonte por Tab
+e cobre zoom de 200% e viewport estreita. A regressão falhou com `clientHeight = 0`
+antes da correção e passou depois.
+
+**O que isso invalida.** O aceite anterior da quota de 20 conversas não provava
+acesso às mensagens e fontes. Nenhum dado, contrato ou cálculo financeiro mudou.
+
 ## 2026-09-24 — Aceite local do chat contextual, C6 (MOT-95)
 
 **Sintoma.** C5 ainda não tinha aceite ponta a ponta de privacidade/browser. O

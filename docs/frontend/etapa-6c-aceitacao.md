@@ -37,7 +37,7 @@ socket/DNS externos, usando `httpx.MockTransport` na serialização do provider.
 | Contexto anterior | Mudança local de dia mantém fingerprint da resposta e sinaliza contexto anterior |
 | Retry e concorrência | Reutiliza USER e troca ID da resposta; conflito CAS entre abas relê vencedora sem HTTP automático |
 | Falhas | Provider ausente, erro, timeout controlado, citação inválida e cancelamento preservam navegação |
-| Quotas | 100 mensagens oferecem nova conversa; 20 conversas exigem exclusão explícita com confirmação; não há descarte automático |
+| Quotas | 100 mensagens oferecem nova conversa; 20 conversas exigem exclusão explícita com confirmação; histórico e fonte permanecem roláveis e acessíveis por teclado |
 | Acessibilidade | Enter/Tab, foco inicial e retorno, aria-live incremental sem reler histórico, composer/Enviar utilizáveis a 200%, captura com painel aberto |
 | Privacidade local | XLSX sintético selecionado e processado; nome/bytes/células brutas/identidade/token/dados não selecionados ausentes do corpo HTTP e console |
 | Deep links | Abertura direta e reload das seleções citadas; nenhuma seleção financeira recalculada em JS |
@@ -55,6 +55,10 @@ socket/DNS externos, usando `httpx.MockTransport` na serialização do provider.
 4. Com zoom CSS de 200%, `height:100vh` deixava o composer do painel fixo fora da
    viewport. O painel passa a usar as bordas superior/inferior e altura automática.
    A captura de aceitação mantém o painel aberto e o foco no Enviar.
+5. Com 20 conversas, a lista ocupava a altura do painel e o histórico flexível
+   encolhia a zero. A altura mínima de `8rem` preserva a rolagem das mensagens.
+   O teste de quota reproduziu `clientHeight = 0` antes da correção e agora percorre
+   oito mensagens e uma fonte por Tab, também sob zoom de 200% e viewport estreita.
 
 Nenhuma fórmula, regra financeira, taxa, contrato HTTP, schema persistido ou
 comportamento do motor Python foi alterado.
