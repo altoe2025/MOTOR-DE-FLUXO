@@ -79,6 +79,7 @@ correções e ressalvas: `docs/frontend/etapa-6c-aceitacao.md`.
 | Privacidade e scanner novos | 18 testes de privacidade passaram no gate Python; scanner final: 46 PASS (inclui 18 casos posteriores ao gate) |
 | Python otimizado: privacidade/scanner/runner | 42 PASS no recorte inicial; scanner final reexecutado sob `-O`: 46 PASS |
 | Browser consolidado C6 | 15 PASS; 3,0 min |
+| Regressão de layout da quota | 20 conversas com 8 mensagens e fonte; RED com histórico de altura zero, GREEN com rolagem e fonte acessível por Tab; zoom de 200% e viewport estreita |
 | Typecheck/lint web; Ruff/mypy servidor | PASS; mypy sem problemas em 54 arquivos |
 | Scanner código/bundle/maps + console observado | PASS, 607 textos/32 binários + 15 artefatos; canários privados ausentes |
 | Suíte unitária completa | 964 PASS em 107 arquivos; 384,36 s; `--maxWorkers=1 --testTimeout=15000` |

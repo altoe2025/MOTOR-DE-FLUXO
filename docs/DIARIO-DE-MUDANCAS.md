@@ -93,6 +93,25 @@ MOT-96. Não houve push, PR, merge ou deploy.
 **O que isso invalida.** Nada na aplicação roteada ou nas medições existentes. A
 MOT-96 continua em andamento; este commit não constitui aceite de deep link,
 fidelidade de PDF ou visual A4.
+## 2026-09-24 — Histórico inacessível com 20 conversas, C6 (MOT-95)
+
+**Sintoma.** Com a quota de 20 conversas ocupada e uma conversa contendo mensagens,
+o histórico e suas fontes ficavam fora do alcance visual; o contêiner media zero
+pixels de altura no Chromium a 1280×960.
+
+**Causa.** A lista de conversas crescia no painel flexível e `.chat-messages`,
+configurado com `flex: 1` e rolagem própria, encolhia até zero. O teste anterior
+usava 20 conversas vazias e não observava o histórico.
+
+**O que foi feito.** Na branch local `codex/mot95-c6-chat-acceptance`, o histórico
+ganhou altura mínima de `8rem`. O percurso Playwright agora preenche as 20 conversas
+com mensagens e fonte de ajuda, verifica altura e rolagem, alcança a fonte por Tab
+e cobre zoom de 200% e viewport estreita. A regressão falhou com `clientHeight = 0`
+antes da correção e passou depois.
+
+**O que isso invalida.** O aceite anterior da quota de 20 conversas não provava
+acesso às mensagens e fontes. Nenhum dado, contrato ou cálculo financeiro mudou.
+
 ## 2026-09-24 — Aceite local do chat contextual, C6 (MOT-95)
 
 **Sintoma.** C5 ainda não tinha aceite ponta a ponta de privacidade/browser. O
