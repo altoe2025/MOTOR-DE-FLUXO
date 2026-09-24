@@ -9,6 +9,7 @@ import type { ChatConversation } from './domain';
 import { conversation, message } from './fixtures';
 import { ChatProvider, useChat } from './ChatProvider';
 import { ChatPanel } from './components/ChatPanel';
+import { DefinitionTooltip } from '../ui/DefinitionTooltip';
 
 let activeSignal: AbortSignal | null = null;
 function Controls() {
@@ -24,6 +25,7 @@ function Controls() {
     <button onClick={() => chat.setReplayDay(2)}>Selecionar dia 2</button>
     <button onClick={() => navigate('/estudos/study-a/diagnostico?scenarioId=invalid')}>Abrir cenário inválido</button>
     <button onClick={() => chat.setScenarioId(null)}>Limpar cenário</button>
+    <DefinitionTooltip term="Ajuda externa">Explicação externa.</DefinitionTooltip>
     <output data-testid="context">{JSON.stringify(chat.routeContext)}</output>
     <output data-testid="active-conversation">{chat.activeConversation?.id ?? 'none'}</output>
   </>;
@@ -140,6 +142,57 @@ describe('session chat shell', () => {
     await user.click(screen.getByRole('button', { name: 'Fechar chat' }));
     expect(screen.queryByRole('dialog', { name: 'Chat' })).not.toBeInTheDocument();
     expect(opener).toHaveFocus();
+  });
+
+  it('clears pending deletion when Escape closes and the chat is reopened', async () => {
+    const user = userEvent.setup();
+    setup('owner-a', [conversation({ studyId: 'study-a' })]);
+    const opener = screen.getByRole('button', { name: 'Perguntar' });
+    await user.click(opener);
+    await user.click(await screen.findByRole('button', { name: 'Excluir conversa' }));
+    expect(screen.getByRole('button', { name: 'Confirmar exclusão' })).toBeVisible();
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog', { name: 'Chat' })).not.toBeInTheDocument();
+    expect(opener).toHaveFocus();
+    await user.click(opener);
+    expect(screen.queryByRole('button', { name: 'Confirmar exclusão' })).not.toBeInTheDocument();
+  });
+
+  it('does not close nonmodal chat when Escape belongs to an external DefinitionTooltip', async () => {
+    const user = userEvent.setup();
+    setup();
+    await user.click(screen.getByRole('button', { name: 'Perguntar' }));
+    const trigger = screen.getByRole('button', { name: 'Definição de Ajuda externa' });
+    await user.click(trigger);
+    expect(screen.getByRole('tooltip')).toBeVisible();
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Chat' })).toBeVisible();
+    expect(trigger).toHaveFocus();
+  });
+
+  it('does not close chat when a descendant consumes Escape', async () => {
+    const user = userEvent.setup();
+    setup();
+    await user.click(screen.getByRole('button', { name: 'Perguntar' }));
+    const close = screen.getByRole('button', { name: 'Fechar chat' });
+    close.addEventListener('keydown', (event) => event.preventDefault());
+    close.focus();
+    await user.keyboard('{Escape}');
+    expect(screen.getByRole('dialog', { name: 'Chat' })).toBeVisible();
+    expect(close).toHaveFocus();
+  });
+
+  it('does not close chat when a descendant stops Escape propagation', async () => {
+    const user = userEvent.setup();
+    setup();
+    await user.click(screen.getByRole('button', { name: 'Perguntar' }));
+    const close = screen.getByRole('button', { name: 'Fechar chat' });
+    close.addEventListener('keydown', (event) => event.stopPropagation());
+    close.focus();
+    await user.keyboard('{Escape}');
+    expect(screen.getByRole('dialog', { name: 'Chat' })).toBeVisible();
+    expect(close).toHaveFocus();
   });
 
   it('aborts an active request on account change and does not show the former account history', async () => {

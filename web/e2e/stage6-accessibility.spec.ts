@@ -26,6 +26,7 @@ test('demo, chat and presentation preserve keyboard focus and readable structure
   await expect(chat).toBeVisible();
   await expect(chat.getByRole('heading', { name: 'Chat' })).toBeFocused();
   await auditAccessibility(page);
+  await expect(chat.locator('[aria-live="polite"][aria-atomic="true"]')).toHaveCount(1);
   await page.keyboard.press('Escape');
   await expect(chat).toBeHidden();
   await expect(opener).toBeFocused();

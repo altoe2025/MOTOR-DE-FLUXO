@@ -31,8 +31,7 @@ export async function auditAccessibility(page: Page, options: AuditOptions = {})
         const rect = target.getBoundingClientRect();
         return rect.width < 24 || rect.height < 24;
       }).map((element) => element.outerHTML.slice(0, 150));
-    return { headings, skips, hiddenFocusable, tinyTargets,
-      liveRegions: document.querySelectorAll('[aria-live], [role="status"], [role="alert"]').length };
+    return { headings, skips, hiddenFocusable, tinyTargets };
   });
   expect(structure.skips).toEqual([]);
   // Print CSS hides interactive navigation without removing it from the screen-mode DOM.

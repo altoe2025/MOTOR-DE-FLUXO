@@ -4,8 +4,8 @@
 
 Gates novos em `web/e2e/stage6-{accessibility,visual,performance}.spec.ts` e
 `tests/web_api/measure_stage6.py`. O bundle público inicial foi reduzido de
-~395,5 kB para 326.473 bytes (318,82 KiB) gzip por code splitting; o chunk lazy da apresentação
-ficou em 5.733 bytes (5,60 KiB). A medição local usa 20 amostras aquecidas para abertura,
+~395,5 kB para 326.481 bytes (318,83 KiB) gzip por code splitting; o chunk lazy da apresentação
+ficou em 5.735 bytes (5,60 KiB) após revisão. A medição local usa 20 amostras aquecidas para abertura,
 troca de seção e Documento de Comunicação, com observador persistente de long
 tasks por fase. Axe, teclado, zoom/reflow, reduced motion e impressão cobrem os
 estados principais. Evidência, limites e comandos completos:
@@ -22,6 +22,16 @@ Snapshots de Chromium **Windows** foram revisadas e passaram localmente.
 Baselines **Linux/CI permanecem NOT_RUN/BLOCKED**: Docker/WSL indisponíveis
 neste host; o gate CI foi instalado e deve reprovar até a geração e revisão
 humana dessas baselines. Nenhum aceite publicado, push, PR ou deploy foi feito.
+
+Revisão D3 no mesmo worktree: Escape do chat não modal foi restrito ao painel,
+reutiliza a limpeza de exclusão pendente e respeita eventos já consumidos.
+Regressões RED/GREEN de fechamento, tooltip externo e consumo do evento:
+**18/18 testes focados de chat PASS**. A região live do histórico aberto agora
+tem asserção direcionada no Playwright, não apenas contagem incidental.
+Na revisão, acessibilidade e visual passaram, mas o gate de long tasks teve
+duas falhas (6 e 48 entradas >200 ms) antes de passar com zero na terceira
+execução. O limite não mudou; desempenho neste host é **instável** e não é
+declarado aceito sem nova medição controlada.
 
 ## Painel A e relatório local — D1/D2 / MOT-96 (2026-09-24)
 

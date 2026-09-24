@@ -73,6 +73,31 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-24 — Escape local no chat não modal (MOT-97, revisão D3)
+
+**Sintoma.** Escape num tooltip externo fechava o chat e roubava foco; após
+abrir “Excluir conversa”, Escape fechava o painel mas a confirmação reaparecia
+ao reabri-lo. Um evento Escape consumido por um descendente também era ignorado.
+
+**Causa.** Um listener em `document` recebia Escape de qualquer parte da página
+e chamava `chat.hide()` diretamente, sem limpar `deleteId` nem considerar
+`defaultPrevented` ou propagação.
+
+**O que foi feito.** `ChatPanel` trata Escape somente no `aside`/descendentes,
+quando o evento não foi consumido, e reutiliza `close()` para limpar exclusão
+pendente e devolver foco. Quatro regressões unitárias cobrem exclusão,
+`DefinitionTooltip` externo, `preventDefault` e `stopPropagation`. A auditoria
+de acessibilidade afirma explicitamente a região live do histórico aberto,
+em vez de apenas contar regiões sem critério.
+
+**O que isso invalida.** A afirmação anterior de que Escape era seguro em
+qualquer foco da página não valia para um painel não modal. A documentação D3
+agora delimita a asserção de live region ao chat; budgets e baselines Linux
+pendentes não mudam. Durante a revisão, o gate de long tasks oscilou entre
+6, 48 e 0 entradas >200 ms em três execuções de 20 amostras; a última passou,
+mas o gate é instável neste runner e requer repetição controlada antes do
+aceite T7. Sem push, PR ou deploy.
+
 ## 2026-09-24 — Gates D3 de acessibilidade, visual e desempenho (MOT-97)
 
 **Sintoma.** O JS inicial público excedia 350 KiB gzip (~395,5 KiB); a

@@ -28,8 +28,8 @@ temporário e não entra no Git.
 
 | Métrica | Limite D3 | Medição local |
 |---|---:|---:|
-| JS inicial da rota pública em gzip | ≤350 KiB | 326.473 bytes (318,82 KiB), produção |
-| Chunk lazy da apresentação em gzip | ≤300 KiB | 5.733 bytes (5,60 KiB), produção |
+| JS inicial da rota pública em gzip | ≤350 KiB | 326.481 bytes (318,83 KiB), produção após revisão |
+| Chunk lazy da apresentação em gzip | ≤300 KiB | 5.735 bytes (5,60 KiB), produção após revisão |
 | Abertura do Painel A com documento local pronto | p95 ≤1.500 ms | 849,0 ms |
 | Troca de seção/foco | p95 ≤100 ms | 15,7 ms |
 | Documento de Comunicação demonstrativo | p95 ≤2.000 ms | 315,4 ms |
@@ -46,6 +46,19 @@ importa eager importador, Replay, chat ou apresentação; a entrada inicial aind
 é grande, mas fica sob 350 KiB. `xlsx.worker`, ECharts e Replay permanecem em
 chunks sob demanda, não requisitados no login.
 
+Na revisão do Escape do chat em 2026-09-24, o gate de 20 amostras mostrou
+**instabilidade no mesmo runner Windows**: uma execução integrada registrou
+6 long tasks de abertura (201–210 ms), uma repetição isolada registrou 48
+(37 na abertura, 11 no documento; 201–235 ms), e a terceira repetição isolada
+passou com zero (p95 de abertura 835,6 ms, seção 14,2 ms, documento 324,6 ms;
+CLS 0,0458). Nenhuma dessas execuções mudou o limite ou o produto medido.
+Após os processos terminarem, não havia Chromium/Python órfão dos gates;
+`npm run dev`/Vite ainda ativos pertenciam ao checkout c6db, e CPU total em
+repouso ficou em 19–22% (três amostras). A última execução **PASS** não apaga
+as duas falhas: este gate é **instável neste host** e precisa de repetição em
+runner controlado antes do aceite T7; não se declara desempenho aceito de
+forma incondicional.
+
 ### Carga observada e limites de extrapolação
 
 As medições anteriores ainda válidas estão em
@@ -61,8 +74,9 @@ estão aprovados.
 
 `@axe-core/playwright@4.13.0` roda nos estados estáveis de login,
 importação, demonstração, chat e apresentação, inclusive mídia print.
-Complementos verificam heading sem salto, foco oculto na tela, alvos visíveis
-de pelo menos 24×24 CSS px e presença de regiões live. Testes de teclado
+Complementos verificam heading sem salto, foco oculto na tela e alvos visíveis
+de pelo menos 24×24 CSS px; a região live do histórico do chat é afirmada
+diretamente no estado aberto. Testes de teclado
 verificam Enter para abrir o chat, Escape para fechar e retorno do foco ao
 acionador. Testes de apresentação verificam ausência de overflow horizontal
 em 200% (equivalente a 640×360), 400% (320×180) e 390×844, além de

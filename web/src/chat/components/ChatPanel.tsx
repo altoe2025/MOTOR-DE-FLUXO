@@ -10,21 +10,17 @@ export function ChatPanel() {
   const heading = useRef<HTMLHeadingElement>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   useEffect(() => { if (chat.open && chat.focusComposerToken === 0) heading.current?.focus(); }, [chat.open, chat.focusComposerToken]);
-  useEffect(() => {
-    if (!chat.open) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return;
-      chat.hide();
-      opener.current?.focus();
-    };
-    document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
-  }, [chat]);
   if (chat.routeContext === null) return null;
   function close() { setDeleteId(null); chat.hide(); opener.current?.focus(); }
   return <>
     <button ref={opener} type="button" aria-expanded={chat.open} aria-controls={chat.open ? 'chat-panel' : undefined} onClick={chat.show}>Perguntar</button>
-    {chat.open && <aside id="chat-panel" className="chat-panel" role="dialog" aria-modal="false" aria-labelledby="chat-panel-heading">
+    {chat.open && <aside id="chat-panel" className="chat-panel" role="dialog" aria-modal="false" aria-labelledby="chat-panel-heading"
+      onKeyDown={(event) => {
+        if (event.key !== 'Escape' || event.defaultPrevented) return;
+        event.preventDefault();
+        event.stopPropagation();
+        close();
+      }}>
       <div className="chat-panel-header">
         <h2 id="chat-panel-heading" ref={heading} tabIndex={-1}>Chat</h2>
         <button type="button" onClick={close} aria-label="Fechar chat">Fechar</button>
