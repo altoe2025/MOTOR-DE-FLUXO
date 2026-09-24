@@ -108,32 +108,35 @@ local: instalação única, reload, remoção e restauração explícita; XLSX r
 worker até Caso, Perfil e Estudo, com execução importada bloqueada por
 `NAO_CONFIGURADO` e restauração demo sem apagar o Estudo importado; os cinco
 cenários sintéticos com diagnóstico, repetição e Replay; composição de hipótese
-sem alterar Perfis, comparação de duas execuções prontas e catálogo de ajuda.
+sem alterar Perfis, comparação incompatível entre mixes independentes, comparação
+positiva de base e hipótese de janela executadas no servidor e catálogo de ajuda.
 A projeção `CommunicationDocumentV1` é extraída do Estudo persistido e das
 fontes de Replay para conferir métricas, rótulos, repetição, fingerprints e
-referências de evidência contra as telas.
+referências de evidência contra as telas. A comparação positiva confere todas as
+métricas projetadas contra as células exibidas e a mudança de janela `7 → 8`.
 
-O pacote demo fixa o SHA `5cb78f0b6ddd45b8b63f170153e6be8cd1928497`.
-Para percorrer sua preparação no servidor E2E controlado, use o mesmo SHA no
-bundle e na API. Exemplo PowerShell, com porta e saída exclusivas deste worktree:
+O pacote demo fixa o SHA `5cb78f0b6ddd45b8b63f170153e6be8cd1928497` e a
+versão instalada `0.1.0` do motor. O runner E2E lê o SHA do pacote versionado
+para configurar o bundle e a API controlada, sem parâmetro manual. Isso não
+altera o portão de incompatibilidade de build no produto. Exemplo PowerShell,
+com porta e saída exclusivas deste worktree:
 
 ```powershell
-$env:MOT_E2E_BUILD_SHA='5cb78f0b6ddd45b8b63f170153e6be8cd1928497'
 $env:MOT_E2E_PORT='8046'
 $env:MOT_E2E_OUTPUT_DIR='test-results/b6-acceptance'
 npm --prefix web run test:e2e -- stage6-demo-communication.spec.ts
 ```
 
-O bloqueio importado também passou em `import-observed-case.spec.ts` com o SHA
-normal do checkout, sem catálogo fictício. Os cinco cenários prontos têm seeds
-e entradas distintas; a Comparação os classifica como incompatíveis, com a
-mesma razão da função de domínio, e o documento omite comparação. A execução
-de uma hipótese nova depende de servidor com o SHA do pacote. Uma tentativa de
-diagnóstico da hipótese no gate controlado chegou à agregação e falhou com
-`volume casado excede o potencial estrutural`; outra tentativa com mudança
-apenas de custo falhou em `taxas por mecanismo não reconciliam com netabilidade`.
-São limitações reproduzidas, não aceites positivos de comparação com métricas
-nem de diagnóstico da hipótese. Não houve mudança nas regras do Motor.
+O bloqueio importado também passou em `import-observed-case.spec.ts`, sem
+catálogo fictício. Os cinco cenários prontos têm seeds e entradas distintas;
+a Comparação os classifica como incompatíveis e o documento omite comparação.
+Uma hipótese nova que reutiliza as ordens e muda a janela de 7 para 8 dias
+foi executada com uma seed fixa no teste; a comparação resultante é positiva
+e inclui métricas e evidências no documento. Com outras seeds, tentativas
+anteriores de diagnóstico falharam na agregação (`volume casado excede o
+potencial estrutural` e `taxas por mecanismo não reconciliam com netabilidade`).
+O aceite B6 demonstra o caminho positivo reproduzível e não resolve essas
+falhas de agregação do Motor. Nenhuma regra de simulação foi alterada.
 
 Gate local de 2026-09-23 neste worktree:
 
@@ -141,12 +144,23 @@ Gate local de 2026-09-23 neste worktree:
 |---|---|
 | `npm --prefix web run test:unit -- --maxWorkers=2` | 879 PASS em 94 arquivos; rerun sequencial após timeout por contenção |
 | typecheck / lint / build | PASS; aviso informativo de chunk > 500 kB |
-| `npm --prefix web run test:e2e -- stage6-demo-communication.spec.ts` com as variáveis acima | 4 PASS em Chromium local; 1,1 min |
+| `npm --prefix web run test:e2e -- stage6-demo-communication.spec.ts` sem SHA manual | 4 PASS em Chromium local; comparação positiva incluída |
 | `import-observed-case.spec.ts` com SHA do checkout | 7 PASS, gate A6 preservado |
 | `python -m pytest -q` | 888 PASS, 2 SKIP; 118 s |
 | `python -O -m pytest tests/web_api/test_demo_package.py -q` | 2 PASS |
 | Ruff dos arquivos Python alterados / `mypy servidor` | PASS; 45 arquivos no mypy |
-| Regeneração do pacote duas vezes | mesmo SHA-256 `B5B3FA81FB828A5461439FDF460F1CB9236A49F6F03527CC43850BE7E6ACCDCF` |
+| Regeneração do pacote com `.venv-t5` | SHA-256 `5072BA19841153850FE8A6E8FA9DBB378601A460AC9851BCD36694875C295E39`; versões `0.1.0+SHA` |
+
+Após a correção dos bloqueios da revisão: 4/4 no B6 sem SHA manual; 69 testes
+unitários focados, 10 testes Python focados, 5 sob `python -O`, typecheck,
+lint, build, Ruff, mypy (45 arquivos) e scanner de credenciais aprovados.
+A suíte Playwright completa em porta alternativa 8046 teve 28/33: dois testes
+abrem 8021 diretamente; esses dois
+passaram isoladamente na porta padrão 8021. A falha de sessão expirada em
+`foundation.spec.ts` repetiu mesmo em 8021. Duas falhas de concorrência/quota
+na execução completa passaram isoladamente em 8021. A suíte global não foi
+declarada verde por esse resultado; B6 4/4 foi confirmado separadamente.
+
 ## Aceitação integrada da Etapa 6A — MOT-61
 
 O percurso `web/e2e/import-observed-case.spec.ts` lê XLSX no worker real,

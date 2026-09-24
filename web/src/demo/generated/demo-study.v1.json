@@ -8189,7 +8189,7 @@
       ],
       "diagnostic_execution_id": "1bf6372f-f690-51ac-9b60-d894817ba890",
       "execution_fingerprint": "aaa42143d482262450ce579322edff571d838ebf302f8556ad3981e661bb49fb",
-      "motor_version": "desconhecida+5cb78f0b6ddd45b8b63f170153e6be8cd1928497",
+      "motor_version": "0.1.0+5cb78f0b6ddd45b8b63f170153e6be8cd1928497",
       "orders": [
         {
           "client_id": "006b47b2-bcb7-5af5-8d1c-eef9b4abef47",
@@ -8818,7 +8818,7 @@
       },
       "policy": "P0",
       "repetition_id": "f84e1eed-d5f2-5c82-b99f-aa007305fb4c",
-      "result_fingerprint": "2ec2b67d72beaeaf1ccae2251c358239fd2c0309ae64c33cb047d0245b03e51a",
+      "result_fingerprint": "1beab2d72dda18e310c44604cb3a796fc615d4810492d008cf5f60660b044476",
       "scenario_id": "02e58345-b425-57c2-ab38-497fdc922389",
       "scenario_revision": 1,
       "totals": {
@@ -11013,7 +11013,7 @@
       ],
       "diagnostic_execution_id": "5a174355-3827-5f1e-9bbd-54e9fcff7345",
       "execution_fingerprint": "9b0512bc2f5a17556d52e41866fdbcb71f054dabcdabd99663125551ec2afb4d",
-      "motor_version": "desconhecida+5cb78f0b6ddd45b8b63f170153e6be8cd1928497",
+      "motor_version": "0.1.0+5cb78f0b6ddd45b8b63f170153e6be8cd1928497",
       "orders": [
         {
           "client_id": "006b47b2-bcb7-5af5-8d1c-eef9b4abef47",
@@ -11516,7 +11516,7 @@
       },
       "policy": "P0",
       "repetition_id": "746de9b3-a08f-50e6-8ca1-ba347d5b5717",
-      "result_fingerprint": "6ad359392db92d7133a9240cb3c34785cdb419f0e0a021dceb48c3080e99cf3b",
+      "result_fingerprint": "3872d25b63ab54023b14fc312d760cc41b4d67b8d58e2485a37a6bb7f7bd2e79",
       "scenario_id": "b3abb1ed-f313-5b66-96ab-600323ee058b",
       "scenario_revision": 1,
       "totals": {
@@ -14372,7 +14372,7 @@
       ],
       "diagnostic_execution_id": "cc26a7c0-2cb1-574f-8809-0af6e97a8b59",
       "execution_fingerprint": "68a20e7e55bc324754727174567956fb2fc8aad35ac4db59f7195cc2e19218a8",
-      "motor_version": "desconhecida+5cb78f0b6ddd45b8b63f170153e6be8cd1928497",
+      "motor_version": "0.1.0+5cb78f0b6ddd45b8b63f170153e6be8cd1928497",
       "orders": [
         {
           "client_id": "006b47b2-bcb7-5af5-8d1c-eef9b4abef47",
@@ -14938,7 +14938,7 @@
       },
       "policy": "P0",
       "repetition_id": "6dee234b-34c5-5180-8676-e55e40de3052",
-      "result_fingerprint": "a74e73040f67cc83cd38ea568cfa66c98ad33d8784a4a67450a56d9702aa61c2",
+      "result_fingerprint": "8372b41193b1f9cbbac51a7cf391dfa8bf1983a431a8069741255bf7c87304c8",
       "scenario_id": "bc4ed198-4bba-5fe4-9045-49cd8a166ef0",
       "scenario_revision": 1,
       "totals": {
@@ -17781,7 +17781,7 @@
       ],
       "diagnostic_execution_id": "e86ecd5e-d3f9-5a1c-bea7-565a967fed1a",
       "execution_fingerprint": "5ebe9b48d90188064d1d67f4646f8c4c9ca781e83205086d9c0c6b76d54d12f2",
-      "motor_version": "desconhecida+5cb78f0b6ddd45b8b63f170153e6be8cd1928497",
+      "motor_version": "0.1.0+5cb78f0b6ddd45b8b63f170153e6be8cd1928497",
       "orders": [
         {
           "client_id": "006b47b2-bcb7-5af5-8d1c-eef9b4abef47",
@@ -18374,7 +18374,7 @@
       },
       "policy": "P0",
       "repetition_id": "892897f1-2a6f-5503-925a-bd0a3bce31fa",
-      "result_fingerprint": "c35d6d75c12cb43347057b415e4fc180774726165dc41beab4802752c7cf7fea",
+      "result_fingerprint": "f771493dd1ae1252af11757e1e804d82deb0731bbfb56955453ba56d19df37a0",
       "scenario_id": "c462be55-6ad4-5c20-abc8-721dbe3823ac",
       "scenario_revision": 1,
       "totals": {
@@ -21144,7 +21144,7 @@
       ],
       "diagnostic_execution_id": "48e4b7c4-b900-5372-9945-4c6d1f436123",
       "execution_fingerprint": "e5b2317a68bfbad055c4843c2aff95628d4dc19cc512e5d518705082037c8093",
-      "motor_version": "desconhecida+5cb78f0b6ddd45b8b63f170153e6be8cd1928497",
+      "motor_version": "0.1.0+5cb78f0b6ddd45b8b63f170153e6be8cd1928497",
       "orders": [
         {
           "client_id": "006b47b2-bcb7-5af5-8d1c-eef9b4abef47",
@@ -21746,7 +21746,7 @@
       },
       "policy": "P0",
       "repetition_id": "1389a3e9-985d-5fc5-bd89-4522ee13c160",
-      "result_fingerprint": "2c823707cf5d5648864d60df24c73f84f309cc5b3e91e226140ee51829ae5060",
+      "result_fingerprint": "dee7987dc4dc6746a8ef24531838ac105995da461e5f28753b9f477d57c90831",
       "scenario_id": "f6ba2178-de57-50b9-ac82-34ee7d4c2c14",
       "scenario_revision": 1,
       "totals": {
@@ -31814,7 +31814,7 @@
                 "criado_em_utc": "2026-09-23T12:00:00.000000Z",
                 "custo_calibrado": false,
                 "drenagem": "NATURAL",
-                "hash_configuracao": "2a897f0889c5969778ac9afda7595074867914459e1c71a51fc754c2dd8fa924",
+                "hash_configuracao": "1d9d5dbb6e53bc5a314be9046ce41e2d486a4f46ceae673281626ef7ab4ea3ee",
                 "horizonte_dias": 87,
                 "janela_dias": 7,
                 "metodo_percentil": "NAO_APLICAVEL",
@@ -31831,11 +31831,11 @@
                   "spread_rail_bps": "25"
                 },
                 "periodo_medicao_dias": 30,
-                "run_id": "20260923T120000.000000Z-2a897f0889c5",
+                "run_id": "20260923T120000.000000Z-1d9d5dbb6e53",
                 "run_ids_origem": [],
                 "schema_version": "2.0.0",
                 "seeds": [],
-                "versao_motor": "desconhecida+5cb78f0b6ddd45b8b63f170153e6be8cd1928497"
+                "versao_motor": "0.1.0+5cb78f0b6ddd45b8b63f170153e6be8cd1928497"
               }
             },
             "scenario_id": "02e58345-b425-57c2-ab38-497fdc922389",
@@ -40809,7 +40809,7 @@
                 "criado_em_utc": "2026-09-23T12:00:00.000000Z",
                 "custo_calibrado": false,
                 "drenagem": "NATURAL",
-                "hash_configuracao": "0eae456225ed541ae0ed4bfeac375f808fc7c8293aece0664d66be8db1f2b0d2",
+                "hash_configuracao": "8a89101678f06e8c5593963ef3caf52391ece38a82ff525bd65263535f4a1bab",
                 "horizonte_dias": 80,
                 "janela_dias": 7,
                 "metodo_percentil": "NAO_APLICAVEL",
@@ -40826,11 +40826,11 @@
                   "spread_rail_bps": "25"
                 },
                 "periodo_medicao_dias": 30,
-                "run_id": "20260923T120000.000000Z-0eae456225ed",
+                "run_id": "20260923T120000.000000Z-8a89101678f0",
                 "run_ids_origem": [],
                 "schema_version": "2.0.0",
                 "seeds": [],
-                "versao_motor": "desconhecida+5cb78f0b6ddd45b8b63f170153e6be8cd1928497"
+                "versao_motor": "0.1.0+5cb78f0b6ddd45b8b63f170153e6be8cd1928497"
               }
             },
             "scenario_id": "f6ba2178-de57-50b9-ac82-34ee7d4c2c14",
@@ -49541,7 +49541,7 @@
                 "criado_em_utc": "2026-09-23T12:00:00.000000Z",
                 "custo_calibrado": false,
                 "drenagem": "NATURAL",
-                "hash_configuracao": "d3e4d225260a5cb50bea757554b9656765ee040f856d5ada40e653799db8f1f5",
+                "hash_configuracao": "5aa32dd44d9f748fe42492515210d05fcd408227ded80f5ce6f6833a515785ae",
                 "horizonte_dias": 79,
                 "janela_dias": 7,
                 "metodo_percentil": "NAO_APLICAVEL",
@@ -49558,11 +49558,11 @@
                   "spread_rail_bps": "25"
                 },
                 "periodo_medicao_dias": 30,
-                "run_id": "20260923T120000.000000Z-d3e4d225260a",
+                "run_id": "20260923T120000.000000Z-5aa32dd44d9f",
                 "run_ids_origem": [],
                 "schema_version": "2.0.0",
                 "seeds": [],
-                "versao_motor": "desconhecida+5cb78f0b6ddd45b8b63f170153e6be8cd1928497"
+                "versao_motor": "0.1.0+5cb78f0b6ddd45b8b63f170153e6be8cd1928497"
               }
             },
             "scenario_id": "c462be55-6ad4-5c20-abc8-721dbe3823ac",
@@ -58191,7 +58191,7 @@
                 "criado_em_utc": "2026-09-23T12:00:00.000000Z",
                 "custo_calibrado": false,
                 "drenagem": "NATURAL",
-                "hash_configuracao": "b8423223ac2ba085d3d9543a2b38cc77d9559a05355726be0a0087ff4e5e66f2",
+                "hash_configuracao": "ea7534fe5b7258db059a516fff661297bfea2d703323b71fd7648cf1ac753535",
                 "horizonte_dias": 81,
                 "janela_dias": 7,
                 "metodo_percentil": "NAO_APLICAVEL",
@@ -58208,11 +58208,11 @@
                   "spread_rail_bps": "25"
                 },
                 "periodo_medicao_dias": 30,
-                "run_id": "20260923T120000.000000Z-b8423223ac2b",
+                "run_id": "20260923T120000.000000Z-ea7534fe5b72",
                 "run_ids_origem": [],
                 "schema_version": "2.0.0",
                 "seeds": [],
-                "versao_motor": "desconhecida+5cb78f0b6ddd45b8b63f170153e6be8cd1928497"
+                "versao_motor": "0.1.0+5cb78f0b6ddd45b8b63f170153e6be8cd1928497"
               }
             },
             "scenario_id": "bc4ed198-4bba-5fe4-9045-49cd8a166ef0",
@@ -66814,7 +66814,7 @@
                 "criado_em_utc": "2026-09-23T12:00:00.000000Z",
                 "custo_calibrado": false,
                 "drenagem": "NATURAL",
-                "hash_configuracao": "394d8f2193c850617a67cbe14345d9438c62496ab36af4d8a1e52f07cb2de966",
+                "hash_configuracao": "ee4939612d08d00f5f467243269dfe42d6dc0b3659f24908f87091f8065738aa",
                 "horizonte_dias": 67,
                 "janela_dias": 7,
                 "metodo_percentil": "NAO_APLICAVEL",
@@ -66831,11 +66831,11 @@
                   "spread_rail_bps": "25"
                 },
                 "periodo_medicao_dias": 30,
-                "run_id": "20260923T120000.000000Z-394d8f2193c8",
+                "run_id": "20260923T120000.000000Z-ee4939612d08",
                 "run_ids_origem": [],
                 "schema_version": "2.0.0",
                 "seeds": [],
-                "versao_motor": "desconhecida+5cb78f0b6ddd45b8b63f170153e6be8cd1928497"
+                "versao_motor": "0.1.0+5cb78f0b6ddd45b8b63f170153e6be8cd1928497"
               }
             },
             "scenario_id": "b3abb1ed-f313-5b66-96ab-600323ee058b",

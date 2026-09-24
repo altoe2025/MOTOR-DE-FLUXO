@@ -53,7 +53,8 @@ em `web/src/e2eBridge.ts`, instalação/restauração em `web/src/pages/StudiesP
 e pacote sintético em `servidor/demo/generate_package.py`/
 `web/src/demo/generated/demo-study.v1.json`. Comandos, evidências e limites
 de versão/comparação estão em `docs/testing.md`, seção "Aceitação local da
-Etapa 6B". O teste preserva o bloqueio `NAO_CONFIGURADO` para Estudo importado.
+Etapa 6B". O runner E2E lê o SHA do pacote; o teste cobre comparação positiva
+de hipótese executada e preserva o bloqueio `NAO_CONFIGURADO` para Estudo importado.
 
 | Pergunta | Arquivo |
 |---|---|

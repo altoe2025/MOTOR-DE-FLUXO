@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import os
-import subprocess
+import re
 from collections import deque
 from concurrent.futures import Future
 from pathlib import Path
@@ -121,14 +121,12 @@ class ControlledVerifier:
             raise SessionInvalid("token controlado inválido") from error
 
 
-def _head_sha() -> str:
-    return subprocess.run(
-        ["git", "rev-parse", "HEAD"],
-        cwd=ROOT,
-        check=True,
-        capture_output=True,
-        text=True,
-    ).stdout.strip()
+def _demo_build_sha() -> str:
+    package_path = ROOT / "web" / "src" / "demo" / "generated" / "demo-study.v1.json"
+    value = json.loads(package_path.read_text(encoding="utf-8"))["motorBuildSha"]
+    if not isinstance(value, str) or re.fullmatch(r"[0-9a-f]{40}", value) is None:
+        raise ValueError("SHA de motor inválido no pacote demo E2E")
+    return value
 
 
 def build_e2e_app(
@@ -141,7 +139,7 @@ def build_e2e_app(
         supabase_url="https://e2e.invalid",
         supabase_jwt_issuer="https://e2e.invalid/auth/v1",
         supabase_allowed_user_ids=frozenset({CONTROLLED_USER_ID, CONTROLLED_USER_ID_B}),
-        motor_build_sha=os.environ.get("MOT_E2E_BUILD_SHA") or _head_sha(),
+        motor_build_sha=os.environ.get("MOT_E2E_BUILD_SHA") or _demo_build_sha(),
         web_dist_dir=ROOT / "web" / "dist",
         diagnostic_max_workers=diagnostic_max_workers,
     )

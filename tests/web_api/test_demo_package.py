@@ -5,12 +5,16 @@ from __future__ import annotations
 import json
 from collections import Counter
 from decimal import Decimal
+from importlib.metadata import PackageNotFoundError
 from math import ceil, floor
 from pathlib import Path
+
+import pytest
 
 from motor.mixes import TODOS as MIXES
 from servidor.contracts.diagnostics import DiagnosticEnvelope, DiagnosticRequest
 from servidor.contracts.replay import ReplayDocumentV1, ReplayRequestV1
+from servidor.demo import generate_package
 from servidor.demo.generate_package import build_package, write_package
 from servidor.replay import construir_replay
 
@@ -69,6 +73,9 @@ def test_pacote_tem_cinco_composicoes_e_repeticoes_reconciliadas() -> None:
         assert request.selected_repetition_id == request.sampling.repetitions[0].repetition_id
         assert envelope.statistics.selected_repetition_id == request.selected_repetition_id
         replay = ReplayDocumentV1.model_validate(package["replays"][scenario["id"]])
+        expected_motor_version = f"0.1.0+{package['motorBuildSha']}"
+        assert envelope.selected_execution.result.manifesto.versao_motor == expected_motor_version
+        assert replay.motor_version == expected_motor_version
         assert replay.repetition_id == request.selected_repetition_id
         assert replay.execution_fingerprint == envelope.selected_execution.execution_fingerprint
         assert len(replay.orders) <= 98
@@ -92,3 +99,12 @@ def test_geracao_e_byte_a_byte_deterministica(tmp_path: Path) -> None:
     assert first.read_bytes() == second.read_bytes()
     versioned = Path("web/src/demo/generated/demo-study.v1.json")
     assert first.read_bytes() == versioned.read_bytes()
+
+
+def test_gerador_recusa_versao_instalada_indisponivel(monkeypatch) -> None:
+    def missing(_name: str) -> str:
+        raise PackageNotFoundError("motor-de-fluxo")
+
+    monkeypatch.setattr(generate_package, "version", missing, raising=False)
+    with pytest.raises(RuntimeError, match="motor-de-fluxo.*instalado"):
+        build_package()

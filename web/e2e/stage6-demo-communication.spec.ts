@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { strToU8, unzipSync, zipSync } from 'fflate';
+import { AXIS_TITLES } from '../src/hypotheses/comparison';
 import { formatFraction, formatMoney } from '../src/presentation/format';
 
 const OWNER = '00000000-0000-4000-8000-000000000021';
@@ -27,7 +28,10 @@ type AcceptanceBridge = {
     source: { synthetic: boolean; label: string };
     selection: { repetitionId: string; replayDay: number; comparisonExecutionId: string | null };
     executiveMetrics: readonly { code: string; value: string | null; evidenceRefs: readonly string[] }[];
-    comparison: { metrics: readonly { code: string; value: string | null; evidenceRefs: readonly string[] }[] } | null;
+    comparison: {
+      metrics: readonly { code: string; label: string; value: string | null; evidenceRefs: readonly string[] }[];
+      facts: readonly { code: string; label: string; value: string; evidenceRefs: readonly string[] }[];
+    } | null;
     replaySnapshot: { metrics: readonly { code: string; value: string | null; evidenceRefs: readonly string[] }[] } | null;
     evidenceIndex: Record<string, { value: string | null }>;
   }>;
@@ -49,6 +53,15 @@ async function installedDemo(page: Page): Promise<DemoSnapshot> {
 
 async function purge(page: Page, id: string): Promise<void> {
   await page.evaluate((studyId) => (window.__MOTOR_E2E__ as unknown as AcceptanceBridge).purgeDemoForAcceptance(studyId), id);
+}
+
+async function releaseDiagnostics(page: Page, count: number, submittedBefore: number): Promise<void> {
+  for (let index = 0; index < count; index += 1) {
+    await expect.poll(async () => (await page.request.get('/__e2e__/diagnostics/state')).json())
+      .toMatchObject({ pending: 1, submitted: submittedBefore + index + 1 });
+    const response = await page.request.post('/__e2e__/diagnostics/release', { data: { fail: false } });
+    expect(response.ok()).toBe(true);
+  }
 }
 
 const headers = ['operacao_id', 'cliente_nome', 'classificacao_perfil', 'direcao', 'data_conhecida', 'data_limite', 'valor_brl', 'finalidade_codigo'];
@@ -181,7 +194,7 @@ test('cinco cenários exibem repetição e Replay; documento projeta as mesmas e
   }
 });
 
-test('hipótese guiada preserva Perfis; comparação explica incompatibilidade e ajuda coerente', async ({ page }) => {
+test('hipótese guiada preserva Perfis; compara diagnóstico compatível e explica incompatibilidade', async ({ page }) => {
   test.setTimeout(120_000);
   await page.goto('/estudos');
   const study = (await installedDemo(page)).studies[0]!;
@@ -217,6 +230,66 @@ test('hipótese guiada preserva Perfis; comparação explica incompatibilidade e
   });
   expect(projected.selection.comparisonExecutionId).toBeNull();
   expect(projected.comparison).toBeNull();
+
+  await page.goto(`/carteira/${study.id}`);
+  const compatibleBuilder = page.getByRole('region', { name: 'Criar hipótese de composição' });
+  await compatibleBuilder.getByLabel('Nome da hipótese').fill('Janela comparável B6');
+  await compatibleBuilder.getByLabel('Janela em dias').fill('8');
+  await compatibleBuilder.getByRole('button', { name: 'Criar hipótese', exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`/estudos/${study.id}/diagnostico\\?scenarioId=`));
+  const comparableScenarioId = new URL(page.url()).searchParams.get('scenarioId')!;
+  const before = await (await page.request.get('/__e2e__/diagnostics/state')).json() as { submitted: number };
+  await page.evaluate(() => {
+    const original = crypto.randomUUID.bind(crypto);
+    let first = true;
+    Object.defineProperty(crypto, 'randomUUID', { configurable: true, value: () => {
+      if (first) { first = false; return '00000000-0000-4000-8000-000000000111'; }
+      return original();
+    } });
+  });
+  await page.getByRole('button', { name: 'Executar diagnóstico', exact: true }).click();
+  await releaseDiagnostics(page, 10, before.submitted);
+  await expect(page.getByRole('heading', { name: 'Diagnóstico concluído' })).toBeVisible();
+  const comparable = (await snapshot(page)).studies[0]!.diagnostics.find((item) => item.scenarioId === comparableScenarioId);
+  expect(comparable).toBeDefined();
+  await page.goto(`/comparar?studyId=${study.id}`);
+  await page.getByLabel('Execução base').selectOption(base.id);
+  await page.getByLabel('Execução da hipótese').selectOption(comparable!.id);
+  await page.getByRole('button', { name: 'Comparar', exact: true }).click();
+  await expect(page.getByRole('heading', { name: '4. Exposição residual' })).toBeVisible();
+  const compatible = await page.evaluate((ids) => (window.__MOTOR_E2E__ as unknown as AcceptanceBridge).compareDemoExecutions(...ids),
+    [study.id, base.id, comparable!.id] as const);
+  expect(compatible.ok).toBe(true);
+  const comparedDocument = await page.evaluate((input) => (window.__MOTOR_E2E__ as unknown as AcceptanceBridge).projectDemoCommunication(input), {
+    studyId: study.id, scenarioId: base.scenarioId, diagnosticExecutionId: base.id,
+    comparisonExecutionId: comparable!.id, replayDay: 31,
+  });
+  expect(comparedDocument.selection.comparisonExecutionId).toBe(comparable!.id);
+  const windowBefore = comparedDocument.comparison!.facts.find((item) => item.code.startsWith('WINDOW.') && item.code.endsWith('.before'));
+  const windowAfter = comparedDocument.comparison!.facts.find((item) => item.code.startsWith('WINDOW.') && item.code.endsWith('.after'));
+  expect([windowBefore?.value, windowAfter?.value]).toEqual(['7', '8']);
+  await expect(page.getByRole('region', { name: 'Entradas alteradas' })).toContainText('Janela: 7 → 8');
+  const remittedDelta = comparedDocument.comparison!.metrics.find((item) => item.code === 'CROSS_BORDER_RESIDUAL.remitted_brl.delta');
+  expect(remittedDelta?.value).not.toBeNull();
+  await expect(page.getByRole('row', { name: /Remetido/ })).toContainText(`${remittedDelta!.value} BRL`);
+  const rendered = await page.locator('.comparison-axis').evaluateAll((sections) => sections.flatMap((section) => {
+    const axis = section.querySelector('h2')?.textContent ?? '';
+    return [...section.querySelectorAll('tbody tr')].map((row) => ({
+      axis, label: row.querySelector('th')?.textContent ?? '',
+      cells: [...row.querySelectorAll('td')].map((cell) => cell.textContent ?? ''),
+    }));
+  }));
+  for (const metric of comparedDocument.comparison!.metrics) {
+    const axis = metric.code.split('.')[0] as keyof typeof AXIS_TITLES;
+    const label = metric.label.replace(/ \([^)]+\): (base|hypothesis|delta)$/, '');
+    const side = metric.code.split('.').at(-1);
+    const column = side === 'base' ? 0 : side === 'hypothesis' ? 1 : 2;
+    const row = rendered.find((item) => item.axis === AXIS_TITLES[axis] && item.label === label);
+    expect(row, metric.code).toBeDefined();
+    expect(row!.cells[column], metric.code).toContain(metric.value ?? 'Indisponível');
+    expect(metric.evidenceRefs.length).toBeGreaterThan(0);
+    for (const ref of metric.evidenceRefs) expect(comparedDocument.evidenceIndex[ref]).toBeDefined();
+  }
   const response = await page.request.get('/api/v1/catalogos/ajuda', {
     headers: { Authorization: 'Bearer mot21-controlled-e2e-token' },
   });

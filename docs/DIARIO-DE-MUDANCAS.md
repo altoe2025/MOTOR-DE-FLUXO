@@ -66,12 +66,36 @@ Atualizada em 2026-09-23, durante o planejamento da Etapa 6.
 | `codex/etapa-4-mvp` | MVP e Evolução B aceitos localmente até MOT-85; sem push/PR/merge/deploy | Codex |
 | `codex/fix-reconciliacao-decimal` | correção da aritmética exata dos mecanismos da análise, pronta para merge na `main` | Codex |
 | `codex/frontend-etapa-5` | MOT-86–MOT-89 concluídas e aceitas localmente; Replay Fronteira Viva funcional até o limite efetivo medido; sem push/PR/merge/deploy | Codex |
-| `codex/frontend-etapa-6-planejamento` | Etapa 6 em execução local: importação A0–A5 e demonstração B1; sem push, PR, merge ou deploy | Codex |
+| `codex/frontend-etapa-6-planejamento` | Etapa 6A e 6B em execução local; B6 corrigida no worktree isolado, sem push, PR, merge ou deploy | Codex |
 
 Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+## 2026-09-23 — Correção dos três bloqueios da revisão B6 (MOT-91/MOT-92)
+
+**Sintoma.** O pacote demo gravava `desconhecida+SHA` como versão do motor; o
+comando Playwright padrão usava o HEAD do front-end e exigia override manual do
+SHA; o aceite cobria apenas comparação incompatível entre mixes independentes.
+
+**Causa.** O JSON havia sido gerado sem a distribuição Python instalada; bundle
+e servidor E2E inferiam build pelo commit atual, que muda mesmo sem alterar o
+motor; o teste não executava uma hipótese compatível até a tela de Comparação.
+
+**O que foi feito.** O gerador recusa distribuição ausente e o pacote foi
+regenerado com `.venv-t5`, versão `0.1.0+5cb78f0b…`; seu SHA-256 é
+`5072BA19841153850FE8A6E8FA9DBB378601A460AC9851BCD36694875C295E39`.
+O runner E2E controlado deriva o build do pacote versionado sem relaxar o
+portão de incompatibilidade do produto. O teste cria hipótese de janela 8 com
+ordens reaproveitadas, executa dez repetições com seed fixa no teste, compara
+com a base e confere métricas, mudança de janela e evidências do
+`CommunicationDocumentV1` contra a tela. Também conserva o caso incompatível.
+
+**O que isso invalida.** O procedimento anterior que exigia
+`MOT_E2E_BUILD_SHA` manual e a conclusão de que B6 não tinha comparação
+positiva. Tentativas com outras seeds que falharam na agregação continuam
+registradas como limitação do motor; esta correção não altera simulação.
 
 ## 2026-09-23 — Gate B6 de demonstração e comunicação (MOT-92)
 

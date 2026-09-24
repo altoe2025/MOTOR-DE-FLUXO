@@ -13,6 +13,7 @@ from collections import Counter
 from datetime import UTC, datetime
 from decimal import Decimal
 from functools import partial
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Literal
 from uuid import UUID, uuid5
@@ -476,6 +477,10 @@ def _diagnostic(
 
 def build_package() -> dict:
     """Materializa contratos canônicos; não lê CSV nem estado de usuário."""
+    try:
+        version("motor-de-fluxo")
+    except PackageNotFoundError as error:
+        raise RuntimeError("motor-de-fluxo precisa estar instalado para gerar o pacote demo") from error
     trio = [_company_case_profile(index) for index in range(1, 13)]
     companies = [item[0] for item in trio]
     cases = [item[1] for item in trio]
