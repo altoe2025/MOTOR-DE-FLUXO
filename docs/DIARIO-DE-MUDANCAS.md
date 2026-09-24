@@ -73,6 +73,33 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-24 — Gates D3 de acessibilidade, visual e desempenho (MOT-97)
+
+**Sintoma.** O JS inicial público excedia 350 KiB gzip (~395,5 KiB); a
+geração do Documento de Comunicação produzia long tasks acima de 200 ms.
+Faltavam auditoria Axe, baselines de tela/impressão e orçamento executável.
+
+**Causa.** Rotas protegidas e seus validadores eram carregados eager antes do
+login. Clone, validação de Estudo, projeção e validação do documento
+compartilhavam um turno do main thread. A apresentação não reutilizava seu
+documento validado ao abrir o chat, e alvos de retorno eram pequenos.
+
+**O que foi feito.** No worktree local `codex/mot97-stage6-quality` a partir
+de `a0d556c`, rotas protegidas foram divididas em chunks, a construção do
+documento ganhou pontos de cedência reais sem remover validações, e o chat
+reaproveita o documento validado somente com estudo/cenário/execução iguais.
+Escape fecha o chat e restaura foco; links de retorno ganharam alvo mínimo.
+Entraram testes Axe, teclado, zoom, snapshots Windows de cinco estados e duas
+páginas A4, medição de 20 amostras e gate de orçamento no CI. A evidência e as
+limitações estão em `docs/frontend/etapa-6-acessibilidade-desempenho.md`. Sem
+push, PR, deploy, alteração de Linear ou execução da grade de 27.000.
+
+**O que isso invalida.** O bundle D2 de ~395,5 KiB gzip e a conclusão de que
+T7 ainda não tinha teste deixam de descrever esta branch. Não invalida
+números financeiros, validação/persistência ou isolamento por owner. As
+baselines Linux/CI e a revisão humana com leitor de tela continuam
+**NOT_RUN/BLOCKED**; baselines Windows não equivalem a aceite Linux.
+
 ## 2026-09-24 — Linha total da receita não é participante (MOT-96)
 
 **Sintoma.** O Painel A exibia 13 participantes para a receita demonstrativa

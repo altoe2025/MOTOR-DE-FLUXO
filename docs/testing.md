@@ -1,5 +1,28 @@
 # Testes
 
+## Acessibilidade, regressão visual e desempenho — D3 / MOT-97 (2026-09-24)
+
+Gates novos em `web/e2e/stage6-{accessibility,visual,performance}.spec.ts` e
+`tests/web_api/measure_stage6.py`. O bundle público inicial foi reduzido de
+~395,5 kB para 326.473 bytes (318,82 KiB) gzip por code splitting; o chunk lazy da apresentação
+ficou em 5.733 bytes (5,60 KiB). A medição local usa 20 amostras aquecidas para abertura,
+troca de seção e Documento de Comunicação, com observador persistente de long
+tasks por fase. Axe, teclado, zoom/reflow, reduced motion e impressão cobrem os
+estados principais. Evidência, limites e comandos completos:
+[`etapa-6-acessibilidade-desempenho.md`](frontend/etapa-6-acessibilidade-desempenho.md).
+Gate local: build produção, **7/7 Playwright**, **193/193 unitários focados**,
+**3/3 testes Python do orçamento**, typecheck, ESLint e `git diff --check`
+PASS. A suíte web completa passou **1.000/1.000 em 115 arquivos** após ajustar
+dois testes de deep link da apresentação que aguardavam apenas 1 s durante o
+carregamento lazy. Cada locator espera até 5 s e cada teste até 15 s; timeout
+global e paralelismo não mudaram. As duas primeiras execuções tiveram 1 falha
+de timeout cada (192/193 focados e 999/1.000 completos), sem erro funcional.
+
+Snapshots de Chromium **Windows** foram revisadas e passaram localmente.
+Baselines **Linux/CI permanecem NOT_RUN/BLOCKED**: Docker/WSL indisponíveis
+neste host; o gate CI foi instalado e deve reprovar até a geração e revisão
+humana dessas baselines. Nenhum aceite publicado, push, PR ou deploy foi feito.
+
 ## Painel A e relatório local — D1/D2 / MOT-96 (2026-09-24)
 
 Correção de contagem na receita demonstrativa: `composition` inclui uma linha
@@ -48,10 +71,9 @@ O primeiro comando pytest com `--basetemp .pytest_tmp` falhou porque o servidor
 E2E mantinha seu log aberto nessa pasta; a repetição com diretório separado
 `--basetemp .pytest_static_tmp` passou. Esse erro não veio do código testado.
 
-O gate D3 de acessibilidade, regressão visual e desempenho permanece próprio da
-MOT-97. O build local mostrou `PresentationRoute` 3,81 KiB gzip e chunk inicial
-`index` 395,46 KiB gzip; o segundo excede o orçamento D3 de 350 KiB e requer
-trabalho/medição próprios da MOT-97. O build/smoke Docker D4 segue bloqueado
+O build D2 então mostrava `PresentationRoute` 3,81 KiB gzip e chunk inicial
+`index` 395,46 KiB gzip, acima do orçamento D3. Essa medição anterior foi
+superada pela seção MOT-97 acima. O build/smoke Docker D4 segue bloqueado
 conforme seção MOT-98 abaixo;
 nenhum aceite publicado é inferido destes testes locais.
 
