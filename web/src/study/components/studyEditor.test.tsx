@@ -308,4 +308,19 @@ describe('StudyList', () => {
     expect(screen.getByRole('button', { name: 'Duplicar Estudo teste' })).toBeVisible();
     expect(screen.getByRole('button', { name: 'Excluir Estudo teste' })).toBeVisible();
   });
+
+  it('oculta da lista principal os estudos movidos para a lixeira', async () => {
+    const active = await study();
+    const deleted = {
+      ...active,
+      id: '00000000-0000-4000-8000-000000000100',
+      name: 'Estudo excluído',
+      deletedAt: '2026-09-24T12:00:00Z',
+    };
+    render(<StudyList studies={[active, deleted]} selectedId={null} onCreate={vi.fn()} onOpen={vi.fn()} onRename={vi.fn()} onDuplicate={vi.fn()} onRestore={vi.fn()} onDelete={vi.fn()} />);
+
+    expect(screen.getByRole('button', { name: 'Abrir Estudo teste' })).toBeVisible();
+    expect(screen.queryByText('Estudo excluído')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Restaurar Estudo excluído' })).not.toBeInTheDocument();
+  });
 });
