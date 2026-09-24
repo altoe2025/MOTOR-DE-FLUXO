@@ -49,6 +49,9 @@ com saída em `web/src/generated/validators/`; smoke da CSP em
 `web/scripts/smoke-csp.mjs` (`npm --prefix web run test:csp`).
 Evidências e bloqueios locais: seção MOT-98 de `docs/testing.md`.
 Aceite publicado continua NOT_RUN.
+D5 está em `render.yaml` (um serviço free, auto deploy desligado),
+`tests/web_api/test_render_blueprint.py` e `docs/deploy-render.md`
+(configuração, convite/callbacks, cold start, rollback e autorização de publicação).
 
 Etapa 6A integrada localmente: o percurso real de importação e os limites estão em
 `docs/frontend/etapa-6a-aceitacao.md`; o teste reproduzível está em
