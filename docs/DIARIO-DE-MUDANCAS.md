@@ -135,7 +135,9 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
    coletada" somente na UI, mantendo `null` nos dados. O contrato Python de
    `CommunicationDocumentV1` reconhece esse único fato derivado mediante enum
    e as duas evidências canônicas esperadas, preservando igualdade literal para
-   todos os outros fatos; `ChatRequestV1` aceita o documento completo.
+   todos os outros fatos; `ChatRequestV1` aceita o documento completo. Direção
+   não textual dentro da tabela de evidência é rejeitada como erro de validação,
+   inclusive quando vier como lista ou objeto JSON, sem `TypeError` no chat.
 4. **O que isso invalida.** O documento anterior não permitia concluir qual regra
    de IOF foi aplicável à carteira. Nenhuma alíquota, custo ou resultado numérico
    mudou; o fato descreve a regra por ordem, não atribui custo por cliente.

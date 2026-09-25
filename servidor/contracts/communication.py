@@ -121,7 +121,8 @@ def _valid_iof_application_mode(
         isinstance(rule, dict)
         and isinstance(rule.get("finalidade"), str)
         and bool(rule["finalidade"])
-        and rule.get("direcao") in {"OUT", "IN"}
+        and isinstance(rule.get("direcao"), str)
+        and rule["direcao"] in {"OUT", "IN"}
         and isinstance(rule.get("aliquota"), str)
         for rule in published_rules
     )
