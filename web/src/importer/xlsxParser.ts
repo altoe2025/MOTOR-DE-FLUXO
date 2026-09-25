@@ -3,7 +3,9 @@ import readXlsxFile from 'read-excel-file/universal';
 import type { RawOperationCells } from './domain';
 import { ImportFileError, preflightXlsx, type SerializedImportFileError } from './xlsxPreflight';
 
-const HEADERS: Array<keyof RawOperationCells> = ['operacao_id', 'cliente_nome', 'classificacao_perfil', 'direcao', 'data_conhecida', 'data_limite', 'valor_brl', 'finalidade_codigo'];
+const REQUIRED_HEADERS = ['operacao_id', 'cliente_nome', 'classificacao_perfil', 'direcao', 'data_conhecida', 'data_limite', 'valor_brl'] as const;
+const OPTIONAL_HEADERS = ['finalidade_codigo'] as const;
+const HEADERS: readonly (keyof RawOperationCells)[] = [...REQUIRED_HEADERS, ...OPTIONAL_HEADERS];
 const MAX_ROWS = 1000;
 
 export type ParsedImport = Readonly<{

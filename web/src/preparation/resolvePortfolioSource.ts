@@ -58,9 +58,6 @@ function dayFromWindowStart(date: string, startDate: string): number {
 
 function observedOrders(caseRecord: ObservedCase): CanonicalAuthoredOrder[] {
   return caseRecord.orders.map((order) => {
-    if (order.purposeCode === null) {
-      throw new Error('Caso observado contém finalidade necessária não coletada.');
-    }
     return {
       id: order.id,
       cliente_id: order.clientId,

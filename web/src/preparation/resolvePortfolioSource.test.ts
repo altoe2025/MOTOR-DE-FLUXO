@@ -4,6 +4,7 @@ import type { PreparationRequest, PreparationResponse } from '../api/client';
 import { makeObservedCase } from '../study/fixtures';
 import { fingerprintPortfolioSource } from '../study/fingerprints';
 import {
+  authoredDefinitionFromObservedCase,
   resolvePortfolioSource,
   type PortfolioSourceResolverDependencies,
 } from './resolvePortfolioSource';
@@ -82,6 +83,30 @@ function dependencies(overrides: Partial<PortfolioSourceResolverDependencies> = 
 }
 
 describe('resolvePortfolioSource', () => {
+  it('retains a missing observed purpose through snapshot and fingerprint', async () => {
+    const original = makeObservedCase();
+    const source = {
+      ...original,
+      orders: original.orders.map((order) => ({
+        ...order, purposeCode: null,
+        fieldProvenance: {
+          knownDate: order.provenance[0]!, deadlineDate: order.provenance[0]!,
+          valueBrl: order.provenance[0]!, efxStatus: order.provenance[0]!,
+          purposeCode: { kind: 'NOT_COLLECTED' as const, source: 'xlsx-operacoes', version: '1.0.0', recordedAt: NOW },
+        },
+      })),
+    };
+    const result = await resolvePortfolioSource(
+      { kind: 'OBSERVED_CASE', caseId: source.id, caseRevision: source.revision },
+      dependencies({ getObservedCase: async () => source }),
+    );
+    expect(result.orders[0]?.finalidade).toBeNull();
+    expect(result.provenanceByOrder?.[result.orders[0]!.id]?.finalidade.kind).toBe('NOT_COLLECTED');
+    expect(result.sourceFingerprint).toBe(await fingerprintPortfolioSource(result));
+    expect(authoredDefinitionFromObservedCase(source).orders[0]?.finalidade).toBeNull();
+    const withPurpose = { ...result, orders: result.orders.map((order) => ({ ...order, finalidade: 'SERVICO' })) };
+    expect(await fingerprintPortfolioSource(withPurpose)).not.toBe(result.sourceFingerprint);
+  });
   it('cria o fixture dourado observado sem chamar o gerador e sem carregar metadados do arquivo', async () => {
     const preparePortfolio = vi.fn();
     const caseRecord = makeObservedCase();

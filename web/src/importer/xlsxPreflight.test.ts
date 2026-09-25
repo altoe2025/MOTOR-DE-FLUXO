@@ -10,11 +10,10 @@ async function fixture(name: string): Promise<ArrayBuffer> {
   return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
 }
 
-function sparseWorkbook(withoutRowReference: boolean = false): ArrayBuffer {
-  const headers = ['operacao_id', 'cliente_nome', 'classificacao_perfil', 'direcao', 'data_conhecida', 'data_limite', 'valor_brl', 'finalidade_codigo'];
+function sparseWorkbook(withoutRowReference: boolean = false, headers: readonly string[] = ['operacao_id', 'cliente_nome', 'classificacao_perfil', 'direcao', 'data_conhecida', 'data_limite', 'valor_brl', 'finalidade_codigo'], sparse = true): ArrayBuffer {
   const headerCells = headers.map((header, index) => `<c r="${String.fromCharCode(65 + index)}1" t="inlineStr"><is><t>${header}</t></is></c>`).join('');
   const sparseRowReference = withoutRowReference ? '' : ' r="1000000"';
-  const sheet = `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData><row r="1">${headerCells}</row><row${sparseRowReference}><c r="A1000000" t="inlineStr"><is><t>OP-SPARSE</t></is></c></row></sheetData></worksheet>`;
+  const sheet = `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData><row r="1">${headerCells}</row>${sparse ? `<row${sparseRowReference}><c r="A1000000" t="inlineStr"><is><t>OP-SPARSE</t></is></c></row>` : ''}</sheetData></worksheet>`;
   const archive = zipSync({
     '[Content_Types].xml': strToU8('<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>'),
     'xl/workbook.xml': strToU8('<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="operacoes" sheetId="1" r:id="rId1"/></sheets></workbook>'),
@@ -25,6 +24,17 @@ function sparseWorkbook(withoutRowReference: boolean = false): ArrayBuffer {
 }
 
 describe('preflightXlsx', () => {
+  it('accepts only the seven required headers', async () => {
+    await expect(preflightXlsx(sparseWorkbook(false, [
+      'operacao_id', 'cliente_nome', 'classificacao_perfil', 'direcao', 'data_conhecida', 'data_limite', 'valor_brl',
+    ], false))).resolves.toMatchObject({ sheetName: 'operacoes' });
+  });
+
+  it('rejects unknown and misplaced optional headers', async () => {
+    const required = ['operacao_id', 'cliente_nome', 'classificacao_perfil', 'direcao', 'data_conhecida', 'data_limite', 'valor_brl'];
+    await expect(preflightXlsx(sparseWorkbook(false, [...required, 'unknown'], false))).rejects.toMatchObject({ code: 'HEADER_INVALID' });
+    await expect(preflightXlsx(sparseWorkbook(false, [...required.slice(0, 6), 'finalidade_codigo', required[6]!], false))).rejects.toMatchObject({ code: 'HEADER_INVALID' });
+  });
   it('accepts exactly one visible worksheet named operacoes', async () => {
     await expect(preflightXlsx(await fixture('valid-minimal.xlsx'))).resolves.toEqual({
       sheetName: 'operacoes',

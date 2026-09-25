@@ -15,8 +15,8 @@ function inlineCell(reference: string, value: string): string {
   return `<c r="${reference}" t="inlineStr"><is><t>${value}</t></is></c>`;
 }
 
-function workbookWithRow(row: readonly string[]): ArrayBuffer {
-  const headers = ['operacao_id', 'cliente_nome', 'classificacao_perfil', 'direcao', 'data_conhecida', 'data_limite', 'valor_brl', 'finalidade_codigo'];
+function workbookWithRow(row: readonly string[], includePurpose = true): ArrayBuffer {
+  const headers = ['operacao_id', 'cliente_nome', 'classificacao_perfil', 'direcao', 'data_conhecida', 'data_limite', 'valor_brl', ...(includePurpose ? ['finalidade_codigo'] : [])];
   const cells = (values: readonly string[], rowNumber: number) => values
     .map((value, index) => inlineCell(`${String.fromCharCode(65 + index)}${rowNumber}`, value))
     .join('');
@@ -31,6 +31,21 @@ function workbookWithRow(row: readonly string[]): ArrayBuffer {
 }
 
 describe('parseXlsxBuffer', () => {
+  it('imports seven required columns with an explicit null purpose', async () => {
+    const result = await parseXlsxBuffer(workbookWithRow([
+      'OP-0001', 'Cliente Exemplo', '', 'OUT', '17/10/2026', '19/10/2026', '1500000.00',
+    ], false));
+    expect(result.rows[0]?.finalidade_codigo).toBeNull();
+    expect(validateImportedRows(result.rows).summary.invalid).toBe(0);
+  });
+
+  it('imports a blank purpose cell as explicit null', async () => {
+    const result = await parseXlsxBuffer(workbookWithRow([
+      'OP-0001', 'Cliente Exemplo', '', 'OUT', '17/10/2026', '19/10/2026', '1500000.00', '',
+    ]));
+    expect(result.rows[0]?.finalidade_codigo).toBeNull();
+    expect(validateImportedRows(result.rows).rows[0]?.errors).toEqual([]);
+  });
   it('returns only serializable canonical rows and batch metadata', async () => {
     const parsed = await parseXlsxBuffer(await fixture('valid-minimal.xlsx'));
 

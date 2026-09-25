@@ -35,9 +35,7 @@ describe('createImportReview', () => {
       controlTotals: [{ code: 'GROSS_OUT_BRL', valueBrl: '100.5' }, { code: 'GROSS_IN_BRL', valueBrl: '0' }],
     });
     expect(review.blockers).toEqual([]);
-    expect(review.warnings.map((warning) => warning.code)).toEqual([
-      'PURPOSE_MISSING', 'EFX_NOT_COLLECTED',
-    ]);
+    expect(review.warnings.map((warning) => warning.code)).toEqual(['EFX_NOT_COLLECTED']);
   });
 
   it('keeps an unresolved divergent duplicate and an unidentified position as blockers', () => {

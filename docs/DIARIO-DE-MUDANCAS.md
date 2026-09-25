@@ -74,6 +74,22 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-24 — XLSX e Caso Observado aceitam finalidade ausente (MOT-90, Task 2)
+
+1. **Sintoma.** O XLSX sem `finalidade_codigo` falhava no preflight; com a coluna
+   vazia, a revisão emitia `PURPOSE_MISSING` e a conversão para Estudo recusava a ordem.
+2. **Causa.** O layout exigia oito headers, a validação gerava erro para finalidade
+   ausente e o resolvedor de carteira rejeitava `purposeCode: null`.
+3. **O que foi feito.** Na branch `codex/finalidade-importador`, os sete headers
+   operacionais permanecem obrigatórios e a finalidade é aceita somente como oitava
+   coluna opcional. Ausência e célula vazia viram `null`, sem erro ou warning de
+   finalidade. A proveniência `NOT_COLLECTED` e o `null` seguem para o snapshot;
+   o editor de ordens explícitas mostra vazio e salva `null` ou texto validado.
+   Testes do parser, validação, revisão, snapshot e editor cobrem o percurso.
+4. **O que isso invalida.** A afirmação de que o layout exige oito colunas e de que
+   uma finalidade ausente torna o Caso inelegível ou impede converter a ordem para
+   Estudo. O gate de execução por catálogo é tratado pelas tasks seguintes.
+
 ## 2026-09-24 — Núcleo aceita finalidade ausente (MOT-90, Task 1)
 
 1. **Sintoma.** Um cenário com `finalidade: null` era carregado como a string

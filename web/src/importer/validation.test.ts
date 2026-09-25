@@ -9,10 +9,10 @@ const validRow = {
 };
 
 describe('validateImportedRows', () => {
-  it('keeps a valid row normalized and reports a missing purpose as a warning', () => {
+  it('keeps a valid row normalized without a purpose error', () => {
     const report = validateImportedRows([{ ...validRow, finalidade_codigo: null }]);
     expect(report.summary).toEqual({ total: 1, valid: 1, invalid: 0 });
-    expect(report.rows[0]).toMatchObject({ rowNumber: 2, normalized: { purposeCode: null }, errors: [{ code: 'PURPOSE_MISSING' }] });
+    expect(report.rows[0]).toMatchObject({ rowNumber: 2, normalized: { purposeCode: null }, errors: [] });
   });
 
   it('retains all reachable field failures for review instead of throwing away the row', () => {

@@ -108,7 +108,7 @@ function rowIssues(row: ImportedVersionRow): Readonly<{ invalid: readonly DataQu
   const warnings: DataQualityIssue[] = [];
   for (const error of row.errors) {
     if (error.code === 'PURPOSE_MISSING') {
-      warnings.push(issue('PURPOSE_MISSING', 'Finalidade não informada.', `/rows/${row.rowNumber}/finalidade_codigo`));
+      continue;
     } else if (error.code === 'DIRECTION_INVALID') {
       invalid.push(issue('DIRECTION_UNKNOWN', 'Direção não identificada.', `/rows/${row.rowNumber}/direcao`));
     } else if (error.field === 'valor_brl') {
@@ -275,9 +275,6 @@ function buildReview(
   const caseId = stableUuid(`${context.parsed.sha256}:${company?.id ?? 'missing'}:${ownerSub}`);
   const controlTotals = declared ?? { out: generatedTotals.out, in: generatedTotals.in };
   const warnings = [...quality.warnings];
-  if (orders.some((order) => order.purposeCode === null) && !warnings.some((item) => item.code === 'PURPOSE_MISSING')) {
-    warnings.push(issue('PURPOSE_MISSING', 'Finalidade não informada.'));
-  }
   if (orders.length > 0) warnings.push(issue('EFX_NOT_COLLECTED', 'Status eFX não coletado no layout canônico.'));
   const draft: ObservedCaseDraft = {
     schemaVersion: '2.0.0',

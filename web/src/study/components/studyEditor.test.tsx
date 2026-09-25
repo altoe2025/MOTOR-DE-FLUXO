@@ -231,6 +231,23 @@ describe('StudyEditor', () => {
     expect(JSON.stringify(observedCase)).toBe(originalJson);
   });
 
+  it('salva finalidade ausente como null e permite texto exato na autoria explícita', async () => {
+    const fixture = makeObservedCase();
+    const observedCase = { ...fixture, orders: [{ ...fixture.orders[0]!, purposeCode: null }] };
+    const { onSourceChange } = await subject({ observedCases: [observedCase] });
+    const user = userEvent.setup();
+    await user.click(screen.getByLabelText('Caso observado'));
+    await user.selectOptions(screen.getByLabelText('Caso confirmado'), observedCase.id);
+    await user.click(screen.getByRole('button', { name: 'Converter para autoria manual' }));
+    const purpose = screen.getByLabelText('Finalidade da operação observed-order-1');
+    expect(purpose).toHaveValue('');
+    await user.click(screen.getByRole('button', { name: 'Salvar operações explícitas' }));
+    expect(onSourceChange.mock.calls.at(-1)?.[0].definition.orders[0].finalidade).toBeNull();
+    await user.type(purpose, 'SERVICO');
+    await user.click(screen.getByRole('button', { name: 'Salvar operações explícitas' }));
+    expect(onSourceChange.mock.calls.at(-1)?.[0].definition.orders[0].finalidade).toBe('SERVICO');
+  });
+
   it('marca somente campos explícitos alterados e nunca envia valor corrigido como observado', async () => {
     const { onSourceChange, observedCase } = await subject(); const user = userEvent.setup();
     await user.click(screen.getByLabelText('Caso observado'));

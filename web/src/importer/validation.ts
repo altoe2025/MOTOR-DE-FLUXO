@@ -25,13 +25,9 @@ function normalizeRow(raw: RawOperationCells, rowNumber: number): MutableRow {
   const knownDate = validate(raw, 'data_conhecida', rowNumber, errors, (value) => parseCivilDate(requireOperationCell(value, 'data_conhecida')));
   const deadlineDate = validate(raw, 'data_limite', rowNumber, errors, (value) => parseCivilDate(requireOperationCell(value, 'data_limite')));
   const valueBrl = validate(raw, 'valor_brl', rowNumber, errors, (value) => parseBrlDecimal(requireOperationCell(value, 'valor_brl')));
-  const purposeCode = validate(raw, 'finalidade_codigo', rowNumber, errors, (value) => {
-    if (value === null || value === '') { errors.push({ code: 'PURPOSE_MISSING', field: 'finalidade_codigo', rowNumber, value, message: 'PURPOSE_MISSING: finalidade não informada' }); return null; }
-    return normalizePurposeCode(value);
-  });
+  const purposeCode = validate(raw, 'finalidade_codigo', rowNumber, errors, normalizePurposeCode);
   if (knownDate !== null && deadlineDate !== null && deadlineDate < knownDate) errors.push({ code: 'DATE_ORDER_INVALID', field: 'data_limite', rowNumber, value: raw.data_limite, message: 'DATE_ORDER_INVALID: data limite anterior à data conhecida' });
-  const blocking = errors.some((error) => error.code !== 'PURPOSE_MISSING');
-  return { rowNumber, raw, errors, normalized: !blocking && operationId !== null && clientName !== null && direction !== null && knownDate !== null && deadlineDate !== null && valueBrl !== null ? { operationId, clientName, profileClassification, direction, knownDate, deadlineDate, valueBrl, purposeCode } : null };
+  return { rowNumber, raw, errors, normalized: errors.length === 0 && operationId !== null && clientName !== null && direction !== null && knownDate !== null && deadlineDate !== null && valueBrl !== null ? { operationId, clientName, profileClassification, direction, knownDate, deadlineDate, valueBrl, purposeCode } : null };
 }
 
 function rejectDuplicates(rows: MutableRow[]): void {
