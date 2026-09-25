@@ -2,11 +2,12 @@
 
 from copy import deepcopy
 from importlib import import_module
+import json
 
 import pytest
 from pydantic import ValidationError
 
-from tests.web_api.test_communication_contracts import load, with_iof_application_mode
+from tests.web_api.test_communication_contracts import load, sign, with_iof_application_mode
 
 
 def payload(with_document=False):
@@ -43,6 +44,19 @@ def test_accepts_broad_chat_request_with_derived_iof_mode():
     source["message"] = "Resuma o documento completo."
     parsed = request_model().model_validate(source)
     assert parsed.communication.assumptions[-1].value == "MIXED"
+
+
+def test_rejects_broad_chat_request_with_unhashable_rule_direction_as_validation_error():
+    source = payload(True)
+    document = with_iof_application_mode("MIXED")
+    rules_ref = document["assumptions"][-1]["evidenceRefs"][0]
+    document["evidenceIndex"][rules_ref]["value"] = json.dumps([{
+        "finalidade": "SERVICES", "direcao": ["OUT"], "aliquota": "0.01",
+    }])
+    sign(document)
+    source["communication"] = document
+    with pytest.raises(ValidationError, match="modo de IOF"):
+        request_model().model_validate(source)
 
 
 @pytest.mark.parametrize("change", [

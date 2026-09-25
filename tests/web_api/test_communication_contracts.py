@@ -78,6 +78,18 @@ def test_derived_iof_exception_does_not_relax_other_facts():
         CommunicationDocumentV1.model_validate(document)
 
 
+@pytest.mark.parametrize("direction", [["OUT"], {"value": "OUT"}])
+def test_rejects_unhashable_rule_direction_as_validation_error(direction):
+    document = with_iof_application_mode()
+    rules_ref = document["assumptions"][-1]["evidenceRefs"][0]
+    document["evidenceIndex"][rules_ref]["value"] = json.dumps([{
+        "finalidade": "SERVICES", "direcao": direction, "aliquota": "0.01",
+    }])
+    sign(document)
+    with pytest.raises(ValidationError, match="modo de IOF"):
+        CommunicationDocumentV1.model_validate(document)
+
+
 @pytest.mark.parametrize("name", ["observed", "synthetic", "unicode"])
 def test_preserves_shared_document_decimals_availability_and_fingerprint(name):
     document = load(name)
