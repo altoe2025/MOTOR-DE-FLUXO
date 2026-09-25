@@ -274,7 +274,7 @@ export function StudyDiagnosticPage() {
           Apresentar esta execução
         </Link>
         <DiagnosticDistribution statistics={envelope.statistics} repetitions={envelope.repetitions} economics={envelope.axes.economic_robustness} />
-        <SelectedExecution envelope={envelope} replayHref={`/estudos/${study.id}/replay?executionId=${encodeURIComponent(terminal!.id)}`} />
+        <SelectedExecution envelope={envelope} iofRules={terminal!.premisesSnapshot.costs.iof_por_finalidade} replayHref={`/estudos/${study.id}/replay?executionId=${encodeURIComponent(terminal!.id)}`} />
         <DiagnosticAxesView axes={envelope.axes} consequences={envelope.consequences} limitations={envelope.limitations} />
         <section className="diagnostic-card" aria-labelledby="provenance-heading"><h2 id="provenance-heading">Proveniência</h2>
           <dl className="diagnostic-identity"><div><dt>Job</dt><dd>{envelope.job_id}</dd></div><div><dt>Fingerprint do request</dt><dd>{envelope.request_fingerprint}</dd></div><div><dt>Versão do schema</dt><dd>{envelope.schema_version}</dd></div></dl>

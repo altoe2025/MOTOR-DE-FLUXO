@@ -33,22 +33,29 @@ const axes: DiagnosticEnvelope['axes'] = {
 };
 
 describe('resultado do diagnóstico', () => {
-  it('explica o IOF padrão para finalidade não coletada no snapshot selecionado', () => {
+  it.each([
+    { name: 'finalidade não coletada', purposes: [null], direction: 'OUT', fallback: true },
+    { name: 'finalidade textual sem regra', purposes: ['DESCONHECIDA'], direction: 'OUT', fallback: true },
+    { name: 'finalidade conhecida com direção incompatível', purposes: ['INFORMADA'], direction: 'IN', fallback: true },
+    { name: 'carteira mista com uma ordem sem par exato', purposes: ['INFORMADA', 'DESCONHECIDA'], direction: 'OUT', fallback: true },
+    { name: 'todas as ordens com regra exata', purposes: ['INFORMADA', 'INFORMADA'], direction: 'OUT', fallback: false },
+  ])('explica o IOF por direção somente quando há fallback: $name', ({ purposes, direction, fallback }) => {
     const envelope = {
       statistics: { kind: 'SINGLE_EXECUTION', count: 1, selected_repetition_id: 'repeticao' },
       selected_execution: {
         statistics: { repetition_id: 'repeticao' }, result: {},
-        input_snapshot: { cenario: { ordens: [{ finalidade: null }] } },
+        input_snapshot: { cenario: { ordens: purposes.map((finalidade) => ({ finalidade, direcao: direction })) } },
       },
     } as unknown as DiagnosticEnvelope;
-    const { rerender } = render(<SelectedExecution envelope={envelope} />);
+    render(<SelectedExecution envelope={envelope} iofRules={[
+      { finalidade: 'INFORMADA', direcao: 'OUT', aliquota: '0.01' },
+    ]} />);
 
-    expect(screen.getByText('IOF padrão por direção', { exact: true })).toBeVisible();
-    expect(screen.getByText(/ordens sem finalidade.*premissas da simulação/i)).toBeVisible();
-
-    envelope.selected_execution.input_snapshot.cenario.ordens[0]!.finalidade = 'FINALIDADE_INFORMADA';
-    rerender(<SelectedExecution envelope={envelope} />);
-    expect(screen.queryByText('IOF padrão por direção', { exact: true })).not.toBeInTheDocument();
+    if (fallback) {
+      expect(screen.getByText('IOF padrão por direção', { exact: true })).toBeVisible();
+    } else {
+      expect(screen.queryByText('IOF padrão por direção', { exact: true })).not.toBeInTheDocument();
+    }
   });
 
   it('mostra finalidade não coletada apenas na tabela de resíduo', () => {
@@ -73,7 +80,7 @@ describe('resultado do diagnóstico', () => {
     expect(screen.getByRole('heading', { name: 'Distribuição de repetições' })).toBeVisible();
     expect(screen.getByText(/método EMPIRICAL_NEAREST_RANK/)).toBeVisible();
 
-    rerender(<SelectedExecution envelope={{
+    rerender(<SelectedExecution iofRules={[]} envelope={{
       statistics: { kind: 'SINGLE_EXECUTION', count: 1, selected_repetition_id: '00000000-0000-4000-8000-000000000005', percentile_method: null },
       selected_execution: {
       kind: 'PREVIA', api_version: '1.0.0', request_id: '00000000-0000-4000-8000-000000000001',

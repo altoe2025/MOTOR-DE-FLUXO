@@ -74,6 +74,22 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-24 — Diagnóstico explica todo fallback de IOF (MOT-99, Task 5 fix 1)
+
+1. **Sintoma.** O Diagnóstico explicava IOF padrão somente para finalidade `null`,
+   omitindo ordens com finalidade textual sem regra ou com direção incompatível.
+2. **Causa.** O aviso verificava ausência de finalidade, em vez da existência de
+   combinação exata de finalidade e direção nas premissas selecionadas.
+3. **O que foi feito.** `StudyDiagnosticPage` passa as regras de IOF do
+   `premisesSnapshot` da execução selecionada a `SelectedExecution`. O aviso
+   aparece se qualquer ordem não tem par exato, incluindo carteira mista, e
+   desaparece quando todas têm regra específica. Testes RED/GREEN cobrem ausência,
+   texto sem regra, direção incompatível, mistura e todas específicas. A correção
+   não consulta catálogo nem altera cálculo, alíquotas ou contratos persistidos.
+4. **O que isso invalida.** A indicação anterior de fallback limitada a `null` e
+   o teste que esperava ausência do aviso para qualquer finalidade textual.
+   Nenhum resultado numérico é invalidado; esta é correção da explicação na UI.
+
 ## 2026-09-24 — Aceite observado sem finalidade até PDF (MOT-99, Task 5)
 
 1. **Sintoma.** E2Es, ajuda e documentos de aceite ainda exigiam bloqueio do

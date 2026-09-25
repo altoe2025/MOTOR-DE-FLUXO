@@ -9,12 +9,16 @@ import { HELP_IDS } from '../../help/helpIds';
 type DiagnosticEnvelope = NonNullable<DiagnosticExecutionRecord['envelope']>;
 type SelectedExecutionProps = Readonly<{
   envelope: DiagnosticEnvelope;
+  iofRules: DiagnosticExecutionRecord['premisesSnapshot']['costs']['iof_por_finalidade'];
   replayHref?: string;
 }>;
 
-export function SelectedExecution({ envelope, replayHref }: SelectedExecutionProps) {
+export function SelectedExecution({ envelope, iofRules, replayHref }: SelectedExecutionProps) {
   const selectedExecution = envelope.selected_execution;
   const selected = describeSelectedRepetition(envelope);
+  const hasIofFallback = selectedExecution.input_snapshot.cenario?.ordens.some((order) =>
+    order.finalidade === null || !iofRules.some((rule) =>
+      rule.finalidade === order.finalidade && rule.direcao === order.direcao));
   const hasCanonicalResult = selectedExecution.result !== null
     && typeof selectedExecution.result === 'object'
     && 'agregado' in selectedExecution.result;
@@ -30,8 +34,8 @@ export function SelectedExecution({ envelope, replayHref }: SelectedExecutionPro
       <div><dt>Versão da apresentação</dt><dd>{selectedExecution.presentation_version}</dd></div>
       <div><dt>Fingerprint de proveniência</dt><dd>{selectedExecution.provenance_fingerprint}</dd></div>
     </dl>
-    {selectedExecution.input_snapshot.cenario?.ordens.some((order) => order.finalidade === null) ? <p>
-      <strong>IOF padrão por direção</strong>: ordens sem finalidade usam as premissas da simulação por direção, sem classificação regulatória inferida ou cotação.
+    {hasIofFallback ? <p>
+      <strong>IOF padrão por direção</strong>: ordens sem regra específica para a combinação de finalidade e direção usam as premissas da simulação por direção, sem classificação regulatória inferida ou cotação.
     </p> : null}
     <p>Uma repetição é uma realização do cenário com seeds planejadas. O Replay mostra apenas esta repetição, não a distribuição inteira.</p>
     <AskAboutThis helpId={HELP_IDS.SELECTED_REPETITION} contextKind="REPETITION" />
