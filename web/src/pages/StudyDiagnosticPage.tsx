@@ -10,6 +10,7 @@ import { buildDiagnosticRequest, DiagnosticRequestBuildError } from '../diagnost
 import { DiagnosticControls } from '../diagnostics/components/DiagnosticControls';
 import { DiagnosticEngineResult } from '../diagnostics/components/DiagnosticEngineResult';
 import { DiagnosticStatus, type DiagnosticViewState } from '../diagnostics/components/DiagnosticStatus';
+import { currentDiagnostic, VariationComparison } from '../levers/VariationComparison';
 import {
   cancelStudyDiagnostic,
   executeStudyDiagnostic,
@@ -103,6 +104,7 @@ export function StudyDiagnosticPage() {
   const [viewState, setViewState] = useState<DiagnosticViewState | null>(null);
   const [runInProgress, setRunInProgress] = useState(false);
   const [cancelInFlight, setCancelInFlight] = useState(false);
+  const [runAllProgress, setRunAllProgress] = useState<string | null>(null);
   const cancelInFlightRef = useRef(false);
   const identityToken = useRef(0);
   const activeIdentity = useRef(screenIdentity);
@@ -214,6 +216,41 @@ export function StudyDiagnosticPage() {
     void run();
   }, [run, runInProgress, scenario, study, rawExecutionId]);
 
+  const runAll = async () => {
+    if (study === null || runInProgress || runAllProgress !== null) return;
+    const pending = study.scenarios.filter((item) => currentDiagnostic(study, item) === null);
+    setRunInProgress(true);
+    try {
+      for (const [index, item] of pending.entries()) {
+        if (!mounted.current) return;
+        setRunAllProgress(`Rodando ${index + 1} de ${pending.length}…`);
+        const itemCount = item.sourceSnapshot.generationInputSnapshot !== undefined ? count : 1;
+        await executeStudyDiagnostic({
+          authority: controller,
+          scenarioId: item.id,
+          api: { submitDiagnostic: client.submitDiagnostic, getDiagnosticJob: client.getDiagnosticJob, getDiagnosticResult: client.getDiagnosticResult },
+          buildRequest: async ({ study: currentStudy, scenario: currentScenario, attemptId }) => {
+            const preview = await buildPreviewRequest(
+              currentScenario.sourceSnapshot, currentScenario.premises, currentScenario.period,
+              { requestId: crypto.randomUUID(), studyId: currentStudy.id, scenarioId: currentScenario.id, scenarioRevision: currentScenario.revision },
+              requestProvenance(currentStudy, currentScenario),
+            );
+            return buildDiagnosticRequest({
+              requestId: preview.request_id, idempotencyKey: crypto.randomUUID(), studyId: currentStudy.id,
+              scenario: currentScenario, count: itemCount, baseSeed: attemptId, previewRequest: preview,
+            });
+          },
+        });
+        const current = controller.snapshot.document;
+        if (current !== null && mounted.current) setStudy(current);
+      }
+    } catch {
+      if (mounted.current) setViewState({ kind: 'FAILED', attemptId: 'não persistida', publicMessage: 'Não foi possível rodar todas as variações. As que terminaram ficaram salvas.' });
+    } finally {
+      if (mounted.current) { setRunAllProgress(null); setRunInProgress(false); }
+    }
+  };
+
   const cancel = async () => {
     if (scenario === null || cancelInFlightRef.current) return;
     cancelInFlightRef.current = true;
@@ -264,6 +301,7 @@ export function StudyDiagnosticPage() {
     <p className="page-introduction">Múltiplas repetições quando a origem é gerável; uma execução individual quando a entrada já está fixa.</p>
     {study === null || scenario === null ? <DiagnosticStatus state={viewState ?? { kind: 'UNAVAILABLE', reason: 'Carregando estudo…' }} /> : <>
       <DiagnosticControls generated={generated} count={effectiveCount} onCountChange={setCount} onRun={() => void run()} disabled={runInProgress || controller.snapshot.status === 'STORAGE_FAILURE'} />
+      <VariationComparison study={study} selectedScenarioId={scenario.id} running={runAllProgress !== null} progress={runAllProgress} onRunAll={() => void runAll()} />
       {viewState === null || viewState.kind === 'SUCCEEDED' ? null : <DiagnosticStatus state={viewState} {...(cancelInFlight ? {} : { onCancel: () => void cancel() })} onRetry={(attemptId) => void retry(attemptId)} />}
       {envelope === null ? null : <>
         <Link className="button-link replay-cta" to={`/estudos/${study.id}/replay?executionId=${encodeURIComponent(terminal!.id)}`}>Abrir Replay · Fronteira Viva</Link>

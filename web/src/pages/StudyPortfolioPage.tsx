@@ -6,6 +6,9 @@ import type { PreparationRequest } from '../api/client';
 import { validatePreparationRequest } from '../api/validators';
 import type { CompanyRecord, FieldProvenance, ObservedCase } from '../cases/domain';
 import { HypothesisBuilder } from '../hypotheses/components/HypothesisBuilder';
+import type { Levers } from '../levers/applyLevers';
+import { LeverBuilder } from '../levers/LeverBuilder';
+import { buildLeverScenario } from '../levers/leverScenario';
 import { PortfolioCompositionSummary } from '../hypotheses/components/PortfolioCompositionSummary';
 import { ProfileScenarioBuilder } from '../hypotheses/components/ProfileScenarioBuilder';
 import {
@@ -323,6 +326,18 @@ export function StudyPortfolioPage() {
     setStudy(saved);
     navigate(`/estudos/${saved.id}/diagnostico?scenarioId=${hypothesisId}`);
   };
+  const createLeverVariation = async (levers: Levers) => {
+    const recordedAt = new Date().toISOString();
+    const draft = await buildLeverScenario({
+      base: selectedBase, levers, id: crypto.randomUUID(), authoredPortfolioId: crypto.randomUUID(), recordedAt,
+    });
+    const next = await appendScenario(study, draft, recordedAt);
+    controller.edit(next);
+    setStudy(next);
+    const saved = await controller.flush();
+    if (saved === null || saved.id !== study.id) throw new Error('A sessão mudou antes de salvar a variação.');
+    setStudy(saved);
+  };
   const navigateAfterFlush = async (path: string) => {
     try {
       const saved = await controller.flush();
@@ -367,6 +382,7 @@ export function StudyPortfolioPage() {
     }} />
     <Button variant="secondary" onClick={() => void navigateAfterFlush(`/comparar?studyId=${study.id}`)}>Comparar resultados</Button>
   </section>
+  <LeverBuilder key={`${selectedBase.id}:${selectedBase.sourceSnapshot.sourceFingerprint}`} base={selectedBase} onCreate={createLeverVariation} />
   <div ref={hypothesisAnchor} id="composition-editor" tabIndex={-1} aria-label="Editor de hipóteses">
     <HypothesisBuilder key={selectedBase.id} baseScenario={selectedBase}
       availableProfiles={availableProfiles} onCreate={createHypothesis} />

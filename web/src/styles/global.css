@@ -403,3 +403,10 @@ a { color: inherit; }
 .chat-composer textarea:focus { outline: 2px solid #25d366; }
 .chat-send { align-items: center; background: #00a884; border: 0; border-radius: 999px; color: #fff; cursor: pointer; display: flex; flex: none; height: 42px; justify-content: center; width: 42px; }
 .chat-send:disabled { background: #9fd9c9; cursor: not-allowed; }
+.lever-builder { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-top: var(--space-6); padding: var(--space-6); }
+.lever-builder h2 { margin-top: 0; }
+.lever-grid { display: grid; gap: var(--space-3); grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin: var(--space-3) 0; }
+.lever-grid label { display: grid; gap: var(--space-1); }
+.variation-comparison { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin: var(--space-6) 0; padding: var(--space-6); }
+.variation-comparison h2 { margin-top: 0; }
+.variation-comparison tr[aria-current="true"] th, .variation-comparison tr[aria-current="true"] td { background: #eef5f2; }
