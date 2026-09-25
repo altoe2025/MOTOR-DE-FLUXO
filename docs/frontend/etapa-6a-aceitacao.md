@@ -9,30 +9,25 @@ constrói as duas operações sintéticas em memória a partir da fixture mínim
 
 O percurso principal confirma Caso, recarrega, confirma Perfil manualmente,
 recarrega, cria Estudo manualmente, usa o Caso como origem, anexa Perfil como
-evidência e comprova o bloqueio da prévia e do diagnóstico enquanto o catálogo está
-`NAO_CONFIGURADO`. Duas operações de 100 BRL, OUT/IN do mesmo cliente, permanecem
+evidência e executa prévia e diagnóstico com catálogo `NAO_CONFIGURADO`, sem o
+header nem células de finalidade. Duas operações de 100 BRL, OUT/IN do mesmo cliente, permanecem
 separadas. Antes das ações manuais não surgem Perfis, Estudos ou requests de
 execução atribuíveis à importação.
 
-A primeira rodada revelou um defeito transversal: o aviso da importação dizia que
-a execução estava bloqueada, mas o Estudo podia executar essas operações e abrir
-Replay. Esse resultado não foi aceito como percurso válido. O gate compartilhado
-`executionGate.ts` consulta `ApiClient.getImportCatalog` antes de reservar prévia,
-diagnóstico ou retry, e antes de reconstruir Replay antigo. A proveniência
-`xlsx-operacoes` identifica importações inclusive após conversão para autoria.
-Na revisão A6, a edição de todos os campos demonstrou que a proveniência corrente
-podia ser completamente substituída. A derivação agora carrega o marcador imutável
-`derivedFromObservedCase.importedFromXlsx`, incluído no fingerprint e aceito pelo
-schema persistido. O E2E altera todos os oito campos, recarrega e confirma que o
-bloqueio permanece sem reserva/POST. A compatibilidade não exige reescrever
-documentos legados; nenhuma migração retroativa de autoria já salva foi executada.
-Além do status configurado, o gate valida todos os pares finalidade/direção com
-catálogo fictício nos testes: código ausente, direção ausente e par permitido.
-Catálogo indisponível ou não configurado bloqueia; revisão, confirmação do Caso,
-Perfil e Estudo continuam disponíveis. Sintético/demo permanece executável.
-Polling/cancelamento de job já iniciado não é nova execução e permanece disponível.
-O percurso importado até Replay só poderá ser aceito com catálogo configurado;
-nenhum catálogo regulatório foi inventado para produzir um teste verde.
+**Decisão vigente de 2026-09-24:** finalidade é opcional e o catálogo deixou de ser
+gate. A ausência persiste como `purposeCode: null` e proveniência `NOT_COLLECTED`,
+até o snapshot enviado ao motor. Regra específica só se aplica à combinação exata
+de finalidade e direção; nos demais casos valem `iof_out`/`iof_in`. O cenário
+executa com as premissas salvas mesmo com catálogo vazio ou indisponível.
+`stage6-acceptance.spec.ts` percorre a fonte observada até Diagnóstico, Replay,
+Painel A e PDF renderizado, conferindo “IOF padrão por direção”, repetição,
+métricas e fingerprint. Não há inferência regulatória nem cotação.
+
+O antigo gate descrito no histórico A6 foi superado. A ancestralidade
+`derivedFromObservedCase.importedFromXlsx` continua no fingerprint e no schema;
+após editar todos os campos e recarregar, a autoria também executa. O E2E preserva
+o código de finalidade editado sem regra específica e o motor usa fallback.
+Nenhum catálogo regulatório foi inventado e nenhuma migração foi necessária.
 
 Outros cenários cobrem linha inválida, conflito divergente, escolha explícita,
 correção, descarte da revisão, OOXML com fórmula, cancelamento do worker, corrida
@@ -82,12 +77,13 @@ pelas 500 entradas de proveniência do diagnóstico. Nenhum limite foi relaxado.
 | Transação → Caso | Caso/lote/evento/Empresa/operação atômicos; CAS real em duas abas deixa um vencedor |
 | Caso → Perfil | seleção e confirmação manuais, recarga e versão imutável |
 | Perfil/Caso → Estudo | Perfil é evidência; origem observada explícita; recarga preserva snapshot e proveniência |
-| Estudo importado → execução | catálogo não configurado bloqueia antes da reserva/POST; sintético/demo conserva os aceites reais de diagnóstico/Replay existentes |
+| Estudo importado → execução | snapshot persistido com finalidade `null`; prévia e diagnóstico executam com fallback por direção e privacidade inspecionada |
+| Execução → Replay → Painel A → PDF | mesma repetição e métricas; “IOF padrão por direção” e fingerprint conferidos no documento impresso |
 
 O catálogo de produção continua `NAO_CONFIGURADO`; as operações do aceite são
-fictícias, mas seguem o mesmo bloqueio de execução do produto. A grade histórica
-não foi regenerada. Resultado local não é aceite publicado
-nem valida sessão Supabase real, Render, Docker, chat ou apresentação.
+fictícias e executam pelo mesmo fluxo observado do produto, com custos padrão.
+A grade histórica não foi regenerada. Resultado local não é aceite publicado
+nem valida sessão Supabase real, Render, Docker ou provider de chat real.
 
 Os comandos e contagens de gate ficam em `docs/testing.md`; evidência de execução
 e revisão desta tarefa fica também no relatório SDD local da A6. A CI preserva

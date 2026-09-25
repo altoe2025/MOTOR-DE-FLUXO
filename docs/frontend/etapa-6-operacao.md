@@ -1,6 +1,6 @@
 # Etapa 6 — operação do piloto e gates de aceite
 
-Este guia descreve a branch local MOT-99 baseada em `723461c`. O produto ainda não foi publicado. O percurso usa autenticação e chat controlados no teste local; operação de Render, Supabase e OpenAI reais exige a autorização e configuração descritas em `docs/deploy-render.md`.
+Este guia descreve a branch local MOT-99, atualizada pela decisão de finalidade opcional de 2026-09-24. O produto ainda não foi publicado. O percurso usa autenticação e chat controlados no teste local; operação de Render, Supabase e OpenAI reais exige a autorização e configuração descritas em `docs/deploy-render.md`.
 
 ## Percurso de uso
 
@@ -8,7 +8,7 @@ Este guia descreve a branch local MOT-99 baseada em `723461c`. O produto ainda n
 2. Abra um cenário, o Diagnóstico, a repetição representativa no Replay e **Apresentar esta execução**. O Painel A aceita cenário e execução explícitos na URL; comparação e dia do Replay são opcionais. **Salvar PDF** usa a impressão do navegador e o mesmo documento exibido.
    Para recuperar um Estudo comum excluído, abra **Lixeira de estudos** na lista de Estudos, escolha **Restaurar**, volte à lista e abra o mesmo Estudo. A lixeira é acessível por teclado; exclusão não altera sua identidade ou fonte.
 3. Para uma fonte observada, use **Importar**, escolha a Empresa, selecione o XLSX canônico, aceite o contrato de operações explícitas, revise as linhas e confirme o Caso. Depois crie uma versão de Perfil e anexe-a manualmente a um Estudo. O XLSX bruto fica no navegador; Caso, Empresa, Perfil e Estudo persistem no IndexedDB da conta.
-4. Na configuração atual, o catálogo de finalidades da importação está `NAO_CONFIGURADO`. A execução do Estudo derivado do XLSX é bloqueada antes de reservar diagnóstico. Assim, a jornada observada ainda não chega a Comparação, Replay, Painel A ou PDF numérico. Não use um Estudo demonstrativo como substituto dessa evidência.
+4. A coluna `finalidade_codigo` é opcional. Sem ela ou com célula vazia, a ausência permanece `null`, sem inferir classificação regulatória. Execute o Diagnóstico, abra **Abrir Replay · Fronteira Viva**, depois **Apresentar esta execução** e **Salvar PDF**. O Estudo usa suas premissas persistidas: regra específica somente para combinação exata de finalidade e direção; sem ela, **IOF padrão por direção**, indicado no resultado e no documento. Catálogo `NAO_CONFIGURADO`, vazio ou indisponível não bloqueia esse cenário. Os custos continuam sendo premissas de simulação, sem cotação ou calibração comercial implícita.
 5. O botão **Perguntar** abre o chat contextual. Antes do envio, a interface informa que pergunta e contexto selecionado serão enviados à OpenAI quando o provider real estiver configurado. Falha, timeout ou chat desabilitado não apagam o Estudo; a tentativa pode ser repetida manualmente.
 
 Estudos, Perfis e conversas ficam no armazenamento local daquele navegador e conta. Outro dispositivo não recebe uma cópia automática. Remover o pacote demonstrativo não deve recriá-lo silenciosamente; **Carregar estudo demonstrativo** restaura-o por ação explícita. Não apague IndexedDB para contornar erro de versão ou de publicação.
@@ -22,6 +22,7 @@ npm --prefix web ci
 python -m pip install -r requirements/web-dev.lock
 python -m pip install --no-deps -e .
 npm --prefix web run test:e2e -- stage6-acceptance.spec.ts
+npm --prefix web run test:e2e -- --grep "Etapa 6|Caso observado|finalidade opcional"
 npm --prefix web run test:e2e -- stage6-chat.spec.ts stage6-demo-communication.spec.ts stage6-presentation.spec.ts
 npm --prefix web run typecheck
 npm --prefix web run lint

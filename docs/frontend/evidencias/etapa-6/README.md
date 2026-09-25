@@ -5,6 +5,7 @@ Este diretório documenta o que deve acompanhar o aceite. Até a publicação au
 | Artefato | Origem | Estado |
 |---|---|---|
 | `web/test-results/stage6-acceptance-*/stage6-acceptance.pdf` e `pages/page-*.png` | Playwright local, demonstração sintética; gerados sob demanda e ignorados pelo Git | Reproduzível localmente |
+| `web/test-results/stage6-acceptance-*/stage6-observed-purpose-optional.pdf` e `observed-pages/page-*.png` | XLSX sintético de sete colunas pelo fluxo observado; Diagnóstico → Replay → Painel A → PDF com “IOF padrão por direção”, métricas e fingerprint | Gerado sob demanda pelo teste `finalidade opcional` e anexado como `observed-purpose-optional-pdf`; ignorado pelo Git |
 | `web/e2e/stage6-visual.spec.ts-snapshots/*-local-win32.png` | sete baselines Windows/Chromium; `demo` e `chat` revistas novamente após expor a lixeira | Versionado |
 | `*-local-linux.png` | runner Linux/CI | NOT_RUN/BLOCKED; não criar a partir de PNG Windows |
 | `web/test-results/stage6-performance.json` | 20 amostras D3, lidas por `measure_stage6.py --assert-budget` | Gerado sob demanda |

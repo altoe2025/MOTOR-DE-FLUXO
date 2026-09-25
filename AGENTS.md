@@ -118,6 +118,14 @@ o código de `netting.py`/`custo.py` não bater nesse número quando implementad
 
 ## Contrato de entrada explícita
 
+No front-end, a importação observada aceita sete colunas operacionais e a oitava
+`finalidade_codigo` opcional. Ausência é `null`, com proveniência `NOT_COLLECTED`,
+até o snapshot e o motor; nunca é classificação inferida ou gate de execução.
+Estudos executam com premissas persistidas mesmo com catálogo `NAO_CONFIGURADO`,
+vazio ou indisponível. Regra específica exige par exato de finalidade e direção;
+sem ele, usa-se `iof_out`/`iof_in`, identificado como “IOF padrão por direção”.
+Esta decisão de 2026-09-24 não altera alíquotas nem regras de simulação.
+
 Decisão confirmada pelo Gabriel em 2026-09-16: cada `Ordem` é uma operação explícita
 colocada na pool. OUT e IN do mesmo cliente chegam separados; o adaptador e futuros
 importadores não podem pré-netar essas pontas. A P0 decide o autonetting somente nos

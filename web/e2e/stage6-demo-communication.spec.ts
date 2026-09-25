@@ -64,13 +64,13 @@ async function releaseDiagnostics(page: Page, count: number, submittedBefore: nu
   }
 }
 
-const headers = ['operacao_id', 'cliente_nome', 'classificacao_perfil', 'direcao', 'data_conhecida', 'data_limite', 'valor_brl', 'finalidade_codigo'];
+const headers = ['operacao_id', 'cliente_nome', 'classificacao_perfil', 'direcao', 'data_conhecida', 'data_limite', 'valor_brl'];
 function importedWorkbook(): Buffer {
   const fixture = readFileSync(fileURLToPath(new URL('../src/importer/__fixtures__/valid-minimal.xlsx', import.meta.url)));
   const entries = unzipSync(fixture);
   const rows = [headers,
-    ['B6-OUT', 'CLIENTE_B6_BRUTO', 'PERFIL_B6_BRUTO', 'OUT', '01/01/2026', '03/01/2026', '100,00', 'ANEXO_V_REMESSA_TERCEIRO'],
-    ['B6-IN', 'CLIENTE_B6_BRUTO', 'PERFIL_B6_BRUTO', 'IN', '01/01/2026', '03/01/2026', '100,00', 'ANEXO_V_DISPONIBILIDADE'],
+    ['B6-OUT', 'CLIENTE_B6_BRUTO', 'PERFIL_B6_BRUTO', 'OUT', '01/01/2026', '03/01/2026', '100,00'],
+    ['B6-IN', 'CLIENTE_B6_BRUTO', 'PERFIL_B6_BRUTO', 'IN', '01/01/2026', '03/01/2026', '100,00'],
   ];
   const xml = rows.map((row, index) => `<row r="${index + 1}">${row.map((value, column) => `<c r="${String.fromCharCode(65 + column)}${index + 1}" t="inlineStr"><is><t>${value}</t></is></c>`).join('')}</row>`).join('');
   entries['xl/worksheets/sheet1.xml'] = strToU8(`<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${xml}</sheetData></worksheet>`);
@@ -104,7 +104,7 @@ test('primeiro acesso instala uma vez; remoção não ressuscita e restauração
   expect(restored.studies[0]!.scenarios.map((item) => item.name)).toEqual(packageValue.mixes.map((item) => item.label));
 });
 
-test('XLSX real mantém execução bloqueada; demo restaura com Estudo importado presente', async ({ page }) => {
+test('Etapa 6: finalidade opcional executa XLSX e demo restaura com Estudo importado presente', async ({ page }) => {
   test.setTimeout(60_000);
   await page.goto('/estudos');
   const demoId = (await installedDemo(page)).studies[0]!.id;
@@ -133,12 +133,13 @@ test('XLSX real mantém execução bloqueada; demo restaura com Estudo importado
   await page.getByLabel('Caso confirmado').selectOption(caseId);
   await page.getByRole('button', { name: 'Usar caso confirmado' }).click();
   await page.getByRole('button', { name: 'Executar cenário atual' }).click();
-  await expect(page.getByRole('article').getByRole('alert')).toContainText('Catálogo da importação não configurado');
-  expect(await page.evaluate((id) => window.__MOTOR_E2E__!.studyExecutionStatuses(id), importedStudyId)).toEqual([]);
+  await expect.poll(() => page.evaluate((id) => window.__MOTOR_E2E__!.studyExecutionStatuses(id), importedStudyId)).toEqual(['RUNNING', 'SUCCEEDED']);
   await page.goto(`/estudos/${importedStudyId}/diagnostico`);
   await page.getByRole('button', { name: 'Executar diagnóstico', exact: true }).click();
-  await expect(page.getByText(/Catálogo da importação não configurado/)).toBeVisible();
-  expect(await page.evaluate((id) => window.__MOTOR_E2E__!.studyExecutionStatuses(id), importedStudyId)).toEqual([]);
+  await expect.poll(async () => (await page.request.get('/__e2e__/diagnostics/state')).json()).toMatchObject({ pending: 1 });
+  expect((await page.request.post('/__e2e__/diagnostics/release', { data: { fail: false } })).ok()).toBe(true);
+  await expect(page.getByRole('heading', { name: 'Diagnóstico concluído' })).toBeVisible();
+  expect(await page.evaluate((id) => window.__MOTOR_E2E__!.studyExecutionStatuses(id), importedStudyId)).toEqual(['RUNNING', 'SUCCEEDED', 'QUEUED', 'SUCCEEDED']);
   await page.goto('/estudos');
   await expect(page.getByRole('button', { name: 'Carregar estudo demonstrativo' })).toBeVisible();
   await page.getByRole('button', { name: 'Carregar estudo demonstrativo' }).click();

@@ -22,6 +22,16 @@ describe('ProductHelpCatalogV1', () => {
     ))).toBe(true);
   });
 
+  it('explica finalidade opcional e IOF padrão por direção sem inferir classificação', () => {
+    const item = validateProductHelpCatalog(validCatalog)?.items.find((entry) => entry.id === HELP_IDS.IMPORT_PAGE);
+
+    expect(item?.purpose).toContain('finalidade_codigo é opcional');
+    expect(item?.changes).toContain('IOF padrão por direção');
+    expect(item?.changes).toContain('combinação exata de finalidade e direção');
+    expect(item?.doesNotChange).toContain('não infere classificação');
+    expect(item?.disabledWhen.join(' ')).not.toMatch(/finalidade|catálogo/i);
+  });
+
   it('recusa item sem limite ou conceito relacionado ausente', () => {
     const malformed = structuredClone(validCatalog) as {
       items: Array<Record<string, unknown>>;

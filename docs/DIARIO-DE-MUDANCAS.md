@@ -74,6 +74,28 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-24 — Aceite observado sem finalidade até PDF (MOT-99, Task 5)
+
+1. **Sintoma.** E2Es, ajuda e documentos de aceite ainda exigiam bloqueio do
+   Estudo importado por catálogo, contrariando a decisão de finalidade opcional.
+2. **Causa.** As expectativas anteriores sobreviveram às Tasks 1–4; o Diagnóstico
+   também não explicava o fallback nas ordens sem finalidade do snapshot.
+3. **O que foi feito.** Na branch `codex/frontend-etapa-6-planejamento`, três
+   E2Es usam XLSX de sete headers, sem finalidade, e aceitam prévia/diagnóstico,
+   autoria descendente e restauração demo. O transversal chega a Replay, Painel A
+   e PDF A4 de sete páginas, conferindo rótulo de IOF, métricas e fingerprint.
+   Ajuda, arquitetura, especificações, mapas, operação e matrizes foram alinhados;
+   o Diagnóstico ganhou explicação mínima das ordens com finalidade `null`.
+   RED/GREEN da ajuda e Diagnóstico; gate focado **4/4 E2Es**, ajuda HTTP **9/9**,
+   web **12/12** e regressão ampliada **17/17 E2Es** passaram, assim como
+   typecheck, lint, Ruff focado e diff-check. Não houve push, PR, merge ou deploy.
+4. **O que isso invalida.** Fica superado o gate histórico `NAO_CONFIGURADO`:
+   finalidade ausente ou sem par exato não impede executar premissas persistidas,
+   que usam IOF padrão por direção. `importacao.v1.json` continua vazio e não
+   configurado, sem classificação inventada ou alteração de alíquotas. As entradas
+   anteriores permanecem históricas. Linux/Docker/publicação seguem gates próprios;
+   o aceite local integral não se torna PASS por esse resultado.
+
 ## 2026-09-24 — Célula H2 sem header não vira finalidade (MOT-90, Task 2 fix)
 
 1. **Sintoma.** Um XLSX com os sete headers obrigatórios e H1 ausente podia conter

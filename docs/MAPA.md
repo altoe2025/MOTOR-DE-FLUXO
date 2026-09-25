@@ -45,9 +45,10 @@ executado; `web/scripts/run-real-e2e.mjs --render` exige aprovação explícita,
 URL HTTPS onrender.com e credenciais efêmeras. Operação, matriz de aceite e
 proveniência dos artifacts: `docs/frontend/etapa-6-operacao.md`,
 `docs/frontend/etapa-6-aceitacao.md` e
-`docs/frontend/evidencias/etapa-6/README.md`. O catálogo XLSX
-`NAO_CONFIGURADO`, o visual Linux e a imagem Docker impedem declarar aceite
-local integral; publicação segue NOT_RUN.
+`docs/frontend/evidencias/etapa-6/README.md`. A decisão de finalidade opcional
+de 2026-09-24 permite XLSX de sete colunas até Diagnóstico, Replay, Painel A e PDF,
+com “IOF padrão por direção”. Visual Linux e imagem Docker continuam gates
+independentes do aceite local integral; publicação segue NOT_RUN.
 
 MOT-96 / D1–D2 local: `web/src/presentation/PresentationRoute.tsx` carrega a seleção
 explícita do Estudo e constrói o `CommunicationDocumentV1` para o Painel A.
@@ -92,7 +93,8 @@ Etapa 6A integrada localmente: o percurso real de importação e os limites est�
 `web/e2e/import-observed-case.spec.ts`. Parser/worker/revisão/publicação vivem em
 `web/src/importer/`, sem repositório próprio. Catálogo autenticado em
 `servidor/catalogs/importacao.py` e `servidor/routes/importation.py`; produção
-continua `NAO_CONFIGURADO`. Scanner XLSX em
+continua `NAO_CONFIGURADO`, como metadado informativo: o cenário usa seu snapshot
+e custos persistidos, sem exigir finalidade. Scanner XLSX em
 `tests/web_api/scan_credentials.py`, regressões em `test_import_acceptance.py`.
 O limite de 1.000 linhas importadas não substitui o orçamento do Replay da Etapa 5.
 
@@ -103,7 +105,9 @@ e pacote sintético em `servidor/demo/generate_package.py`/
 `web/src/demo/generated/demo-study.v1.json`. Comandos, evidências e limites
 de versão/comparação estão em `docs/testing.md`, seção "Aceitação local da
 Etapa 6B". O runner E2E lê o SHA do pacote; o teste cobre comparação positiva
-de hipótese executada e preserva o bloqueio `NAO_CONFIGURADO` para Estudo importado.
+de hipótese executada e execução do Estudo importado sem finalidade, preservado
+durante restauração demo. Regras específicas exigem par exato finalidade/direção;
+na ausência, aplicam-se os padrões da direção.
 
 | Pergunta | Arquivo |
 |---|---|

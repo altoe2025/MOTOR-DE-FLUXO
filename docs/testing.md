@@ -1,5 +1,41 @@
 # Testes
 
+## Finalidade opcional — Task 5 / MOT-99 (2026-09-24)
+
+Base integrada `e9effcf`. RED confirmado na ajuda HTTP/web (faltava a explicação
+de opcionalidade) e na mensagem do Diagnóstico (unitário e E2E). GREEN:
+
+- `pytest tests/web_api/test_product_help.py -q`: **9 passed**, dois avisos de
+  depreciação das dependências Starlette/httpx/anyio.
+- `npm --prefix web run test:unit -- src/help/catalog.test.ts src/diagnostics/components/DiagnosticResult.test.tsx`:
+  **12 passed** em dois arquivos.
+- `npm --prefix web run test:e2e -- --grep "Etapa 6|Caso observado|finalidade opcional"`:
+  **4 passed** em 1,1 min no Chromium local.
+- `npm --prefix web run test:e2e -- stage6-acceptance.spec.ts import-observed-case.spec.ts stage6-demo-communication.spec.ts`:
+  **17 passed** em 3,4 min; inclui conflito/correção/CAS, 1.000 linhas,
+  PDFs observado e demonstrativo, falhas, isolamento e restauração.
+- `npm --prefix web run typecheck` e `npm --prefix web run lint`: **PASS**.
+- `python -m ruff check tests/web_api/test_product_help.py` e `git diff --check`: **PASS**.
+
+O XLSX sintético do aceite tem sete headers, sem finalidade. Caso persiste
+`purposeCode: null`/`NOT_COLLECTED`; prévia e diagnóstico enviam `finalidade: null`
+sem dados brutos. Diagnóstico → Replay → Painel A → PDF preservam seleção,
+métricas e fingerprint; Diagnóstico, documento e PDF explicam “IOF padrão por
+direção”. O PDF observado tem sete páginas A4, todas inspecionadas por
+`render_stage6_pdf.py` (conteúdo, geometria e sobreposição). Catálogo real fica
+`NAO_CONFIGURADO`; nenhum catálogo fictício contorna o fallback.
+
+Tentativas intermediárias documentadas: as primeiras asserções ignoravam os
+registros históricos de reserva `RUNNING`/`QUEUED`; o seletor do Painel A exigia
+texto isolado embora a explicação fosse adjacente; a contagem inicial de nove
+páginas vinha do demonstrativo, enquanto o observado sem comparação/dia selecionado
+tem sete. Corrigidas as expectativas, o gate acima passou.
+
+**OBSERVED_FLOW=PASS local; LOCAL_ACCEPTANCE=FAIL; PUBLISHED_ACCEPTANCE=NOT_RUN.**
+Linux visual, Docker e smoke publicado permanecem gates separados. As seções
+abaixo conservam resultados históricos; não ampliam esta verificação para suítes
+globais, provider real, Supabase ou Render.
+
 ## Revisão local da Etapa 6 — MOT-99 (2026-09-24)
 
 RED/GREEN: lixeira por teclado e restauração (`StudyList`), estado/ID terminal
@@ -13,8 +49,9 @@ baselines `demo-local-win32.png` e `chat-local-win32.png` foram atualizadas
 após inspeção. Aceitação + visual sem modo update passaram **8/8**.
 O E2E complementar de demonstração e acessibilidade passou **7/7**.
 `typecheck`, ESLint e build de produção PASS. O smoke Render continua
-**NOT_RUN**; o catálogo XLSX `NAO_CONFIGURADO`, Linux visual e Docker image
-smoke mantêm **LOCAL_ACCEPTANCE=FAIL**.
+**NOT_RUN**; Linux visual e Docker image smoke mantêm **LOCAL_ACCEPTANCE=FAIL**.
+O gate de catálogo vigente naquela revisão foi superado pela decisão de
+finalidade opcional em 2026-09-24; veja a evidência da Task 5 no topo deste arquivo.
 
 ## Aceite local Etapa 6 — D6 / MOT-99 (2026-09-24)
 
@@ -37,9 +74,9 @@ do ambiente. O smoke CSP falhou quando coincidiu com a reconstrução de `dist`
 e depois sobre um bundle sem configuração pública sintética; reconstruído com
 valores de exemplo e repetido isoladamente, passou sem requests externos.
 
-**LOCAL_ACCEPTANCE=FAIL; PUBLISHED_ACCEPTANCE=NOT_RUN.** Os gates verdes não
-removem o bloqueio funcional do catálogo de importação `NAO_CONFIGURADO`: o
-Estudo observado não pode produzir Diagnóstico/Replay/PDF. As sete baselines
+**Registro histórico D6: LOCAL_ACCEPTANCE=FAIL; PUBLISHED_ACCEPTANCE=NOT_RUN.**
+Naquela rodada, `NAO_CONFIGURADO` bloqueava Diagnóstico/Replay/PDF observado;
+essa restrição foi superada pela finalidade opcional em 2026-09-24. As sete baselines
 visuais Linux não foram geradas nem revistas neste host; Docker CLI/daemon
 indisponível impede o smoke da imagem. Nenhum Render, Supabase real, provider
 real, deploy ou convite foi usado. Matriz e evidências:
@@ -425,8 +462,8 @@ Não foi executado um novo aceite browser, que pertence à integração C5–C6.
 
 `web/e2e/stage6-demo-communication.spec.ts` percorre quatro caminhos no Chromium
 local: instalação única, reload, remoção e restauração explícita; XLSX real no
-worker até Caso, Perfil e Estudo, com execução importada bloqueada por
-`NAO_CONFIGURADO` e restauração demo sem apagar o Estudo importado; os cinco
+worker até Caso, Perfil e Estudo, com execução importada sem finalidade usando
+IOF padrão por direção e restauração demo sem apagar o Estudo importado; os cinco
 cenários sintéticos com diagnóstico, repetição e Replay; composição de hipótese
 sem alterar Perfis, comparação incompatível entre mixes independentes, comparação
 positiva de base e hipótese de janela executadas no servidor e catálogo de ajuda.
@@ -447,8 +484,8 @@ $env:MOT_E2E_OUTPUT_DIR='test-results/b6-acceptance'
 npm --prefix web run test:e2e -- stage6-demo-communication.spec.ts
 ```
 
-O bloqueio importado também passou em `import-observed-case.spec.ts`, sem
-catálogo fictício. Os cinco cenários prontos têm seeds e entradas distintas;
+O aceite importado em `import-observed-case.spec.ts` executa com catálogo
+`NAO_CONFIGURADO`, sem catálogo fictício. Os cinco cenários prontos têm seeds e entradas distintas;
 a Comparação os classifica como incompatíveis e o documento omite comparação.
 Uma hipótese nova que reutiliza as ordens e muda a janela de 7 para 8 dias
 foi executada com uma seed fixa no teste; a comparação resultante é positiva
@@ -498,10 +535,10 @@ O percurso `web/e2e/import-observed-case.spec.ts` lê XLSX no worker real,
 confirma Caso, recarrega, cria Perfil e Estudo por ações manuais e inspeciona
 requests e todas as stores IndexedDB. Linha inválida, conflito, correção,
 cancelamento, fórmula proibida, corrida CAS e isolamento de contas têm regressão.
-O catálogo real permanece `NAO_CONFIGURADO`: o aceite exige bloqueio de prévia,
-diagnóstico e Replay importados antes de publicar execução. Não se declara um
-percurso importado até Replay como aprovado. Demo/sintético conserva os percursos
-executáveis existentes. Detalhes e medição de 1.000 linhas estão em
+O catálogo real permanece `NAO_CONFIGURADO`, sem impedir execução. O aceite
+observado usa sete headers, preserva finalidade `null`/`NOT_COLLECTED` e executa
+prévia e diagnóstico; `stage6-acceptance.spec.ts` continua até Replay, Painel A e
+PDF com “IOF padrão por direção”. Detalhes e medição de 1.000 linhas estão em
 [`etapa-6a-aceitacao.md`](frontend/etapa-6a-aceitacao.md).
 
 Execute o gate de navegador sozinho no worktree: dois Playwright concorrentes
@@ -539,6 +576,11 @@ deste aceite local; não houve push, deploy ou regeneração da grade financeira
 ## Decisão
 
 ### Revisão A6 — ancestralidade e catálogo por par
+
+**Histórico superado quanto ao gate:** os testes abaixo registram a decisão A6
+original. Desde 2026-09-24, finalidade ausente ou par sem regra não bloqueia;
+valem as premissas persistidas e o IOF padrão por direção. A ancestralidade
+permanece preservada. As contagens históricas abaixo não são resultados da Task 5.
 
 Sobre `15f5eca` (C1 integrada), quatro testes RED comprovaram perda de origem após
 autoria integral e ausência de validação de finalidade/direção. O Chromium também

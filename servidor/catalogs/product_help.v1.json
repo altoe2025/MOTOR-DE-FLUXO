@@ -6,9 +6,9 @@
       "routePattern": "/importar",
       "elementKind": "PAGE",
       "label": "Importação",
-      "purpose": "Revisar uma planilha local antes de confirmar um Caso.",
-      "changes": "Organiza a revisão e a confirmação explícita dos dados importados.",
-      "doesNotChange": "Não altera a planilha original nem confirma um Caso sem ação da pessoa usuária.",
+      "purpose": "Revisar uma planilha local antes de confirmar um Caso. A coluna finalidade_codigo é opcional.",
+      "changes": "Organiza a confirmação explícita dos dados. A execução usa as premissas persistidas: regra específica quando existe combinação exata de finalidade e direção; nos demais casos, IOF padrão por direção. Catálogo vazio ou indisponível não bloqueia esse cenário.",
+      "doesNotChange": "A ausência de finalidade não infere classificação regulatória. Não altera a planilha original nem confirma um Caso sem ação da pessoa usuária; custos da simulação não são cotação.",
       "disabledWhen": ["Não há arquivo selecionado ou a sessão não está autenticada."],
       "recovery": ["Selecione novamente o arquivo e corrija os bloqueios informados na revisão."],
       "relatedConceptIds": ["concept.caso", "concept.empresa"]

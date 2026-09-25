@@ -221,21 +221,18 @@ Confirmar o Caso não cria Perfil, Estudo, prévia ou diagnóstico. Depois da re
 o usuário confirma manualmente uma versão do Perfil, cria um Estudo e anexa o
 snapshot do Perfil como evidência. Selecionar o Caso como origem do Estudo preserva
 cada operação explícita: duas pontas do mesmo cliente não são pré-netadas pelo
-importador. Antes de executar prévia, diagnóstico, retry ou reconstruir Replay,
-`importer/executionGate.ts` identifica a proveniência `xlsx-operacoes` ou a
-ancestralidade `derivedFromObservedCase.importedFromXlsx` e consulta
-o catálogo via `ApiClient`, com timeout/auth/schema existentes. Estado indisponível
-ou `NAO_CONFIGURADO` bloqueia antes da reserva/POST. A derivação para autoria
-preserva o marcador de ancestralidade mesmo quando todos os campos ganham nova
-proveniência manual. Esse marcador opcional participa do source fingerprint e do
-schema persistido, sem invalidar documentos antigos. Sintético/demo não exige
-catálogo de importação. `CONFIGURADO` sozinho não libera a carteira: cada ordem
-precisa de um par `(finalidade, direcao)` presente nas alíquotas do catálogo antes
-da reserva/POST. Finalidade ou direção ausente falha fechado, sem citar dados da
-operação na mensagem pública.
-Revisão e confirmação local continuam livres. Cancelar ou acompanhar um job já
-iniciado permanece possível. Diagnóstico e Replay usam contratos e motor atuais,
-mas o percurso importado só pode avançar até eles com catálogo configurado.
+importador. `finalidade_codigo` é a oitava coluna opcional: sete headers
+operacionais bastam. Ausência ou célula vazia persiste como `purposeCode: null`,
+com proveniência `NOT_COLLECTED`, e chega ao motor como `finalidade: null`.
+Prévia, diagnóstico, retry, Replay e apresentação usam exclusivamente snapshots
+e premissas persistidos; não consultam catálogo para autorizar a execução.
+`NAO_CONFIGURADO`, tabela vazia ou catálogo indisponível são estados válidos.
+O motor aplica regra específica somente no par exato `(finalidade, direção)`;
+nos demais casos usa `iof_out`/`iof_in`, comunicado como “IOF padrão por direção”.
+Não se infere classificação regulatória nem se alteram custos retroativamente.
+A ancestralidade `derivedFromObservedCase.importedFromXlsx` continua preservada
+na conversão para autoria e no fingerprint, sem migração de documentos antigos.
+Premissas inválidas, autenticação e isolamento mantêm seus bloqueios próprios.
 
 O arquivo XLSX nunca é enviado ao FastAPI. Requests e todas as stores do IndexedDB
 são inspecionados no aceite Chromium em `web/e2e/import-observed-case.spec.ts`;

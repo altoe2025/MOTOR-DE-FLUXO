@@ -30,6 +30,9 @@ export function SelectedExecution({ envelope, replayHref }: SelectedExecutionPro
       <div><dt>Versão da apresentação</dt><dd>{selectedExecution.presentation_version}</dd></div>
       <div><dt>Fingerprint de proveniência</dt><dd>{selectedExecution.provenance_fingerprint}</dd></div>
     </dl>
+    {selectedExecution.input_snapshot.cenario?.ordens.some((order) => order.finalidade === null) ? <p>
+      <strong>IOF padrão por direção</strong>: ordens sem finalidade usam as premissas da simulação por direção, sem classificação regulatória inferida ou cotação.
+    </p> : null}
     <p>Uma repetição é uma realização do cenário com seeds planejadas. O Replay mostra apenas esta repetição, não a distribuição inteira.</p>
     <AskAboutThis helpId={HELP_IDS.SELECTED_REPETITION} contextKind="REPETITION" />
     {replayHref === undefined ? null : <Link className="button-link" to={replayHref}>Abrir Replay · Fronteira Viva</Link>}

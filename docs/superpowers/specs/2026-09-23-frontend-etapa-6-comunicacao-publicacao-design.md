@@ -699,8 +699,13 @@ na CI comum. Não existe fallback para resposta inventada.
 21. O Estudo demonstrativo abre com cinco composições sintéticas executadas pelo
     motor vigente e sem números herdados da varredura histórica.
 22. Recarregar o pacote é uma ação explícita e não sobrescreve alterações locais.
-23. Amanda importa um XLSX canônico pela interface, revisa e confirma um Caso
-    Observado sem ferramentas de teste ou edição manual do IndexedDB.
+23. Amanda importa um XLSX canônico sem a coluna `finalidade_codigo` pela interface,
+    revisa e confirma um Caso Observado sem ferramentas de teste ou edição manual
+    do IndexedDB. O Estudo chega a Diagnóstico, Replay, Painel A e PDF com as
+    premissas persistidas e “IOF padrão por direção” explícito no Diagnóstico,
+    apresentação e PDF. Finalidade ausente permanece `null`, sem inferência.
+    Catálogo vazio ou indisponível não é gate; regra específica exige par exato
+    de finalidade e direção. Docker/Linux e smoke publicado são gates separados.
 24. O caso confirmado aparece na Empresa, produz nova versão de Perfil e pode ser
     anexado a um Estudo sem redigitação.
 25. Arquivo bruto não aparece na rede, no IndexedDB ou nos logs; falha e cancelamento

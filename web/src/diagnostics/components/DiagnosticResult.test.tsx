@@ -33,6 +33,24 @@ const axes: DiagnosticEnvelope['axes'] = {
 };
 
 describe('resultado do diagnóstico', () => {
+  it('explica o IOF padrão para finalidade não coletada no snapshot selecionado', () => {
+    const envelope = {
+      statistics: { kind: 'SINGLE_EXECUTION', count: 1, selected_repetition_id: 'repeticao' },
+      selected_execution: {
+        statistics: { repetition_id: 'repeticao' }, result: {},
+        input_snapshot: { cenario: { ordens: [{ finalidade: null }] } },
+      },
+    } as unknown as DiagnosticEnvelope;
+    const { rerender } = render(<SelectedExecution envelope={envelope} />);
+
+    expect(screen.getByText('IOF padrão por direção', { exact: true })).toBeVisible();
+    expect(screen.getByText(/ordens sem finalidade.*premissas da simulação/i)).toBeVisible();
+
+    envelope.selected_execution.input_snapshot.cenario.ordens[0]!.finalidade = 'FINALIDADE_INFORMADA';
+    rerender(<SelectedExecution envelope={envelope} />);
+    expect(screen.queryByText('IOF padrão por direção', { exact: true })).not.toBeInTheDocument();
+  });
+
   it('mostra finalidade não coletada apenas na tabela de resíduo', () => {
     const localAxes = structuredClone(axes);
     localAxes.cross_border_residual.by_purpose = [{ key: null, direction: 'OUT', value_brl: '40' }];

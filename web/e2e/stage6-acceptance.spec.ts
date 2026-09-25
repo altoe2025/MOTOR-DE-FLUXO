@@ -18,9 +18,9 @@ function workbook(): Buffer {
   const fixture = readFileSync(fileURLToPath(new URL('../src/importer/__fixtures__/valid-minimal.xlsx', import.meta.url)));
   const entries = unzipSync(fixture);
   const rows = [
-    ['operacao_id', 'cliente_nome', 'classificacao_perfil', 'direcao', 'data_conhecida', 'data_limite', 'valor_brl', 'finalidade_codigo'],
-    ['MOT99-OUT', RAW_NAME, 'PERFIL_BRUTO_MOT99', 'OUT', '01/01/2026', '03/01/2026', '100,00', 'ANEXO_V_REMESSA_TERCEIRO'],
-    ['MOT99-IN', RAW_NAME, 'PERFIL_BRUTO_MOT99', 'IN', '01/01/2026', '03/01/2026', '100,00', 'ANEXO_V_DISPONIBILIDADE'],
+    ['operacao_id', 'cliente_nome', 'classificacao_perfil', 'direcao', 'data_conhecida', 'data_limite', 'valor_brl'],
+    ['MOT99-OUT', RAW_NAME, 'PERFIL_BRUTO_MOT99', 'OUT', '01/01/2026', '03/01/2026', '100,00'],
+    ['MOT99-IN', RAW_NAME, 'PERFIL_BRUTO_MOT99', 'IN', '01/01/2026', '03/01/2026', '100,00'],
   ];
   const xml = rows.map((row, index) => `<row r="${index + 1}">${row.map((value, column) =>
     `<c r="${String.fromCharCode(65 + column)}${index + 1}" t="inlineStr"><is><t>${value}</t></is></c>`).join('')}</row>`).join('');
@@ -46,7 +46,7 @@ async function chat(page: Page, question: string) {
   return { panel, response: await response };
 }
 
-test('XLSX observado chega a Caso, Perfil e Estudo, mas o catálogo pendente impede aceitar diagnóstico', async ({ page }) => {
+test('Etapa 6: finalidade opcional percorre Caso observado, Diagnóstico, Replay, Painel A e PDF', async ({ page }, testInfo) => {
   test.setTimeout(90_000);
   const bodies: string[] = [];
   page.on('request', (request) => { if (request.postData()) bodies.push(request.postData()!); });
@@ -79,12 +79,49 @@ test('XLSX observado chega a Caso, Perfil e Estudo, mas o catálogo pendente imp
   await page.getByRole('button', { name: 'Usar como evidência em estudo' }).click();
   await page.goto(`/estudos/${studyId}/diagnostico`);
   await page.getByRole('button', { name: 'Executar diagnóstico', exact: true }).click();
-  await expect(page.getByText(/Catálogo da importação não configurado/)).toBeVisible();
-  expect(await page.evaluate((id) => window.__MOTOR_E2E__!.studyExecutionStatuses(id), studyId)).toEqual([]);
+  await expect.poll(async () => (await page.request.get('/__e2e__/diagnostics/state')).json()).toMatchObject({ pending: 1 });
+  expect((await page.request.post('/__e2e__/diagnostics/release', { data: { fail: false } })).ok()).toBe(true);
+  await expect(page.getByRole('heading', { name: 'Diagnóstico concluído' })).toBeVisible();
+  await expect(page.getByText('IOF padrão por direção', { exact: true })).toBeVisible();
+  expect(await page.evaluate((id) => window.__MOTOR_E2E__!.studyExecutionStatuses(id), studyId)).toEqual(['QUEUED', 'SUCCEEDED']);
   expect(bodies.join('\n')).not.toMatch(/CLIENTE_BRUTO_MOT99|PERFIL_BRUTO_MOT99|FONTE_BRUTA_MOT99|PK\\u0003\\u0004/);
-  expect(bodies.filter((body) => body.includes('"sampling"'))).toHaveLength(0);
+  const state = await page.evaluate(() => window.__MOTOR_E2E__!.demoAcceptanceSnapshot());
+  const observed = state.studies.find((item) => item.id === studyId)!;
+  const execution = observed.diagnostics[0]!;
+  expect(execution.count).toBe(1);
+  const document = await page.evaluate((input) => window.__MOTOR_E2E__!.projectDemoCommunication(input), {
+    studyId, scenarioId: execution.scenarioId, diagnosticExecutionId: execution.id, replayDay: null,
+  });
+  expect(document.source.synthetic).toBe(false);
+  expect(document.selection.repetitionId).toBe(execution.repetitionId);
+  expect(document.assumptions).toContainEqual(expect.objectContaining({ code: 'IOF_APPLICATION_MODE', value: 'FALLBACK_ONLY' }));
+  const selected = page.getByRole('region', { name: 'Execução selecionada' });
+  await expect(selected.getByTestId('economia-brl')).toHaveText(formatMoney(execution.savingsBrl));
+  await expect(selected.getByTestId('netabilidade')).toHaveText(formatFraction(execution.netability));
+  await page.getByRole('link', { name: 'Abrir Replay · Fronteira Viva' }).click();
+  await expect(page.getByRole('region', { name: 'Repetição exibida' })).toContainText(execution.repetitionId);
+  await page.goto(`/estudos/${studyId}/apresentacao?cenario=${execution.scenarioId}&execucao=${execution.id}`);
+  await expect(page.getByRole('region', { name: 'Resumo executivo' })).toContainText(formatMoney(execution.savingsBrl));
+  await expect(page.getByRole('region', { name: 'Premissas e proveniência' })).toContainText('IOF padrão por direção');
   await page.reload();
-  await expect(page.getByRole('heading', { name: 'Diagnóstico robusto' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Premissas e proveniência' })).toContainText('IOF padrão por direção');
+  await page.emulateMedia({ media: 'print' });
+  const pdf = testInfo.outputPath('stage6-observed-purpose-optional.pdf');
+  await page.pdf({ path: pdf, format: 'A4', printBackground: true, preferCSSPageSize: true });
+  const inspected = spawnSync(python, ['tests/web_api/render_stage6_pdf.py', '--pdf', pdf,
+    '--render-dir', testInfo.outputPath('observed-pages'), '--expected-pages', '7',
+    '--expect', execution.id, '--expect', 'IOF padrão por direção', '--expect', 'Limitações e versões'], {
+    cwd: '..', encoding: 'utf8', timeout: 30_000,
+  });
+  expect(inspected.status, inspected.stderr).toBe(0);
+  const pdfText = (JSON.parse(inspected.stdout) as { text: string }).text.replace(/\s/g, '');
+  expect(pdfText).toContain(document.contextFingerprint);
+  for (const metric of document.executiveMetrics) {
+    expect(pdfText).toContain(metric.label.replace(/\s/g, ''));
+    expect(pdfText).toContain(formatCommunicationMetric(metric).replace(/\s/g, ''));
+  }
+  await testInfo.attach('observed-purpose-optional-pdf', { path: pdf, contentType: 'application/pdf' });
+  await page.emulateMedia({ media: 'screen' });
   await page.goto(`/estudos/${studyId}/apresentacao?cenario=ausente&execucao=ausente`);
   await expect(page.getByRole('alert')).toBeVisible();
   await page.evaluate(() => localStorage.setItem('motor-fluxo:e2e-account', 'b'));

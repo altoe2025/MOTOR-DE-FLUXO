@@ -59,6 +59,18 @@ def test_catalogo_de_ajuda_autenticado_publica_conteudo_versionado(product_help_
         assert set(item["relatedConceptIds"]) <= set(items)
 
 
+def test_ajuda_importacao_explica_finalidade_opcional_e_fallback(product_help_client):
+    response = product_help_client.get("/api/v1/catalogos/ajuda", headers=auth())
+    item = next(item for item in response.json()["items"] if item["id"] == "page.importacao")
+
+    assert "finalidade_codigo é opcional" in item["purpose"]
+    assert "IOF padrão por direção" in item["changes"]
+    assert "combinação exata de finalidade e direção" in item["changes"]
+    assert "não infere classificação" in item["doesNotChange"]
+    assert all("finalidade" not in reason.lower() and "catálogo" not in reason.lower()
+               for reason in item["disabledWhen"])
+
+
 def test_catalogo_de_ajuda_exige_bearer(product_help_client):
     response = product_help_client.get("/api/v1/catalogos/ajuda")
 

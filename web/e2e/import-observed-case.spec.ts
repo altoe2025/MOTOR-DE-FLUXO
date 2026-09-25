@@ -9,11 +9,11 @@ const OWNER_B = '00000000-0000-4000-8000-000000000022';
 const SOURCE_NAME = 'somente-local-sentinela.xlsx';
 const RAW_CLIENT = 'CLIENTE_BRUTO_SENTINELA';
 const RAW_PROFILE = 'PERFIL_BRUTO_SENTINELA';
-const headers = ['operacao_id', 'cliente_nome', 'classificacao_perfil', 'direcao', 'data_conhecida', 'data_limite', 'valor_brl', 'finalidade_codigo'];
+const headers = ['operacao_id', 'cliente_nome', 'classificacao_perfil', 'direcao', 'data_conhecida', 'data_limite', 'valor_brl'];
 const fixture = (name: string) => readFileSync(fileURLToPath(new URL(`../src/importer/__fixtures__/${name}`, import.meta.url)));
 const normalRows = [
-  ['E2E-OUT', RAW_CLIENT, RAW_PROFILE, 'OUT', '01/01/2026', '03/01/2026', '100,00', 'ANEXO_V_REMESSA_TERCEIRO'],
-  ['E2E-IN', RAW_CLIENT, RAW_PROFILE, 'IN', '01/01/2026', '03/01/2026', '100,00', 'ANEXO_V_DISPONIBILIDADE'],
+  ['E2E-OUT', RAW_CLIENT, RAW_PROFILE, 'OUT', '01/01/2026', '03/01/2026', '100,00'],
+  ['E2E-IN', RAW_CLIENT, RAW_PROFILE, 'IN', '01/01/2026', '03/01/2026', '100,00'],
 ];
 
 /** Reuses the audited minimal OOXML fixture; adds only synthetic inline cells. */
@@ -95,7 +95,8 @@ async function readAndConfirm(page: Page, buffer = workbook(), companyId?: strin
   return { companyId: url.pathname.split('/')[2]!, caseId: url.searchParams.get('caseId')!, profileUrl: url.pathname + url.search };
 }
 
-test('XLSX local → Caso → reload → Perfil manual → reload → Estudo manual; catálogo bloqueia execução', async ({ page }, testInfo) => {
+test('Caso observado: finalidade opcional preserva privacidade até prévia e diagnóstico após reload', async ({ page }, testInfo) => {
+  test.setTimeout(90_000);
   const requests = captureRequests(page);
   await page.goto('/importar');
   await expect(page.getByRole('heading', { name: 'Fonte e empresa' })).toBeVisible();
@@ -104,8 +105,8 @@ test('XLSX local → Caso → reload → Perfil manual → reload → Estudo man
   const afterCase = await assertPrivate(page, requests);
   const savedCase = afterCase.observed_cases!.find((row) => row.case_id === imported.caseId)!.document!;
   expect(savedCase.orders).toEqual(expect.arrayContaining([
-    expect.objectContaining({ id: 'E2E-IN', direction: 'IN', valueBrl: '100', efxStatus: 'NOT_COLLECTED' }),
-    expect.objectContaining({ id: 'E2E-OUT', direction: 'OUT', valueBrl: '100', efxStatus: 'NOT_COLLECTED' }),
+    expect.objectContaining({ id: 'E2E-IN', direction: 'IN', valueBrl: '100', purposeCode: null, efxStatus: 'NOT_COLLECTED', fieldProvenance: expect.objectContaining({ purposeCode: expect.objectContaining({ kind: 'NOT_COLLECTED' }) }) }),
+    expect.objectContaining({ id: 'E2E-OUT', direction: 'OUT', valueBrl: '100', purposeCode: null, efxStatus: 'NOT_COLLECTED', fieldProvenance: expect.objectContaining({ purposeCode: expect.objectContaining({ kind: 'NOT_COLLECTED' }) }) }),
   ]));
   expect(afterCase.observed_cases).toHaveLength(before.stores.observed_cases!.length + 1);
   expect(afterCase.studies).toHaveLength(before.stores.studies!.length);
@@ -136,14 +137,18 @@ test('XLSX local → Caso → reload → Perfil manual → reload → Estudo man
   expect(await page.evaluate((id) => window.__MOTOR_E2E__!.profileSnapshot(id), studyId)).toEqual({ attachedVersions: [1], availableVersions: [1] });
   await page.goto(`/carteira/${studyId}`);
   await page.getByRole('button', { name: 'Executar cenário atual' }).click();
-  await expect(page.getByRole('article').getByRole('alert')).toContainText('Catálogo da importação não configurado');
+  await expect.poll(() => page.evaluate((id) => window.__MOTOR_E2E__!.studyExecutionStatuses(id), studyId)).toEqual(['RUNNING', 'SUCCEEDED']);
   const snapshot = await page.evaluate((id) => window.__MOTOR_E2E__!.stage4Snapshot(id), studyId);
   await page.goto(`/estudos/${studyId}/diagnostico?scenarioId=${snapshot.baseScenarioId}`);
   await page.getByRole('button', { name: 'Executar diagnóstico', exact: true }).click();
-  await expect(page.getByText(/Catálogo da importação não configurado/)).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Abrir Replay · Fronteira Viva' })).toHaveCount(0);
-  expect(await page.evaluate((id) => window.__MOTOR_E2E__!.studyExecutionStatuses(id), studyId)).toEqual([]);
-  expect(requests.filter((request) => /\/(?:previas|diagnosticos|replays)$/.test(request.url) && request.body !== null)).toHaveLength(0);
+  await expect.poll(async () => (await page.request.get('/__e2e__/diagnostics/state')).json()).toMatchObject({ pending: 1 });
+  expect((await page.request.post('/__e2e__/diagnostics/release', { data: { fail: false } })).ok()).toBe(true);
+  await expect(page.getByRole('heading', { name: 'Diagnóstico concluído' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Abrir Replay · Fronteira Viva' })).toBeVisible();
+  expect(await page.evaluate((id) => window.__MOTOR_E2E__!.studyExecutionStatuses(id), studyId)).toEqual(['RUNNING', 'SUCCEEDED', 'QUEUED', 'SUCCEEDED']);
+  expect(requests.filter((request) => /\/(?:previas|diagnosticos)$/.test(request.url) && request.body !== null)).toHaveLength(2);
+  const canonicalBodies = requests.filter((request) => /\/(?:previas|diagnosticos)$/.test(request.url)).map((request) => request.body ?? '');
+  for (const body of canonicalBodies) expect(body).toContain('"finalidade":null');
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Diagnóstico robusto' })).toBeVisible();
   await assertPrivate(page, requests);
@@ -152,7 +157,7 @@ test('XLSX local → Caso → reload → Perfil manual → reload → Estudo man
   await testInfo.attach('import-privacy-summary', { contentType: 'application/json', path: privacyPath });
 });
 
-test('ancestralidade XLSX bloqueia autoria após editar todos os campos e recarregar', async ({ page }) => {
+test('Caso observado: ancestralidade XLSX permite autoria com finalidade sem regra após reload', async ({ page }) => {
   const requests = captureRequests(page);
   const imported = await readAndConfirm(page);
   await page.goto('/estudos');
@@ -178,9 +183,10 @@ test('ancestralidade XLSX bloqueia autoria após editar todos os campos e recarr
   await page.reload();
   await expect(page.getByLabel('ID da operação edited-E2E-IN', { exact: true })).toHaveValue('edited-E2E-IN');
   await page.getByRole('button', { name: 'Executar cenário atual' }).click();
-  await expect(page.getByRole('article').getByRole('alert')).toContainText('Catálogo da importação não configurado');
-  expect(await page.evaluate((id) => window.__MOTOR_E2E__!.studyExecutionStatuses(id), studyId)).toEqual([]);
-  expect(requests.filter((request) => /\/(?:previas|diagnosticos|replays)$/.test(request.url) && request.body !== null)).toHaveLength(0);
+  await expect.poll(() => page.evaluate((id) => window.__MOTOR_E2E__!.studyExecutionStatuses(id), studyId)).toEqual(['RUNNING', 'SUCCEEDED']);
+  const previews = requests.filter((request) => /\/previas$/.test(request.url) && request.body !== null);
+  expect(previews).toHaveLength(1);
+  expect(previews[0]!.body).toContain('FINALIDADE_FICTICIA_EDITADA');
   await assertPrivate(page, requests);
 });
 
