@@ -5,8 +5,15 @@ import { readFileSync } from 'node:fs';
 import { formatMoney } from '../src/presentation/format';
 import { formatCommunicationMetric } from '../src/presentation/domain';
 
-const python = process.env.MOT_STAGE6_PDF_PYTHON ?? (process.env.CI === 'true' ? 'python' : process.platform === 'win32'
-  ? '.venv\\Scripts\\python.exe' : '.venv/bin/python');
+const python = process.env.MOT_STAGE6_PDF_PYTHON ?? process.env.MOT_E2E_PYTHON
+  ?? (process.env.CI === 'true' ? 'python' : process.platform === 'win32'
+    ? '.venv\\Scripts\\python.exe' : '.venv/bin/python');
+
+test('inspetor PDF usa o interpretador E2E quando não há override específico', () => {
+  test.skip(process.env.MOT_STAGE6_PDF_PYTHON !== undefined || process.env.MOT_E2E_PYTHON === undefined,
+    'requer MOT_E2E_PYTHON sem MOT_STAGE6_PDF_PYTHON');
+  expect(python).toBe(process.env.MOT_E2E_PYTHON);
+});
 
 test('deep link e relatório A4 conservam a publicação e ocultam controles', async ({ page }, testInfo) => {
   await page.goto('/estudos');
@@ -66,7 +73,10 @@ test('deep link e relatório A4 conservam a publicação e ocultam controles', a
     '--expect', '25,00 bps', '--expect', 'As premissas de custo não foram observadas na fonte'], {
     cwd: '..', encoding: 'utf8', timeout: 30_000,
   });
-  expect(inspected.status, inspected.stderr).toBe(0);
+  if (inspected.status !== 0) {
+    const errorCode = (inspected.error as NodeJS.ErrnoException | undefined)?.code;
+    expect(inspected.status, `erro=${errorCode ?? 'desconhecido'} sinal=${inspected.signal ?? 'nenhum'}\n${inspected.stderr}`).toBe(0);
+  }
   const report = JSON.parse(inspected.stdout) as { pageCount: number; text: string };
   expect(report.pageCount).toBeGreaterThan(1);
   expect(report.text.replace(/\s/g, '')).toContain(formatMoney(diagnostic.savingsBrl).replace(/\s/g, ''));

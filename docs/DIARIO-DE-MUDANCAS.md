@@ -74,6 +74,27 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-25 — Gates de PDF e baseline de importação estabilizados (MOT-99)
+
+1. **Sintoma.** O E2E do relatório A4 podia esgotar o timeout de 30 s no inspetor
+   de PDF e o snapshot Windows da importação divergia em 1.985 pixels, embora a
+   tela já exibisse o fallback de IOF por direção.
+2. **Causa.** Somente `stage6-presentation.spec.ts` ignorava
+   `MOT_E2E_PYTHON`, podendo escolher outro interpretador para o inspetor. A
+   baseline `import-local-win32.png` ainda registrava a mensagem histórica de
+   execução bloqueada, substituída intencionalmente pelo aviso de fallback.
+3. **O que foi feito.** O E2E de PDF agora resolve
+   `MOT_STAGE6_PDF_PYTHON`, `MOT_E2E_PYTHON` e o fallback nessa ordem, preserva o
+   timeout e publica código/sinal na próxima falha. A guarda visual exige o aviso
+   de fallback e proíbe “execução bloqueada”; somente
+   `import-local-win32.png` foi revisada. O E2E de apresentação passou com apenas
+   `MOT_E2E_PYTHON` (3/3), o renderizador Python passou (5/5), o visual focal
+   passou (2/2), assim como typecheck, lint e diff-check.
+4. **O que isso invalida.** Ficam superados o timeout atribuído ao conteúdo do
+   PDF e a baseline que aprovava o bloqueio de execução. Nenhum produto, CSS,
+   tolerância visual, regra de negócio ou baseline além da importação Windows foi
+   alterado.
+
 ## 2026-09-24 — Contrato de chat do login separa sessão pública e autenticada (MOT-99)
 
 1. **Sintoma.** O gate unitário falhava de modo intermitente ao afirmar que

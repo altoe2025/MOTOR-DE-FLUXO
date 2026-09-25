@@ -28,6 +28,8 @@ test('login, import, demo, chat and presentation match reviewed baselines', asyn
   await page.getByRole('button', { name: 'Entrar' }).click();
   await page.goto('/importar');
   await expect(page.getByRole('heading', { name: /Importar/ })).toBeVisible();
+  await expect(page.getByRole('status')).toContainText('Sem regras específicas de finalidade; os Estudos usarão IOF padrão por direção.');
+  await expect(page.getByRole('status')).not.toContainText('execução bloqueada');
   await expect(page).toHaveScreenshot('import.png', { fullPage: true });
 
   await page.goto('/estudos');
