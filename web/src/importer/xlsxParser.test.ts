@@ -39,6 +39,14 @@ describe('parseXlsxBuffer', () => {
     expect(validateImportedRows(result.rows).summary.invalid).toBe(0);
   });
 
+  it('does not treat H2 as purpose when H1 has no purpose header', async () => {
+    const result = await parseXlsxBuffer(workbookWithRow([
+      'OP-0001', 'Cliente Exemplo', '', 'OUT', '17/10/2026', '19/10/2026', '1500000.00', 'NAO_DECLARADA',
+    ], false));
+    expect(result.rows[0]?.finalidade_codigo).toBeNull();
+    expect(validateImportedRows(result.rows).rows[0]?.normalized?.purposeCode).toBeNull();
+  });
+
   it('imports a blank purpose cell as explicit null', async () => {
     const result = await parseXlsxBuffer(workbookWithRow([
       'OP-0001', 'Cliente Exemplo', '', 'OUT', '17/10/2026', '19/10/2026', '1500000.00', '',

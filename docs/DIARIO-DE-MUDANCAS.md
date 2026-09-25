@@ -74,6 +74,18 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-24 — Célula H2 sem header não vira finalidade (MOT-90, Task 2 fix)
+
+1. **Sintoma.** Um XLSX com os sete headers obrigatórios e H1 ausente podia conter
+   texto em H2; o parser absorvia esse texto como `finalidade_codigo` observada.
+2. **Causa.** O preflight aceitava corretamente o layout de sete colunas, mas a
+   serialização sempre lia a oitava célula, sem verificar se H1 declarava a coluna.
+3. **O que foi feito.** Na branch `codex/finalidade-importador`, o parser só lê H2
+   como finalidade quando H1 contém `finalidade_codigo`. Sem esse header, a chave
+   canônica é `null`; um teste OOXML cobre o caso e preserva o layout de oito colunas.
+4. **O que isso invalida.** Texto fora de uma coluna declarada deixa de adquirir
+   proveniência de finalidade observada por posição.
+
 ## 2026-09-24 — XLSX e Caso Observado aceitam finalidade ausente (MOT-90, Task 2)
 
 1. **Sintoma.** O XLSX sem `finalidade_codigo` falhava no preflight; com a coluna
