@@ -19,6 +19,8 @@ export function ChatHistory({ conversation, contextFingerprint, catalog = null, 
   const latest = conversation?.messages.at(-1) ?? null;
   const previous = useRef<{ conversationId: string | null; messageId: string | null; status: string | null }>({ conversationId: null, messageId: null, status: null });
   const [announcement, setAnnouncement] = useState('');
+  const end = useRef<HTMLDivElement>(null);
+  useEffect(() => { end.current?.scrollIntoView?.({ block: 'end' }); }, [conversation?.id, conversation?.messages.length, latest?.status]);
   useEffect(() => {
     const currentId = conversation?.id ?? null;
     if (currentId === previous.current.conversationId
@@ -29,14 +31,14 @@ export function ChatHistory({ conversation, contextFingerprint, catalog = null, 
     } else setAnnouncement('');
     previous.current = { conversationId: currentId, messageId: latest?.id ?? null, status: latest?.status ?? null };
   }, [conversation?.id, latest?.id, latest?.role, latest?.status, latest?.text]);
-  if (conversation === null) return <p>Nenhuma conversa neste contexto.</p>;
+  if (conversation === null) return <p className="chat-notice">Escreva sua dúvida abaixo para começar.</p>;
   return <>
     <ol className="chat-messages" aria-label="Mensagens da conversa">
       {conversation.messages.map((item, index) => <li key={item.id}>
         {index > 0 && conversation.messages[index - 1]?.contextFingerprint !== item.contextFingerprint
           && <p className="chat-context-divider">Contexto alterado</p>}
         <article className="chat-message" data-chat-role={item.role} data-chat-status={item.status} data-chat-message-id={item.id}>
-          <strong>{item.role === 'USER' ? 'Você' : 'Assistente'}</strong>
+          <strong className="visually-hidden">{item.role === 'USER' ? 'Você' : 'Assistente'}</strong>
           <p>{item.text || (item.status === 'PENDING' ? 'Respondendo…' : 'Resposta indisponível.')}</p>
           {item.status === 'FAILED' && <span>Falha ao responder. Tente novamente.</span>}
           {item.status === 'FAILED' && index === conversation.messages.length - 1 && onRetry
@@ -54,5 +56,6 @@ export function ChatHistory({ conversation, contextFingerprint, catalog = null, 
     {latest !== null && latest !== undefined && latest.contextFingerprint !== null && latest.contextFingerprint !== contextFingerprint
       && <p className="chat-context-divider">Contexto anterior</p>}
     <div className="visually-hidden" aria-live="polite" aria-atomic="true">{announcement}</div>
+    <div ref={end} />
   </>;
 }

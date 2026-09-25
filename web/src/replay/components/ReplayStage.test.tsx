@@ -56,10 +56,10 @@ describe('cena Fronteira Viva', () => {
     expect(screen.getByRole('article', { name: /OUT out-1/i })).toHaveTextContent('Liquidada');
     expect(screen.getByRole('article', { name: /IN in-2/i })).toHaveTextContent('Liquidada');
     expect(container.querySelector('.replay-connections')).toBeInTheDocument();
-    act(() => vi.advanceTimersByTime(1_300));
+    act(() => vi.advanceTimersByTime(1_900));
     expect(screen.getByRole('article', { name: /OUT out-1/i })).toBeInTheDocument();
     expect(container.querySelector('.replay-connections')).toBeInTheDocument();
-    act(() => vi.advanceTimersByTime(1_300));
+    act(() => vi.advanceTimersByTime(1_900));
     expect(screen.queryByRole('article', { name: /OUT out-1/i })).not.toBeInTheDocument();
     expect(container.querySelector('.replay-connections')).not.toBeInTheDocument();
   });

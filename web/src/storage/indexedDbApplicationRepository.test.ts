@@ -384,6 +384,35 @@ describe('operational profile versions', () => {
 });
 
 describe('observed cases', () => {
+  it('deletes a company with its cases, batches and events, and frees the name', async () => {
+    const target = repository();
+    const caseDocument = observedCase();
+    const mutation = (operationId: string) => ({
+      expectedRevision: 0, operationId, company: company(), observedCase: caseDocument,
+      batches: [{
+        id: 'batch-1', sha256: 'a'.repeat(64), byteSize: 123, layout: 'xlsx-operacoes/1.0.0',
+        counts: { total: 1, valid: 1, invalid: 0 }, caseId: caseDocument.id, batchSequence: 1,
+        ownerSub: OWNER_SUB, companyId: caseDocument.companyId,
+      }],
+      events: [{
+        id: 'event-1', occurredAt: FIXTURE_NOW, kind: 'BATCH_IMPORTED', path: 'batches/batch-1', audit: null,
+        caseId: caseDocument.id, eventSequence: 1, ownerSub: OWNER_SUB, companyId: caseDocument.companyId,
+      }],
+    } as const);
+    await target.confirmObservedCase(mutation(OPERATION_A));
+
+    await repository(PROJECT_REF, 'owner-b').deleteCompany(company().id);
+    expect(await target.listCompanies()).toEqual([company()]);
+
+    await target.deleteCompany(company().id);
+    expect(await target.listCompanies()).toEqual([]);
+    expect(await target.listObservedCases()).toEqual([]);
+    expect(await target.getObservedCase(caseDocument.id)).toBeNull();
+
+    expect(await target.confirmObservedCase(mutation('reimport-after-delete'))).toEqual(caseDocument);
+    expect(await target.listObservedCases()).toEqual([caseDocument]);
+  });
+
   it('confirms company, case, batches and events atomically and repeats the operation idempotently', async () => {
     const target = repository();
     const caseDocument = observedCase();

@@ -609,6 +609,36 @@ export class IndexedDbApplicationRepository implements ApplicationRepository {
     return rows.map((row) => structuredClone(row.document));
   }
 
+  async deleteCompany(id: string): Promise<void> {
+    const database = await this.#database();
+    const key = [this.#ownerSub, id];
+    return transactionResult(
+      database,
+      ['companies', 'observed_cases', 'import_batches', 'import_events', 'profile_versions'],
+      'readwrite',
+      async (transaction) => {
+        const companies = transaction.objectStore('companies');
+        const row = await requestResult<CompanyRow | undefined>(companies.get(id));
+        if (row === undefined || row.owner_sub !== this.#ownerSub) return;
+        const cases = transaction.objectStore('observed_cases');
+        const batches = transaction.objectStore('import_batches');
+        const events = transaction.objectStore('import_events');
+        const profiles = transaction.objectStore('profile_versions');
+        const [caseRows, batchRows, eventRows, profileRows] = await Promise.all([
+          requestResult<ObservedCaseRow[]>(cases.index('by_owner_company').getAll(key)),
+          requestResult<ImportBatchRow[]>(batches.index('by_owner_company').getAll(key)),
+          requestResult<ImportEventRow[]>(events.index('by_owner_company').getAll(key)),
+          requestResult<ProfileVersionRow[]>(profiles.index('by_owner_company').getAll(key)),
+        ]);
+        for (const item of caseRows) cases.delete(item.case_id);
+        for (const item of batchRows) batches.delete([item.case_id, item.batch_sequence]);
+        for (const item of eventRows) events.delete([item.case_id, item.event_sequence]);
+        for (const item of profileRows) profiles.delete(item.profile_version_id);
+        companies.delete(id);
+      },
+    );
+  }
+
   /** Validate and materialize before opening the one transaction that publishes the package. */
   async installDemoStudy(candidate: DemoInstallMutation): Promise<StudyDocument> {
     rejectBinary(candidate);

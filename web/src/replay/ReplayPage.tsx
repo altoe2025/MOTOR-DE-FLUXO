@@ -14,8 +14,6 @@ import { ReplayMetrics } from './components/ReplayMetrics';
 import { ReplayStage } from './components/ReplayStage';
 import { replayStateAt } from './state';
 import { useReplayPlayback } from './useReplayPlayback';
-import { AskAboutThis } from '../help/AskAboutThis';
-import { HELP_IDS } from '../help/helpIds';
 
 export type ReplayPublicErrorCode =
   | 'REPLAY_NAO_DISPONIVEL'
@@ -211,9 +209,7 @@ function ReplayReady({ document, study, studyId, scenarioId, selected, initialDa
         <div><dt>Total executado</dt><dd>{selected.total} {selected.total === 1 ? 'repetição executada' : 'repetições executadas'}</dd></div>
         <div><dt>Critério de seleção</dt><dd>{selected.criterion}</dd></div></dl>
     </section>
-    <AskAboutThis helpId={HELP_IDS.SELECTED_REPETITION} contextKind="REPETITION" />
     <ReplayControls document={document} playback={playback} sort={sort} onSort={setSort} />
-    <AskAboutThis helpId={HELP_IDS.REPLAY} contextKind="REPLAY" />
     <p className="replay-live" aria-live="polite">{directDay} · {phaseLabel}</p>
     <ReplayMetrics document={document} state={state} />
     <ReplayStage document={document} state={state} sort={sort} transitionMode={playback.transitionMode} transitionKey={playback.transitionKey} />

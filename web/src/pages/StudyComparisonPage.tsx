@@ -10,8 +10,6 @@ import { isProfileMvpScenario } from '../hypotheses/hypothesis';
 import type { DiagnosticExecutionRecord, ScenarioDocument, StudyDocument } from '../study/model';
 import { Button } from '../ui/Button';
 import { InlineNotice } from '../ui/InlineNotice';
-import { AskAboutThis } from '../help/AskAboutThis';
-import { HELP_IDS } from '../help/helpIds';
 
 function current(execution: DiagnosticExecutionRecord, scenario: ScenarioDocument): boolean {
   return execution.scenarioRevision === scenario.revision
@@ -120,7 +118,7 @@ export function StudyComparisonPage() {
     {result?.ok === true ? <>{study !== null && selectedHypothesis !== undefined && baseId !== '' ? <Link
       to={`/estudos/${encodeURIComponent(study.id)}/apresentacao?cenario=${encodeURIComponent(selectedHypothesis.scenarioId)}&execucao=${encodeURIComponent(selectedHypothesis.id)}&comparacao=${encodeURIComponent(baseId)}`}>
       Apresentar comparação
-    </Link> : null}<AskAboutThis helpId={HELP_IDS.COMPARISON_PAGE} contextKind="COMPARISON" />
+    </Link> : null}
       <ScenarioComparison comparison={result.value} /></> : null}
   </article>;
 }

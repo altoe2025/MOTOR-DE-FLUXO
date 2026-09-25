@@ -10,6 +10,7 @@ import { useProductHelpCatalog } from '../help/HelpCatalogProvider';
 const destinations = [
   { to: '/empresas', label: 'Empresas' },
   { to: '/estudos', label: 'Estudos' },
+  { to: '/quadro', label: 'Quadro comparativo' },
   { to: '/importar', label: 'Importar' },
 ];
 
@@ -62,12 +63,12 @@ export function AppShell() {
         <header className="workspace-header">
           <p>Estudo</p>
           <strong>Ainda não iniciado</strong>
-          <ChatPanel />
         </header>
         <main id="main-content" className="workspace-content">
           <Outlet />
         </main>
       </section>
+      <ChatPanel />
     </div>
   </ChatProvider>;
 }

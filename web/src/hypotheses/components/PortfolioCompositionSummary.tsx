@@ -1,8 +1,6 @@
 import type { ScenarioDocument } from '../../study/model';
 import { Button } from '../../ui/Button';
 import { isProfileMvpScenario } from '../hypothesis';
-import { AskAboutThis } from '../../help/AskAboutThis';
-import { HELP_IDS } from '../../help/helpIds';
 
 const ARCHETYPE_LABELS: Record<string, string> = {
   tesouraria_corporativa: 'Tesouraria corporativa',
@@ -21,7 +19,6 @@ export function PortfolioCompositionSummary({ scenario, onEdit }: Readonly<{
   const canEditComposition = input !== undefined && isProfileMvpScenario(scenario);
   return <div className="portfolio-composition-summary">
     <h3>Composição de {scenario.name}</h3>
-    <AskAboutThis helpId={HELP_IDS.COMPOSITION} />
     {input === undefined ? <p>Esta origem não possui participantes geráveis registrados.</p> : <>
       <p>{input.participants.length} {input.participants.length === 1 ? 'participante' : 'participantes'} nesta carteira.</p>
       <ul>{input.participants.map((participant) => {

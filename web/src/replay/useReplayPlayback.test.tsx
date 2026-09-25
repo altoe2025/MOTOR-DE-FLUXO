@@ -19,11 +19,11 @@ describe('useReplayPlayback', () => {
     expect(result.current.day).toBe(0);
   });
 
-  it('mantém o dia por 3,2 segundos na velocidade padrão', () => {
+  it('mantém o dia por 4 segundos na velocidade padrão', () => {
     const { result } = renderHook(() => useReplayPlayback(replayDocumentFixture()));
 
     act(() => result.current.togglePlaying());
-    act(() => vi.advanceTimersByTime(3_199));
+    act(() => vi.advanceTimersByTime(3_999));
     expect(result.current.day).toBe(0);
     act(() => vi.advanceTimersByTime(1));
     expect(result.current.day).toBe(1);

@@ -69,6 +69,8 @@ export interface ApplicationRepository {
   deleteChatConversation(id: string, expectedRevision: number, operationId: string): Promise<void>;
   installDemoStudy(input: DemoInstallMutation): Promise<StudyDocument>;
   listCompanies(): Promise<CompanyRecord[]>;
+  /** Apaga a empresa com seus casos, lotes, eventos e perfis. Estudos guardam cópia e ficam. */
+  deleteCompany?(id: string): Promise<void>;
   listObservedCases(companyId?: string): Promise<ObservedCase[]>;
   getObservedCase(id: string): Promise<ObservedCase | null>;
   confirmObservedCase(input: ConfirmObservedCaseMutation): Promise<ObservedCase>;

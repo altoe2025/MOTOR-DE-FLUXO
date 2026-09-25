@@ -7,7 +7,6 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { ChatRequest, ChatResponse } from '../../api/client';
 import productHelp from '../../../../servidor/catalogs/product_help.v1.json';
-import { AskAboutThis } from '../../help/AskAboutThis';
 import { HELP_IDS } from '../../help/helpIds';
 import { validateProductHelpCatalog } from '../../help/catalog';
 import { ChatProvider } from '../ChatProvider';
@@ -38,7 +37,6 @@ function setup(deferCreate = false) {
   }));
   render(<MemoryRouter initialEntries={['/estudos']}><ChatProvider ownerSub="owner-a" repository={repository}
     client={{ sendChatMessage }} catalog={catalog}>
-    <AskAboutThis helpId={HELP_IDS.REPLAY} />
     <ChatPanel />
   </ChatProvider></MemoryRouter>);
   return { repository, sendChatMessage, releaseCreate, get current() { return current; } };
@@ -94,12 +92,14 @@ describe('chat panel send', () => {
     await waitFor(() => expect(screen.getByRole('textbox', { name: 'Sua pergunta' })).toBeEnabled());
   });
 
-  it('opens from canonical help and focuses the contextual composer', async () => {
+  it('opens and closes from the floating chat icon', async () => {
     const user = userEvent.setup(); setup();
-    await user.click(screen.getByRole('button', { name: 'Perguntar sobre isto' }));
-    expect(screen.getByRole('textbox', { name: 'Sua pergunta' })).toHaveFocus();
-    expect(screen.getByText('Contexto: Replay', { selector: '.chat-context-label' })).toBeVisible();
-    expect(screen.queryByText('Contexto anterior')).not.toBeInTheDocument();
+    const launcher = screen.getByRole('button', { name: 'Perguntar' });
+    await user.click(launcher);
+    expect(screen.getByRole('dialog', { name: 'ORKE AI' })).toBeVisible();
+    expect(screen.getByRole('textbox', { name: 'Sua pergunta' })).toBeInTheDocument();
+    await user.click(launcher);
+    expect(screen.queryByRole('dialog', { name: 'ORKE AI' })).not.toBeInTheDocument();
   });
 
   it('sends after disclosure and renders a navigable help citation', async () => {

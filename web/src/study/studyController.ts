@@ -321,6 +321,13 @@ export class StudyController {
     return this.#isCurrent(repository, epoch) ? companies : [];
   }
 
+  async deleteCompany(id: string): Promise<void> {
+    this.#assertOpen();
+    const { repository } = this.#session();
+    if (repository.deleteCompany === undefined) throw new Error('Exclusão de empresa indisponível neste armazenamento.');
+    await repository.deleteCompany(id);
+  }
+
   async confirmImportedCase(review: ImportReview, operationId: string): Promise<ObservedCase> {
     this.#assertOpen();
     const { repository, epoch } = this.#session();

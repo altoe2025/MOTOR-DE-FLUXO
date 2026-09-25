@@ -137,10 +137,10 @@ describe('session chat shell', () => {
     setup();
     const opener = screen.getByRole('button', { name: 'Perguntar' });
     await user.click(opener);
-    expect(screen.getByRole('dialog', { name: 'Chat' })).toHaveAttribute('aria-modal', 'false');
+    expect(screen.getByRole('dialog', { name: 'ORKE AI' })).toHaveAttribute('aria-modal', 'false');
     expect(screen.getByRole('button', { name: 'Mudar contexto' })).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Fechar chat' }));
-    expect(screen.queryByRole('dialog', { name: 'Chat' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'ORKE AI' })).not.toBeInTheDocument();
     expect(opener).toHaveFocus();
   });
 
@@ -152,7 +152,7 @@ describe('session chat shell', () => {
     await user.click(await screen.findByRole('button', { name: 'Excluir conversa' }));
     expect(screen.getByRole('button', { name: 'Confirmar exclusão' })).toBeVisible();
     await user.keyboard('{Escape}');
-    expect(screen.queryByRole('dialog', { name: 'Chat' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'ORKE AI' })).not.toBeInTheDocument();
     expect(opener).toHaveFocus();
     await user.click(opener);
     expect(screen.queryByRole('button', { name: 'Confirmar exclusão' })).not.toBeInTheDocument();
@@ -167,7 +167,7 @@ describe('session chat shell', () => {
     expect(screen.getByRole('tooltip')).toBeVisible();
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
-    expect(screen.getByRole('dialog', { name: 'Chat' })).toBeVisible();
+    expect(screen.getByRole('dialog', { name: 'ORKE AI' })).toBeVisible();
     expect(trigger).toHaveFocus();
   });
 
@@ -179,7 +179,7 @@ describe('session chat shell', () => {
     close.addEventListener('keydown', (event) => event.preventDefault());
     close.focus();
     await user.keyboard('{Escape}');
-    expect(screen.getByRole('dialog', { name: 'Chat' })).toBeVisible();
+    expect(screen.getByRole('dialog', { name: 'ORKE AI' })).toBeVisible();
     expect(close).toHaveFocus();
   });
 
@@ -191,7 +191,7 @@ describe('session chat shell', () => {
     close.addEventListener('keydown', (event) => event.stopPropagation());
     close.focus();
     await user.keyboard('{Escape}');
-    expect(screen.getByRole('dialog', { name: 'Chat' })).toBeVisible();
+    expect(screen.getByRole('dialog', { name: 'ORKE AI' })).toBeVisible();
     expect(close).toHaveFocus();
   });
 

@@ -1,6 +1,4 @@
 import { AXIS_TITLES, type MvpComparison } from '../comparison';
-import { AskAboutThis } from '../../help/AskAboutThis';
-import { HELP_IDS } from '../../help/helpIds';
 
 const LIMITATION_LABELS: Readonly<Record<string, string>> = {
   COMPOSITION_CHANGED: 'A composição mudou; os resultados representam diagnósticos agregados de carteiras diferentes.',
@@ -16,7 +14,6 @@ export function ScenarioComparison({ comparison }: Readonly<{ comparison: MvpCom
   return <div className="scenario-comparison">
     <section className="comparison-limitations" aria-labelledby="comparison-limitations-title">
       <h2 id="comparison-limitations-title">Limitações da comparação</h2>
-      <AskAboutThis helpId={HELP_IDS.COMPARISON_PAGE} contextKind="LIMITATIONS" />
       <ul>{comparison.limitations.map((item) => <li key={item}>{LIMITATION_LABELS[item] ?? item}</li>)}</ul>
     </section>
     <section className="comparison-inputs" aria-labelledby="comparison-composition-title">

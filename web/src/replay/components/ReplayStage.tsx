@@ -63,7 +63,7 @@ export function ReplayStage({ document, state, sort, transitionMode, transitionK
     const timeout = globalThis.setTimeout(() => {
       setDeparting([]);
       setEventActive(false);
-    }, 2_600);
+    }, 3_800);
     return () => globalThis.clearTimeout(timeout);
   }, [animate, document, state.day, transitionKey]);
 

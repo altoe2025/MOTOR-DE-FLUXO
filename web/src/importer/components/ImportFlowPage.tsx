@@ -11,8 +11,6 @@ import { parseCanonicalXlsx } from '../workerClient';
 import { CaseConfirmation } from './CaseConfirmation';
 import { ReviewStep } from './ReviewStep';
 import { UploadStep } from './UploadStep';
-import { AskAboutThis } from '../../help/AskAboutThis';
-import { HELP_IDS } from '../../help/helpIds';
 
 const PURPOSE_FALLBACK_MESSAGE = 'Sem regras específicas de finalidade; os Estudos usarão IOF padrão por direção.';
 
@@ -74,7 +72,6 @@ export function ImportFlowPage() {
   return <article className="destination-page company-page import-flow">
     <p className="eyebrow">Fonte observada</p>
     <h1 ref={heading} tabIndex={-1}>Importar operações{companyId === undefined || company === null ? '' : ` de ${company.displayName}`}</h1>
-    <AskAboutThis helpId={HELP_IDS.IMPORT_PAGE} />
     <p className="page-introduction">Leia uma planilha canônica, revise cada operação e confirme o Caso Observado.</p>
     {catalogMessage === null ? null : <p role="status" className="inline-notice">{catalogMessage}</p>}
     {uiError === null && snapshot.error === null ? null : <p role="alert" className="inline-notice inline-notice--error">{uiError ?? snapshot.error}</p>}

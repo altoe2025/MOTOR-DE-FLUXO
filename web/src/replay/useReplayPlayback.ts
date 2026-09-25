@@ -26,7 +26,7 @@ export type ReplayPlayback = Readonly<{
 
 export function useReplayPlayback(
   document: ReplayDocument,
-  { intervalMs = 3_200, initialDay = 0 }: Readonly<{ intervalMs?: number; initialDay?: number }> = {},
+  { intervalMs = 4_000, initialDay = 0 }: Readonly<{ intervalMs?: number; initialDay?: number }> = {},
 ): ReplayPlayback {
   const lastDay = document.period.settlement_end_day;
   const routeDay = Number.isSafeInteger(initialDay) && initialDay >= 0 && initialDay <= lastDay ? initialDay : 0;

@@ -17,6 +17,7 @@ const PreviewPage = lazy(async () => ({ default: (await import('../pages/Preview
 const StudiesPage = lazy(async () => ({ default: (await import('../pages/StudiesPage')).StudiesPage }));
 const StudyPortfolioPage = lazy(async () => ({ default: (await import('../pages/StudyPortfolioPage')).StudyPortfolioPage }));
 const StudyComparisonPage = lazy(async () => ({ default: (await import('../pages/StudyComparisonPage')).StudyComparisonPage }));
+const ComparisonBoardPage = lazy(async () => ({ default: (await import('../pages/ComparisonBoardPage')).ComparisonBoardPage }));
 
 const StudyDiagnosticPage = lazy(async () => {
   const module = await import('../pages/StudyDiagnosticPage');
@@ -98,6 +99,7 @@ export function AppRoutes() {
         <Route path="/estudos/:studyId/apresentacao" element={<Suspense fallback={<p role="status">Carregando apresentação…</p>}><PresentationRoute /></Suspense>} />
         <Route path="/diagnostico" element={<PreviewPage />} />
         <Route path="/comparar" element={<StudyComparisonPage />} />
+        <Route path="/quadro" element={<ComparisonBoardPage />} />
         <Route path="/replay" element={<Destination title="Replay" description="Uma repetição específica poderá ser inspecionada dia a dia." emptyTitle="Nenhum replay disponível" emptyDescription="O replay depende de uma execução reproduzível." />} />
         <Route path="/premissas" element={<Destination title="Dados e premissas" description="Período, política e custos aparecerão com sua proveniência." emptyTitle="Nenhuma premissa carregada" emptyDescription="As premissas serão exibidas quando a carteira estiver disponível." />} />
       </Route>

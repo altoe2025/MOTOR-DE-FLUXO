@@ -549,7 +549,8 @@ describe('application routes', () => {
     expect(navigation).toHaveTextContent('Estudos');
     expect(navigation).toHaveTextContent('Diagnóstico');
     expect(navigation).toHaveTextContent('Importar');
-    expect(navigation.querySelectorAll('a')).toHaveLength(4);
+    expect(navigation).toHaveTextContent('Quadro comparativo');
+    expect(navigation.querySelectorAll('a')).toHaveLength(5);
     expect(screen.getByRole('link', { name: 'Empresas' })).toHaveAttribute('aria-current', 'page');
   });
 
@@ -642,9 +643,8 @@ describe('application routes', () => {
       expect(cancelDiagnostic).toHaveBeenCalledTimes(1);
     });
     expect(await screen.findByRole('heading', { name: 'Diagnóstico cancelado' }, { timeout: 5000 })).toBeVisible();
-    const history = screen.getByRole('table', { name: 'Histórico de tentativas diagnósticas' });
-    expect(history).toHaveTextContent('CANCELLED');
-    expect(history).toHaveTextContent(request.idempotency_key);
+    expect(screen.getByRole('region', { name: 'Estado do diagnóstico' })).toHaveTextContent(/Tentativa \S+/);
+    expect(screen.getByRole('button', { name: 'Tentar novamente' })).toBeVisible();
   }, 15_000);
 
   it('navega pelo catálogo e pelas quatro áreas da empresa com foco no título', async () => {

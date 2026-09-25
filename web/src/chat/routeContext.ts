@@ -12,6 +12,7 @@ export function routeChatContext(pathAndSearch: string): RouteChatContext | null
   const url = new URL(pathAndSearch, 'https://local.invalid');
   const path = url.pathname;
   if (/^\/(?:login|auth\/|imprimir|print)(?:\/|$)/.test(path) || /\/(?:imprimir|print)(?:\/|$)/.test(path)) return null;
+  if (/^\/(?:login|auth)(?:\/|$)/.test(path)) return null;
   const parts = path.split('/').filter(Boolean);
   const [root, second, third] = parts;
   let routeId: string | null = null;
@@ -29,7 +30,9 @@ export function routeChatContext(pathAndSearch: string): RouteChatContext | null
   else if (root === 'comparar') { routeId = 'comparison'; studyId = url.searchParams.get('studyId'); }
   else if (root === 'replay') routeId = 'replay';
   else if (root === 'premissas') routeId = 'premises';
-  if (routeId === null) return null;
+  else if (root === 'quadro') routeId = 'studies';
+  // Qualquer outra tela do app mantém o chat disponível, sem contexto específico.
+  if (routeId === null) routeId = 'studies';
   const dayText = routeId === 'replay' ? url.searchParams.get('day')
     : routeId === 'presentation' ? url.searchParams.get('dia') : null;
   const day = dayText !== null && /^(0|[1-9]\d*)$/.test(dayText) ? Number(dayText) : null;
