@@ -47,6 +47,7 @@ test('login, import, demo, chat and presentation match reviewed baselines', asyn
   await page.goto(`/estudos/${study.id}/apresentacao?cenario=${scenario.id}&execucao=${diagnostic.id}`);
   await expect(page.getByRole('heading', { name: study.name, level: 1 })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Limitações e versões' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Premissas e proveniência' })).toContainText('IOF padrão por direção');
   await expect(page).toHaveScreenshot('presentation.png', {
     fullPage: true,
     mask: [page.locator('.presentation-header time')],
