@@ -74,6 +74,13 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-25 — Baseline Windows da apresentação revisada para modo de IOF (MOT-99)
+
+1. **Sintoma.** O snapshot Windows do Painel A divergia: a baseline tinha 1280×9483 px e a tela estável passou a 1280×9516 px, com a alteração concentrada em Premissas e limitações.
+2. **Causa.** `presentation-local-win32.png`, criada antes de `IOF_APPLICATION_MODE`, não continha a apresentação do fallback por direção.
+3. **O que foi feito.** `stage6-visual.spec.ts` agora exige “IOF padrão por direção” dentro de “Premissas e proveniência” antes do screenshot. Foi regenerada e inspecionada somente `presentation-local-win32.png`; o visual focal passou (2/2) com `MOT_E2E_PYTHON`, assim como typecheck, lint e diff-check.
+4. **O que isso invalida.** Fica superada apenas a baseline Windows de apresentação sem o modo de IOF. Nenhum produto, CSS, tolerância visual, regra de negócio ou outra baseline foi alterado.
+
 ## 2026-09-25 — Gates de PDF e baseline de importação estabilizados (MOT-99)
 
 1. **Sintoma.** O E2E do relatório A4 podia esgotar o timeout de 30 s no inspetor
