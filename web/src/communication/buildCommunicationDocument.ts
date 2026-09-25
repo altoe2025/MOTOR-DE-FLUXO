@@ -284,6 +284,18 @@ export async function buildCommunicationDocument(input: CommunicationInput): Pro
   for (const [index, warning] of (input.comparison?.value.limitations ?? []).entries()) limitations.push({ code: `COMPARISON_${index}`,
     severity: 'WARNING', statement: warning, evidenceRefs: evidence('COMPARISON', `/limitations/${index}`) });
   const assumptions = Object.keys(execution.premisesSnapshot.costs).sort().map((key) => fact('STUDY', `${executionPath}/premisesSnapshot/costs/${key}`, `COST.${key}`, key));
+  const rulesPath = `${executionPath}/premisesSnapshot/costs/iof_por_finalidade`;
+  const exactRules = new Set(execution.premisesSnapshot.costs.iof_por_finalidade.map((rule) =>
+    JSON.stringify([rule.finalidade, rule.direcao])));
+  let specific = false;
+  let fallback = false;
+  const applicationEvidence = [...evidence('STUDY', rulesPath), ...evidence('STUDY', `${executionPath}/inputFingerprint`)];
+  for (const order of execution.sourceSnapshot.orders) {
+    if (order.finalidade !== null && exactRules.has(JSON.stringify([order.finalidade, order.direcao]))) specific = true;
+    else fallback = true;
+  }
+  assumptions.push({ code: 'IOF_APPLICATION_MODE', label: 'Aplicação de IOF',
+    value: specific ? (fallback ? 'MIXED' : 'SPECIFIC_ONLY') : 'FALLBACK_ONLY', evidenceRefs: applicationEvidence });
   assumptions.push(fact('STUDY', `${executionPath}/premisesSnapshot/windowDays`, 'WINDOW_DAYS', 'Janela em dias'),
     fact('STUDY', `${executionPath}/periodSnapshot`, 'PERIOD', 'Período'));
   const provenance = [fact('STUDY', `${executionPath}/sourceSnapshot/sourceFingerprint`, 'SOURCE_FINGERPRINT'),
@@ -301,7 +313,7 @@ export async function buildCommunicationDocument(input: CommunicationInput): Pro
   performance.clearMarks('mot97:communication:projected');
   performance.mark('mot97:communication:projected');
   await new Promise<void>((resolve) => setTimeout(resolve, 0));
-  await assertValidCommunicationDocument(document);
+  await assertValidCommunicationDocument(document, input.study);
   performance.clearMarks('mot97:communication:validated');
   performance.mark('mot97:communication:validated');
   return deepFreeze(document);

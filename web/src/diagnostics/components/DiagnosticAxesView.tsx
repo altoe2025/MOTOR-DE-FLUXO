@@ -134,9 +134,9 @@ export function DiagnosticAxesView({ axes, consequences, limitations }: Readonly
   </div>;
 }
 
-function BreakdownTable({ rows, title }: Readonly<{ rows: DiagnosticEnvelope['axes']['cross_border_residual']['by_day']; title: string }>) {
+function BreakdownTable({ rows, title }: Readonly<{ rows: DiagnosticEnvelope['axes']['cross_border_residual']['by_day'] | DiagnosticEnvelope['axes']['cross_border_residual']['by_purpose']; title: string }>) {
   if (rows.length === 0) return <p className="evidence-unavailable">{title}: sem itens.</p>;
-  return <div className="table-scroll" role="region" tabIndex={0} aria-label={`Tabela rolável — ${title}`}><table className="diagnostic-table"><caption>{title}</caption><thead><tr><th scope="col">Chave</th><th scope="col">Direção</th><th scope="col">Valor</th></tr></thead><tbody>{rows.map((row) => <tr key={`${row.key}-${row.direction}`}><th scope="row">{row.key}</th><td>{row.direction}</td><td>{formatMetric(row.value_brl, 'BRL')}</td></tr>)}</tbody></table></div>;
+  return <div className="table-scroll" role="region" tabIndex={0} aria-label={`Tabela rolável — ${title}`}><table className="diagnostic-table"><caption>{title}</caption><thead><tr><th scope="col">Chave</th><th scope="col">Direção</th><th scope="col">Valor</th></tr></thead><tbody>{rows.map((row) => <tr key={JSON.stringify([row.key, row.direction])}><th scope="row">{row.key ?? 'Finalidade não coletada'}</th><td>{row.direction}</td><td>{formatMetric(row.value_brl, 'BRL')}</td></tr>)}</tbody></table></div>;
 }
 
 function DistributionAxisTable({ economics }: Readonly<{ economics: DiagnosticEnvelope['axes']['economic_robustness'] }>) {

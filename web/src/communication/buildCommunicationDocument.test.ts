@@ -3,10 +3,12 @@ import { describe, expect, it } from 'vitest';
 import demoJson from '../demo/generated/demo-study.v1.json';
 import type { DemoStudyPackageV1 } from '../demo/domain';
 import { compareMvpDiagnostics } from '../hypotheses/comparison';
-import { canonical } from '../study/fingerprints';
+import { canonical, fingerprintScenarioInput } from '../study/fingerprints';
 import { assertValidStudy } from '../study/validation';
 import type { DeepMutable, DiagnosticExecutionRecord } from '../study/model';
 import { buildCommunicationDocument } from './buildCommunicationDocument';
+import { fingerprintCommunicationDocument } from './evidence';
+import { validateCommunicationDocument } from './validation';
 import { observedInput, comparisonInput, refreshSourceFingerprints } from './testFixtures';
 
 function fixture() {
@@ -18,6 +20,72 @@ function fixture() {
 }
 
 describe('buildCommunicationDocument', () => {
+  it.each([
+    { rules: [] as { finalidade: string; direcao: 'OUT' | 'IN'; aliquota: string }[], mode: 'FALLBACK_ONLY', nullPurpose: false },
+    { rules: [{ finalidade: 'ANEXO_V_DISPONIBILIDADE', direcao: 'OUT' as const, aliquota: '0.01' },
+      { finalidade: 'ANEXO_V_DISPONIBILIDADE', direcao: 'IN' as const, aliquota: '0.02' }], mode: 'SPECIFIC_ONLY', nullPurpose: false },
+    { rules: [{ finalidade: 'ANEXO_V_DISPONIBILIDADE', direcao: 'OUT' as const, aliquota: '0.01' }], mode: 'MIXED', nullPurpose: false },
+    { rules: [{ finalidade: 'ANEXO_V_DISPONIBILIDADE', direcao: 'OUT' as const, aliquota: '0.01' },
+      { finalidade: 'ANEXO_V_DISPONIBILIDADE', direcao: 'IN' as const, aliquota: '0.02' }], mode: 'MIXED', nullPurpose: true },
+  ])('publica $mode a partir dos pares exatos da execução com evidências (null=$nullPurpose)', async ({ rules, mode, nullPurpose }) => {
+    const input = await observedInput();
+    expect(input.execution.sourceSnapshot.orders).toHaveLength(2);
+    const scenario = input.study.scenarios[0]!;
+    if (nullPurpose) {
+      scenario.sourceSnapshot.orders[1]!.finalidade = null;
+      await refreshSourceFingerprints(input);
+    }
+    scenario.premises.costs.iof_por_finalidade = rules;
+    scenario.inputFingerprint = await fingerprintScenarioInput(scenario);
+    for (const record of input.study.executions) {
+      if (record.kind !== 'DIAGNOSTIC') continue;
+      record.premisesSnapshot.costs.iof_por_finalidade = structuredClone(rules);
+      record.inputFingerprint = scenario.inputFingerprint;
+      record.requestSnapshot.input_fingerprint = scenario.inputFingerprint;
+      if (record.requestSnapshot.sampling.kind === 'FIXED_INPUT') {
+        record.requestSnapshot.sampling.preview_request.cenario.custo.iof_por_finalidade = structuredClone(rules);
+        if (nullPurpose) record.requestSnapshot.sampling.preview_request.cenario.ordens[1]!.finalidade = null;
+      }
+      if (record.envelope !== null) record.envelope.request_fingerprint = scenario.inputFingerprint;
+    }
+    const orders = input.execution.sourceSnapshot.orders;
+    const document = await buildCommunicationDocument(input);
+    const fact = document.assumptions.find((item) => item.code === 'IOF_APPLICATION_MODE');
+    expect(fact?.value).toBe(mode);
+    const base = `/executions/${input.study.executions.findIndex((item) => item.id === input.execution.id)}`;
+    expect(fact?.evidenceRefs).toEqual([
+      `STUDY:${base}/premisesSnapshot/costs/iof_por_finalidade`,
+      `STUDY:${base}/inputFingerprint`,
+    ]);
+    expect(JSON.parse(document.evidenceIndex[fact!.evidenceRefs[0]!]!.value!)).toEqual(rules);
+    expect(document.evidenceIndex[fact!.evidenceRefs[1]!]!.value).toBe(input.execution.inputFingerprint);
+    expect(orders.map((order) => [order.finalidade, order.direcao])).toEqual(
+      input.execution.sourceSnapshot.orders.map((order) => [order.finalidade, order.direcao]));
+    const tampered = structuredClone(document) as DeepMutable<typeof document>;
+    tampered.assumptions.find((item) => item.code === 'IOF_APPLICATION_MODE')!.value =
+      mode === 'MIXED' ? 'SPECIFIC_ONLY' : 'MIXED';
+    tampered.contextFingerprint = await fingerprintCommunicationDocument(tampered);
+    const result = await validateCommunicationDocument(tampered, input.study);
+    expect(result).toMatchObject({ ok: false, issues: expect.arrayContaining(['IOF_APPLICATION_MODE']) });
+  });
+  it('mantém duas evidências curtas numa carteira com muitas ordens', async () => {
+    const input = await observedInput();
+    const scenario = input.study.scenarios[0]!;
+    scenario.sourceSnapshot.orders = Array.from({ length: 250 }, (_, index) => ({
+      ...structuredClone(scenario.sourceSnapshot.orders[index % 2]!), id: `order-${index}`,
+    }));
+    await refreshSourceFingerprints(input);
+    for (const record of input.study.executions) {
+      if (record.kind === 'DIAGNOSTIC' && record.requestSnapshot.sampling.kind === 'FIXED_INPUT') {
+        record.requestSnapshot.sampling.preview_request.cenario.ordens = structuredClone(scenario.sourceSnapshot.orders);
+      }
+    }
+    const document = await buildCommunicationDocument(input);
+    const fact = document.assumptions.find((item) => item.code === 'IOF_APPLICATION_MODE')!;
+    expect(fact.value).toBe('FALLBACK_ONLY');
+    expect(fact.evidenceRefs).toHaveLength(2);
+    expect(Object.values(document.evidenceIndex).every((entry) => entry.value === null || entry.value.length <= 20_000)).toBe(true);
+  });
   it('projeta fonte observada canônica, execução única e distribuição indisponível', async () => {
     const input = await observedInput();
     const document = await buildCommunicationDocument(input);

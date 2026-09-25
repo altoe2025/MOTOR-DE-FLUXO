@@ -27,6 +27,15 @@ function provenance(value: string): string | null {
 
 /** Presentation only: the published fact and its evidence stay untouched. */
 export function presentFact(fact: CommunicationFact): PresentedFact {
+  if (fact.code === 'IOF_APPLICATION_MODE') {
+    const modes: Readonly<Record<string, string>> = {
+      FALLBACK_ONLY: 'IOF padrão por direção',
+      SPECIFIC_ONLY: 'IOF específico por finalidade',
+      MIXED: 'IOF misto: específico e padrão por direção',
+    };
+    return { label: fact.label, value: modes[fact.value] ?? fact.value,
+      explanation: 'São premissas da simulação; não representam cotação.' };
+  }
   if (fact.code === 'SOURCE') {
     try {
       const parsed: unknown = JSON.parse(fact.value);
