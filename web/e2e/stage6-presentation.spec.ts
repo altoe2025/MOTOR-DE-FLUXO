@@ -4,6 +4,8 @@ import { readFileSync } from 'node:fs';
 
 import { formatMoney } from '../src/presentation/format';
 import { formatCommunicationMetric } from '../src/presentation/domain';
+import type { ChatRequest, ChatResponse } from '../src/api/client';
+import { HELP_IDS } from '../src/help/helpIds';
 
 const python = process.env.MOT_STAGE6_PDF_PYTHON ?? process.env.MOT_E2E_PYTHON
   ?? (process.env.CI === 'true' ? 'python' : process.platform === 'win32'
@@ -39,12 +41,30 @@ test('deep link e relatório A4 conservam a publicação e ocultam controles', a
   await expect(page.getByRole('region', { name: 'Composição e mecanismo' })).toContainText('12 participantes');
   await page.getByRole('button', { name: 'Perguntar', exact: true }).click();
   const chat = page.getByRole('dialog', { name: 'ORKE AI', exact: true });
-  await expect(chat.locator('.chat-context-label')).toHaveText('Contexto: Apresentação');
+  expect((await page.request.post('/__e2e__/chat/control', { data: { mode: 'ok' } })).ok()).toBe(true);
+  async function expectChatContext(helpId: string) {
+    await chat.getByLabel('Sua pergunta').fill('Explique a publicação selecionada.');
+    const responsePromise = page.waitForResponse((response) =>
+      response.url().endsWith('/api/v1/chat') && response.request().method() === 'POST');
+    await chat.getByRole('button', { name: 'Enviar', exact: true }).click();
+    const response = await responsePromise;
+    expect(response.status()).toBe(200);
+    const request = response.request().postDataJSON() as ChatRequest;
+    expect(request.routeContext).toMatchObject({
+      routeId: 'presentation', helpId, studyId: study.id, scenarioId: scenario.id,
+      diagnosticExecutionId: diagnostic.id, replayDay: null,
+    });
+    expect(request.communication).toEqual(publication);
+    const answer = await response.json() as ChatResponse;
+    expect(answer.contextFingerprint).toBe(publication.contextFingerprint);
+    await expect(chat.getByRole('list', { name: 'Mensagens da conversa' })).toContainText(answer.answer);
+  }
+  await expectChatContext(HELP_IDS.PRESENTATION_PAGE);
   await chat.getByRole('button', { name: 'Fechar chat' }).click();
   await page.getByRole('navigation', { name: 'Seções da apresentação' }).getByRole('link', { name: 'Composição' }).click();
   await expect(page).toHaveURL(/#composicao$/);
   await page.getByRole('button', { name: 'Perguntar', exact: true }).click();
-  await expect(chat.locator('.chat-context-label')).toHaveText('Contexto: Composição');
+  await expectChatContext(HELP_IDS.COMPOSITION);
   await chat.getByRole('button', { name: 'Fechar chat' }).click();
   const before = await page.evaluate(() => window.__MOTOR_E2E__!.demoAcceptanceSnapshot());
 

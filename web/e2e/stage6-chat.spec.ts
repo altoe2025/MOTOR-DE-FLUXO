@@ -360,6 +360,12 @@ test('contexto da comparação e citação restauram o par base/hipótese após 
   const citation = panel(page).getByRole('navigation', { name: 'Fontes da resposta' }).getByRole('link');
   await expect(citation).toHaveAttribute('href', path);
   await citation.click();
+  // Navigation reloads the comparison and then publishes its chat document.
+  // The citation becomes a link again only when that document is available.
+  await expect(page.getByLabel('Execução base')).toHaveValue(base.id);
+  await expect(page.getByLabel('Execução da hipótese')).toHaveValue(hypothesis.id);
+  await expect(page.getByRole('heading', { name: '4. Exposição residual' })).toBeVisible();
+  await expect(citation).toHaveAttribute('href', path);
   await send(page, 'Explique novamente esta comparação.');
   const currentCitation = panel(page).getByRole('navigation', { name: 'Fontes da resposta' }).last().getByRole('link');
   await page.getByLabel('Execução da hipótese').selectOption(study.diagnostics[1]!.id);

@@ -92,6 +92,9 @@ test('cria duas hipóteses, muda composição, executa, compara e recarrega', as
   await page.setViewportSize({ width: 640, height: 900 });
   await page.evaluate(() => { document.documentElement.style.zoom = '2'; });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  // Wider fallback fonts must also fit the three-column navigation at 200% zoom.
+  await page.evaluate(() => { document.documentElement.style.setProperty('--font-body', 'Verdana, sans-serif'); });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
 
 test('conflito CAS mantém o rascunho da aba perdedora', async ({ browser }) => {

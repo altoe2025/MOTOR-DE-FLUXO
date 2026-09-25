@@ -75,6 +75,13 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-25 — Compatibilidade dos E2Es históricos e navegação com zoom (MOT-99)
+
+1. **Sintoma.** A CI integral encontrou expectativas de blocos removidos da carteira/apresentação e transbordamento horizontal a 200% em três telas.
+2. **Causa.** A simplificação intencional de `c3a8e67` removeu resultado/conciliação/histórico visuais da carteira; o chat deixou de expor a antiga classe de contexto. O novo link “Quadro comparativo” não quebrava a palavra em colunas estreitas com a fonte Linux.
+3. **O que foi feito.** Os E2Es históricos passam a conferir a publicação real no IndexedDB: conservação decimal exata, economia, conciliação, identidade, histórico terminal e imutabilidade após reload. O contexto de chat da apresentação é conferido no request real e fingerprint da resposta. Navegação permite quebra de palavra sem alterar a estrutura desktop; transbordamento foi confirmado no trace Linux e reproduzido localmente com fonte larga. Asserções de zoom e tolerâncias permanecem ativas. Os seis casos de dados/chat passaram localmente; o restante é conferido pela CI do PR.
+4. **O que isso invalida.** Ficam superados somente seletores/expectativas de blocos deliberadamente removidos. Não foram restaurados blocos da UI antiga nem alterados cálculos, regras ou snapshots para encobrir falha de layout. O E2E de citação espera a seleção e a referência reidratadas antes do segundo envio: o trace registrou envio 28 ms após navegar, antes da publicação do contexto. Permanece uma limitação breve de UX: Enviar pode estar disponível durante essa recomposição e retornar erro local controlado; não há POST com contexto inválido. Não se aumentou timeout nem adicionou retry para ocultar a condição.
+
 ## 2026-09-25 — Referências Linux revisadas no PR #56 (MOT-99)
 
 1. **Sintoma.** A comparação visual da CI não tinha baselines Linux.
