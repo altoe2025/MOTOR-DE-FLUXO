@@ -6,7 +6,7 @@ from importlib import import_module
 import pytest
 from pydantic import ValidationError
 
-from tests.web_api.test_communication_contracts import load
+from tests.web_api.test_communication_contracts import load, with_iof_application_mode
 
 
 def payload(with_document=False):
@@ -35,6 +35,14 @@ def request_model():
 def test_preserves_valid_chat_document(with_document):
     source = payload(with_document)
     assert request_model().model_validate(source).model_dump(mode="json") == source
+
+
+def test_accepts_broad_chat_request_with_derived_iof_mode():
+    source = payload(True)
+    source["communication"] = with_iof_application_mode("MIXED")
+    source["message"] = "Resuma o documento completo."
+    parsed = request_model().model_validate(source)
+    assert parsed.communication.assumptions[-1].value == "MIXED"
 
 
 @pytest.mark.parametrize("change", [
