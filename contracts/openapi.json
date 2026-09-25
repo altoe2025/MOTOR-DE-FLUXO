@@ -1370,7 +1370,7 @@
           },
           "by_purpose": {
             "items": {
-              "$ref": "#/components/schemas/ResidualBreakdown"
+              "$ref": "#/components/schemas/PurposeResidualBreakdown"
             },
             "maxItems": 200,
             "title": "By Purpose",
@@ -3138,10 +3138,17 @@
             "type": "boolean"
           },
           "finalidade": {
-            "maxLength": 128,
-            "minLength": 1,
-            "title": "Finalidade",
-            "type": "string"
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finalidade"
           },
           "id": {
             "maxLength": 128,
@@ -3996,6 +4003,46 @@
           "mode"
         ],
         "title": "ProfileDeadline",
+        "type": "object"
+      },
+      "PurposeResidualBreakdown": {
+        "additionalProperties": false,
+        "properties": {
+          "direction": {
+            "enum": [
+              "OUT",
+              "IN"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "key": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Key"
+          },
+          "value_brl": {
+            "maxLength": 80,
+            "minLength": 1,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Value Brl",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "direction",
+          "value_brl"
+        ],
+        "title": "PurposeResidualBreakdown",
         "type": "object"
       },
       "RealizedComposition": {

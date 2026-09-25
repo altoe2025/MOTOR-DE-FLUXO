@@ -34,7 +34,7 @@ class OrdemEntrada(StrictModel):
     dia_conhecida: Annotated[StrictInt, Field(ge=0, le=1095)]
     dia_limite: Annotated[StrictInt, Field(ge=0, le=1095)]
     eh_efx: StrictBool
-    finalidade: Annotated[str, Field(strict=True, min_length=1, max_length=128)]
+    finalidade: Annotated[str, Field(strict=True, min_length=1, max_length=128)] | None
 
     @field_validator("id", "cliente_id")
     @classmethod
@@ -43,8 +43,8 @@ class OrdemEntrada(StrictModel):
 
     @field_validator("finalidade")
     @classmethod
-    def finalidade_is_exact(cls, value: str) -> str:
-        if value != value.strip():
+    def finalidade_is_exact(cls, value: str | None) -> str | None:
+        if value is not None and value != value.strip():
             raise ValueError("finalidade não pode ter espaços externos")
         return value
 
@@ -173,6 +173,7 @@ class PeriodoNatural(StrictModel):
 PeriodoEntrada = Annotated[PeriodoLegado | PeriodoNatural, Field(discriminator="modo")]
 
 _UNCOLLECTED_EFX_POINTER_RE = re.compile(r"^/ordens/[0-9]+/eh_efx$")
+_UNCOLLECTED_PURPOSE_POINTER_RE = re.compile(r"^/ordens/[0-9]+/finalidade$")
 
 
 def _required_provenance_paths(scenario: CenarioEntrada) -> set[str]:
@@ -261,12 +262,17 @@ class PreviaRequest(StrictModel):
         for pointer, origin in self.proveniencia.items():
             if origin.tipo != "NAO_COLETADO":
                 continue
-            if _UNCOLLECTED_EFX_POINTER_RE.fullmatch(pointer) is None:
+            if _UNCOLLECTED_EFX_POINTER_RE.fullmatch(pointer):
+                if _resolve_pointer(scenario_json, pointer) is not False:
+                    raise ValueError("NAO_COLETADO exige eh_efx=false")
+            elif _UNCOLLECTED_PURPOSE_POINTER_RE.fullmatch(pointer):
+                if _resolve_pointer(scenario_json, pointer) is not None:
+                    raise ValueError("NAO_COLETADO exige finalidade=null")
+            else:
                 raise ValueError(
-                    "NAO_COLETADO só pode ser usado em /ordens/{i}/eh_efx"
+                    "NAO_COLETADO só pode ser usado em /ordens/{i}/eh_efx "
+                    "ou /ordens/{i}/finalidade"
                 )
-            if _resolve_pointer(scenario_json, pointer) is not False:
-                raise ValueError("NAO_COLETADO exige eh_efx=false")
         if isinstance(self.periodo, PeriodoNatural):
             total = self.periodo.dias_aquecimento + self.periodo.periodo_medicao_dias
             if any(order.dia_conhecida >= total for order in self.cenario.ordens):

@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from servidor.contracts.input import PreviaRequest
+from servidor.contracts.diagnostics import CrossBorderResidualAxis
 from servidor.contracts.preview import PreviewEnvelope
 from servidor.diagnostics.analysis import (
     RepetitionInput,
@@ -233,7 +234,7 @@ def _order(
     value: str,
     known: int,
     due: int,
-    purpose: str,
+    purpose: str | None,
 ) -> dict[str, object]:
     return {
         "id": order_id,
@@ -415,6 +416,48 @@ def test_axes_1_to_4_are_derived_from_canonical_request_and_allocations():
         (item.key, item.direction, item.value_brl)
         for item in axes.cross_border_residual.by_purpose
     ] == [("SERVICOS", "OUT", "40")]
+
+
+def test_residual_breakdown_accepts_null_purpose_but_not_null_day():
+    available = {"state": "AVAILABLE", "value": "10", "evidence": []}
+    axis = CrossBorderResidualAxis.model_validate({
+        "remitted_brl": available,
+        "out_brl": available,
+        "in_brl": available,
+        "by_day": [{"key": "0", "direction": "OUT", "value_brl": "10"}],
+        "by_purpose": [{"key": None, "direction": "OUT", "value_brl": "10"}],
+    })
+    assert axis.by_purpose[0].key is None
+    with pytest.raises(ValueError):
+        CrossBorderResidualAxis.model_validate({
+            "remitted_brl": available,
+            "out_brl": available,
+            "in_brl": available,
+            "by_day": [{"key": None, "direction": "OUT", "value_brl": "10"}],
+            "by_purpose": [],
+        })
+
+
+def test_residual_analysis_groups_and_sorts_null_purpose():
+    request = _request([
+        _order("z", "a", "OUT", "100", 0, 0, None),
+        _order("a", "b", "OUT", "50", 0, 0, "SERVICOS"),
+    ], window=1, horizon=0)
+    envelope = _preview(request, [{
+        "dia": 0,
+        "alocacoes": [
+            {"ordem_id": "z", "dia": 0, "valor_brl": "100", "tipo": "REMETIDO", "origem_casamento": None},
+            {"ordem_id": "a", "dia": 0, "valor_brl": "50", "tipo": "REMETIDO", "origem_casamento": None},
+        ],
+        "bruto_out": "150", "bruto_in": "0", "casado": "0",
+        "residuo": "150", "direcao_residuo": "OUT",
+    }], gross="150", matched="0", intra="0", inter="0", remitted="150")
+    axis = analyze_diagnostic_repetitions((RepetitionInput(
+        request=request, envelope=envelope, duration_ms=1, selected=True
+    ),)).cross_border_residual
+    assert [(item.key, item.direction, item.value_brl) for item in axis.by_purpose] == [
+        (None, "OUT", "100"), ("SERVICOS", "OUT", "50")
+    ]
 
 
 def test_axes_5_to_7_cover_concentration_timing_queue_and_duration():

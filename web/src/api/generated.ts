@@ -664,7 +664,7 @@ export interface components {
             /** By Day */
             by_day: components["schemas"]["ResidualBreakdown"][];
             /** By Purpose */
-            by_purpose: components["schemas"]["ResidualBreakdown"][];
+            by_purpose: components["schemas"]["PurposeResidualBreakdown"][];
             /** In Brl */
             in_brl: components["schemas"]["AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"] | components["schemas"]["UnavailableEvidenceMetric"];
             /** Out Brl */
@@ -1232,7 +1232,7 @@ export interface components {
             /** Eh Efx */
             eh_efx: boolean;
             /** Finalidade */
-            finalidade: string;
+            finalidade: string | null;
             /** Id */
             id: string;
             /** Valor Brl */
@@ -1584,6 +1584,18 @@ export interface components {
              * @enum {string}
              */
             mode: "PROFILE";
+        };
+        /** PurposeResidualBreakdown */
+        PurposeResidualBreakdown: {
+            /**
+             * Direction
+             * @enum {string}
+             */
+            direction: "OUT" | "IN";
+            /** Key */
+            key: string | null;
+            /** Value Brl */
+            value_brl: string;
         };
         /** RealizedComposition */
         RealizedComposition: {

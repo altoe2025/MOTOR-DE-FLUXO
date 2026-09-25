@@ -74,6 +74,23 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-24 — Núcleo aceita finalidade ausente (MOT-90, Task 1)
+
+1. **Sintoma.** Um cenário com `finalidade: null` era carregado como a string
+   `"None"`, e requests HTTP e a quebra de resíduo por finalidade rejeitavam `null`.
+2. **Causa.** O loader convertia toda finalidade com `str`, e os contratos de ordem
+   e de diagnóstico exigiam texto mesmo quando a regra de IOF por direção já
+   oferecia fallback.
+3. **O que foi feito.** Na branch `codex/frontend-etapa-6-planejamento`, o domínio,
+   o custo, os contratos de entrada e o diagnóstico passaram a preservar a ausência
+   explícita. Proveniência `NAO_COLETADO` é aceita em finalidade somente quando o
+   valor é `null`. OpenAPI e validators foram regenerados; testes de YAML, request,
+   adaptador, identidade, custo e diagnóstico cobrem o caminho.
+4. **O que isso invalida.** A exigência de finalidade textual em toda ordem e em
+   todo item de `by_purpose` deixa de valer. Regras específicas de IOF continuam
+   exigindo finalidade textual, e `by_day` continua com chave textual. A execução
+   importada ainda depende das mudanças de fluxo e interface das próximas tasks.
+
 ## 2026-09-24 — Finalidade deixa de bloquear importação observada (MOT-90)
 
 1. **Sintoma.** O percurso XLSX chegava até Caso, Perfil e Estudo, mas qualquer

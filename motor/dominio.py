@@ -79,7 +79,7 @@ class Ordem:
     dia_conhecida: int  # quando o produto fica sabendo da ordem
     dia_limite: int  # quando ela obrigatoriamente executa
     eh_efx: bool
-    finalidade: str  # código do Anexo V da Res. BCB 277
+    finalidade: str | None  # código do Anexo V quando informado
 
     def __post_init__(self) -> None:
         if not self.id:
@@ -273,7 +273,7 @@ def carregar_cenario(path: str) -> Cenario:
             dia_conhecida=int(o["dia_conhecida"]),
             dia_limite=int(o["dia_limite"]),
             eh_efx=bool(o["eh_efx"]),
-            finalidade=str(o["finalidade"]),
+            finalidade=None if o["finalidade"] is None else str(o["finalidade"]),
         )
         for o in dados["ordens"]
     )

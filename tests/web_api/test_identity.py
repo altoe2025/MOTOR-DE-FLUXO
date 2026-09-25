@@ -40,6 +40,19 @@ def test_order_semantics_change_execution_identity(reference_payload, field, val
     ) != execution_fingerprint(request(changed), BUILD)
 
 
+def test_null_purpose_has_stable_distinct_execution_identity(reference_payload):
+    changed = deepcopy(reference_payload)
+    changed["cenario"]["ordens"][0]["finalidade"] = None
+    changed["proveniencia"]["/ordens/0/finalidade"]["tipo"] = "NAO_COLETADO"
+    null_request = request(changed)
+    assert execution_fingerprint(null_request, BUILD) == execution_fingerprint(
+        request(deepcopy(changed)), BUILD
+    )
+    assert execution_fingerprint(null_request, BUILD) != execution_fingerprint(
+        request(reference_payload), BUILD
+    )
+
+
 def test_reordering_and_decimal_scale_do_not_change_identity(reference_payload):
     changed = deepcopy(reference_payload)
     changed["cenario"]["ordens"][0]["valor_brl"] = "10800000.000"
