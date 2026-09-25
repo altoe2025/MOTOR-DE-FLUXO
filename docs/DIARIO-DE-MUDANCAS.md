@@ -74,6 +74,22 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-24 — Contrato de chat do login separa sessão pública e autenticada (MOT-99)
+
+1. **Sintoma.** O gate unitário falhava de modo intermitente ao afirmar que
+   `/login` não mostrava o botão “Perguntar”, embora o mesmo teste isolado pudesse
+   passar.
+2. **Causa.** O caso fornecia sessão autenticada: `LoginPage` redireciona esse
+   estado para `/carteira`, que monta o `AppShell` e o chat global. A expectativa
+   tratava a URL inicial como se a tela pública de login permanecesse visível.
+3. **O que foi feito.** Em `web/src/app/router.test.tsx`, a ausência de chat em
+   `/login` passou a usar sessão nula e a confirmar o heading público. Um teste
+   distinto espera a navegação autenticada para `/carteira` e confirma o chat
+   global. Nenhum código de produto, rota ou contrato de autenticação foi alterado.
+4. **O que isso invalida.** Fica superada a expectativa de que `/login` sem
+   distinguir autenticação não possa montar chat. O contrato público continua sem
+   chat; uma sessão autenticada deve observar o shell protegido após o redirect.
+
 ## 2026-09-24 — Vitest deixa o smoke gate de Render com seu runner próprio (MOT-99)
 
 1. **Sintoma.** O comando serial `test:unit` coletava

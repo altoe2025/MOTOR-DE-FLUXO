@@ -210,11 +210,23 @@ describe('application routes', () => {
     expect(await screen.findByRole('button', { name: 'Perguntar' })).toBeVisible();
   });
 
-  it.each(['/login', '/auth/callback', '/auth/definir-senha'])
+  it.each(['/auth/callback', '/auth/definir-senha'])
   ('omits chat on authentication route %s', async (path) => {
     renderAppAt(path, client(session('user-a')), new RepositoryDouble());
     await screen.findByTestId('location');
     expect(screen.queryByRole('button', { name: 'Perguntar' })).not.toBeInTheDocument();
+  });
+
+  it('omits chat on the public login page without a session', async () => {
+    renderAppAt('/login', client(null), new RepositoryDouble());
+    expect(await screen.findByRole('heading', { name: 'Entrar' })).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Perguntar' })).not.toBeInTheDocument();
+  });
+
+  it('redirects authenticated login to the protected portfolio with global chat', async () => {
+    renderAppAt('/login', client(session('user-a')), new RepositoryDouble());
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/carteira'));
+    expect(await screen.findByRole('button', { name: 'Perguntar' })).toBeVisible();
   });
 
   it('prepara primeira empresa sem persistir até confirmação atômica do Caso', async () => {
