@@ -17,8 +17,6 @@ const mocks = vi.hoisted(() => {
 vi.mock('../app/providers', () => ({ useDiagnosticRuntime: () => mocks.runtime }));
 vi.mock('../chat/ChatProvider', () => ({ useOptionalChat: () => ({ publishCommunication: mocks.publishCommunication,
   setReplayDay: mocks.setReplayDay, setScenarioId: mocks.setScenarioId }) }));
-vi.mock('../importer/executionGate', () => ({ assertImportExecutionAvailable: vi.fn(async () => undefined),
-  ImportExecutionBlockedError: class extends Error {} }));
 
 describe('replay communication context', () => {
   it('publishes the selected day with the loaded Study and Replay', async () => {

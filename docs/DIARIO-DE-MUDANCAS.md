@@ -101,6 +101,22 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 4. **O que isso invalida.** A afirmação de que o layout exige oito colunas e de que
    uma finalidade ausente torna o Caso inelegível ou impede converter a ordem para
    Estudo. O gate de execução por catálogo é tratado pelas tasks seguintes.
+## 2026-09-24 — Catálogo informativo sem gate de execução (MOT-90, Task 3)
+
+1. **Sintoma.** Estudos descendentes de XLSX com premissas persistidas eram
+   impedidos de executar prévia, diagnóstico/retry ou abrir Replay e Apresentação
+   quando o catálogo estava ausente, indisponível ou sem o par finalidade/direção.
+2. **Causa.** Um gate de catálogo condicionava o uso de snapshots reproduzíveis
+   a uma consulta externa, embora os custos já estivessem no cenário salvo.
+3. **O que foi feito.** Na branch `codex/finalidade-execucao`, os quatro
+   consumidores deixam de consultar o catálogo para autorizar execução. O módulo
+   de gate e seu teste foram removidos, junto com opções e imports dos chamadores.
+   A importação passa a informar `hasPurposeRules` pela presença de finalidades
+   e exibe aviso de IOF padrão por direção sem impedir confirmar o Caso.
+   Testes RED/GREEN cobrem os serviços, retry, Replay, Apresentação e revisão.
+4. **O que isso invalida.** Catálogo não configurado ou indisponível deixa de
+   significar execução bloqueada. Validação de snapshots, autenticação, identidade
+   e persistência continuam vigentes; esta task não altera parser ou contratos.
 
 ## 2026-09-24 — Núcleo aceita finalidade ausente (MOT-90, Task 1)
 

@@ -7,7 +7,6 @@ import { selectionId } from '../chat/routeContext';
 import { buildCommunicationDocument } from '../communication/buildCommunicationDocument';
 import type { CommunicationDocumentV1 } from '../communication/domain';
 import { HELP_IDS } from '../help/helpIds';
-import { assertImportExecutionAvailable } from '../importer/executionGate';
 import { resolveReplayRequest } from '../replay/ReplayPage';
 import { PresentationPage } from './PresentationPage';
 import { resolvePresentationSelection } from './selection';
@@ -74,7 +73,6 @@ export function PresentationRoute() {
         }
         const execution = study!.executions.find((item) => item.id === executionId)!;
         if (execution.kind !== 'DIAGNOSTIC') throw new Error('Execução diagnóstica ausente.');
-        await assertImportExecutionAvailable(execution.sourceSnapshot, client.getImportCatalog, abort.signal);
         const replay = await client.buildReplay(replayRequest.request, abort.signal);
         input = { ...input, replay };
       }

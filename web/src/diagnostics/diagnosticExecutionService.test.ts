@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import type { DiagnosticRequest, JobSnapshot } from '../api/client';
+import type { DiagnosticEnvelope, DiagnosticRequest, JobSnapshot } from '../api/client';
+import observedSource from '../../../contracts/fixtures/communication/observed-source.json';
 import { ApiError } from '../api/errors';
 import { fictionalCatalog } from '../importer/__fixtures__/catalog';
 import { createStudy } from '../study/domain';
@@ -153,17 +154,28 @@ async function reservedFixture() {
 
 describe('executeStudyDiagnostic', () => {
   it.each([
-    { name: 'sem catálogo', getImportCatalog: undefined, message: 'Catálogo da importação indisponível' },
-    { name: 'catálogo configurado sem par', getImportCatalog: async () => fictionalCatalog(), message: 'par finalidade/direção' },
-  ])('recusa diagnóstico XLSX $name antes de reservar ou enviar job', async ({ getImportCatalog, message }) => {
+    { name: 'sem cliente de catálogo', getImportCatalog: undefined },
+    { name: 'catálogo indisponível', getImportCatalog: vi.fn(async () => { throw new Error('offline'); }) },
+    { name: 'catálogo não configurado', getImportCatalog: vi.fn(async () => ({ ...fictionalCatalog(), status: 'NAO_CONFIGURADO' as const })) },
+    { name: 'catálogo configurado sem par', getImportCatalog: vi.fn(async () => fictionalCatalog()) },
+  ])('executa diagnóstico XLSX $name com premissas persistidas', async ({ getImportCatalog }) => {
     const { study, request } = await studyFixture(true);
     const authority = new AuthorityDouble(study);
     const submitDiagnostic = vi.fn().mockResolvedValue(snapshot('QUEUED', request));
+    const envelope = structuredClone(observedSource.envelope) as DiagnosticEnvelope;
+    envelope.job_id = request.idempotency_key;
+    envelope.request_fingerprint = request.input_fingerprint;
+    envelope.selected_execution.study_id = request.study_id;
+    envelope.selected_execution.scenario_id = request.scenario_id;
+    envelope.selected_execution.scenario_revision = request.scenario_revision;
     const options = { authority, scenarioId: SCENARIO_ID, buildRequest: async () => request,
-      api: { submitDiagnostic, getDiagnosticJob: vi.fn().mockResolvedValue(snapshot('FAILED', request)), getDiagnosticResult: vi.fn(), ...(getImportCatalog === undefined ? {} : { getImportCatalog }) } };
-    await expect(executeStudyDiagnostic(options)).rejects.toThrow(message);
-    expect(authority.edits).toEqual([]);
-    expect(submitDiagnostic).not.toHaveBeenCalled();
+      api: { submitDiagnostic, getDiagnosticJob: vi.fn().mockResolvedValue(snapshot('SUCCEEDED', request)), getDiagnosticResult: vi.fn().mockResolvedValue(envelope), ...(getImportCatalog === undefined ? {} : { getImportCatalog }) } };
+    const result = await executeStudyDiagnostic(options);
+    expect(result.status).toBe('SUCCEEDED');
+    expect(authority.edits.at(-1)?.executions.at(-1)).toMatchObject({ status: 'SUCCEEDED', premisesSnapshot: study.scenarios[0]!.premises });
+    expect(submitDiagnostic).toHaveBeenCalledOnce();
+    expect(submitDiagnostic).toHaveBeenCalledWith(request, expect.any(AbortSignal));
+    if (getImportCatalog) expect(getImportCatalog).not.toHaveBeenCalled();
   });
   it('persiste somente reserva e terminal, sem snapshots de progresso', async () => {
     const { study, request } = await studyFixture();
@@ -475,8 +487,8 @@ describe('cancel e retry diagnósticos', () => {
     expect(authority.edits.at(-1)?.executions.at(-1)?.status).toBe('CANCELLED');
   });
 
-  it('retry cria nova tentativa e preserva histórico terminal anterior', async () => {
-    const { study, request } = await studyFixture();
+  it('retry XLSX sem catálogo cria nova tentativa e preserva histórico terminal anterior', async () => {
+    const { study, request } = await studyFixture(true);
     const authority = new AuthorityDouble(study);
     const firstApi = {
       submitDiagnostic: vi.fn().mockResolvedValue(snapshot('QUEUED', request)),

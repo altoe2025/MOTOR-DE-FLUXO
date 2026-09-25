@@ -19,7 +19,6 @@ import {
   retryStudyDiagnostic,
 } from '../diagnostics/diagnosticExecutionService';
 import { buildPreviewRequest, type PreviewRequestProvenance } from '../preparation/buildPreviewRequest';
-import { ImportExecutionBlockedError } from '../importer/executionGate';
 import type { DiagnosticExecutionRecord, ScenarioDocument, StudyDocument } from '../study/model';
 
 function requestProvenance(study: StudyDocument, scenario: ScenarioDocument): PreviewRequestProvenance {
@@ -162,7 +161,6 @@ export function StudyDiagnosticPage() {
   const effectiveCount = generated ? count : 1;
 
   const trackedApi = useCallback(() => ({
-    getImportCatalog: client.getImportCatalog,
     submitDiagnostic: async (...args: Parameters<typeof client.submitDiagnostic>) => {
       const result = await client.submitDiagnostic(...args); if (mounted.current && activeIdentity.current === screenIdentity) setViewState(transientState(result)); return result;
     },
@@ -202,7 +200,7 @@ export function StudyDiagnosticPage() {
       });
       complete(result);
     } catch (reason) {
-      const publicMessage = reason instanceof ImportExecutionBlockedError ? reason.message : reason instanceof DiagnosticRequestBuildError
+      const publicMessage = reason instanceof DiagnosticRequestBuildError
         ? `A entrada do diagnóstico é incompatível (${reason.code}).`
         : 'Não foi possível concluir o diagnóstico.';
       if (mounted.current) setViewState(controller.snapshot.status === 'STORAGE_FAILURE'
@@ -243,8 +241,8 @@ export function StudyDiagnosticPage() {
       const result = await retryStudyDiagnostic({ authority: controller, executionId: terminal.id,
         idempotencyKey: crypto.randomUUID(), api: { ...trackedApi(), retryDiagnostic: client.retryDiagnostic } });
       complete(result);
-    } catch (reason) {
-      if (mounted.current) setViewState({ kind: 'FAILED', attemptId: 'não persistida', publicMessage: reason instanceof ImportExecutionBlockedError ? reason.message : 'Não foi possível repetir o diagnóstico.' });
+    } catch {
+      if (mounted.current) setViewState({ kind: 'FAILED', attemptId: 'não persistida', publicMessage: 'Não foi possível repetir o diagnóstico.' });
     } finally { if (mounted.current) setRunInProgress(false); }
   };
 
