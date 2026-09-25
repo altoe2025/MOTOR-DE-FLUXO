@@ -155,10 +155,10 @@ a { color: inherit; }
 .profile-study-target { display: grid; gap: var(--space-1); margin-top: var(--space-6); max-width: 520px; }
 .profile-study-target label { font-weight: 650; }
 .profile-study-target select { background: white; border: 1px solid var(--border); border-radius: var(--radius); padding: var(--space-2); }
-.hypothesis-card, .scenario-workspace { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); margin-top: var(--space-8); max-width: 960px; padding: var(--space-5); }
-.hypothesis-card > h2, .scenario-workspace > h2 { font-family: var(--font-heading); font-size: 1.5rem; margin: 0 0 var(--space-4); }
+.hypothesis-card, .scenario-workspace, .lever-builder { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); margin-top: var(--space-8); max-width: 960px; padding: var(--space-5); }
+.hypothesis-card > h2, .scenario-workspace > h2, .lever-builder > h2 { font-family: var(--font-heading); font-size: 1.5rem; margin: 0 0 var(--space-4); }
 .hypothesis-card > label { display: grid; font-weight: 650; gap: var(--space-1); margin-bottom: var(--space-4); }
-.hypothesis-card input, .hypothesis-card select { background: white; border: 1px solid var(--border); border-radius: var(--radius); min-width: 0; padding: var(--space-2); }
+.hypothesis-card input, .hypothesis-card select, .lever-builder input, .lever-builder select { background: white; border: 1px solid var(--border); border-radius: var(--radius); min-width: 0; padding: var(--space-2); }
 .hypothesis-card select { max-width: 100%; }
 .hypothesis-card fieldset { border: 1px solid var(--border); margin: var(--space-4) 0; min-width: 0; padding: var(--space-4); }
 .hypothesis-card fieldset > legend { font-family: var(--font-heading); font-weight: 700; padding: 0 var(--space-1); }
@@ -403,10 +403,10 @@ a { color: inherit; }
 .chat-composer textarea:focus { outline: 2px solid #25d366; }
 .chat-send { align-items: center; background: #00a884; border: 0; border-radius: 999px; color: #fff; cursor: pointer; display: flex; flex: none; height: 42px; justify-content: center; width: 42px; }
 .chat-send:disabled { background: #9fd9c9; cursor: not-allowed; }
-.lever-builder { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-top: var(--space-6); padding: var(--space-6); }
-.lever-builder h2 { margin-top: 0; }
 .lever-grid { display: grid; gap: var(--space-3); grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin: var(--space-3) 0; }
 .lever-grid label { display: grid; gap: var(--space-1); }
 .variation-comparison { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin: var(--space-6) 0; padding: var(--space-6); }
 .variation-comparison h2 { margin-top: 0; }
 .variation-comparison tr[aria-current="true"] th, .variation-comparison tr[aria-current="true"] td { background: #eef5f2; }
+.scenario-list .button.button--danger { background: #fff; border-color: #b3261e; color: #b3261e; font-size: 0.8rem; min-height: 0; padding: 4px 10px; }
+.scenario-list .button.button--danger:hover:not(:disabled) { background: #fcebea; }

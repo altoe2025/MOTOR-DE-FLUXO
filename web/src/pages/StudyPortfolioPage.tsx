@@ -33,7 +33,7 @@ import { buildPreviewRequest, type PreviewRequestProvenance } from '../preparati
 import { resolvePortfolioSource } from '../preparation/resolvePortfolioSource';
 import { StudyEditor } from '../study/components/StudyEditor';
 import type { PortfolioSourceDraft } from '../study/components/PortfolioSourceSelector';
-import { appendCompositionHypothesis, appendScenario, createProfileStudy, duplicateStudy, renameStudy, updateScenario } from '../study/domain';
+import { appendCompositionHypothesis, appendScenario, createProfileStudy, duplicateStudy, removeScenario, renameStudy, updateScenario } from '../study/domain';
 import { executeStudyScenario } from '../study/executionService';
 import type { DeepMutable, EffectiveInput, ExecutionRecord, PreviewExecutionRecord, ScenarioDocument, ScenarioDraft, StudyDocument } from '../study/model';
 import { requiredBuildSha } from '../study/sourceConfiguration';
@@ -338,6 +338,23 @@ export function StudyPortfolioPage() {
     if (saved === null || saved.id !== study.id) throw new Error('A sessão mudou antes de salvar a variação.');
     setStudy(saved);
   };
+  const deleteScenario = async (target: ScenarioDocument) => {
+    if (!window.confirm(`Apagar o cenário "${target.name}"?
+
+Os diagnósticos dele também serão apagados. Não dá para desfazer.`)) return;
+    try {
+      const next = await removeScenario(study, target.id, new Date().toISOString());
+      if (selectedBase.id === target.id) setSelectedBaseId(study.baseScenarioId);
+      controller.edit(next);
+      setStudy(next);
+      const saved = await controller.flush();
+      if (saved === null || saved.id !== study.id) throw new Error('A sessão mudou antes de apagar o cenário.');
+      setStudy(saved);
+      setError(null);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Não foi possível apagar o cenário.');
+    }
+  };
   const navigateAfterFlush = async (path: string) => {
     try {
       const saved = await controller.flush();
@@ -375,6 +392,7 @@ export function StudyPortfolioPage() {
       <label><input type="radio" name="hypothesis-base" checked={selectedBase.id === item.id} onChange={() => setSelectedBaseId(item.id)} /> <strong>{item.name}</strong></label>
       <span>{sourceLabel(item)}{item.id === study.baseScenarioId ? ' · base' : ' · hipótese'}</span>
       <Button variant="secondary" onClick={() => void navigateAfterFlush(`/estudos/${study.id}/diagnostico?scenarioId=${item.id}`)}>Executar diagnóstico</Button>
+      {item.id === study.baseScenarioId ? null : <Button variant="secondary" className="button--danger" aria-label={`Apagar cenário ${item.name}`} onClick={() => void deleteScenario(item)}>Apagar</Button>}
     </li>)}</ul>
     <PortfolioCompositionSummary scenario={selectedBase} onEdit={() => {
       hypothesisAnchor.current?.focus();

@@ -233,6 +233,23 @@ export async function appendCompositionHypothesis(
   }) as Promise<StudyDocumentV3>;
 }
 
+/** Apaga um cenário que não é o base, junto com as execuções dele. */
+export async function removeScenario(
+  study: StudyDocument,
+  scenarioId: string,
+  now: string,
+): Promise<StudyDocument> {
+  if (scenarioId === study.baseScenarioId) throw new Error('O cenário base não pode ser apagado.');
+  if (!study.scenarios.some((scenario) => scenario.id === scenarioId)) throw new Error('Cenário não encontrado no estudo.');
+  return finalize({
+    ...clone(study),
+    scenarios: study.scenarios.filter((scenario) => scenario.id !== scenarioId).map(clone),
+    executions: study.executions.filter((execution) => execution.scenarioId !== scenarioId).map(clone),
+    revision: study.revision + 1,
+    updatedAt: checkedInstant(now),
+  });
+}
+
 export async function renameStudy(
   study: StudyDocument,
   name: string,
