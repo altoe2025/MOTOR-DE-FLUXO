@@ -7,13 +7,13 @@ export type ImportCatalogAvailable = Readonly<{
   kind: 'AVAILABLE';
   catalog: ImportCatalog;
   localReviewAvailable: true;
-  canConfirmExecution: boolean;
+  hasPurposeRules: boolean;
 }>;
 
 export type ImportCatalogUnavailable = Readonly<{
   kind: 'UNAVAILABLE';
   localReviewAvailable: true;
-  canConfirmExecution: false;
+  hasPurposeRules: false;
   error: ApiError;
 }>;
 
@@ -24,7 +24,7 @@ export function catalogAvailability(catalog: ImportCatalog): ImportCatalogAvaila
     kind: 'AVAILABLE',
     catalog,
     localReviewAvailable: true,
-    canConfirmExecution: catalog.status === 'CONFIGURADO',
+    hasPurposeRules: catalog.finalidades.length > 0,
   };
 }
 
@@ -39,7 +39,7 @@ export async function loadImportCatalog(
     return {
       kind: 'UNAVAILABLE',
       localReviewAvailable: true,
-      canConfirmExecution: false,
+      hasPurposeRules: false,
       error,
     };
   }

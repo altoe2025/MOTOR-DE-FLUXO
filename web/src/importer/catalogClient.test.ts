@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { createApiClient, type ApiClient, type ImportCatalog } from '../api/client';
 import { ApiError } from '../api/errors';
+import { fictionalCatalog } from './__fixtures__/catalog';
 
 const UNCONFIGURED_CATALOG: ImportCatalog = {
   schema_version: '1.0.0',
@@ -27,7 +28,7 @@ async function loadCatalogModule() {
 }
 
 describe('catálogo da importação', () => {
-  it('mantém revisão local disponível e bloqueia confirmação quando não configurado', async () => {
+  it('informa ausência de regras quando não configurado mantendo revisão local disponível', async () => {
     const module = await loadCatalogModule();
 
     expect(module).toBeDefined();
@@ -35,7 +36,7 @@ describe('catálogo da importação', () => {
       kind: 'AVAILABLE',
       catalog: UNCONFIGURED_CATALOG,
       localReviewAvailable: true,
-      canConfirmExecution: false,
+      hasPurposeRules: false,
     });
   });
 
@@ -52,7 +53,7 @@ describe('catálogo da importação', () => {
       kind: 'AVAILABLE',
       catalog: UNCONFIGURED_CATALOG,
       localReviewAvailable: true,
-      canConfirmExecution: false,
+      hasPurposeRules: false,
     });
     expect(fetch).toHaveBeenCalledWith('/api/v1/catalogos/importacao', expect.objectContaining({
       method: 'GET',
@@ -74,8 +75,14 @@ describe('catálogo da importação', () => {
     await expect(module!.loadImportCatalog(api)).resolves.toEqual({
       kind: 'UNAVAILABLE',
       localReviewAvailable: true,
-      canConfirmExecution: false,
+      hasPurposeRules: false,
       error: unavailable,
     });
+  });
+  it.each(['CONFIGURADO', 'NAO_CONFIGURADO'] as const)('informa regras pela lista independentemente do status %s', async (status) => {
+    const module = await loadCatalogModule();
+    const rule = { codigo: 'FICTICIA', descricao: 'Fixture', aliquotas: [{ direcao: 'OUT' as const, aliquota: '0.01' }] };
+    expect(module!.catalogAvailability({ ...fictionalCatalog(), status })).toMatchObject({ hasPurposeRules: false });
+    expect(module!.catalogAvailability({ ...fictionalCatalog([rule]), status })).toMatchObject({ hasPurposeRules: true });
   });
 });

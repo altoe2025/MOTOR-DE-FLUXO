@@ -1,5 +1,4 @@
-import type { ApiClient, PreviaRequest, PreviewEnvelope } from '../api/client';
-import { assertImportExecutionAvailable } from '../importer/executionGate';
+import type { PreviaRequest, PreviewEnvelope } from '../api/client';
 import { validatePreviewEnvelope } from '../api/validators';
 import { compareObservedToMotor } from '../cases/observedComparison';
 import { appendExecution } from './domain';
@@ -29,7 +28,6 @@ export type ExecuteStudyScenarioOptions = Readonly<{
   scenarioId: string;
   buildRequest(context: ExecutionRequestContext): PreviaRequest;
   runPreview(input: PreviaRequest, signal: AbortSignal): Promise<PreviewEnvelope>;
-  getImportCatalog?: ApiClient['getImportCatalog'];
   nextId?: () => string;
   now?: () => string;
   reservationLeaseMs?: number;
@@ -224,7 +222,6 @@ async function execute(options: ExecuteStudyScenarioOptions): Promise<ExecutionA
       }
       const scenario = study.scenarios.find((item) => item.id === options.scenarioId);
       if (scenario === undefined) throw new Error('Cenário não encontrado para execução.');
-      await assertImportExecutionAvailable(scenario.sourceSnapshot, options.getImportCatalog, signal);
       if (signal.aborted || options.controller.snapshot.ownerSub !== ownerSub || options.controller.snapshot.sessionEpoch !== epoch) return attempt(executionId, 'INTERRUPTED', null);
       const context = { requestId, executionId, study, scenario };
       request = options.buildRequest(context);

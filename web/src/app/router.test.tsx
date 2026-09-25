@@ -15,6 +15,7 @@ import type { AuthClient, AuthSession } from '../auth/types';
 import type { ApiClient, DiagnosticRequest, JobSnapshot } from '../api/client';
 import type { CompanyRecord, ObservedCase } from '../cases/domain';
 import { comparisonInput, observedInput } from '../communication/testFixtures';
+import { fictionalCatalog } from '../importer/__fixtures__/catalog';
 import type { OperationalProfileVersion } from '../profiles/domain';
 import { DemoInstallSkippedError } from '../storage/errors';
 import type {
@@ -115,9 +116,9 @@ function renderAppAt(
   authClient: AuthClient = client(session()),
   repository: ApplicationRepository | null = null,
   extra: ReactNode = null,
-  providedApiClient?: ApiClient,
+  providedApiClient?: Partial<ApiClient>,
 ) {
-  const apiClient: ApiClient = providedApiClient ?? {
+  const apiClient: ApiClient = {
     getReferenceExample: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
     getImportCatalog: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
     getProductHelpCatalog: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
@@ -129,6 +130,7 @@ function renderAppAt(
     retryDiagnostic: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
     buildReplay: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
     sendChatMessage: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
+    ...providedApiClient,
   };
   return render(
     <AuthProvider client={authClient}>
@@ -286,12 +288,17 @@ describe('application routes', () => {
     expect(await screen.findByRole('heading', { name: 'Caso confirmado' })).toBeVisible();
     expect(repository.cases.at(-1)?.companyId).toBe('A');
   });
-  it('espera Ler planilha, revisa e confirma Caso sem executar motor', async () => {
+  it.each([
+    { name: 'indisponível', getImportCatalog: vi.fn(async () => { throw new Error('offline'); }) },
+    { name: 'não configurado', getImportCatalog: vi.fn(async () => ({ ...fictionalCatalog(), status: 'NAO_CONFIGURADO' as const })) },
+  ])('espera Ler planilha, revisa e confirma Caso com catálogo $name', async ({ getImportCatalog }) => {
     vi.mocked(parseCanonicalXlsx).mockClear();
     const company: CompanyRecord = { id: 'company-1', ownerSub: 'user-a', displayName: 'Empresa A', aliases: [], createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', revision: 1 };
     const repository = new RepositoryDouble([company]);
     const user = userEvent.setup();
-    const view = renderAppAt('/importar', client(session('user-a')), repository);
+    const view = renderAppAt('/importar', client(session('user-a')), repository, null, { getImportCatalog });
+    expect(await screen.findByText(/Sem regras específicas de finalidade.*IOF padrão por direção/)).toBeVisible();
+    expect(screen.queryByText(/execução bloqueada/i)).not.toBeInTheDocument();
     await user.selectOptions(await screen.findByLabelText('Empresa'), company.id);
     await user.upload(screen.getByLabelText('Planilha canônica XLSX'), new File(['planilha'], 'operacoes.xlsx', { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
     expect(parseCanonicalXlsx).not.toHaveBeenCalled();

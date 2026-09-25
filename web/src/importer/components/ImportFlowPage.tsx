@@ -14,6 +14,8 @@ import { UploadStep } from './UploadStep';
 import { AskAboutThis } from '../../help/AskAboutThis';
 import { HELP_IDS } from '../../help/helpIds';
 
+const PURPOSE_FALLBACK_MESSAGE = 'Sem regras específicas de finalidade; os Estudos usarão IOF padrão por direção.';
+
 export function ImportFlowPage() {
   const { companyId } = useParams();
   const { userId } = useAuth();
@@ -53,10 +55,8 @@ export function ImportFlowPage() {
     const abort = new AbortController();
     void loadImportCatalog(api, abort.signal).then((availability) => {
       if (abort.signal.aborted) return;
-      if (availability.kind === 'UNAVAILABLE') setCatalogMessage('Catálogo indisponível: revisão local disponível; confirmação de execução bloqueada.');
-      else if (!availability.canConfirmExecution) setCatalogMessage('Catálogo não configurado: revisão local disponível; confirmação de execução bloqueada.');
-      else setCatalogMessage(null);
-    }).catch(() => { if (!abort.signal.aborted) setCatalogMessage('Catálogo indisponível: revisão local disponível; confirmação de execução bloqueada.'); });
+      setCatalogMessage(availability.hasPurposeRules ? null : PURPOSE_FALLBACK_MESSAGE);
+    }).catch(() => { if (!abort.signal.aborted) setCatalogMessage(PURPOSE_FALLBACK_MESSAGE); });
     return () => abort.abort();
   }, [api]);
 

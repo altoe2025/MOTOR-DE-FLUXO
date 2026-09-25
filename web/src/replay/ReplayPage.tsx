@@ -6,7 +6,6 @@ import type { ReplayRequest } from '../api/client';
 import { ApiError } from '../api/errors';
 import { useDiagnosticRuntime } from '../app/providers';
 import { describeSelectedRepetition } from '../diagnostics/selectedRepetition';
-import { assertImportExecutionAvailable, ImportExecutionBlockedError } from '../importer/executionGate';
 import type { StudyDocument } from '../study/model';
 import type { ReplayDocument, ReplaySort } from './domain';
 import { ReplayControls } from './components/ReplayControls';
@@ -78,7 +77,6 @@ type LoadState =
   | Readonly<{ kind: 'ERROR'; code: ReplayPublicErrorCode; message: string; retryable: boolean }>;
 
 function errorState(reason: unknown): Extract<LoadState, { kind: 'ERROR' }> {
-  if (reason instanceof ImportExecutionBlockedError) return { kind: 'ERROR', code: 'REPLAY_NAO_DISPONIVEL', message: reason.message, retryable: true };
   if (reason instanceof ApiError) {
     const code = publicCodes.has(reason.code as ReplayPublicErrorCode)
       ? reason.code as ReplayPublicErrorCode
@@ -127,7 +125,6 @@ export function ReplayPage() {
       try {
         const execution = study.executions.find((item) => item.id === executionId);
         if (execution?.kind !== 'DIAGNOSTIC') throw new Error('Execução diagnóstica ausente.');
-        await assertImportExecutionAvailable(execution.sourceSnapshot, client.getImportCatalog, abort.signal);
         if (!active || token !== identityToken.current || abort.signal.aborted) return;
         const selected = describeSelectedRepetition(resolution.request.diagnostic_envelope);
         const document = await client.buildReplay(resolution.request, abort.signal);
