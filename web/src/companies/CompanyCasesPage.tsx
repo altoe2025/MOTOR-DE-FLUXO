@@ -53,7 +53,7 @@ export function CompanyCasesPage() {
             <thead><tr><th scope="col">Janela</th><th scope="col">Fechamento</th><th scope="col">Origem</th><th scope="col">Qualidade</th><th scope="col">OUT</th><th scope="col">IN</th><th scope="col">Revisão</th><th scope="col">Estudos</th></tr></thead>
             <tbody>{cases.map((caseRecord) => {
               const links = findCaseStudyLinks(resources.company!.ownerSub, caseRecord.id, resources.studies);
-              return <tr key={caseRecord.id}>
+              return <tr key={caseRecord.id} id={`caso-${caseRecord.id}`}>
                 <td>{caseRecord.window.startDate} a {caseRecord.window.endDate}</td>
                 <td>{caseRecord.window.closingDate}</td>
                 <td>{caseRecord.sourceManifest.sourceKind}</td>

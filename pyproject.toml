@@ -21,6 +21,7 @@ web = [
 web-dev = [
     "mypy==2.3.1",
     "pip-tools==7.6.1",
+    "PyMuPDF==1.28.2",
     "ruff==0.16.7",
     "types-PyYAML==6.0.12.20260906",
 ]
@@ -41,3 +42,4 @@ include = ["motor*", "servidor*"]
 
 [tool.setuptools.package-data]
 motor = ["cenarios/*.yaml"]
+servidor = ["catalogs/*.json"]

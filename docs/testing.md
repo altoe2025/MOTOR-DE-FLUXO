@@ -1,5 +1,323 @@
 # Testes
 
+## Finalidade opcional — Task 5 / MOT-99 (2026-09-24)
+
+Base integrada `e9effcf`. RED confirmado na ajuda HTTP/web (faltava a explicação
+de opcionalidade) e na mensagem do Diagnóstico (unitário e E2E). GREEN:
+
+- `pytest tests/web_api/test_product_help.py -q`: **9 passed**, dois avisos de
+  depreciação das dependências Starlette/httpx/anyio.
+- `npm --prefix web run test:unit -- src/help/catalog.test.ts src/diagnostics/components/DiagnosticResult.test.tsx`:
+  **12 passed** em dois arquivos.
+- `npm --prefix web run test:e2e -- --grep "Etapa 6|Caso observado|finalidade opcional"`:
+  **4 passed** em 1,1 min no Chromium local.
+- `npm --prefix web run test:e2e -- stage6-acceptance.spec.ts import-observed-case.spec.ts stage6-demo-communication.spec.ts`:
+  **17 passed** em 3,4 min; inclui conflito/correção/CAS, 1.000 linhas,
+  PDFs observado e demonstrativo, falhas, isolamento e restauração.
+- `npm --prefix web run typecheck` e `npm --prefix web run lint`: **PASS**.
+- `python -m ruff check tests/web_api/test_product_help.py` e `git diff --check`: **PASS**.
+
+O XLSX sintético do aceite tem sete headers, sem finalidade. Caso persiste
+`purposeCode: null`/`NOT_COLLECTED`; prévia e diagnóstico enviam `finalidade: null`
+sem dados brutos. Diagnóstico → Replay → Painel A → PDF preservam seleção,
+métricas e fingerprint; Diagnóstico, documento e PDF explicam “IOF padrão por
+direção”. O PDF observado tem sete páginas A4, todas inspecionadas por
+`render_stage6_pdf.py` (conteúdo, geometria e sobreposição). Catálogo real fica
+`NAO_CONFIGURADO`; nenhum catálogo fictício contorna o fallback.
+
+Tentativas intermediárias documentadas: as primeiras asserções ignoravam os
+registros históricos de reserva `RUNNING`/`QUEUED`; o seletor do Painel A exigia
+texto isolado embora a explicação fosse adjacente; a contagem inicial de nove
+páginas vinha do demonstrativo, enquanto o observado sem comparação/dia selecionado
+tem sete. Corrigidas as expectativas, o gate acima passou.
+
+**OBSERVED_FLOW=PASS local; LOCAL_ACCEPTANCE=FAIL; PUBLISHED_ACCEPTANCE=NOT_RUN.**
+Linux visual, Docker e smoke publicado permanecem gates separados. As seções
+abaixo conservam resultados históricos; não ampliam esta verificação para suítes
+globais, provider real, Supabase ou Render.
+
+## Revisão local da Etapa 6 — MOT-99 (2026-09-24)
+
+RED/GREEN: lixeira por teclado e restauração (`StudyList`), estado/ID terminal
+do ASSISTANT (`ChatHistory`) e guard puro compartilhado do smoke Render. O
+guard local rejeita URL com path/porta, credenciais vazias, 503, timeout,
+provider ausente, classificação fora de escopo, fingerprint/citação forjados
+ou resposta não terminal; **4/4 testes Node PASS**, sem rede. Os dois arquivos
+unitários afetados passaram **16/16**. E2E local de aceitação/chat passou
+**21/21**; visual Windows acusou a nova entrada da lixeira, e apenas as
+baselines `demo-local-win32.png` e `chat-local-win32.png` foram atualizadas
+após inspeção. Aceitação + visual sem modo update passaram **8/8**.
+O E2E complementar de demonstração e acessibilidade passou **7/7**.
+`typecheck`, ESLint e build de produção PASS. O smoke Render continua
+**NOT_RUN**; Linux visual e Docker image smoke mantêm **LOCAL_ACCEPTANCE=FAIL**.
+O gate de catálogo vigente naquela revisão foi superado pela decisão de
+finalidade opcional em 2026-09-24; veja a evidência da Task 5 no topo deste arquivo.
+
+## Aceite local Etapa 6 — D6 / MOT-99 (2026-09-24)
+
+No worktree isolado baseado em `723461c` mais a correção de Estudos excluídos
+`aa9ad9f`, o gate local passou: `pytest -q` e `python -O -m pytest -q`
+**1.174 passed / 3 skipped** cada; Vitest **1.014/1.014** em 116 arquivos
+(`--maxWorkers=1 --testTimeout=15000`); Playwright Chromium Windows local
+**62/62** em 8,6 min, incluindo **5/5** casos transversais novos de D6.
+`typecheck`, ESLint, build de produção, Ruff, mypy, scanner de credenciais
+(697 textos, 39 binários, zero artefatos runtime), smoke CSP com configuração
+pública sintética e orçamento de 20 amostras passaram. O orçamento mediu zero
+long tasks >200 ms, CLS máximo 0,046, 327.625 bytes gzip iniciais e 5.797
+bytes gzip no chunk lazy do Painel A. O teste de PDF A4 também renderizou e
+conferiu métricas e fingerprint do documento demonstrativo.
+
+Primeiras tentativas não são apagadas: Vitest teve 1 timeout de 5 s sob carga
+paralela; pytest teve 2 falhas porque o venv novo não tinha o pacote instalado
+em modo editable; ambas as suítes passaram após execução sequencial e correção
+do ambiente. O smoke CSP falhou quando coincidiu com a reconstrução de `dist`
+e depois sobre um bundle sem configuração pública sintética; reconstruído com
+valores de exemplo e repetido isoladamente, passou sem requests externos.
+
+**Registro histórico D6: LOCAL_ACCEPTANCE=FAIL; PUBLISHED_ACCEPTANCE=NOT_RUN.**
+Naquela rodada, `NAO_CONFIGURADO` bloqueava Diagnóstico/Replay/PDF observado;
+essa restrição foi superada pela finalidade opcional em 2026-09-24. As sete baselines
+visuais Linux não foram geradas nem revistas neste host; Docker CLI/daemon
+indisponível impede o smoke da imagem. Nenhum Render, Supabase real, provider
+real, deploy ou convite foi usado. Matriz e evidências:
+[`etapa-6-aceitacao.md`](frontend/etapa-6-aceitacao.md) e
+[`evidencias/etapa-6/README.md`](frontend/evidencias/etapa-6/README.md).
+
+## Corrida de autosave e timeouts locais — MOT-97 (2026-09-24)
+
+O teste de restore do `StudyController` agora controla o scheduler: um atraso
+de 25 ms reproduziu que o autosave de 10 ms muda legitimamente `DIRTY` para
+`SAVED` sem substituir a edição. Repetido 20 vezes isolado e junto aos outros
+dois arquivos afetados (80/80 PASS). Os testes de rota diagnóstica e publicação
+de contexto usam apenas limites locais maiores; nenhum timeout global ou budget
+foi alterado. Suíte web completa **1.013/1.013**, typecheck, lint e build PASS.
+Sem mudança de runtime.
+
+## Certificado efêmero e divisão persistida — MOT-97 (2026-09-24)
+
+TDD cobre equivalência exata de issues entre validação raw e dividida,
+owner/fingerprints/envelope/terminal, snapshot anterior ao `await`, congelamento
+profundo, identidade não transferível por clone/spread/JSON/forja, documento
+idêntico e verificações de comparação/Replay/seleção. Revisão adicional cobre
+owner ausente e `PREVIEW.observedComparison` com `Map`, `Set`, `Date` ou protótipo
+exótico, nunca certificados. Suíte web: **1.013/1.013**
+em 116 arquivos; typecheck, lint e build PASS. Sete E2Es de
+apresentação/acessibilidade/visual PASS; três séries consecutivas de 20 amostras
+do gate de desempenho PASS, sem long tasks >200 ms. Valores e limitações em
+[`etapa-6-acessibilidade-desempenho.md`](frontend/etapa-6-acessibilidade-desempenho.md).
+O aceite segue local ao Chromium Windows.
+
+## Perfil da validação — MOT-97 (2026-09-24)
+
+O experimento de worker de sessão foi revertido porque duas séries de 20 amostras
+excederam o p95 de abertura de 1.500 ms (1.968 e 2.629 ms), apesar de zero long
+tasks >200 ms; três séries anteriores tinham passado. Permanecem as marcas das
+fases de leitura persistida e builder e sua coleta no teste de desempenho. Ver
+[`etapa-6-acessibilidade-desempenho.md`](frontend/etapa-6-acessibilidade-desempenho.md).
+Naquele commit ainda não havia aceite novo de desempenho.
+No estado revertido, `typecheck`, `lint` e 43 testes focados nas duas fronteiras
+passaram; o gate de 20 amostras falhou com 20 long tasks >200 ms.
+
+## Acessibilidade, regressão visual e desempenho — D3 / MOT-97 (2026-09-24)
+
+Gates novos em `web/e2e/stage6-{accessibility,visual,performance}.spec.ts` e
+`tests/web_api/measure_stage6.py`. O bundle público inicial foi reduzido de
+~395,5 kB para 326.481 bytes (318,83 KiB) gzip por code splitting; o chunk lazy da apresentação
+ficou em 5.735 bytes (5,60 KiB) após revisão. A medição local usa 20 amostras aquecidas para abertura,
+troca de seção e Documento de Comunicação, com observador persistente de long
+tasks por fase. Axe, teclado, zoom/reflow, reduced motion e impressão cobrem os
+estados principais. Evidência, limites e comandos completos:
+[`etapa-6-acessibilidade-desempenho.md`](frontend/etapa-6-acessibilidade-desempenho.md).
+Gate local: build produção, **7/7 Playwright**, **193/193 unitários focados**,
+**3/3 testes Python do orçamento**, typecheck, ESLint e `git diff --check`
+PASS. A suíte web completa passou **1.000/1.000 em 115 arquivos** após ajustar
+dois testes de deep link da apresentação que aguardavam apenas 1 s durante o
+carregamento lazy. Cada locator espera até 5 s e cada teste até 15 s; timeout
+global e paralelismo não mudaram. As duas primeiras execuções tiveram 1 falha
+de timeout cada (192/193 focados e 999/1.000 completos), sem erro funcional.
+
+Snapshots de Chromium **Windows** foram revisadas e passaram localmente.
+Baselines **Linux/CI permanecem NOT_RUN/BLOCKED**: Docker/WSL indisponíveis
+neste host; o gate CI foi instalado e deve reprovar até a geração e revisão
+humana dessas baselines. Nenhum aceite publicado, push, PR ou deploy foi feito.
+
+Revisão D3 no mesmo worktree: Escape do chat não modal foi restrito ao painel,
+reutiliza a limpeza de exclusão pendente e respeita eventos já consumidos.
+Regressões RED/GREEN de fechamento, tooltip externo e consumo do evento:
+**18/18 testes focados de chat PASS**. A região live do histórico aberto agora
+tem asserção direcionada no Playwright, não apenas contagem incidental.
+Na revisão, acessibilidade e visual passaram, mas o gate de long tasks teve
+duas falhas (6 e 48 entradas >200 ms) antes de passar com zero na terceira
+execução. O limite não mudou; desempenho neste host é **instável** e não é
+declarado aceito sem nova medição controlada.
+
+## Painel A e relatório local — D1/D2 / MOT-96 (2026-09-24)
+
+Correção de contagem na receita demonstrativa: `composition` inclui uma linha
+total com `participant_id: null`; o texto apresenta 12 participantes. RED/GREEN
+unitário, TypeScript, ESLint e Playwright/PDF de apresentação **2 PASS**
+reconfirmados em 2026-09-24. A projeção não altera o documento canônico.
+
+Revisão de auditoria na mesma base: `?comparacao=<execução base>` e
+`?dia=<dia>` preservam seleção explícita, inclusive juntos; valores inválidos
+produzem erro, sem substituição silenciosa. A apresentação traduz rótulos,
+unidades, receita e limitação de custo mantendo o valor publicado e IDs de
+fonte. O gate PDF lê geometria sem clipping antes de aceitar as páginas.
+Regressões finais: **119 PASS em 12 arquivos** focados de web, **5 PASS** no
+helper PDF (quatro cortes sentinela), TypeScript/ESLint/Ruff PASS e **2 PASS**
+no Playwright de apresentação. O PDF final tem **9 páginas A4**; PNGs das
+páginas 1, 8 e 9 foram revistos visualmente, sem corte ou sobreposição.
+Comandos: `npm --prefix web run test:unit -- src/presentation src/app/router.test.tsx src/chat/routeContext.test.ts src/chat/ChatProvider.test.tsx src/pages/StudyComparisonPage.test.tsx src/replay/ReplayPage.test.tsx`,
+`npm --prefix web run typecheck`, `npm --prefix web run lint`,
+`.venv\Scripts\python.exe -m pytest tests/web_api/test_render_stage6_pdf.py -q -p no:cacheprovider`
+e `npm --prefix web run test:e2e -- stage6-presentation.spec.ts`.
+PyMuPDF 1.28.2 permanece somente em `web-dev`. Nenhum deploy foi feito.
+
+Base `14aca31` com núcleo isolado; commits locais D1/D2, sem push, PR, merge,
+deploy, chamada paga ou alteração do motor financeiro. O Painel A consome o
+`CommunicationDocumentV1` da seleção explícita; a impressão usa o mesmo DOM e
+`window.print()`. O PDF é salvo pelo usuário no navegador, sem API de upload ou
+geração no servidor.
+
+| Gate | Evidência |
+|---|---|
+| Testes unitários de apresentação e rotas | **76 PASS em 7 arquivos**; incluem seleção inválida, métricas com fonte, indisponibilidade e marco `main` único |
+| Fallback estático | **41 PASS, 2 SKIP**; deep link e rejeição de paths parecidos |
+| TypeScript, ESLint, Ruff do helper | PASS |
+| Build de produção + smoke CSP | PASS com configuração pública sintética: login visível, zero violações e zero requests a provedores externos |
+| PyMuPDF | `render_stage6_pdf.py --check-only`: versão exata **1.28.2** |
+| Browser + PDF | **1 PASS** no Playwright: seleção, ajuda do chat por seção, modo impressão e snapshot IndexedDB preservado |
+| Extração e renderização do PDF inicial D2 | **8 páginas A4** antes da revisão textual; o gate atualizado acima gera 9 páginas e verifica geometria sem recorte |
+
+O teste é `npm --prefix web run test:e2e -- stage6-presentation.spec.ts` e salva
+PDF/PNGs apenas em `web/test-results` ignorado. No Windows, o runner local foi
+executado com o servidor E2E iniciado separadamente e `MOT_REAL_AUTH_ONLY=1`,
+pois a espera de shutdown do `webServer` do Playwright não terminava após o teste.
+Isso não muda as asserções do browser. O helper também pode ser conferido com
+`.venv\\Scripts\\python.exe tests/web_api/render_stage6_pdf.py --check-only`.
+O primeiro comando pytest com `--basetemp .pytest_tmp` falhou porque o servidor
+E2E mantinha seu log aberto nessa pasta; a repetição com diretório separado
+`--basetemp .pytest_static_tmp` passou. Esse erro não veio do código testado.
+
+O build D2 então mostrava `PresentationRoute` 3,81 KiB gzip e chunk inicial
+`index` 395,46 KiB gzip, acima do orçamento D3. Essa medição anterior foi
+superada pela seção MOT-97 acima. O build/smoke Docker D4 segue bloqueado
+conforme seção MOT-98 abaixo;
+nenhum aceite publicado é inferido destes testes locais.
+
+## Contêiner e Blueprint declarativo — D4/D5 / MOT-98
+
+Base `0fd484e` da branch `codex/frontend-etapa-6-planejamento`, implementação
+isolada em `codex/mot98-container-render` (2026-09-24). Sem deploy, push, PR,
+chamada paga, alteração da simulação ou dependência da MOT-96/MOT-97.
+Guia de comandos/configuração: [deploy-render.md](deploy-render.md).
+
+| Gate | Evidência |
+|---|---|
+| Baseline configuração + estáticos | 51 PASS, 2 SKIP (symlinks no Windows) |
+| TDD runtime/headers | RED confirmado; 119 PASS, 2 SKIP com regressões de auth/config/static |
+| TDD Blueprint | 2 RED por arquivo ausente; 2 PASS depois |
+| TDD empacotamento/smoke | RED inicial e RED específico `motor.analise` ausente; 20 PASS após correções |
+| Suíte Python completa | **1.097 PASS, 2 SKIP**, 480,96 s; warnings preexistentes Starlette/httpx/anyio |
+| Gates D4/D5 sob `python -O` | **67 PASS**, 65,65 s; aviso esperado sobre asserts de bibliotecas |
+| Lock de produção | Instalação com hashes em Python 3.12.14 limpo: 24 dependências; pacote 0.1.0 instalado sem resolver extras |
+| Resolução Linux do lock | Mesmas 24 versões para Linux x86_64 / Python 3.12; não substitui instalação na imagem |
+| Smoke HTTP nativo | PASS: health, SPA, assets, 404, autenticação, headers; não é evidência Docker |
+| Ajv standalone | 134 testes focados PASS; paridade de erros API inclusive schemaPath aninhado; sem geração dinâmica no browser |
+| Frontend completo, sem builds concorrentes nesta task | **927 PASS em 101 arquivos**, `--maxWorkers=1`, 467,05 s |
+| Build Vite + typecheck + geração | PASS; `check:validators` consistente e contratos públicos sem drift |
+| Smoke Chromium CSP | PASS no bundle final: login visível, headers reais, zero violações ou chamadas a provedores |
+| Análise estática | Ruff PASS; mypy 55 arquivos PASS; ESLint PASS |
+| Build/smoke Docker | **BLOCKED / NOT_RUN**; daemon indisponível, detalhes abaixo |
+| Scanner com arquivos novos staged | PASS; 611 textos e 32 binários no momento do gate |
+| Validação Blueprint | 2 PASS offline; CLI Render não instalada; nenhum recurso criado |
+| Aceite publicado | **NOT_RUN**; MOT-99, depende de autorização externa |
+
+O comando `python scripts/smoke_container.py --image motor-de-fluxo:etapa-6`
+também retornou `container_smoke=FAIL (diagnostic payload suppressed)` antes de
+criar contêiner, pois o daemon não estava disponível.
+
+O comando real `docker build ... -t motor-de-fluxo:etapa-6 .` terminou com
+`failed to connect to the docker API at npipe:////./pipe/dockerDesktopLinuxEngine`
+e `The system cannot find the file specified`. Docker Desktop foi iniciado
+localmente e falhou em `initializing Ingest server`, no socket
+`sailor-ingest.sock`: `The file cannot be accessed by the system`. Não houve
+reset, remoção de dados Docker ou alteração de configuração global. Não há daemon
+alternativo no Ubuntu/WSL. Portanto a instalação Linux, execução não-root,
+filesystem read-only e scanner **dentro da imagem** ainda precisam do build/smoke
+real; testes estruturais e smoke nativo não substituem esse gate. MOT-98 permanece
+**In Progress** até essa evidência estar disponível.
+
+O bundle final tem `index-BVl3ZYV-.js` com 3.098,18 kB brutos / 378,53 kB gzip
+(aproximadamente 369,7 KiB gzip), além do chunk Supabase de 55,36 kB gzip.
+A pré-compilação troca código gerado em runtime por código estático: cumpre CSP,
+mas aumenta o bundle. O orçamento T7 de 350 KiB por rota pública **não está
+aprovado** aqui; code splitting/otimização permanecem na MOT-97, sem ampliar D4.
+Esta tarefa não declara o gate global de desempenho nem aceite da Etapa 6.
+
+Uma execução ampla do frontend sob carga concorrente mostrou três falhas
+relacionadas a timing (autosave de 10 ms e limites de espera). Duas reproduções
+focadas passaram. Os testes de timing não foram alterados; após estabilizar a
+geração, a execução integral serial passou.
+
+A revisão independente encontrou duas regressões reais: omissão de
+`motor/analise` no contexto e bloqueio do Ajv pela CSP estrita. A primeira ganhou
+teste de importação a partir do contexto isolado, com sentinelas de dados/segredos
+excluídas. O gate de regeneração da CI inclui também os validadores novos,
+impedindo testar artefatos regenerados enquanto a imagem empacota uma versão
+obsoleta. Para a segunda, o smoke Chromium `npm --prefix web run test:csp`
+reproduziu tela de login vazia e violação `script-src`; os schemas passam a ser
+pré-compilados, mantendo a política sem `unsafe-eval`. O gate usa headers reais do
+backend e proíbe tráfego externo. O smoke da imagem continua independente desse
+smoke browser e ambos são necessários.
+## Aceite local do chat — C6 / MOT-95 (2026-09-24)
+
+Base `ab32cc4`, branch `codex/mot95-c6-chat-acceptance`, sem publicação. Matriz,
+correções e ressalvas: `docs/frontend/etapa-6c-aceitacao.md`.
+
+| Gate | Evidência |
+|---|---|
+| Baseline C5: chat + ajuda + cliente | 109 PASS em 13 arquivos; Windows exigiu `--maxWorkers=2 --testTimeout=15000` |
+| TDD quotas | 4 RED antes da correção; 16 PASS no recorte Provider/Panel/Quota após correção |
+| TDD restauração de citações | Replay e comparação reproduzidos em RED; 14 PASS nos dois arquivos após correção |
+| Python chat, provider e runner | 178 PASS, 1 SKIP (real opt-in explicitamente desabilitado), 99,07 s; antes dos 18 casos finais do scanner |
+| Privacidade e scanner novos | 18 testes de privacidade passaram no gate Python; scanner final: 46 PASS (inclui 18 casos posteriores ao gate) |
+| Python otimizado: privacidade/scanner/runner | 42 PASS no recorte inicial; scanner final reexecutado sob `-O`: 46 PASS |
+| Browser consolidado C6 | 15 PASS; 3,0 min |
+| Regressão de layout da quota | 20 conversas com 8 mensagens e fonte; RED com histórico de altura zero, GREEN com rolagem e fonte acessível por Tab; zoom de 200% e viewport estreita |
+| Typecheck/lint web; Ruff/mypy servidor | PASS; mypy sem problemas em 54 arquivos |
+| Scanner código/bundle/maps + console observado | PASS, 607 textos/32 binários + 15 artefatos; canários privados ausentes |
+| Suíte unitária completa | 964 PASS em 107 arquivos; 384,36 s; `--maxWorkers=1 --testTimeout=15000` |
+| Build de produção com source maps | PASS (`npm --prefix web run build -- --sourcemap`); aviso preexistente de chunk >500 kB |
+| Revisão independente | Gaps de comparação, captura de zoom e scanner de dependências corrigidos; revisões focadas |
+
+A primeira execução completa com dois workers teve 963 PASS e a mesma falha
+preexistente de autosave de 10 ms documentada em C5 (`DIRTY` versus `SAVED`).
+O arquivo isolado passou com 24 testes sem alterar o controlador. O resultado
+da repetição completa com um worker está na tabela acima. Avisos de canvas do
+jsdom permanecem preexistentes.
+
+`web/e2e/stage6-chat.spec.ts` faz requests reais à API local com provider fake e
+IndexedDB real. O scanner também aceita artefatos observados:
+
+```powershell
+python -m tests.web_api.scan_credentials --runtime-artifact CAMINHO/browser-console.log --canary-manifest CAMINHO/privacy-canaries.json
+```
+
+Os dois arquivos são produzidos juntos no diretório `web/test-results` do teste
+XLSX/privacidade; `chat-200-percent.png` é produzido pelo teste de acessibilidade.
+Logs privados do backend são verificados com `caplog` em `test_chat_privacy.py`.
+Para inspecionar também bundle/source maps com os mesmos canários, passe cada
+arquivo como outro `--runtime-artifact`. O scanner padrão sempre percorre
+`web/dist` para padrões de segredo. Tokens de autenticação ficam somente no header
+da API; não no corpo, no input do provider ou nos logs.
+
+O teste real é manual opt-in, exige chave e modelo próprios e é bloqueado em CI.
+Não foi executado; todos os gates desta entrega mantêm `MOTOR_CHAT_REAL_OPT_IN=0`.
+As rotas Apresentação e impressão ainda não existem na base: sua verificação no
+browser permanece pendente da integração D e a MOT-95 não foi marcada Done.
+Nenhuma regra financeira JS foi adicionada ou alterada.
+
 ## Contexto
 
 Reconferido em 2026-09-20 no candidato local `03e87b8` da branch
@@ -8,7 +326,278 @@ tanto na execução normal quanto sob `python -O`. O front-end tem **388 testes
 unitários aprovados em 51 arquivos**; typecheck, lint, build e os **14 testes
 Playwright** também passam. Esse estado não foi publicado ou mergeado.
 
+O fechamento local da Etapa 5 em 2026-09-22 é aditivo a esse histórico e está
+detalhado na seção **Aceitação integrada da Etapa 5 — MOT-89**. A contagem final
+abaixo prevalece para a branch `codex/frontend-etapa-5`; ela também não foi
+publicada ou mergeada.
+
+## Cliente, evidências e ajuda contextual — C5 / MOT-95
+
+Entrega local sobre C4 em 2026-09-23. Implementa apenas C5; o aceite em browser e
+os testes adversariais de C6 seguem pendentes. Contrato e limites em
+[`etapa-6c-c5-cliente.md`](frontend/etapa-6c-c5-cliente.md).
+
+| Verificação | Resultado |
+|---|---|
+| Baseline focado antes da edição | 83 PASS |
+| TDD do cliente, fragmentos, citações e telas | RED/GREEN nos novos testes |
+| Recorte `src/chat src/help src/api/client.test.ts` e telas afetadas | 110 PASS, 17 arquivos |
+| `npm --prefix web run test:unit -- --maxWorkers=2` | **943 PASS, 106 arquivos**; 177,02 s |
+| `npm --prefix web run typecheck` | PASS |
+| `npm --prefix web run lint` | PASS |
+| `npm --prefix web run build` | PASS; aviso preexistente de chunks acima de 500 kB |
+
+Revisão local C5/MOT-95 em 2026-09-23: regressões RED reproduziram a pendência
+após CAS, o CTA sem intenção de comparação, links sem IDs e a não restauração das
+seleções. A regressão de seleção na mesma URL foi confirmada por mutação temporária
+do comportamento antigo e depois voltou a GREEN. O recorte de chat, ajuda, API
+e páginas afetadas passou com **116 testes em 17 arquivos**; typecheck, lint e
+`git diff --check` passaram. O aceite em browser permanece em C6.
+
+Reauditoria C5/MOT-95: o teste integrado `chatService` → `createApiClient` →
+`fetch` fake reproduziu em RED a rejeição AJV de `comparisonExecutionId` antes do
+fetch; outra regressão reproduziu em RED a falta de releitura após conflito no
+CAS inicial. Após projetar o contexto HTTP e reconciliar a revisão, ambos
+passaram em GREEN, com retry apenas por nova ação do usuário. Recorte
+`src/chat src/help src/api/client.test.ts`: **109 PASS em 13 arquivos**;
+typecheck, lint e `git diff --check` também passaram.
+
+A suíte completa com a concorrência padrão chegou a 942 PASS e 1 falha no teste
+preexistente `studyController.test.ts::não substitui edição corrente quando
+restauração explícita termina`. Esse teste usa autosave real de 10 ms e observou
+`SAVED` em vez de `DIRTY` sob carga; passou isoladamente (24 PASS) sem mudança de
+código. A repetição completa, sozinha e limitada a dois workers, passou. Não foi
+alterado o controlador fora do escopo C5. Os testes de C5 usam transporte fake;
+nenhuma chamada real ou paga foi feita.
+
+## Provider Responses e política temática — C4 / MOT-94
+
+Candidato local sobre `21541ae`, branch `codex/mot94-c4-responses`, em 2026-09-23.
+Somente C4, com 83 testes Python adicionais; C5/C6 não implementadas neste recorte.
+Arquitetura, fontes oficiais e limites em
+[`etapa-6c-c4-provider.md`](frontend/etapa-6c-c4-provider.md).
+
+O Python é o virtualenv `.venv-t5` existente, somente usado como runtime;
+`--basetemp=.pytest_cache/c4-*` isola os temporários dentro deste worktree.
+Dependências web vieram do lockfile via cache local (`npm ci --offline --ignore-scripts`).
+
+| Verificação | Resultado |
+|---|---|
+| Baseline C3 chat + configuração | 59 PASS; 23,56 s |
+| TDD política/ferramentas | 34 RED + 4 testes já verdes antes da implementação; 38 PASS depois |
+| TDD provider Responses | 26 RED antes do adaptador; 26 PASS depois |
+| TDD factory/lifecycle | 1 RED sem criação automática; GREEN após integrar lifespan |
+| TDD estado contraditório `IN_SCOPE` + insuficiência | 1 RED; GREEN normalizando resposta server-side |
+| Revisão independente + TDD fatos de seções | 1 achado P2 confirmado; 4 RED/GREEN, sem ampliar allowlist |
+| `python -m pytest -q --basetemp=.pytest_cache/c4-full-normal` | **1.030 PASS, 2 SKIP**; 191,00 s |
+| `python -O -m pytest -q --basetemp=.pytest_cache/c4-full-optimized` | **1.030 PASS, 2 SKIP**; 190,03 s |
+| `python -m ruff check servidor tests/web_api` | PASS |
+| `python -m mypy servidor` | PASS; 54 arquivos |
+| `npm --prefix web run typecheck` | PASS |
+| `npm --prefix web run test:unit -- src/api src/chat --maxWorkers=2` | 101 PASS; 9 arquivos, 50,01 s |
+| `python -m tests.web_api.scan_credentials` | PASS; 570 textos e 32 binários no momento da verificação, sem bundle novo |
+| `git diff --check` | PASS |
+
+Cobertura nova: schemas fechados com campos required; recusa fixa sem `answer`;
+MIXED e insuficiência; resolução de evidências/citações/limitações; seis leituras;
+valores decimais e fonte sintética preservados; escopo por snapshot; `call_id`,
+reasoning, quatro funções/duas rodadas; IDs repetidos; argumentos malformados;
+HTTP/refusal/incompleto/timeout e sanitização de logs/resposta; lifecycle e segredo
+server-side. Nenhum teste usa transporte HTTP externo. Conexões/DNS externos estão
+bloqueados; apenas o loopback usado pelo event loop Windows é permitido.
+
+A matriz adversarial contém clima, política, instruções para ignorar regras,
+base64, troca de idioma, pedidos de web/edição e conteúdo malicioso em evidência e
+histórico. Classificações fake são oráculos de teste: comprovam barreiras e
+protocolo, não acurácia do modelo real nem fidelidade semântica de respostas MIXED.
+Fingerprint e resolução de IDs não autenticam fontes recebidas do navegador.
+Avisos são os preexistentes Starlette/httpx/anyio e o esperado sob `-O`.
+Sem chamada real/paga, chave real, browser C5/C6, push, PR, merge ou deploy.
+
+## Contratos HTTP e configuração do chat — C3 / MOT-94
+
+Entrega local sobre `f22b70a`, na branch `codex/mot94-c3-chat-contracts`, em
+2026-09-23. Somente C3: não há provider real, ferramentas ou aceite temático C4.
+Contrato e limitações em [`etapa-6c-c3-contratos.md`](frontend/etapa-6c-c3-contratos.md).
+
+O ambiente Windows usa o Python do virtualenv `.venv-t5` existente; `python` nos
+comandos abaixo designa esse executável. `--basetemp` foi direcionado para um
+subdiretório exclusivo de `.pytest_cache/`, pois o temp global não era acessível
+no sandbox. Dependências web instaladas pelo lockfile, sem mudar versões.
+
+| Verificação | Resultado |
+|---|---|
+| Baseline auth + OpenAPI + comunicação | 97 PASS |
+| TDD Settings | 13 RED antes da implementação; 13 PASS depois |
+| TDD contratos chat | 26 RED antes da implementação; 26 PASS depois |
+| TDD transporte chat | 20 RED antes da rota/injeção; 20 PASS depois |
+| TDD validadores TypeScript | 3 RED sem exports; 3 PASS após regenerar |
+| `python -m pytest tests/web_api/test_chat_contracts.py tests/web_api/test_chat_http.py tests/web_api/test_config.py -q` | 59 PASS, 21,74 s |
+| Mesmo recorte com `python -O -m pytest` | 59 PASS, 37,92 s |
+| `python -m pytest -q` | 947 PASS, 2 SKIP; 215,07 s |
+| `python -O -m pytest -q` | 947 PASS, 2 SKIP; 301,00 s |
+| `python -m ruff check servidor tests/web_api` | PASS |
+| `python -m mypy servidor` | PASS, 50 arquivos |
+| `npm --prefix web run test:unit -- src/api src/chat --maxWorkers=2` | 101 PASS, 9 arquivos |
+| `npm --prefix web run test:unit -- --maxWorkers=2` isolado dos outros gates | 922 PASS, 99 arquivos; 186,14 s |
+| `npm --prefix web run typecheck` e `npm --prefix web run lint` | PASS |
+| `npm --prefix web run build` | PASS; aviso preexistente de chunks >500 kB |
+| `python -m tests.web_api.scan_credentials` | PASS; 572 textos, 32 binários |
+| OpenAPI + `npm --prefix web run generate:api` repetidos | 4 arquivos gerados idênticos byte a byte; nenhum schema/path anterior alterado semanticamente |
+| Revisão independente C3 | Nenhum achado material confirmado; não atesta C4–C6 |
+
+A primeira suíte web completa, concorrendo com gates Python/build, teve 920 PASS
+e dois timeouts de 5 s em `router.test.tsx`. A reexecução isolada do arquivo passou
+os 48 testes em 28,43 s, sem mudar código, testes ou timeout. A repetição completa
+sem os demais gates concorrentes passou os 922 testes em 186,14 s. A hipótese de
+contenção local é consistente com essas duas reexecuções; não houve correção de
+produto para os timeouts da primeira tentativa.
+
+Os testes HTTP bloqueiam conexões externas e usam somente provider fake injetado.
+O socket de loopback necessário ao event loop Windows continua permitido. Não há
+rede OpenAI nos testes, gasto ou alteração de recurso externo. Os warnings Python
+são deprecações Starlette/httpx/anyio já existentes e o aviso esperado de `-O`.
+Não foi executado um novo aceite browser, que pertence à integração C5–C6.
+## Aceitação local da Etapa 6B — B6 (MOT-91/MOT-92)
+
+`web/e2e/stage6-demo-communication.spec.ts` percorre quatro caminhos no Chromium
+local: instalação única, reload, remoção e restauração explícita; XLSX real no
+worker até Caso, Perfil e Estudo, com execução importada sem finalidade usando
+IOF padrão por direção e restauração demo sem apagar o Estudo importado; os cinco
+cenários sintéticos com diagnóstico, repetição e Replay; composição de hipótese
+sem alterar Perfis, comparação incompatível entre mixes independentes, comparação
+positiva de base e hipótese de janela executadas no servidor e catálogo de ajuda.
+A projeção `CommunicationDocumentV1` é extraída do Estudo persistido e das
+fontes de Replay para conferir métricas, rótulos, repetição, fingerprints e
+referências de evidência contra as telas. A comparação positiva confere todas as
+métricas projetadas contra as células exibidas e a mudança de janela `7 → 8`.
+
+O pacote demo fixa o SHA `5cb78f0b6ddd45b8b63f170153e6be8cd1928497` e a
+versão instalada `0.1.0` do motor. O runner E2E lê o SHA do pacote versionado
+para configurar o bundle e a API controlada, sem parâmetro manual. Isso não
+altera o portão de incompatibilidade de build no produto. Exemplo PowerShell,
+com porta e saída exclusivas deste worktree:
+
+```powershell
+$env:MOT_E2E_PORT='8046'
+$env:MOT_E2E_OUTPUT_DIR='test-results/b6-acceptance'
+npm --prefix web run test:e2e -- stage6-demo-communication.spec.ts
+```
+
+O aceite importado em `import-observed-case.spec.ts` executa com catálogo
+`NAO_CONFIGURADO`, sem catálogo fictício. Os cinco cenários prontos têm seeds e entradas distintas;
+a Comparação os classifica como incompatíveis e o documento omite comparação.
+Uma hipótese nova que reutiliza as ordens e muda a janela de 7 para 8 dias
+foi executada com uma seed fixa no teste; a comparação resultante é positiva
+e inclui métricas e evidências no documento. Com outras seeds, tentativas
+anteriores de diagnóstico falharam na agregação (`volume casado excede o
+potencial estrutural` e `taxas por mecanismo não reconciliam com netabilidade`).
+O aceite B6 demonstra o caminho positivo reproduzível e não resolve essas
+falhas de agregação do Motor. Nenhuma regra de simulação foi alterada.
+
+Gate local de 2026-09-23 neste worktree:
+
+| Verificação | Resultado |
+|---|---|
+| `npm --prefix web run test:unit -- --maxWorkers=2` | 879 PASS em 94 arquivos; rerun sequencial após timeout por contenção |
+| typecheck / lint / build | PASS; aviso informativo de chunk > 500 kB |
+| `npm --prefix web run test:e2e -- stage6-demo-communication.spec.ts` sem SHA manual | 4 PASS em Chromium local; comparação positiva incluída |
+| `import-observed-case.spec.ts` com SHA do checkout | 7 PASS, gate A6 preservado |
+| `python -m pytest -q` | 888 PASS, 2 SKIP; 118 s |
+| `python -O -m pytest tests/web_api/test_demo_package.py -q` | 2 PASS |
+| Ruff dos arquivos Python alterados / `mypy servidor` | PASS; 45 arquivos no mypy |
+| Regeneração do pacote com `.venv-t5` | SHA-256 `5072BA19841153850FE8A6E8FA9DBB378601A460AC9851BCD36694875C295E39`; versões `0.1.0+SHA` |
+
+Após a correção dos bloqueios da revisão: 4/4 no B6 sem SHA manual; 69 testes
+unitários focados, 10 testes Python focados, 5 sob `python -O`, typecheck,
+lint, build, Ruff, mypy (45 arquivos) e scanner de credenciais aprovados.
+A suíte Playwright completa em porta alternativa 8046 teve 28/33: dois testes
+abrem 8021 diretamente; esses dois
+passaram isoladamente na porta padrão 8021. A falha de sessão expirada em
+`foundation.spec.ts` repetiu mesmo em 8021. Duas falhas de concorrência/quota
+na execução completa passaram isoladamente em 8021. A suíte global não foi
+declarada verde por esse resultado; B6 4/4 foi confirmado separadamente.
+
+Após integrar B6 sobre C1–C4, o gate B6 repetiu **4/4 PASS em 1,1 min** sem
+override de SHA. Duas expectativas antigas do Playwright foram reconciliadas com
+o comportamento vigente: sessão expirada redireciona imediatamente ao login
+(RED antes, **1/1 PASS** depois) e a segunda conta recebe apenas seu demo canônico,
+sem enxergar o Estudo privado da conta A (RED antes, **1/1 PASS** depois). A
+primeira execução integral teve 32/33 por essa expectativa de isolamento. A
+segunda passou esse caso e teve 32/33 porque o fluxo XLSX excedeu o timeout global
+em 0,9 s enquanto C5 executava em paralelo; o mesmo fluxo passou isolado em 24,0 s
+(**1/1 PASS**). Por isso, esta evidência fecha B6, mas não declara ainda o gate
+Playwright integral verde; ele será repetido sem contenção antes do aceite final.
+
+## Aceitação integrada da Etapa 6A — MOT-61
+
+O percurso `web/e2e/import-observed-case.spec.ts` lê XLSX no worker real,
+confirma Caso, recarrega, cria Perfil e Estudo por ações manuais e inspeciona
+requests e todas as stores IndexedDB. Linha inválida, conflito, correção,
+cancelamento, fórmula proibida, corrida CAS e isolamento de contas têm regressão.
+O catálogo real permanece `NAO_CONFIGURADO`, sem impedir execução. O aceite
+observado usa sete headers, preserva finalidade `null`/`NOT_COLLECTED` e executa
+prévia e diagnóstico; `stage6-acceptance.spec.ts` continua até Replay, Painel A e
+PDF com “IOF padrão por direção”. Detalhes e medição de 1.000 linhas estão em
+[`etapa-6a-aceitacao.md`](frontend/etapa-6a-aceitacao.md).
+
+Execute o gate de navegador sozinho no worktree: dois Playwright concorrentes
+compartilham porta, bundle e `test-results`, podendo apagar traces um do outro.
+O Vitest usa `--maxWorkers=2` também na CI, sem aumentar timeout. Evidências de
+cada rerun do Replay agora ficam em `test.info().outputPath`, sem sobrescrever
+os PNG/JSON históricos aceitos de MOT-89. A CI retém `web/test-results/` por 7 dias.
+
+O scanner inspeciona o conteúdo ZIP das fixtures XLSX em memória, com limite de
+4.096 entradas/64 MiB descompactados, além da inspeção binária existente. Não
+extrai arquivos e não abre exceção para segredos nos marcadores não-ZIP de teste.
+
+Gate local em 2026-09-23, candidato A6 sobre `9a60729`:
+
+| Verificação | Resultado |
+|---|---|
+| OpenAPI + TypeScript gerados | PASS, sem drift |
+| `python -m pytest -q` | 880 PASS, 2 SKIP; 178,65 s |
+| `python -O -m pytest -q` | 880 PASS, 2 SKIP; 405,25 s |
+| `python -m ruff check servidor tests/web_api` (CI) | PASS |
+| `python -m ruff check servidor tests` (literal do plano) | RED: 298 achados legados fora do escopo CI |
+| `python -m mypy servidor` | PASS, 43 arquivos; inclui correção B1 `9a60729` |
+| `npm --prefix web run test:unit -- --maxWorkers=2` | 832 PASS, 90 arquivos; 209,85 s |
+| typecheck / lint / build produção | PASS; warning de chunk grande preexistente |
+| `npm --prefix web run test:e2e` | 28 PASS; 5,4 min, Chromium local, um worker |
+| E2E principal + 1.000 linhas após materializar reports | 2 PASS; 37,0 s; JSONs presentes e sem sentinelas brutas/segredos |
+| scanner produção | PASS, 536 textos / 32 binários |
+| `git diff --check`, diff contratos e evidências MOT-89 | PASS, sem drift |
+
+O gate literal do plano mestre não é todo verde: o Ruff amplo exige reconciliação
+explícita pelo coordenador, não uma alegação de que os 298 achados desapareceram.
+Os dois skips Python são de symlink no Windows. Docker/Render/auth real ficam fora
+deste aceite local; não houve push, deploy ou regeneração da grade financeira.
+
 ## Decisão
+
+### Revisão A6 — ancestralidade e catálogo por par
+
+**Histórico superado quanto ao gate:** os testes abaixo registram a decisão A6
+original. Desde 2026-09-24, finalidade ausente ou par sem regra não bloqueia;
+valem as premissas persistidas e o IOF padrão por direção. A ancestralidade
+permanece preservada. As contagens históricas abaixo não são resultados da Task 5.
+
+Sobre `15f5eca` (C1 integrada), quatro testes RED comprovaram perda de origem após
+autoria integral e ausência de validação de finalidade/direção. O Chromium também
+reproduziu o primeiro defeito após edição dos oito campos e reload. Após correção:
+
+- 166 testes seletivos / 12 arquivos PASS, 40,76 s, 2 workers; inclui schema,
+  fingerprint, IndexedDB, execução/Replay e as três suítes C1 existentes.
+- Typecheck, lint, build produção e diff-check PASS; scanner 545 textos/32 binários.
+- E2E autoria integral/reload PASS 20,8 s; Replay sintético PASS 14,9 s.
+- Principal importado excedeu 30 s em uma rodada com compilação concorrente;
+  isolado passou 23,6 s (28,4 s de execução total), sem alteração de timeout.
+
+Catálogo dos testes é explicitamente fictício. Finalidade ausente, direção ausente
+e segundo par ausente bloqueiam antes de reserva/POST; pares presentes passam.
+O marcador de ancestralidade é persistido independentemente da proveniência
+corrente. Não houve migração retroativa de autorias salvas antes dessa correção.
+Python e a suíte global web não foram repetidos neste loop de front-end focado.
 
 ### Módulos testados
 
@@ -139,6 +728,46 @@ ele confere a política contra uma segunda implementação em vez de contra uma 
 escrita à mão.
 
 Para contexto de negócio e proveniência, consultar o vault Obsidian.
+
+## Aceitação integrada da Etapa 5 — MOT-89
+
+O spec `stage5-replay.spec.ts` percorre, no Chromium e pela API real local, um Estudo
+observado e uma hipótese sintética baseada em Perfil. Ele verifica todos os dias do
+horizonte, dia vazio, chegada, cobertura parcial, gatilhos simultâneos, remessas OUT
+e IN, estado final, play/pause, navegação, próximo fechamento, repetição, reload,
+resize, zoom de 200%, viewport estreito e ausência de erro no console.
+
+A página recarrega pela rota `/estudos/<uuid>/replay`; o fallback estático possui
+regressão Python para aceitar exatamente essa rota e continuar recusando segmentos
+extras. O E2E usa o `DiagnosticEnvelope` persistido no IndexedDB e não o job efêmero.
+
+A prova de capacidade tentou o limite nominal de 1.000 ordens, mas o contrato de
+proveniência do diagnóstico limita o caminho real a 500 entradas, ou 98 ordens com
+a representação atual. Em 98 × 365 foram medidos 200.513 bytes de request, 156.112
+bytes de response, builder p50 de 19,153 ms e máximo de 53,291 ms, e reconstrução
+direta no browser p50 de 9,6 ms e máximo de 11,1 ms. O relatório reproduzível está
+em `docs/frontend/evidencias/mot89-orcamento-1000x365.json`. Os números são regressão
+técnica local, não SLA.
+
+Gate final da branch `codex/frontend-etapa-5`:
+
+| Verificação | Resultado |
+|---|---|
+| `python -m pytest -q` | 794 aprovados, 2 ignorados |
+| `python -O -m pytest -q` | 794 aprovados, 2 ignorados |
+| `npx vitest run --maxWorkers=1` | 477 aprovados em 67 arquivos |
+| `npm run lint`, `typecheck`, `build` | aprovados |
+| E2E específico, duas execuções consecutivas | 3/3 em 20,9 s; 3/3 em 22,9 s |
+| Playwright local integral | 22/22 em 1,9 min |
+| `git diff --check` | aprovado |
+
+Na execução unitária padrão, 476/477 testes passaram e um caso antigo de roteamento
+atingiu exatamente o timeout de 5 s sob 67 workers. O arquivo isolado passou 25/25;
+a suíte integral com um worker passou 477/477. Isso reproduz a contenção de partida
+já documentada na Etapa 4, sem esconder uma falha funcional ou aumentar o timeout.
+
+A grade de 27.000 simulações não foi regenerada porque o Replay não modifica
+`motor/`.
 
 ## Aceitação local da Etapa 2 — MOT-32
 
@@ -295,3 +924,13 @@ Os 35 testes Python diretamente ligados à preparação passaram, e o cenário A
 permaneceu em aproximadamente US$439k de baseline, US$249k netado, US$190k de
 economia e 58,82% de netabilidade. A matriz completa está em
 [`docs/frontend/etapa-4-evolucao-b-aceitacao.md`](frontend/etapa-4-evolucao-b-aceitacao.md).
+
+## Refinamento de leitura do Replay — MOT-89
+
+O feedback de teste interno ganhou regressões para diário acumulado limitado ao dia
+selecionado, intervalo padrão de 3,2 s, persistência visual do evento por 2,6 s e
+identificação explícita de autonetting intracliente versus netting multilateral. O
+E2E `stage5-replay.spec.ts` também prova que um dia vazio preserva somente o histórico
+anterior e que o namespace controlado funciona mesmo na presença de `.env.local`
+real. As evidências atualizadas estão na matriz da Etapa 5; nenhuma regra do Motor
+foi modificada e a grade de 27.000 simulações não foi repetida.

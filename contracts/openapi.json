@@ -103,6 +103,99 @@
         "title": "AgregadoDTO",
         "type": "object"
       },
+      "AliquotaFinalidade": {
+        "additionalProperties": false,
+        "properties": {
+          "aliquota": {
+            "maxLength": 80,
+            "minLength": 1,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Aliquota",
+            "type": "string"
+          },
+          "direcao": {
+            "enum": [
+              "OUT",
+              "IN"
+            ],
+            "title": "Direcao",
+            "type": "string"
+          }
+        },
+        "required": [
+          "direcao",
+          "aliquota"
+        ],
+        "title": "AliquotaFinalidade",
+        "type": "object"
+      },
+      "AllocationEventV1": {
+        "additionalProperties": false,
+        "properties": {
+          "allocation_type": {
+            "enum": [
+              "CASADO",
+              "REMETIDO"
+            ],
+            "title": "Allocation Type",
+            "type": "string"
+          },
+          "direction": {
+            "enum": [
+              "OUT",
+              "IN"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "kind": {
+            "const": "ALLOCATION",
+            "title": "Kind",
+            "type": "string"
+          },
+          "matching_origin": {
+            "anyOf": [
+              {
+                "enum": [
+                  "INTRA_CLIENTE",
+                  "INTER_CLIENTE"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Matching Origin"
+          },
+          "order_id": {
+            "title": "Order Id",
+            "type": "string"
+          },
+          "sequence": {
+            "minimum": 0.0,
+            "title": "Sequence",
+            "type": "integer"
+          },
+          "value_brl": {
+            "maxLength": 80,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Value Brl",
+            "type": "string"
+          }
+        },
+        "required": [
+          "sequence",
+          "kind",
+          "order_id",
+          "allocation_type",
+          "value_brl",
+          "direction",
+          "matching_origin"
+        ],
+        "title": "AllocationEventV1",
+        "type": "object"
+      },
       "AlocacaoDTO": {
         "additionalProperties": false,
         "properties": {
@@ -218,6 +311,65 @@
         "title": "AvailableEvidenceMetric[DistributionSummary]",
         "type": "object"
       },
+      "CatalogoImportacao": {
+        "additionalProperties": false,
+        "properties": {
+          "catalog_version": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Catalog Version",
+            "type": "string"
+          },
+          "custos_calibrados": {
+            "const": false,
+            "title": "Custos Calibrados",
+            "type": "boolean"
+          },
+          "custos_origem": {
+            "$ref": "#/components/schemas/OrigemCatalogo"
+          },
+          "custos_padrao": {
+            "$ref": "#/components/schemas/CustoPadraoCatalogo"
+          },
+          "finalidades": {
+            "items": {
+              "$ref": "#/components/schemas/FinalidadeCatalogo"
+            },
+            "maxItems": 100,
+            "title": "Finalidades",
+            "type": "array"
+          },
+          "publicado_em_utc": {
+            "format": "date-time",
+            "title": "Publicado Em Utc",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "1.0.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "CONFIGURADO",
+              "NAO_CONFIGURADO"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "schema_version",
+          "catalog_version",
+          "status",
+          "publicado_em_utc",
+          "finalidades",
+          "custos_padrao",
+          "custos_origem",
+          "custos_calibrados"
+        ],
+        "title": "CatalogoImportacao",
+        "type": "object"
+      },
       "CenarioEntrada": {
         "additionalProperties": false,
         "properties": {
@@ -253,6 +405,260 @@
           "custo"
         ],
         "title": "CenarioEntrada",
+        "type": "object"
+      },
+      "ChatAssistantHistoryItem": {
+        "additionalProperties": false,
+        "properties": {
+          "contextFingerprint": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contextfingerprint"
+          },
+          "role": {
+            "const": "ASSISTANT",
+            "title": "Role",
+            "type": "string"
+          },
+          "text": {
+            "maxLength": 12000,
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "role",
+          "text",
+          "contextFingerprint"
+        ],
+        "title": "ChatAssistantHistoryItem",
+        "type": "object"
+      },
+      "ChatCitation": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "EVIDENCE",
+              "METRIC",
+              "LIMITATION",
+              "HELP"
+            ],
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "id"
+        ],
+        "title": "ChatCitation",
+        "type": "object"
+      },
+      "ChatRequestV1": {
+        "additionalProperties": false,
+        "properties": {
+          "apiVersion": {
+            "const": "1.0.0",
+            "title": "Apiversion",
+            "type": "string"
+          },
+          "communication": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CommunicationDocumentV1"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "conversationId": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Conversationid",
+            "type": "string"
+          },
+          "history": {
+            "description": "Mensagens anteriores; reserva pergunta e resposta na quota de 100.",
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "ASSISTANT": "#/components/schemas/ChatAssistantHistoryItem",
+                  "USER": "#/components/schemas/ChatUserHistoryItem"
+                },
+                "propertyName": "role"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/ChatUserHistoryItem"
+                },
+                {
+                  "$ref": "#/components/schemas/ChatAssistantHistoryItem"
+                }
+              ]
+            },
+            "maxItems": 98,
+            "title": "History",
+            "type": "array"
+          },
+          "message": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Message",
+            "type": "string"
+          },
+          "messageId": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Messageid",
+            "type": "string"
+          },
+          "routeContext": {
+            "$ref": "#/components/schemas/RouteChatContext"
+          }
+        },
+        "required": [
+          "apiVersion",
+          "conversationId",
+          "messageId",
+          "message",
+          "routeContext",
+          "communication",
+          "history"
+        ],
+        "title": "ChatRequestV1",
+        "type": "object"
+      },
+      "ChatResponseV1": {
+        "additionalProperties": false,
+        "properties": {
+          "answer": {
+            "maxLength": 12000,
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Answer",
+            "type": "string"
+          },
+          "apiVersion": {
+            "const": "1.0.0",
+            "title": "Apiversion",
+            "type": "string"
+          },
+          "citations": {
+            "items": {
+              "$ref": "#/components/schemas/ChatCitation"
+            },
+            "maxItems": 100,
+            "title": "Citations",
+            "type": "array"
+          },
+          "classification": {
+            "enum": [
+              "IN_SCOPE",
+              "INSUFFICIENT_EVIDENCE",
+              "OUT_OF_SCOPE",
+              "MIXED"
+            ],
+            "title": "Classification",
+            "type": "string"
+          },
+          "contextFingerprint": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contextfingerprint"
+          },
+          "limitationCodes": {
+            "items": {
+              "maxLength": 128,
+              "minLength": 1,
+              "pattern": "\\S",
+              "type": "string"
+            },
+            "maxItems": 100,
+            "title": "Limitationcodes",
+            "type": "array"
+          },
+          "messageId": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Messageid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "apiVersion",
+          "messageId",
+          "classification",
+          "answer",
+          "citations",
+          "contextFingerprint",
+          "limitationCodes"
+        ],
+        "title": "ChatResponseV1",
+        "type": "object"
+      },
+      "ChatUserHistoryItem": {
+        "additionalProperties": false,
+        "properties": {
+          "contextFingerprint": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contextfingerprint"
+          },
+          "role": {
+            "const": "USER",
+            "title": "Role",
+            "type": "string"
+          },
+          "text": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "role",
+          "text",
+          "contextFingerprint"
+        ],
+        "title": "ChatUserHistoryItem",
         "type": "object"
       },
       "CicloDTO": {
@@ -312,6 +718,583 @@
           "direcao_residuo"
         ],
         "title": "CicloDTO",
+        "type": "object"
+      },
+      "CommunicationDocumentV1": {
+        "additionalProperties": false,
+        "properties": {
+          "apiVersion": {
+            "const": "1.0.0",
+            "title": "Apiversion",
+            "type": "string"
+          },
+          "assumptions": {
+            "items": {
+              "$ref": "#/components/schemas/CommunicationFact"
+            },
+            "maxItems": 2000,
+            "title": "Assumptions",
+            "type": "array"
+          },
+          "comparison": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CommunicationSection"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "composition": {
+            "$ref": "#/components/schemas/CommunicationSection"
+          },
+          "contextFingerprint": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Contextfingerprint",
+            "type": "string"
+          },
+          "economics": {
+            "$ref": "#/components/schemas/CommunicationSection"
+          },
+          "evidenceIndex": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/CommunicationEvidence"
+            },
+            "maxProperties": 10000,
+            "propertyNames": {
+              "maxLength": 128,
+              "minLength": 1
+            },
+            "title": "Evidenceindex",
+            "type": "object"
+          },
+          "executiveMetrics": {
+            "items": {
+              "$ref": "#/components/schemas/CommunicationMetric"
+            },
+            "maxItems": 500,
+            "title": "Executivemetrics",
+            "type": "array"
+          },
+          "generatedAt": {
+            "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$",
+            "title": "Generatedat",
+            "type": "string"
+          },
+          "limitations": {
+            "items": {
+              "$ref": "#/components/schemas/CommunicationLimitation"
+            },
+            "maxItems": 2000,
+            "title": "Limitations",
+            "type": "array"
+          },
+          "mechanism": {
+            "$ref": "#/components/schemas/CommunicationSection"
+          },
+          "presentationVersion": {
+            "const": "1.0.0",
+            "title": "Presentationversion",
+            "type": "string"
+          },
+          "provenance": {
+            "items": {
+              "$ref": "#/components/schemas/CommunicationFact"
+            },
+            "maxItems": 2000,
+            "title": "Provenance",
+            "type": "array"
+          },
+          "replaySnapshot": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CommunicationReplaySnapshot"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "robustness": {
+            "$ref": "#/components/schemas/CommunicationSection"
+          },
+          "selection": {
+            "$ref": "#/components/schemas/CommunicationSelection"
+          },
+          "source": {
+            "$ref": "#/components/schemas/CommunicationSource"
+          },
+          "study": {
+            "$ref": "#/components/schemas/CommunicationStudy"
+          },
+          "versions": {
+            "items": {
+              "$ref": "#/components/schemas/CommunicationFact"
+            },
+            "maxItems": 2000,
+            "title": "Versions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "apiVersion",
+          "presentationVersion",
+          "generatedAt",
+          "study",
+          "selection",
+          "source",
+          "executiveMetrics",
+          "composition",
+          "mechanism",
+          "economics",
+          "robustness",
+          "comparison",
+          "replaySnapshot",
+          "assumptions",
+          "provenance",
+          "limitations",
+          "versions",
+          "evidenceIndex",
+          "contextFingerprint"
+        ],
+        "title": "CommunicationDocumentV1",
+        "type": "object"
+      },
+      "CommunicationEvidence": {
+        "additionalProperties": false,
+        "properties": {
+          "diagnosticExecutionId": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Diagnosticexecutionid",
+            "type": "string"
+          },
+          "path": {
+            "maxLength": 20000,
+            "minLength": 1,
+            "pattern": "^(/([^~]|~[01])*)+$",
+            "title": "Path",
+            "type": "string"
+          },
+          "repetitionId": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Repetitionid",
+            "type": "string"
+          },
+          "scenarioId": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Scenarioid",
+            "type": "string"
+          },
+          "scenarioRevision": {
+            "minimum": 1.0,
+            "title": "Scenariorevision",
+            "type": "integer"
+          },
+          "source": {
+            "enum": [
+              "STUDY",
+              "DIAGNOSTIC",
+              "COMPARISON",
+              "REPLAY"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "sourceId": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Sourceid",
+            "type": "string"
+          },
+          "studyId": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Studyid",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "maxLength": 20000,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "source",
+          "sourceId",
+          "studyId",
+          "scenarioId",
+          "scenarioRevision",
+          "diagnosticExecutionId",
+          "repetitionId",
+          "path",
+          "value"
+        ],
+        "title": "CommunicationEvidence",
+        "type": "object"
+      },
+      "CommunicationFact": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Code",
+            "type": "string"
+          },
+          "evidenceRefs": {
+            "items": {
+              "maxLength": 128,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Evidencerefs",
+            "type": "array"
+          },
+          "label": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "value": {
+            "maxLength": 20000,
+            "minLength": 1,
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "label",
+          "value",
+          "evidenceRefs"
+        ],
+        "title": "CommunicationFact",
+        "type": "object"
+      },
+      "CommunicationLimitation": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Code",
+            "type": "string"
+          },
+          "evidenceRefs": {
+            "items": {
+              "maxLength": 128,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Evidencerefs",
+            "type": "array"
+          },
+          "severity": {
+            "enum": [
+              "INFO",
+              "WARNING"
+            ],
+            "title": "Severity",
+            "type": "string"
+          },
+          "statement": {
+            "maxLength": 20000,
+            "minLength": 1,
+            "title": "Statement",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "severity",
+          "statement",
+          "evidenceRefs"
+        ],
+        "title": "CommunicationLimitation",
+        "type": "object"
+      },
+      "CommunicationMetric": {
+        "additionalProperties": false,
+        "properties": {
+          "availability": {
+            "enum": [
+              "AVAILABLE",
+              "UNAVAILABLE"
+            ],
+            "title": "Availability",
+            "type": "string"
+          },
+          "code": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Code",
+            "type": "string"
+          },
+          "evidenceRefs": {
+            "items": {
+              "maxLength": 128,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Evidencerefs",
+            "type": "array"
+          },
+          "label": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "meaning": {
+            "maxLength": 20000,
+            "minLength": 1,
+            "title": "Meaning",
+            "type": "string"
+          },
+          "unit": {
+            "enum": [
+              "BRL",
+              "FRACTION",
+              "DAYS",
+              "COUNT",
+              "BPS",
+              "TEXT"
+            ],
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "maxLength": 20000,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "code",
+          "label",
+          "availability",
+          "value",
+          "unit",
+          "meaning",
+          "evidenceRefs"
+        ],
+        "title": "CommunicationMetric",
+        "type": "object"
+      },
+      "CommunicationReplaySnapshot": {
+        "additionalProperties": false,
+        "properties": {
+          "day": {
+            "minimum": 0.0,
+            "title": "Day",
+            "type": "integer"
+          },
+          "facts": {
+            "items": {
+              "$ref": "#/components/schemas/CommunicationFact"
+            },
+            "maxItems": 2000,
+            "title": "Facts",
+            "type": "array"
+          },
+          "metrics": {
+            "items": {
+              "$ref": "#/components/schemas/CommunicationMetric"
+            },
+            "maxItems": 500,
+            "title": "Metrics",
+            "type": "array"
+          }
+        },
+        "required": [
+          "day",
+          "metrics",
+          "facts"
+        ],
+        "title": "CommunicationReplaySnapshot",
+        "type": "object"
+      },
+      "CommunicationSection": {
+        "additionalProperties": false,
+        "properties": {
+          "facts": {
+            "items": {
+              "$ref": "#/components/schemas/CommunicationFact"
+            },
+            "maxItems": 2000,
+            "title": "Facts",
+            "type": "array"
+          },
+          "metrics": {
+            "items": {
+              "$ref": "#/components/schemas/CommunicationMetric"
+            },
+            "maxItems": 500,
+            "title": "Metrics",
+            "type": "array"
+          },
+          "title": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "metrics",
+          "facts"
+        ],
+        "title": "CommunicationSection",
+        "type": "object"
+      },
+      "CommunicationSelection": {
+        "additionalProperties": false,
+        "properties": {
+          "comparisonExecutionId": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comparisonexecutionid"
+          },
+          "diagnosticExecutionId": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Diagnosticexecutionid",
+            "type": "string"
+          },
+          "repetitionId": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Repetitionid",
+            "type": "string"
+          },
+          "replayDay": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Replayday"
+          },
+          "scenarioId": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Scenarioid",
+            "type": "string"
+          },
+          "scenarioRevision": {
+            "minimum": 1.0,
+            "title": "Scenariorevision",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "scenarioId",
+          "scenarioRevision",
+          "diagnosticExecutionId",
+          "repetitionId",
+          "comparisonExecutionId",
+          "replayDay"
+        ],
+        "title": "CommunicationSelection",
+        "type": "object"
+      },
+      "CommunicationSource": {
+        "additionalProperties": false,
+        "properties": {
+          "family": {
+            "enum": [
+              "OBSERVED",
+              "PROFILE_SIMULATION"
+            ],
+            "title": "Family",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "synthetic": {
+            "title": "Synthetic",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "family",
+          "label",
+          "synthetic"
+        ],
+        "title": "CommunicationSource",
+        "type": "object"
+      },
+      "CommunicationStudy": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "revision": {
+            "minimum": 1.0,
+            "title": "Revision",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "revision"
+        ],
+        "title": "CommunicationStudy",
         "type": "object"
       },
       "CompositionDependencyAxis": {
@@ -387,7 +1370,7 @@
           },
           "by_purpose": {
             "items": {
-              "$ref": "#/components/schemas/ResidualBreakdown"
+              "$ref": "#/components/schemas/PurposeResidualBreakdown"
             },
             "maxItems": 200,
             "title": "By Purpose",
@@ -536,6 +1519,80 @@
           "iof_por_finalidade"
         ],
         "title": "CustoEntrada",
+        "type": "object"
+      },
+      "CustoPadraoCatalogo": {
+        "additionalProperties": false,
+        "properties": {
+          "carry_cnr": {
+            "maxLength": 80,
+            "minLength": 1,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Carry Cnr",
+            "type": "string"
+          },
+          "custo_fixo_remessa": {
+            "maxLength": 80,
+            "minLength": 1,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Custo Fixo Remessa",
+            "type": "string"
+          },
+          "custo_oportunidade_aa": {
+            "maxLength": 80,
+            "minLength": 1,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Custo Oportunidade Aa",
+            "type": "string"
+          },
+          "iof_in": {
+            "maxLength": 80,
+            "minLength": 1,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Iof In",
+            "type": "string"
+          },
+          "iof_out": {
+            "maxLength": 80,
+            "minLength": 1,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Iof Out",
+            "type": "string"
+          },
+          "iof_por_finalidade": {
+            "items": {
+              "$ref": "#/components/schemas/RegraIOFCatalogo"
+            },
+            "maxItems": 100,
+            "title": "Iof Por Finalidade",
+            "type": "array"
+          },
+          "ptax": {
+            "maxLength": 80,
+            "minLength": 1,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Ptax",
+            "type": "string"
+          },
+          "spread_rail_bps": {
+            "maxLength": 80,
+            "minLength": 1,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Spread Rail Bps",
+            "type": "string"
+          }
+        },
+        "required": [
+          "iof_out",
+          "iof_in",
+          "carry_cnr",
+          "spread_rail_bps",
+          "custo_fixo_remessa",
+          "custo_oportunidade_aa",
+          "ptax",
+          "iof_por_finalidade"
+        ],
+        "title": "CustoPadraoCatalogo",
         "type": "object"
       },
       "CustosDTO": {
@@ -1412,6 +2469,39 @@
         "title": "EstatisticaPrevia",
         "type": "object"
       },
+      "FinalidadeCatalogo": {
+        "additionalProperties": false,
+        "properties": {
+          "aliquotas": {
+            "items": {
+              "$ref": "#/components/schemas/AliquotaFinalidade"
+            },
+            "maxItems": 2,
+            "minItems": 1,
+            "title": "Aliquotas",
+            "type": "array"
+          },
+          "codigo": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Codigo",
+            "type": "string"
+          },
+          "descricao": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Descricao",
+            "type": "string"
+          }
+        },
+        "required": [
+          "codigo",
+          "descricao",
+          "aliquotas"
+        ],
+        "title": "FinalidadeCatalogo",
+        "type": "object"
+      },
       "FixedDeadline": {
         "additionalProperties": false,
         "properties": {
@@ -2048,10 +3138,17 @@
             "type": "boolean"
           },
           "finalidade": {
-            "maxLength": 128,
-            "minLength": 1,
-            "title": "Finalidade",
-            "type": "string"
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finalidade"
           },
           "id": {
             "maxLength": 128,
@@ -2078,6 +3175,65 @@
           "finalidade"
         ],
         "title": "OrdemEntrada",
+        "type": "object"
+      },
+      "OrderArrivedEventV1": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "ORDER_ARRIVED",
+            "title": "Kind",
+            "type": "string"
+          },
+          "order_id": {
+            "title": "Order Id",
+            "type": "string"
+          },
+          "sequence": {
+            "minimum": 0.0,
+            "title": "Sequence",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "sequence",
+          "kind",
+          "order_id"
+        ],
+        "title": "OrderArrivedEventV1",
+        "type": "object"
+      },
+      "OrigemCatalogo": {
+        "additionalProperties": false,
+        "properties": {
+          "fonte": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Fonte",
+            "type": "string"
+          },
+          "registrado_em_utc": {
+            "format": "date-time",
+            "title": "Registrado Em Utc",
+            "type": "string"
+          },
+          "tipo": {
+            "enum": [
+              "PADRAO_SINTETICO",
+              "ESTIMATIVA_USUARIO",
+              "DADO_OBSERVADO",
+              "NAO_COLETADO"
+            ],
+            "title": "Tipo",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tipo",
+          "fonte",
+          "registrado_em_utc"
+        ],
+        "title": "OrigemCatalogo",
         "type": "object"
       },
       "OrigemValor": {
@@ -2709,6 +3865,131 @@
         "title": "PreviewEnvelope",
         "type": "object"
       },
+      "ProductHelpCatalogV1": {
+        "additionalProperties": false,
+        "description": "Documento imutável servido ao chat e à ajuda contextual.",
+        "properties": {
+          "apiVersion": {
+            "const": "1.0.0",
+            "title": "Apiversion",
+            "type": "string"
+          },
+          "catalogVersion": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Catalogversion",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ProductHelpItem"
+            },
+            "maxItems": 200,
+            "minItems": 1,
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "apiVersion",
+          "catalogVersion",
+          "items"
+        ],
+        "title": "ProductHelpCatalogV1",
+        "type": "object"
+      },
+      "ProductHelpItem": {
+        "additionalProperties": false,
+        "description": "Explicação contextual fechada, independente de conteúdo visual da página.",
+        "properties": {
+          "changes": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Changes",
+            "type": "string"
+          },
+          "disabledWhen": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 30,
+            "title": "Disabledwhen",
+            "type": "array"
+          },
+          "doesNotChange": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Doesnotchange",
+            "type": "string"
+          },
+          "elementKind": {
+            "enum": [
+              "PAGE",
+              "SECTION",
+              "CONTROL",
+              "METRIC",
+              "MESSAGE"
+            ],
+            "title": "Elementkind",
+            "type": "string"
+          },
+          "id": {
+            "maxLength": 120,
+            "minLength": 3,
+            "pattern": "^[a-z][a-z0-9-]*(\\.[a-z][a-z0-9-]*)+$",
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "purpose": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Purpose",
+            "type": "string"
+          },
+          "recovery": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 30,
+            "title": "Recovery",
+            "type": "array"
+          },
+          "relatedConceptIds": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 40,
+            "title": "Relatedconceptids",
+            "type": "array"
+          },
+          "routePattern": {
+            "maxLength": 300,
+            "minLength": 1,
+            "pattern": "^/[A-Za-z0-9_:/?&=.-]*$",
+            "title": "Routepattern",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "routePattern",
+          "elementKind",
+          "label",
+          "purpose",
+          "changes",
+          "doesNotChange",
+          "disabledWhen",
+          "recovery",
+          "relatedConceptIds"
+        ],
+        "title": "ProductHelpItem",
+        "type": "object"
+      },
       "ProfileDeadline": {
         "additionalProperties": false,
         "properties": {
@@ -2722,6 +4003,46 @@
           "mode"
         ],
         "title": "ProfileDeadline",
+        "type": "object"
+      },
+      "PurposeResidualBreakdown": {
+        "additionalProperties": false,
+        "properties": {
+          "direction": {
+            "enum": [
+              "OUT",
+              "IN"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "key": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Key"
+          },
+          "value_brl": {
+            "maxLength": 80,
+            "minLength": 1,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Value Brl",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "direction",
+          "value_brl"
+        ],
+        "title": "PurposeResidualBreakdown",
         "type": "object"
       },
       "RealizedComposition": {
@@ -2865,6 +4186,39 @@
         "title": "RegraIOF",
         "type": "object"
       },
+      "RegraIOFCatalogo": {
+        "additionalProperties": false,
+        "properties": {
+          "aliquota": {
+            "maxLength": 80,
+            "minLength": 1,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Aliquota",
+            "type": "string"
+          },
+          "direcao": {
+            "enum": [
+              "OUT",
+              "IN"
+            ],
+            "title": "Direcao",
+            "type": "string"
+          },
+          "finalidade": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Finalidade",
+            "type": "string"
+          }
+        },
+        "required": [
+          "finalidade",
+          "direcao",
+          "aliquota"
+        ],
+        "title": "RegraIOFCatalogo",
+        "type": "object"
+      },
       "RepetitionPlan": {
         "additionalProperties": false,
         "properties": {
@@ -2967,6 +4321,556 @@
           "duration_ms"
         ],
         "title": "RepetitionSummary",
+        "type": "object"
+      },
+      "ReplayClosingV1": {
+        "additionalProperties": false,
+        "properties": {
+          "flow_segments": {
+            "items": {
+              "$ref": "#/components/schemas/ReplayFlowSegmentV1"
+            },
+            "maxItems": 2000,
+            "title": "Flow Segments",
+            "type": "array"
+          },
+          "gross_in_brl": {
+            "maxLength": 80,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Gross In Brl",
+            "type": "string"
+          },
+          "gross_out_brl": {
+            "maxLength": 80,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Gross Out Brl",
+            "type": "string"
+          },
+          "inter_client_position_brl": {
+            "maxLength": 80,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Inter Client Position Brl",
+            "type": "string"
+          },
+          "intra_client_position_brl": {
+            "maxLength": 80,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Intra Client Position Brl",
+            "type": "string"
+          },
+          "matched_contribution_brl": {
+            "maxLength": 80,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Matched Contribution Brl",
+            "type": "string"
+          },
+          "matched_position_brl": {
+            "maxLength": 80,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Matched Position Brl",
+            "type": "string"
+          },
+          "remitted_in_brl": {
+            "maxLength": 80,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Remitted In Brl",
+            "type": "string"
+          },
+          "remitted_out_brl": {
+            "maxLength": 80,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Remitted Out Brl",
+            "type": "string"
+          },
+          "triggers": {
+            "items": {
+              "enum": [
+                "WINDOW",
+                "DEADLINE",
+                "HORIZON_END"
+              ],
+              "type": "string"
+            },
+            "maxItems": 3,
+            "minItems": 1,
+            "title": "Triggers",
+            "type": "array"
+          }
+        },
+        "required": [
+          "triggers",
+          "gross_out_brl",
+          "gross_in_brl",
+          "matched_position_brl",
+          "matched_contribution_brl",
+          "intra_client_position_brl",
+          "inter_client_position_brl",
+          "remitted_out_brl",
+          "remitted_in_brl",
+          "flow_segments"
+        ],
+        "title": "ReplayClosingV1",
+        "type": "object"
+      },
+      "ReplayDayV1": {
+        "additionalProperties": false,
+        "properties": {
+          "closing": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReplayClosingV1"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "day": {
+            "maximum": 730.0,
+            "minimum": 0.0,
+            "title": "Day",
+            "type": "integer"
+          },
+          "end_state": {
+            "$ref": "#/components/schemas/ReplayEndStateV1"
+          },
+          "events": {
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "ALLOCATION": "#/components/schemas/AllocationEventV1",
+                  "ORDER_ARRIVED": "#/components/schemas/OrderArrivedEventV1"
+                },
+                "propertyName": "kind"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/OrderArrivedEventV1"
+                },
+                {
+                  "$ref": "#/components/schemas/AllocationEventV1"
+                }
+              ]
+            },
+            "maxItems": 3000,
+            "title": "Events",
+            "type": "array"
+          }
+        },
+        "required": [
+          "day",
+          "events",
+          "closing",
+          "end_state"
+        ],
+        "title": "ReplayDayV1",
+        "type": "object"
+      },
+      "ReplayDocumentV1": {
+        "additionalProperties": false,
+        "properties": {
+          "api_version": {
+            "const": "1.0.0",
+            "title": "Api Version",
+            "type": "string"
+          },
+          "currency": {
+            "const": "BRL",
+            "title": "Currency",
+            "type": "string"
+          },
+          "days": {
+            "items": {
+              "$ref": "#/components/schemas/ReplayDayV1"
+            },
+            "maxItems": 731,
+            "minItems": 1,
+            "title": "Days",
+            "type": "array"
+          },
+          "diagnostic_execution_id": {
+            "format": "uuid",
+            "title": "Diagnostic Execution Id",
+            "type": "string"
+          },
+          "execution_fingerprint": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Execution Fingerprint",
+            "type": "string"
+          },
+          "motor_version": {
+            "title": "Motor Version",
+            "type": "string"
+          },
+          "orders": {
+            "items": {
+              "$ref": "#/components/schemas/ReplayOrderV1"
+            },
+            "maxItems": 1000,
+            "title": "Orders",
+            "type": "array"
+          },
+          "participant_seeds": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "maxProperties": 100,
+            "title": "Participant Seeds",
+            "type": "object"
+          },
+          "period": {
+            "$ref": "#/components/schemas/ReplayPeriodV1"
+          },
+          "policy": {
+            "const": "P0",
+            "title": "Policy",
+            "type": "string"
+          },
+          "repetition_id": {
+            "format": "uuid",
+            "title": "Repetition Id",
+            "type": "string"
+          },
+          "result_fingerprint": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Result Fingerprint",
+            "type": "string"
+          },
+          "scenario_id": {
+            "format": "uuid",
+            "title": "Scenario Id",
+            "type": "string"
+          },
+          "scenario_revision": {
+            "minimum": 1.0,
+            "title": "Scenario Revision",
+            "type": "integer"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/ReplayTotalsV1"
+          }
+        },
+        "required": [
+          "api_version",
+          "diagnostic_execution_id",
+          "scenario_id",
+          "scenario_revision",
+          "repetition_id",
+          "participant_seeds",
+          "period",
+          "policy",
+          "currency",
+          "orders",
+          "days",
+          "totals",
+          "motor_version",
+          "execution_fingerprint",
+          "result_fingerprint"
+        ],
+        "title": "ReplayDocumentV1",
+        "type": "object"
+      },
+      "ReplayEndStateV1": {
+        "additionalProperties": false,
+        "properties": {
+          "matched_position_accumulated_brl": {
+            "maxLength": 80,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Matched Position Accumulated Brl",
+            "type": "string"
+          },
+          "measured_matched_contribution_accumulated_brl": {
+            "maxLength": 80,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Measured Matched Contribution Accumulated Brl",
+            "type": "string"
+          },
+          "open_in_brl": {
+            "maxLength": 80,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Open In Brl",
+            "type": "string"
+          },
+          "open_out_brl": {
+            "maxLength": 80,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Open Out Brl",
+            "type": "string"
+          },
+          "remitted_in_accumulated_brl": {
+            "maxLength": 80,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Remitted In Accumulated Brl",
+            "type": "string"
+          },
+          "remitted_out_accumulated_brl": {
+            "maxLength": 80,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Remitted Out Accumulated Brl",
+            "type": "string"
+          }
+        },
+        "required": [
+          "open_out_brl",
+          "open_in_brl",
+          "matched_position_accumulated_brl",
+          "measured_matched_contribution_accumulated_brl",
+          "remitted_out_accumulated_brl",
+          "remitted_in_accumulated_brl"
+        ],
+        "title": "ReplayEndStateV1",
+        "type": "object"
+      },
+      "ReplayFlowSegmentV1": {
+        "additionalProperties": false,
+        "properties": {
+          "closing_day": {
+            "maximum": 730.0,
+            "minimum": 0.0,
+            "title": "Closing Day",
+            "type": "integer"
+          },
+          "in_order_id": {
+            "title": "In Order Id",
+            "type": "string"
+          },
+          "matching_origin": {
+            "enum": [
+              "INTRA_CLIENTE",
+              "INTER_CLIENTE"
+            ],
+            "title": "Matching Origin",
+            "type": "string"
+          },
+          "meaning": {
+            "const": "ILLUSTRATIVE_AGGREGATE_DECOMPOSITION",
+            "title": "Meaning",
+            "type": "string"
+          },
+          "out_order_id": {
+            "title": "Out Order Id",
+            "type": "string"
+          },
+          "value_brl": {
+            "maxLength": 80,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Value Brl",
+            "type": "string"
+          }
+        },
+        "required": [
+          "closing_day",
+          "out_order_id",
+          "in_order_id",
+          "value_brl",
+          "matching_origin",
+          "meaning"
+        ],
+        "title": "ReplayFlowSegmentV1",
+        "type": "object"
+      },
+      "ReplayOrderV1": {
+        "additionalProperties": false,
+        "properties": {
+          "client_id": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Client Id",
+            "type": "string"
+          },
+          "cohort": {
+            "enum": [
+              "WARMUP",
+              "MEASUREMENT"
+            ],
+            "title": "Cohort",
+            "type": "string"
+          },
+          "deadline_day": {
+            "minimum": 0.0,
+            "title": "Deadline Day",
+            "type": "integer"
+          },
+          "direction": {
+            "enum": [
+              "OUT",
+              "IN"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "id": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "known_day": {
+            "maximum": 730.0,
+            "minimum": 0.0,
+            "title": "Known Day",
+            "type": "integer"
+          },
+          "value_brl": {
+            "maxLength": 80,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Value Brl",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "client_id",
+          "direction",
+          "known_day",
+          "deadline_day",
+          "value_brl",
+          "cohort"
+        ],
+        "title": "ReplayOrderV1",
+        "type": "object"
+      },
+      "ReplayPeriodV1": {
+        "additionalProperties": false,
+        "properties": {
+          "measurement_end_day": {
+            "maximum": 730.0,
+            "minimum": 0.0,
+            "title": "Measurement End Day",
+            "type": "integer"
+          },
+          "measurement_start_day": {
+            "maximum": 730.0,
+            "minimum": 0.0,
+            "title": "Measurement Start Day",
+            "type": "integer"
+          },
+          "mode": {
+            "enum": [
+              "LEGADO",
+              "NATURAL"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "settlement_end_day": {
+            "maximum": 730.0,
+            "minimum": 0.0,
+            "title": "Settlement End Day",
+            "type": "integer"
+          },
+          "warmup_days": {
+            "maximum": 730.0,
+            "minimum": 0.0,
+            "title": "Warmup Days",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "mode",
+          "warmup_days",
+          "measurement_start_day",
+          "measurement_end_day",
+          "settlement_end_day"
+        ],
+        "title": "ReplayPeriodV1",
+        "type": "object"
+      },
+      "ReplayRequestV1": {
+        "additionalProperties": false,
+        "properties": {
+          "api_version": {
+            "const": "1.0.0",
+            "title": "Api Version",
+            "type": "string"
+          },
+          "diagnostic_envelope": {
+            "$ref": "#/components/schemas/DiagnosticEnvelope"
+          },
+          "diagnostic_execution_id": {
+            "format": "uuid",
+            "title": "Diagnostic Execution Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "api_version",
+          "diagnostic_execution_id",
+          "diagnostic_envelope"
+        ],
+        "title": "ReplayRequestV1",
+        "type": "object"
+      },
+      "ReplayTotalsV1": {
+        "additionalProperties": false,
+        "properties": {
+          "execution_matched_position_brl": {
+            "maxLength": 80,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Execution Matched Position Brl",
+            "type": "string"
+          },
+          "execution_remitted_in_brl": {
+            "maxLength": 80,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Execution Remitted In Brl",
+            "type": "string"
+          },
+          "execution_remitted_out_brl": {
+            "maxLength": 80,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Execution Remitted Out Brl",
+            "type": "string"
+          },
+          "measured_autonetting_contribution_brl": {
+            "maxLength": 80,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Measured Autonetting Contribution Brl",
+            "type": "string"
+          },
+          "measured_gross_brl": {
+            "maxLength": 80,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Measured Gross Brl",
+            "type": "string"
+          },
+          "measured_matched_contribution_brl": {
+            "maxLength": 80,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Measured Matched Contribution Brl",
+            "type": "string"
+          },
+          "measured_multilateral_contribution_brl": {
+            "maxLength": 80,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Measured Multilateral Contribution Brl",
+            "type": "string"
+          },
+          "measured_remitted_brl": {
+            "maxLength": 80,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Measured Remitted Brl",
+            "type": "string"
+          },
+          "netability_fraction": {
+            "maxLength": 80,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Netability Fraction",
+            "type": "string"
+          }
+        },
+        "required": [
+          "measured_gross_brl",
+          "measured_matched_contribution_brl",
+          "measured_autonetting_contribution_brl",
+          "measured_multilateral_contribution_brl",
+          "measured_remitted_brl",
+          "netability_fraction",
+          "execution_matched_position_brl",
+          "execution_remitted_out_brl",
+          "execution_remitted_in_brl"
+        ],
+        "title": "ReplayTotalsV1",
         "type": "object"
       },
       "ResidualBreakdown": {
@@ -3171,6 +5075,96 @@
           "economia_brl"
         ],
         "title": "ResultadoMecanismoDTO",
+        "type": "object"
+      },
+      "RouteChatContext": {
+        "additionalProperties": false,
+        "properties": {
+          "diagnosticExecutionId": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "pattern": "\\S",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Diagnosticexecutionid"
+          },
+          "helpId": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "pattern": "\\S",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Helpid"
+          },
+          "replayDay": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Replayday"
+          },
+          "routeId": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Routeid",
+            "type": "string"
+          },
+          "scenarioId": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "pattern": "\\S",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scenarioid"
+          },
+          "studyId": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "pattern": "\\S",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Studyid"
+          }
+        },
+        "required": [
+          "routeId",
+          "helpId",
+          "studyId",
+          "scenarioId",
+          "diagnosticExecutionId",
+          "replayDay"
+        ],
+        "title": "RouteChatContext",
         "type": "object"
       },
       "SessionResponse": {
@@ -3539,6 +5533,103 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/catalogos/ajuda": {
+      "get": {
+        "operationId": "product_help_catalog_schema_api_v1_catalogos_ajuda_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductHelpCatalogV1"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Product Help Catalog Schema"
+      }
+    },
+    "/api/v1/catalogos/importacao": {
+      "get": {
+        "operationId": "import_catalog_schema_api_v1_catalogos_importacao_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogoImportacao"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Import Catalog Schema"
+      }
+    },
+    "/api/v1/chat": {
+      "post": {
+        "operationId": "chat_schema_api_v1_chat_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatRequestV1"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatResponseV1"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "description": "JSON ou Content-Length inválido (JSON_INVALIDO)."
+          },
+          "401": {
+            "description": "Bearer ausente ou inválido (SESSAO_INVALIDA)."
+          },
+          "403": {
+            "description": "Usuário sem acesso (ACESSO_NAO_PERMITIDO)."
+          },
+          "413": {
+            "description": "Corpo excede 1 MiB (LIMITE_EXCEDIDO)."
+          },
+          "422": {
+            "description": "Contrato ou documento inválido (ENTRADA_INVALIDA)."
+          },
+          "503": {
+            "description": "Chat desabilitado ou indisponível (CHAT_INDISPONIVEL)."
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Chat Schema"
+      }
+    },
     "/api/v1/diagnosticos": {
       "post": {
         "operationId": "diagnostic_schema_api_v1_diagnosticos_post",
@@ -3897,6 +5988,49 @@
           }
         ],
         "summary": "Preview Schema"
+      }
+    },
+    "/api/v1/replays": {
+      "post": {
+        "operationId": "replay_schema_api_v1_replays_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplayRequestV1"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReplayDocumentV1"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Replay Schema"
       }
     },
     "/api/v1/session": {

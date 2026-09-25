@@ -8,7 +8,7 @@ import type {
   StudyDocument,
   PreviewExecutionRecord,
 } from '../study/model';
-import { validateStudyDocument } from '../study/validation';
+import { validateAndCertifyStudy } from '../study/certifiedStudy';
 import type { ApplicationRepository } from './applicationRepository';
 import {
   DocumentCorruptError,
@@ -17,7 +17,7 @@ import {
   SchemaUnsupportedError,
 } from './errors';
 
-const DATABASE_SCHEMA_VERSION = 2;
+const DATABASE_SCHEMA_VERSION = 3;
 
 export type LegacySource = Readonly<{
   sourceKey: string;
@@ -348,11 +348,23 @@ export async function validateStoredStudy(
   value: unknown,
   ownerSub: string,
 ): Promise<StudyDocument> {
+  performance.clearMarks('mot97:stored-study:start');
+  performance.mark('mot97:stored-study:start');
   if (isRecord(value) && typeof value.schemaVersion === 'string'
     && value.schemaVersion !== '3.0.0') {
     throw new SchemaUnsupportedError(`StudyDocument ${value.schemaVersion} não suportado.`);
   }
-  const validation = await validateStudyDocument(value, ownerSub);
+  let validation;
+  try {
+    validation = await validateAndCertifyStudy(value, ownerSub);
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'DataCloneError') {
+      throw new DocumentCorruptError('StudyDocument persistido inválido: INVALID_STRUCTURE.');
+    }
+    throw error;
+  }
+  performance.clearMarks('mot97:stored-study:validated');
+  performance.mark('mot97:stored-study:validated');
   if (!validation.ok) {
     throw new DocumentCorruptError(
       `StudyDocument persistido inválido: ${validation.issues.map((issue) => issue.code).join(', ')}.`,

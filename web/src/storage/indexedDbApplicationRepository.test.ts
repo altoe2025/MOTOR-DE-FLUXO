@@ -247,6 +247,8 @@ describe('IndexedDbApplicationRepository schema', () => {
     );
     database.close();
     expect(storeNames).toEqual([
+      'chat_conversations',
+      'chat_operations',
       'companies',
       'executions',
       'import_batches',
@@ -294,7 +296,7 @@ describe('IndexedDbApplicationRepository schema', () => {
       'by_owner_company',
       'by_owner_company_version',
     ]);
-    expect(meta).toEqual({ key: 'schema_version', value: 2 });
+    expect(meta).toEqual({ key: 'schema_version', value: 3 });
     databaseForIndexes.close();
   });
 
@@ -382,6 +384,35 @@ describe('operational profile versions', () => {
 });
 
 describe('observed cases', () => {
+  it('deletes a company with its cases, batches and events, and frees the name', async () => {
+    const target = repository();
+    const caseDocument = observedCase();
+    const mutation = (operationId: string) => ({
+      expectedRevision: 0, operationId, company: company(), observedCase: caseDocument,
+      batches: [{
+        id: 'batch-1', sha256: 'a'.repeat(64), byteSize: 123, layout: 'xlsx-operacoes/1.0.0',
+        counts: { total: 1, valid: 1, invalid: 0 }, caseId: caseDocument.id, batchSequence: 1,
+        ownerSub: OWNER_SUB, companyId: caseDocument.companyId,
+      }],
+      events: [{
+        id: 'event-1', occurredAt: FIXTURE_NOW, kind: 'BATCH_IMPORTED', path: 'batches/batch-1', audit: null,
+        caseId: caseDocument.id, eventSequence: 1, ownerSub: OWNER_SUB, companyId: caseDocument.companyId,
+      }],
+    } as const);
+    await target.confirmObservedCase(mutation(OPERATION_A));
+
+    await repository(PROJECT_REF, 'owner-b').deleteCompany(company().id);
+    expect(await target.listCompanies()).toEqual([company()]);
+
+    await target.deleteCompany(company().id);
+    expect(await target.listCompanies()).toEqual([]);
+    expect(await target.listObservedCases()).toEqual([]);
+    expect(await target.getObservedCase(caseDocument.id)).toBeNull();
+
+    expect(await target.confirmObservedCase(mutation('reimport-after-delete'))).toEqual(caseDocument);
+    expect(await target.listObservedCases()).toEqual([caseDocument]);
+  });
+
   it('confirms company, case, batches and events atomically and repeats the operation idempotently', async () => {
     const target = repository();
     const caseDocument = observedCase();
@@ -391,12 +422,15 @@ describe('observed cases', () => {
       company: company(),
       observedCase: caseDocument,
       batches: [{
+        id: 'batch-1', sha256: 'a'.repeat(64), byteSize: 123, layout: 'xlsx-operacoes/1.0.0',
+        counts: { total: 1, valid: 1, invalid: 0 },
         caseId: caseDocument.id,
         batchSequence: 1,
         ownerSub: OWNER_SUB,
         companyId: caseDocument.companyId,
       }],
       events: [{
+        id: 'event-1', occurredAt: FIXTURE_NOW, kind: 'BATCH_IMPORTED', path: 'batches/batch-1', audit: null,
         caseId: caseDocument.id,
         eventSequence: 1,
         ownerSub: OWNER_SUB,
@@ -477,6 +511,7 @@ describe('observed cases', () => {
       observedCase: observedCase(),
       batches: [],
       events: [{
+        id: 'event-1', occurredAt: FIXTURE_NOW, kind: 'BATCH_IMPORTED' as const, path: 'batches/batch-1', audit: null,
         caseId: 'case-1',
         eventSequence: 1,
         ownerSub: OWNER_SUB,
@@ -867,6 +902,107 @@ describe('studies', () => {
 });
 
 describe('lifecycle', () => {
+  it.each(['orders', 'aliases', 'warnings', 'blockers', 'provenance', 'inputs', 'totals', 'files', 'corrections', 'metrics', 'batches', 'events'])('rejects named raw properties on %s arrays before opening the database', async (location) => {
+    const document = observedCase();
+    const mutation = { expectedRevision: 0, operationId: 'array-extra', company: company(), observedCase: document, batches: [], events: [] };
+    const derived = { kind: 'DERIVED' as const, source: 'fixture', version: '1', recordedAt: FIXTURE_NOW, rule: 'sum', inputs: [] as string[] };
+    if (location === 'inputs') (document as DeepMutable<ObservedCase>).controlTotals[0]!.provenance = derived;
+    const arrays: Record<string, readonly unknown[]> = {
+      orders: document.orders, aliases: mutation.company.aliases, warnings: document.quality.warnings,
+      blockers: document.quality.blockers, provenance: document.orders[0]!.provenance, inputs: derived.inputs,
+      totals: document.controlTotals, files: document.sourceManifest.files, corrections: document.corrections,
+      metrics: document.observedOutcome!.metrics, batches: mutation.batches, events: mutation.events,
+    };
+    Object.assign(arrays[location]!, { raw: 'PRIVATE ARRAY SOURCE' });
+    await expect(repository().confirmObservedCase(mutation)).rejects.toBeInstanceOf(InvalidDocumentError);
+    expect(await indexedDB.databases()).toEqual([]);
+  });
+
+  it.each([
+    { kind: 'BATCH_IMPORTED', path: 'raw/PRIVATE', audit: null },
+    { kind: 'BATCH_REVERTED', path: 'versions/version-1', audit: null },
+    { kind: 'CONFLICT_RESOLVED', path: 'raw/PRIVATE', audit: null },
+    { kind: 'CLIENT_ALIAS_ASSOCIATED', path: 'raw/PRIVATE', audit: null },
+    { kind: 'OPERATION_EXCLUDED', path: 'orders/../PRIVATE', audit: null },
+    { kind: 'OPERATION_EXCLUDED', path: 'orders/%2E%2E/PRIVATE', audit: null },
+    { kind: 'OPERATION_EXCLUDED', path: 'orders/%2e%2e', audit: null },
+    { kind: 'OPERATION_RESTORED', path: 'raw/PRIVATE', audit: null },
+    { kind: 'OPERATION_CORRECTED', path: 'versions/version-1/rawValue', audit: { originalValue: null, previousValue: null, nextValue: 'PRIVATE' } },
+    { kind: 'OPERATION_CORRECTED', path: 'versions/version-1/direction', audit: { originalValue: 'PRIVATE', previousValue: null, nextValue: 'OUT' } },
+    { kind: 'OPERATION_CORRECTED', path: 'versions/version-1/valueBrl', audit: { originalValue: '100,50', previousValue: null, nextValue: '100.5' } },
+    { kind: 'OPERATION_CORRECTED', path: 'versions/version-1/knownDate', audit: { originalValue: '2026-02-30', previousValue: null, nextValue: '2026-02-28' } },
+    { kind: 'OPERATION_CORRECTED', path: 'versions/version-1/purposeCode', audit: { originalValue: ' PRIVATE ', previousValue: null, nextValue: 'CODE' } },
+  ])('rejects noncanonical $kind path/audit before opening the database', async (invalid) => {
+    const document = observedCase();
+    const mutation = {
+      expectedRevision: 0, operationId: 'invalid-audit', company: company(), observedCase: document,
+      batches: [], events: [{ id: 'event-1', caseId: document.id, companyId: document.companyId, ownerSub: OWNER_SUB,
+        eventSequence: 1, occurredAt: FIXTURE_NOW, ...invalid }],
+    } as Parameters<IndexedDbApplicationRepository['confirmObservedCase']>[0];
+    await expect(repository().confirmObservedCase(mutation)).rejects.toBeInstanceOf(InvalidDocumentError);
+    expect(await indexedDB.databases()).toEqual([]);
+  });
+
+  it('does not overwrite a newer company while confirming a different case from a stale snapshot', async () => {
+    const target = repository();
+    const latest = { ...company(), displayName: 'Empresa atualizada', revision: 2 };
+    await target.confirmObservedCase({ expectedRevision: 0, operationId: 'new-company', company: latest,
+      observedCase: observedCase(), batches: [], events: [] });
+    await expect(target.confirmObservedCase({ expectedRevision: 0, operationId: 'stale-company', company: company(),
+      observedCase: observedCase({ id: 'another-case' }), batches: [], events: [] })).rejects.toBeInstanceOf(RevisionConflictError);
+    expect(await target.listCompanies()).toEqual([latest]);
+    expect(await target.getObservedCase('another-case')).toBeNull();
+  });
+
+  it('rejects conflicting company content at the same revision and keeps the case unpublished', async () => {
+    const target = repository();
+    await target.confirmObservedCase({ expectedRevision: 0, operationId: 'first-company', company: company(),
+      observedCase: observedCase(), batches: [], events: [] });
+    await expect(target.confirmObservedCase({ expectedRevision: 0, operationId: 'conflicting-company', company: { ...company(), displayName: 'Conflicting' },
+      observedCase: observedCase({ id: 'conflicting-case' }), batches: [], events: [] })).rejects.toBeInstanceOf(OperationConflictError);
+    expect(await target.listCompanies()).toEqual([company()]);
+    expect(await target.getObservedCase('conflicting-case')).toBeNull();
+  });
+
+  it.each([new ArrayBuffer(8), new Uint8Array(8), new DataView(new ArrayBuffer(8))])('rejects binary buffers before database creation', async (binary) => {
+    await expect(repository().confirmObservedCase({
+      expectedRevision: 0, operationId: 'buffer', company: company(),
+      observedCase: observedCase(), batches: [], events: [], binary,
+    } as Parameters<IndexedDbApplicationRepository['confirmObservedCase']>[0]))
+      .rejects.toBeInstanceOf(BinaryDataNotAllowedError);
+    expect(await indexedDB.databases()).toEqual([]);
+  });
+
+  it('rejects raw extra properties in import metadata before opening a database', async () => {
+    const document = observedCase();
+    await expect(repository().confirmObservedCase({
+      expectedRevision: 0, operationId: 'raw', company: company(), observedCase: document,
+      batches: [{ caseId: document.id, batchSequence: 1, ownerSub: OWNER_SUB, companyId: document.companyId,
+        id: 'batch-1', sha256: 'a'.repeat(64), byteSize: 123, layout: 'xlsx-operacoes/1.0.0', counts: { total: 1, valid: 1, invalid: 0 }, raw: 'PRIVATE RAW CELL' }], events: [],
+    } as unknown as Parameters<IndexedDbApplicationRepository['confirmObservedCase']>[0])).rejects.toBeInstanceOf(InvalidDocumentError);
+    expect(await indexedDB.databases()).toEqual([]);
+  });
+
+  it('snapshots a validated confirmation before asynchronous database opening', async () => {
+    const document = observedCase();
+    const mutation = { expectedRevision: 0, operationId: 'snapshot', company: company(), observedCase: document, batches: [], events: [] };
+    const promise = repository().confirmObservedCase(mutation);
+    mutation.company = { ...company(), displayName: 'MUTATED AFTER VALIDATION' };
+    (document as DeepMutable<ObservedCase>).orders[0]!.valueBrl = '999';
+    const stored = await promise;
+    expect(stored.orders[0]!.valueBrl).toBe('100');
+    expect(await repository().listCompanies()).toEqual([company()]);
+  });
+
+  it('rejects non-scalar company aliases before database creation', async () => {
+    await expect(repository().confirmObservedCase({
+      expectedRevision: 0, operationId: 'raw-company',
+      company: { ...company(), aliases: [{ raw: 'PRIVATE CELL' }] },
+      observedCase: observedCase(), batches: [], events: [],
+    } as unknown as Parameters<IndexedDbApplicationRepository['confirmObservedCase']>[0])).rejects.toBeInstanceOf(InvalidDocumentError);
+    expect(await indexedDB.databases()).toEqual([]);
+  });
+
   it('closes on logout without deleting data', async () => {
     const first = repository();
     const original = await study();
@@ -881,7 +1017,7 @@ describe('lifecycle', () => {
   it('closes the repository connection on versionchange', async () => {
     const target = repository();
     await target.listCompanies();
-    const upgrade = indexedDB.open(DATABASE_NAME, 3);
+    const upgrade = indexedDB.open(DATABASE_NAME, 4);
     const upgraded = await new Promise<IDBDatabase>((resolve, reject) => {
       upgrade.onerror = () => reject(upgrade.error);
       upgrade.onsuccess = () => resolve(upgrade.result);

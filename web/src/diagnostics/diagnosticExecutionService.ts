@@ -89,6 +89,7 @@ export async function executeStudyDiagnostic(
     let reservation = activeReservation(study, options.scenarioId);
     let reservedStudy = study;
     if (reservation === null) {
+      if (!sessionIsCurrent(options.authority, ownerSub, epoch, signal)) return null;
       fallbackAttemptId = nextId();
       const request = await options.buildRequest({
         study,
@@ -259,6 +260,7 @@ export async function retryStudyDiagnostic(
       || original.jobId === null) {
       throw new Error('Execução diagnóstica não pode ser repetida.');
     }
+    if (!sessionIsCurrent(options.authority, ownerSub, epoch, signal)) return null;
     const attemptId = nextId();
     const request = {
       ...structuredClone(original.requestSnapshot),

@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
@@ -16,6 +17,7 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
         frozen=True,
+        hide_input_in_errors=True,
     )
 
     app_env: Literal["development", "test", "production"] = "development"
@@ -29,6 +31,11 @@ class Settings(BaseSettings):
     diagnostic_max_jobs_per_user: int = Field(default=3, ge=1)
     diagnostic_max_jobs_global: int = Field(default=32, ge=1)
     diagnostic_retention_seconds: int = Field(default=86400, ge=1)
+    chat_enabled: bool = False
+    openai_api_key: SecretStr | None = Field(default=None, repr=False, exclude=True)
+    openai_chat_model: str | None = None
+    openai_chat_timeout_seconds: float = Field(default=30, gt=0, allow_inf_nan=False)
+    openai_chat_max_output_tokens: int = Field(default=2048, ge=1, le=4096)
 
     @field_validator("supabase_allowed_user_ids", mode="before")
     @classmethod
@@ -44,8 +51,32 @@ class Settings(BaseSettings):
             raise ValueError("URL deve usar https e não terminar com barra")
         return value
 
+    @field_validator("supabase_url")
+    @classmethod
+    def validate_supabase_origin(cls, value: str) -> str:
+        # A URL pública também entra na CSP: aceite somente uma origem HTTPS,
+        # sem credenciais, paths, curingas ou caracteres de sintaxe do cabeçalho.
+        match = re.fullmatch(r"https://([A-Za-z0-9.-]+)(?::([0-9]{1,5}))?", value)
+        message = "SUPABASE_URL deve ser uma origem HTTPS válida, sem credenciais ou caminho"
+        if match is None:
+            raise ValueError(message)
+        hostname, port = match.groups()
+        if len(hostname) > 253 or any(
+            re.fullmatch(r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?", label) is None
+            for label in hostname.split(".")
+        ):
+            raise ValueError(message)
+        if port is not None and not 1 <= int(port) <= 65535:
+            raise ValueError(message)
+        return value
+
     @model_validator(mode="after")
     def validate_relationships(self) -> Settings:
+        if self.chat_enabled:
+            if self.openai_api_key is None or not self.openai_api_key.get_secret_value().strip():
+                raise ValueError("OPENAI_API_KEY é obrigatória quando CHAT_ENABLED=true")
+            if self.openai_chat_model is None or not self.openai_chat_model.strip():
+                raise ValueError("OPENAI_CHAT_MODEL é obrigatório quando CHAT_ENABLED=true")
         expected_issuer = f"{self.supabase_url}/auth/v1"
         if self.supabase_jwt_issuer != expected_issuer:
             raise ValueError(

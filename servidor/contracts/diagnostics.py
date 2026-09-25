@@ -307,12 +307,18 @@ class ResidualBreakdown(StrictModel):
     value_brl: DecimalText
 
 
+class PurposeResidualBreakdown(StrictModel):
+    key: Annotated[str, Field(strict=True, min_length=1, max_length=128)] | None
+    direction: Literal["OUT", "IN"]
+    value_brl: DecimalText
+
+
 class CrossBorderResidualAxis(StrictModel):
     remitted_brl: EvidenceMetric
     out_brl: EvidenceMetric
     in_brl: EvidenceMetric
     by_day: Annotated[list[ResidualBreakdown], Field(max_length=731)]
-    by_purpose: Annotated[list[ResidualBreakdown], Field(max_length=200)]
+    by_purpose: Annotated[list[PurposeResidualBreakdown], Field(max_length=200)]
 
 
 class ParticipantShare(StrictModel):

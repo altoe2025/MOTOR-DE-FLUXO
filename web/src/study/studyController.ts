@@ -1,6 +1,9 @@
 import type { ApplicationRepository } from '../storage/applicationRepository';
+import { installDemoStudy, type DemoPackageLoader } from '../demo/installDemoStudy';
 import { RevisionConflictError } from '../storage/errors';
 import type { CompanyRecord, ObservedCase } from '../cases/domain';
+import type { ImportReview } from '../importer/eligibility';
+import { confirmImport } from '../importer/publisher';
 import type { OperationalProfileVersion } from '../profiles/domain';
 import { attachOperationalProfileEvidence } from './domain';
 import type { StudyDocument, StudyDocumentV3 } from './model';
@@ -53,6 +56,7 @@ export type StudyControllerOptions = Readonly<{
   now?: () => string;
   autosaveDelayMs?: number;
   channelScope?: string;
+  demoPackageLoader?: DemoPackageLoader;
 }>;
 
 type PendingSave = Readonly<{
@@ -118,6 +122,7 @@ export class StudyController {
   readonly #now: () => string;
   readonly #autosaveDelayMs: number;
   readonly #channelScope: string;
+  readonly #demoPackageLoader: DemoPackageLoader | undefined;
   readonly #listeners = new Set<() => void>();
   readonly #abortControllers = new Set<AbortController>();
   readonly #pending: PendingSave[] = [];
@@ -156,6 +161,7 @@ export class StudyController {
     this.#now = options.now ?? (() => new Date().toISOString());
     this.#autosaveDelayMs = options.autosaveDelayMs ?? 250;
     this.#channelScope = options.channelScope ?? 'default';
+    this.#demoPackageLoader = options.demoPackageLoader;
   }
 
   get snapshot(): StudyControllerSnapshot {
@@ -209,7 +215,52 @@ export class StudyController {
     this.#repository = repository;
     this.#channel = channel;
     channel?.addEventListener('message', this.#onChannelMessage);
-    return epoch;
+    // A storage failure is shown in the ready UI, rather than blocking authentication.
+    await this.#installDemo('FIRST_EMPTY_SESSION').catch(() => undefined);
+    return this.#snapshot.sessionEpoch;
+  }
+
+  async restoreDemoStudy(): Promise<StudyDocument | null> {
+    this.#assertOpen();
+    return this.#installDemo('EXPLICIT_RESTORE');
+  }
+
+  async demoInstallationStatus(): Promise<'INSTALLED' | 'REMOVED' | null> {
+    this.#assertOpen();
+    const { repository, epoch } = this.#session();
+    const status = await repository.getDemoInstallationStatus();
+    if (!this.#isCurrent(repository, epoch)) throw new StudyControllerSessionError();
+    return status;
+  }
+
+  async #installDemo(mode: 'FIRST_EMPTY_SESSION' | 'EXPLICIT_RESTORE'): Promise<StudyDocument | null> {
+    const { repository, epoch } = this.#session();
+    const selectionEpoch = this.#selectionEpoch;
+    const selectedDocument = this.#snapshot.document;
+    const operationId = this.#operationId;
+    try {
+      const installed = await this.runForCurrentSession(({ signal }) => installDemoStudy({
+        repository, mode, operationId, signal,
+        ...(this.#demoPackageLoader === undefined ? {} : { loadPackage: this.#demoPackageLoader }),
+      }));
+      if (!this.#isCurrent(repository, epoch, selectionEpoch)
+        || this.#snapshot.document !== selectedDocument || this.#pending.length > 0) return null;
+      if (installed !== null && mode === 'EXPLICIT_RESTORE') {
+        this.#pending.splice(0);
+        this.#cancelAutosave();
+        this.#selectionEpoch += 1;
+        this.#persistedRevision = installed.revision;
+        this.#publish({ ...this.#snapshot, status: 'SAVED', document: installed, error: null });
+      } else if (installed !== null) {
+        this.#publish({ ...this.#snapshot, error: null });
+      }
+      return installed;
+    } catch (error) {
+      if (!this.#isCurrent(repository, epoch, selectionEpoch)
+        || this.#snapshot.document !== selectedDocument) return null;
+      this.#publish({ ...this.#snapshot, status: 'STORAGE_FAILURE', error });
+      throw error;
+    }
   }
 
   async loadStudy(id: string): Promise<StudyDocument | null> {
@@ -268,6 +319,24 @@ export class StudyController {
     const { repository, epoch } = this.#session();
     const companies = await repository.listCompanies();
     return this.#isCurrent(repository, epoch) ? companies : [];
+  }
+
+  async deleteCompany(id: string): Promise<void> {
+    this.#assertOpen();
+    const { repository } = this.#session();
+    if (repository.deleteCompany === undefined) throw new Error('Exclusão de empresa indisponível neste armazenamento.');
+    await repository.deleteCompany(id);
+  }
+
+  async confirmImportedCase(review: ImportReview, operationId: string): Promise<ObservedCase> {
+    this.#assertOpen();
+    const { repository, epoch } = this.#session();
+    if (review.draft.ownerSub !== this.#snapshot.ownerSub || review.company?.ownerSub !== this.#snapshot.ownerSub) {
+      throw new StudyControllerSessionError();
+    }
+    const result = await confirmImport(review, repository, operationId);
+    if (!this.#isCurrent(repository, epoch)) throw new StudyControllerSessionError();
+    return result;
   }
 
   async listOperationalProfileVersions(companyId?: string): Promise<OperationalProfileVersion[]> {

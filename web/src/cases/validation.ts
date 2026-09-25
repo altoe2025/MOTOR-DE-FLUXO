@@ -1,5 +1,5 @@
-import Ajv2020, { type ErrorObject, type ValidateFunction } from 'ajv/dist/2020.js';
-import addFormats from 'ajv-formats';
+import type { ErrorObject } from 'ajv';
+import { validateSchema, validateDraftSchema } from '../generated/validators/cases.js';
 import Decimal from 'decimal.js';
 
 import type {
@@ -8,17 +8,8 @@ import type {
   ObservedCase,
   ObservedCaseDraft,
 } from './domain';
-import observedCaseSchema from './observedCase.schema.json';
 
 const ContractDecimal = Decimal.clone({ precision: 40 });
-const ajv = new Ajv2020({ allErrors: true, strict: true });
-addFormats(ajv);
-
-const validateSchema: ValidateFunction<ObservedCase> = ajv.compile(observedCaseSchema);
-const validateDraftSchema: ValidateFunction<ObservedCaseDraft> = ajv.compile({
-  $ref: `${observedCaseSchema.$id}#/$defs/ObservedCaseDraft`,
-});
-
 function schemaIssue(error: ErrorObject): CaseValidationIssue {
   return {
     path: error.instancePath === '' ? '/' : error.instancePath,

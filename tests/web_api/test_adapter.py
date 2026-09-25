@@ -126,6 +126,15 @@ def test_previa_de_uma_direcao_remete_todo_o_volume(reference_payload, fixed_ids
     assert agregado.volume_remetido_periodo_brl == Decimal(10800000)
 
 
+def test_adapter_preserva_finalidade_nula_ate_a_execucao(reference_payload, fixed_ids):
+    reference_payload["cenario"]["ordens"][0]["finalidade"] = None
+    reference_payload["proveniencia"]["/ordens/0/finalidade"]["tipo"] = "NAO_COLETADO"
+    request = PreviaRequest.model_validate(reference_payload)
+    assert construir_cenario(request.cenario).ordens[0].finalidade is None
+    envelope = executar_previa(request, build_sha=BUILD_SHA, relogio=lambda: NOW)
+    assert envelope.input_snapshot.cenario.ordens[0].finalidade is None
+
+
 def test_previa_balanceada_casa_as_duas_pernas(reference_payload, fixed_ids):
     ordens = reference_payload["cenario"]["ordens"][:2]
     ordens[1]["valor_brl"] = ordens[0]["valor_brl"]

@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { expectCanonicalPreview, persistedPreviews } from './helpers/persistedPreview';
 
 test('synthetic and manual portfolios use the preparation service and persist after reload', async ({ page }) => {
   const preparations: string[] = [];
@@ -16,11 +17,12 @@ test('synthetic and manual portfolios use the preparation service and persist af
   await expect.poll(() => page.evaluate((id) => window.__MOTOR_E2E__!.studySource(id), studyId))
     .toBe('SYNTHETIC:exportadores');
   await page.getByRole('button', { name: 'Executar cenário atual' }).click();
-  await expect(page.getByRole('heading', { name: 'Resultado do motor' })).toBeVisible({ timeout: 30_000 });
+  const synthetic = await expectCanonicalPreview(page, studyId);
+  expect(synthetic.sourceSnapshot?.source).toMatchObject({ kind: 'SYNTHETIC', recipe: { exampleId: 'exportadores' } });
   await page.reload();
   await expect(page.getByRole('radio', { name: 'Exemplo sintético' })).toBeChecked();
   await expect(page.getByLabel('Escolha do exemplo sintético')).toHaveValue('exportadores');
-  await expect(page.getByRole('heading', { name: 'Resultado do motor' })).toBeVisible();
+  expect(await persistedPreviews(page, studyId)).toEqual([synthetic]);
 
   await page.getByRole('radio', { name: 'Autoria manual' }).check();
   await page.getByLabel('Nome do grupo').fill('Nome local que não cruza a rede');
@@ -28,10 +30,13 @@ test('synthetic and manual portfolios use the preparation service and persist af
   await expect.poll(() => page.evaluate((id) => window.__MOTOR_E2E__!.studySource(id), studyId))
     .toBe('AUTHORED');
   await page.getByRole('button', { name: 'Executar cenário atual' }).click();
-  await expect(page.getByRole('button', { name: /Abrir execução/ })).toHaveCount(2, { timeout: 30_000 });
+  await expect.poll(async () => (await persistedPreviews(page, studyId)).length).toBe(2);
+  const authored = await expectCanonicalPreview(page, studyId, 2);
+  expect(authored.sourceSnapshot?.source.kind).toBe('AUTHORED');
   await page.reload();
   await expect(page.getByRole('radio', { name: 'Autoria manual' })).toBeChecked();
-  await expect(page.getByRole('button', { name: /Abrir execução/ })).toHaveCount(2);
+  expect(await persistedPreviews(page, studyId)).toEqual([synthetic, authored]);
+  await expect.poll(async () => (await persistedPreviews(page, studyId)).length).toBe(2);
 
   expect(preparations.length).toBeGreaterThanOrEqual(3);
   expect(preparations.every((body) => !body.includes('Nome local que não cruza a rede'))).toBe(true);

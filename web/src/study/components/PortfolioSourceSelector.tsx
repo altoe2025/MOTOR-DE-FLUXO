@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 
 import type { PreparationRequest } from '../../api/client';
 import type { CompanyRecord, FieldProvenance, ObservedCase } from '../../cases/domain';
+import { normalizePurposeCode } from '../../importer/normalization';
 import { Button } from '../../ui/Button';
 import { TextField } from '../../ui/TextField';
 import { authoredDefinitionFromObservedCase } from '../../preparation/resolvePortfolioSource';
@@ -191,13 +192,14 @@ function ExplicitOrdersForm({
   };
   const submit = () => {
     try {
+      const normalizedOrders = orders.map((order) => ({ ...order, finalidade: normalizePurposeCode(order.finalidade) }));
       const actionId = uuid();
       const recordedAt = new Date().toISOString();
       const corrected = (): FieldProvenance => ({
         kind: 'USER_CORRECTED', source: 'autoria manual', version: '1.0.0',
         actionId, recordedAt,
       });
-      const provenanceByOrder = Object.fromEntries(orders.map((order, index) => {
+      const provenanceByOrder = Object.fromEntries(normalizedOrders.map((order, index) => {
         const original = definition.orders[index];
         if (original === undefined) throw new Error(`Operação original ausente para ${order.id}.`);
         const provenance = definition.provenanceByOrder[original.id];
@@ -213,7 +215,7 @@ function ExplicitOrdersForm({
         if (order.valor_brl !== original.valor_brl) next.valor_brl = corrected();
         return [order.id, next];
       }));
-      orders.forEach((order) => {
+      normalizedOrders.forEach((order) => {
         decimal(order.valor_brl, `Valor BRL da operação ${order.id}`);
         if (!Number.isSafeInteger(order.dia_conhecida)
           || !Number.isSafeInteger(order.dia_limite)
@@ -227,7 +229,7 @@ function ExplicitOrdersForm({
         authoredPortfolioId,
         definition: {
           ...definition,
-          orders: structuredClone(orders),
+          orders: structuredClone(normalizedOrders),
           provenanceByOrder,
         },
       });
@@ -246,7 +248,7 @@ function ExplicitOrdersForm({
       <TextField id={`explicit-known-${index}`} label={`Dia conhecido da operação ${definition.orders[index]!.id}`} value={String(order.dia_conhecida)} inputMode="numeric" onChange={(event) => change(index, { dia_conhecida: Number(event.currentTarget.value) })} />
       <TextField id={`explicit-deadline-${index}`} label={`Dia limite da operação ${definition.orders[index]!.id}`} value={String(order.dia_limite)} inputMode="numeric" onChange={(event) => change(index, { dia_limite: Number(event.currentTarget.value) })} />
       <TextField id={`explicit-value-${index}`} label={`Valor BRL da operação ${definition.orders[index]!.id}`} value={order.valor_brl} inputMode="decimal" onChange={(event) => change(index, { valor_brl: event.currentTarget.value })} />
-      <TextField id={`explicit-purpose-${index}`} label={`Finalidade da operação ${definition.orders[index]!.id}`} value={order.finalidade} onChange={(event) => change(index, { finalidade: event.currentTarget.value })} />
+      <TextField id={`explicit-purpose-${index}`} label={`Finalidade da operação ${definition.orders[index]!.id}`} value={order.finalidade ?? ''} onChange={(event) => change(index, { finalidade: event.currentTarget.value === '' ? null : event.currentTarget.value })} />
       <label><input type="checkbox" checked={order.eh_efx} onChange={(event) => change(index, { eh_efx: event.currentTarget.checked })} /> EFX da operação {definition.orders[index]!.id}</label>
     </fieldset>)}
     <Button onClick={submit}>Salvar operações explícitas</Button>

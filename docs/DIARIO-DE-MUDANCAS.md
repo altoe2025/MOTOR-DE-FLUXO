@@ -33,11 +33,11 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-09-21, durante a integração do MVP da Etapa 4 com a correção
-decimal vigente para iniciar a Evolução B.
+Atualizada em 2026-09-25, durante a consolidação das Etapas 5 e 6.
 
 | Branch | Situação | Dono |
 |---|---|---|
+| `codex/integracao-etapas-5-6` | Consolida `feat/bancada-exploracao` e `codex/finalidade-verificacao`, incluindo histórico de `origin/main`; publicação/CI em preparação, sem deploy | Codex |
 | `main` | Autonetting preferencial e integração final incorporados até o PR #37 (`c2ad175`); grade histórica não regenerada | os dois |
 | `netting/p1` | spike do P1, **NÃO MERGEAR** — dominado, e agora sabemos que a folga é zero em N ≥ 50. Só local, nunca foi pro GitHub | Felipe |
 | `fix/semantica-remessa-p0` | PR #11, mergeada | Felipe |
@@ -66,11 +66,1876 @@ decimal vigente para iniciar a Evolução B.
 | `codex/frontend-etapa-3` | T0–T12 concluídos localmente; gate global verde em `57be689`; aceite técnico **PASS**; sem push/PR/merge | Codex |
 | `codex/etapa-4-mvp` | MVP e Evolução B aceitos localmente até MOT-85; sem push/PR/merge/deploy | Codex |
 | `codex/fix-reconciliacao-decimal` | correção da aritmética exata dos mecanismos da análise, pronta para merge na `main` | Codex |
+| `codex/frontend-etapa-5` | MOT-86–MOT-89 concluídas e aceitas localmente; Replay Fronteira Viva funcional até o limite efetivo medido; sem push/PR/merge/deploy | Codex |
+| `codex/frontend-etapa-6-planejamento` | Etapas 6A/6B e D1/D2 da MOT-96 concluídas localmente; 6C tem aceite local separado; sem push, PR, merge ou deploy | Codex |
+| `codex/mot97-validation-worker` | MOT-97: profiling e estabilização local por certificado efêmero + uma cedência; worker revertido; sem push, PR, merge ou deploy | Codex |
 
 Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+## 2026-09-25 — Compatibilidade dos E2Es históricos e navegação com zoom (MOT-99)
+
+1. **Sintoma.** A CI integral encontrou expectativas de blocos removidos da carteira/apresentação e transbordamento horizontal a 200% em três telas.
+2. **Causa.** A simplificação intencional de `c3a8e67` removeu resultado/conciliação/histórico visuais da carteira; o chat deixou de expor a antiga classe de contexto. O novo link “Quadro comparativo” não quebrava a palavra em colunas estreitas com a fonte Linux.
+3. **O que foi feito.** Os E2Es históricos passam a conferir a publicação real no IndexedDB: conservação decimal exata, economia, conciliação, identidade, histórico terminal e imutabilidade após reload. O contexto de chat da apresentação é conferido no request real e fingerprint da resposta. Navegação permite quebra de palavra sem alterar a estrutura desktop; transbordamento foi confirmado no trace Linux e reproduzido localmente com fonte larga. Asserções de zoom e tolerâncias permanecem ativas. Os seis casos de dados/chat passaram localmente; o restante é conferido pela CI do PR.
+4. **O que isso invalida.** Ficam superados somente seletores/expectativas de blocos deliberadamente removidos. Não foram restaurados blocos da UI antiga nem alterados cálculos, regras ou snapshots para encobrir falha de layout. O E2E de citação espera a seleção e a referência reidratadas antes do segundo envio: o trace registrou envio 28 ms após navegar, antes da publicação do contexto. Permanece uma limitação breve de UX: Enviar pode estar disponível durante essa recomposição e retornar erro local controlado; não há POST com contexto inválido. Não se aumentou timeout nem adicionou retry para ocultar a condição.
+
+## 2026-09-25 — Referências Linux revisadas no PR #56 (MOT-99)
+
+1. **Sintoma.** A comparação visual da CI não tinha baselines Linux.
+2. **Causa.** As sete referências anteriores tinham sido geradas somente no Windows.
+3. **O que foi feito.** Run `36099835253`, commit `dbb4097`, gerou sete PNG Linux com Playwright no Ubuntu. Todos foram inspecionados e copiados byte a byte, com SHA-256 conferido, para `stage6-visual.spec.ts-snapshots`. Workflow temporário removido; a CI normal continua comparando imagens, sem atualização automática. A primeira CI aprovou 1.203 testes Python (normal e otimizado); dois imports de testes foram ordenados pelo Ruff para liberar a etapa seguinte.
+4. **O que isso invalida.** Fica superada a ausência de referências Linux, não o requisito de aprovação da CI sobre elas. Nenhum deploy, alteração de pixels ou flexibilização de tolerância.
+
+## 2026-09-25 — Verificação da integração e referências visuais (MOT-99)
+
+1. **Sintoma.** O candidato integrado precisava verificar regressões do novo chat/quadro e ainda não possuía referências visuais Linux.
+2. **Causa.** A UI mudou após os baselines Windows; snapshots dependem da plataforma de renderização.
+3. **O que foi feito.** Typecheck/lint focal, 14 testes unitários focais e 31 casos E2E de chat/aceite/importação/diagnóstico passaram. A revisão do quadro/variações validou 9 casos; o lote assíncrono recebeu 3 testes de navegação/falha. Visual Windows passou 2/2, sete PNG foram inspecionados e o PDF manteve nove páginas. Build Docker e smoke passaram em `desktop-linux` (saúde, SPA, assets, auth, headers, nonroot, readonly e scanner); scanner local também passou. PR #56 aberto em rascunho. Workflow temporário gera referências Linux como artefato para revisão, sem aprovar nem substituir o gate visual normal; será removido após incorporar os PNG revisados.
+4. **O que isso invalida.** Docker deixa de ser bloqueio local. Referências Windows anteriores de importação, Estudos, chat e apresentação ficam superadas. CI integral e aceite Linux continuam separados dessas aprovações locais. Nenhum deploy foi feito.
+
+## 2026-09-25 — Consolidação das Etapas 5/6 e bancada de exploração (MOT-99)
+
+1. **Sintoma.** Replay, comunicação, chat, apresentação/PDF, Docker/Render declarativo e finalidade opcional estavam em branches locais; o trabalho final do Claude ainda não estava no GitHub.
+2. **Causa.** Desenvolvimento paralelo sem a integração final, com testes de navegador ainda ligados aos antigos botões e blocos técnicos.
+3. **O que foi feito.** Worktree isolada `codex/integracao-etapas-5-6`, juntando `feat/bancada-exploracao` (incluindo `dffc24b`, `c3a8e67`, `91c613b`) e `codex/finalidade-verificacao`, preservando `origin/main`. Mantidos quadro, alavancas e ORKE AI; restaurados aviso de fallback de IOF e acesso ao Painel no diagnóstico. A decomposição por empresa passa a usar a carteira efetivamente executada e a contabilizar espera por alocação; o quadro recusa resultados obsoletos e preserva a seleção no link. O lote de variações não atualiza outra tela após navegação. Testes E2E foram alinhados à UI simplificada, sem mudar regras do motor. Verificações finais e CI são registradas no PR; não se presume aceite Linux nem deploy a partir de teste Windows.
+4. **O que isso invalida.** Totais por empresa anteriores podiam omitir/redistribuir espera ou usar carteira gerada diferente. O rateio visual de spread/tarifa por volume remetido é uma decomposição de apresentação, não um novo rateio contratual implementado no motor. Diferenças entre original regenerado e variação fixa não isolam causalmente a alavanca. Nenhuma premissa regulatória, dado de negócio ou regra de simulação foi alterada. Deploy permanece não autorizado nesta consolidação.
+
+## 2026-09-25 — Baseline Windows da apresentação revisada para modo de IOF (MOT-99)
+
+1. **Sintoma.** O snapshot Windows do Painel A divergia: a baseline tinha 1280×9483 px e a tela estável passou a 1280×9516 px, com a alteração concentrada em Premissas e limitações.
+2. **Causa.** `presentation-local-win32.png`, criada antes de `IOF_APPLICATION_MODE`, não continha a apresentação do fallback por direção.
+3. **O que foi feito.** `stage6-visual.spec.ts` agora exige “IOF padrão por direção” dentro de “Premissas e proveniência” antes do screenshot. Foi regenerada e inspecionada somente `presentation-local-win32.png`; o visual focal passou (2/2) com `MOT_E2E_PYTHON`, assim como typecheck, lint e diff-check.
+4. **O que isso invalida.** Fica superada apenas a baseline Windows de apresentação sem o modo de IOF. Nenhum produto, CSS, tolerância visual, regra de negócio ou outra baseline foi alterado.
+
+## 2026-09-25 — Gates de PDF e baseline de importação estabilizados (MOT-99)
+
+1. **Sintoma.** O E2E do relatório A4 podia esgotar o timeout de 30 s no inspetor
+   de PDF e o snapshot Windows da importação divergia em 1.985 pixels, embora a
+   tela já exibisse o fallback de IOF por direção.
+2. **Causa.** Somente `stage6-presentation.spec.ts` ignorava
+   `MOT_E2E_PYTHON`, podendo escolher outro interpretador para o inspetor. A
+   baseline `import-local-win32.png` ainda registrava a mensagem histórica de
+   execução bloqueada, substituída intencionalmente pelo aviso de fallback.
+3. **O que foi feito.** O E2E de PDF agora resolve
+   `MOT_STAGE6_PDF_PYTHON`, `MOT_E2E_PYTHON` e o fallback nessa ordem, preserva o
+   timeout e publica código/sinal na próxima falha. A guarda visual exige o aviso
+   de fallback e proíbe “execução bloqueada”; somente
+   `import-local-win32.png` foi revisada. O E2E de apresentação passou com apenas
+   `MOT_E2E_PYTHON` (3/3), o renderizador Python passou (5/5), o visual focal
+   passou (2/2), assim como typecheck, lint e diff-check.
+4. **O que isso invalida.** Ficam superados o timeout atribuído ao conteúdo do
+   PDF e a baseline que aprovava o bloqueio de execução. Nenhum produto, CSS,
+   tolerância visual, regra de negócio ou baseline além da importação Windows foi
+   alterado.
+
+## 2026-09-24 — Contrato de chat do login separa sessão pública e autenticada (MOT-99)
+
+1. **Sintoma.** O gate unitário falhava de modo intermitente ao afirmar que
+   `/login` não mostrava o botão “Perguntar”, embora o mesmo teste isolado pudesse
+   passar.
+2. **Causa.** O caso fornecia sessão autenticada: `LoginPage` redireciona esse
+   estado para `/carteira`, que monta o `AppShell` e o chat global. A expectativa
+   tratava a URL inicial como se a tela pública de login permanecesse visível.
+3. **O que foi feito.** Em `web/src/app/router.test.tsx`, a ausência de chat em
+   `/login` passou a usar sessão nula e a confirmar o heading público. Um teste
+   distinto espera a navegação autenticada para `/carteira` e confirma o chat
+   global. Nenhum código de produto, rota ou contrato de autenticação foi alterado.
+4. **O que isso invalida.** Fica superada a expectativa de que `/login` sem
+   distinguir autenticação não possa montar chat. O contrato público continua sem
+   chat; uma sessão autenticada deve observar o shell protegido após o redirect.
+
+## 2026-09-24 — Vitest deixa o smoke gate de Render com seu runner próprio (MOT-99)
+
+1. **Sintoma.** O comando serial `test:unit` coletava
+   `scripts/render-smoke-gate.test.mjs` e terminava em `No test suite found`, apesar
+   de os 1.038 testes Vitest terem passado.
+2. **Causa.** O arquivo é um teste `node:test` destinado exclusivamente a
+   `node --test`, mas seu sufixo `*.test.mjs` também corresponde à coleta padrão do
+   Vitest e não constava nas exclusões da configuração.
+3. **O que foi feito.** `web/vite.config.ts` exclui exatamente
+   `scripts/render-smoke-gate.test.mjs`; `vite.config.test.ts` protege essa
+   separação. O teste focado passou (2/2), o gate dedicado de Render passou (4/4),
+   e typecheck, lint e diff-check passaram. A suíte unitária passou pela coleta e
+   executou 1.039 testes, mas terminou com bloqueador separado em
+   `src/app/router.test.tsx` (1 falha, 1.038 passes): em `/login`, o botão
+   “Perguntar” está presente apesar da expectativa de ausência. Esse teste não foi
+   alterado nesta correção.
+4. **O que isso invalida.** Fica superado o bloqueio de aceite causado por o Vitest
+   tentar executar o smoke gate do Render. A falha de rota é um bloqueador distinto;
+   nenhum aceite integral é promovido por esta mudança.
+
+## 2026-09-24 — Diagnóstico explica todo fallback de IOF (MOT-99, Task 5 fix 1)
+
+1. **Sintoma.** O Diagnóstico explicava IOF padrão somente para finalidade `null`,
+   omitindo ordens com finalidade textual sem regra ou com direção incompatível.
+2. **Causa.** O aviso verificava ausência de finalidade, em vez da existência de
+   combinação exata de finalidade e direção nas premissas selecionadas.
+3. **O que foi feito.** `StudyDiagnosticPage` passa as regras de IOF do
+   `premisesSnapshot` da execução selecionada a `SelectedExecution`. O aviso
+   aparece se qualquer ordem não tem par exato, incluindo carteira mista, e
+   desaparece quando todas têm regra específica. Testes RED/GREEN cobrem ausência,
+   texto sem regra, direção incompatível, mistura e todas específicas. A correção
+   não consulta catálogo nem altera cálculo, alíquotas ou contratos persistidos.
+4. **O que isso invalida.** A indicação anterior de fallback limitada a `null` e
+   o teste que esperava ausência do aviso para qualquer finalidade textual.
+   Nenhum resultado numérico é invalidado; esta é correção da explicação na UI.
+
+## 2026-09-24 — Aceite observado sem finalidade até PDF (MOT-99, Task 5)
+
+1. **Sintoma.** E2Es, ajuda e documentos de aceite ainda exigiam bloqueio do
+   Estudo importado por catálogo, contrariando a decisão de finalidade opcional.
+2. **Causa.** As expectativas anteriores sobreviveram às Tasks 1–4; o Diagnóstico
+   também não explicava o fallback nas ordens sem finalidade do snapshot.
+3. **O que foi feito.** Na branch `codex/frontend-etapa-6-planejamento`, três
+   E2Es usam XLSX de sete headers, sem finalidade, e aceitam prévia/diagnóstico,
+   autoria descendente e restauração demo. O transversal chega a Replay, Painel A
+   e PDF A4 de sete páginas, conferindo rótulo de IOF, métricas e fingerprint.
+   Ajuda, arquitetura, especificações, mapas, operação e matrizes foram alinhados;
+   o Diagnóstico ganhou explicação mínima das ordens com finalidade `null`.
+   RED/GREEN da ajuda e Diagnóstico; gate focado **4/4 E2Es**, ajuda HTTP **9/9**,
+   web **12/12** e regressão ampliada **17/17 E2Es** passaram, assim como
+   typecheck, lint, Ruff focado e diff-check. Não houve push, PR, merge ou deploy.
+4. **O que isso invalida.** Fica superado o gate histórico `NAO_CONFIGURADO`:
+   finalidade ausente ou sem par exato não impede executar premissas persistidas,
+   que usam IOF padrão por direção. `importacao.v1.json` continua vazio e não
+   configurado, sem classificação inventada ou alteração de alíquotas. As entradas
+   anteriores permanecem históricas. Linux/Docker/publicação seguem gates próprios;
+   o aceite local integral não se torna PASS por esse resultado.
+
+## 2026-09-24 — Célula H2 sem header não vira finalidade (MOT-90, Task 2 fix)
+
+1. **Sintoma.** Um XLSX com os sete headers obrigatórios e H1 ausente podia conter
+   texto em H2; o parser absorvia esse texto como `finalidade_codigo` observada.
+2. **Causa.** O preflight aceitava corretamente o layout de sete colunas, mas a
+   serialização sempre lia a oitava célula, sem verificar se H1 declarava a coluna.
+3. **O que foi feito.** Na branch `codex/finalidade-importador`, o parser só lê H2
+   como finalidade quando H1 contém `finalidade_codigo`. Sem esse header, a chave
+   canônica é `null`; um teste OOXML cobre o caso e preserva o layout de oito colunas.
+4. **O que isso invalida.** Texto fora de uma coluna declarada deixa de adquirir
+   proveniência de finalidade observada por posição.
+
+## 2026-09-24 — XLSX e Caso Observado aceitam finalidade ausente (MOT-90, Task 2)
+
+1. **Sintoma.** O XLSX sem `finalidade_codigo` falhava no preflight; com a coluna
+   vazia, a revisão emitia `PURPOSE_MISSING` e a conversão para Estudo recusava a ordem.
+2. **Causa.** O layout exigia oito headers, a validação gerava erro para finalidade
+   ausente e o resolvedor de carteira rejeitava `purposeCode: null`.
+3. **O que foi feito.** Na branch `codex/finalidade-importador`, os sete headers
+   operacionais permanecem obrigatórios e a finalidade é aceita somente como oitava
+   coluna opcional. Ausência e célula vazia viram `null`, sem erro ou warning de
+   finalidade. A proveniência `NOT_COLLECTED` e o `null` seguem para o snapshot;
+   o editor de ordens explícitas mostra vazio e salva `null` ou texto validado.
+   Testes do parser, validação, revisão, snapshot e editor cobrem o percurso.
+4. **O que isso invalida.** A afirmação de que o layout exige oito colunas e de que
+   uma finalidade ausente torna o Caso inelegível ou impede converter a ordem para
+   Estudo. O gate de execução por catálogo é tratado pelas tasks seguintes.
+## 2026-09-24 — Catálogo informativo sem gate de execução (MOT-90, Task 3)
+
+1. **Sintoma.** Estudos descendentes de XLSX com premissas persistidas eram
+   impedidos de executar prévia, diagnóstico/retry ou abrir Replay e Apresentação
+   quando o catálogo estava ausente, indisponível ou sem o par finalidade/direção.
+2. **Causa.** Um gate de catálogo condicionava o uso de snapshots reproduzíveis
+   a uma consulta externa, embora os custos já estivessem no cenário salvo.
+3. **O que foi feito.** Na branch `codex/finalidade-execucao`, os quatro
+   consumidores deixam de consultar o catálogo para autorizar execução. O módulo
+   de gate e seu teste foram removidos, junto com opções e imports dos chamadores.
+   A importação passa a informar `hasPurposeRules` pela presença de finalidades
+   e exibe aviso de IOF padrão por direção sem impedir confirmar o Caso.
+   Testes RED/GREEN cobrem os serviços, retry, Replay, Apresentação e revisão.
+4. **O que isso invalida.** Catálogo não configurado ou indisponível deixa de
+   significar execução bloqueada. Validação de snapshots, autenticação, identidade
+   e persistência continuam vigentes; esta task não altera parser ou contratos.
+## 2026-09-24 — Comunicação distingue IOF específico e fallback (MOT-90, Task 4)
+
+1. **Sintoma.** O documento de comunicação listava premissas de IOF, mas não dizia
+   se a carteira da execução usou pares específicos, fallback por direção ou ambos;
+   no diagnóstico, uma finalidade `null` aparecia como célula vazia.
+2. **Causa.** A projeção não classificava as ordens por par exato
+   `(finalidade, direção)`, e a tabela de resíduo imprimia a chave nula sem rótulo.
+3. **O que foi feito.** Na branch `codex/finalidade-comunicacao`, o fato
+   `IOF_APPLICATION_MODE` passou a refletir exclusivamente ordens e regras do
+   snapshot da execução selecionada. Duas evidências canônicas compactas
+   apontam para a tabela de regras e o fingerprint da entrada. Com o Estudo
+   fornecido, o validador recompõe o modo e rejeita adulteração; sem o Estudo,
+   valida enum, referências e fingerprint documental. A apresentação traduz os
+   três modos e informa que são
+   premissas da simulação, sem cotação. O diagnóstico mostra "Finalidade não
+   coletada" somente na UI, mantendo `null` nos dados. O contrato Python de
+   `CommunicationDocumentV1` reconhece esse único fato derivado mediante enum
+   e as duas evidências canônicas esperadas, preservando igualdade literal para
+   todos os outros fatos; `ChatRequestV1` aceita o documento completo. Direção
+   não textual dentro da tabela de evidência é rejeitada como erro de validação,
+   inclusive quando vier como lista ou objeto JSON, sem `TypeError` no chat.
+4. **O que isso invalida.** O documento anterior não permitia concluir qual regra
+   de IOF foi aplicável à carteira. Nenhuma alíquota, custo ou resultado numérico
+   mudou; o fato descreve a regra por ordem, não atribui custo por cliente.
+
+## 2026-09-24 — Núcleo aceita finalidade ausente (MOT-90, Task 1)
+
+1. **Sintoma.** Um cenário com `finalidade: null` era carregado como a string
+   `"None"`, e requests HTTP e a quebra de resíduo por finalidade rejeitavam `null`.
+2. **Causa.** O loader convertia toda finalidade com `str`, e os contratos de ordem
+   e de diagnóstico exigiam texto mesmo quando a regra de IOF por direção já
+   oferecia fallback.
+3. **O que foi feito.** Na branch `codex/frontend-etapa-6-planejamento`, o domínio,
+   o custo, os contratos de entrada e o diagnóstico passaram a preservar a ausência
+   explícita. Proveniência `NAO_COLETADO` é aceita em finalidade somente quando o
+   valor é `null`. OpenAPI e validators foram regenerados; testes de YAML, request,
+   adaptador, identidade, custo e diagnóstico cobrem o caminho.
+4. **O que isso invalida.** A exigência de finalidade textual em toda ordem e em
+   todo item de `by_purpose` deixa de valer. Regras específicas de IOF continuam
+   exigindo finalidade textual, e `by_day` continua com chave textual. A execução
+   importada ainda depende das mudanças de fluxo e interface das próximas tasks.
+
+## 2026-09-24 — Finalidade deixa de bloquear importação observada (MOT-90)
+
+1. **Sintoma.** O percurso XLSX chegava até Caso, Perfil e Estudo, mas qualquer
+   execução descendente era bloqueada enquanto o catálogo permanecesse
+   `NAO_CONFIGURADO` ou não contivesse todos os pares finalidade/direção.
+2. **Causa.** A cautela de não inventar conteúdo regulatório foi implementada como
+   gate operacional, embora o motor já possua fallback de IOF por direção e o
+   cenário persista um snapshot próprio das premissas.
+3. **O que foi feito.** Gabriel aprovou o design que torna
+   `finalidade_codigo` opcional e não bloqueante. Foi registrada a especificação
+   `docs/superpowers/specs/2026-09-24-finalidade-opcional-importacao-design.md` e
+   o plano TDD/paralelizável
+   `docs/superpowers/plans/2026-09-24-finalidade-opcional-importacao-plano.md`.
+   Código e contratos ainda não foram alterados nesses commits.
+4. **O que isso invalida.** Após a futura implementação, deixam de valer o gate
+   por `status=NAO_CONFIGURADO`, a exigência de par finalidade/direção para toda
+   ordem importada e o bloqueio correspondente no aceite local da Etapa 6. Até
+   essa implementação, o comportamento corrente continua sendo o documentado nas
+   especificações anteriores.
+
+## 2026-09-24 — Revisão do aceite local e da lixeira (MOT-99 / D6)
+
+**Sintoma.** A lista principal ocultava Estudos excluídos, mas não havia
+caminho para sua lixeira; `onRestore` ficava inacessível. O smoke opt-in podia
+aceitar ausência de provider como resultado verde ou ignorar configuração
+inválida. A reconciliação local do chat não verificava o documento enviado.
+
+**Causa.** O filtro `deletedAt === null` era aplicado antes de renderizar todas
+as ações. Runner e spec usavam guards diferentes; o smoke aguardava apenas
+dois artigos de chat, sem conferir HTTP, estado terminal nem citações.
+
+**O que foi feito.** A lista ganhou vista de lixeira no mesmo fluxo, operável
+por teclado, com restauração de Estudo comum e reabertura com ID/fonte
+preservados. Um guard puro único valida URL/credenciais para runner e spec;
+testes Node locais exercitam 503, timeout, provider ausente, fingerprint e
+citações inválidos. O smoke não executado exige resposta POST 200, ASSISTANT
+SUCCEEDED identificada por mensagem e conteúdo/fontes renderizados. O E2E
+local compara o request do chat com a seleção, métricas, evidências e
+fingerprint do Documento de Comunicação esperado. As baselines Windows de
+Estudos e chat foram revistas para a nova entrada de lixeira. Sem Render,
+push, PR ou deploy.
+
+**O que isso invalida.** Ocultar da lista principal não bastava para declarar
+exclusão reversível; dois artigos de chat não demonstravam provider real
+concluído. `LOCAL_ACCEPTANCE=FAIL` e `PUBLISHED_ACCEPTANCE=NOT_RUN` permanecem.
+
+## 2026-09-24 — Aceite local separado da publicação (MOT-99 / D6)
+
+**Sintoma.** A Etapa 6 tinha provas separadas de importação, demonstração, chat,
+apresentação, PDF e contêiner, mas faltava um percurso transversal que mostrasse
+explicitamente o que ainda impede o piloto publicado.
+
+**Causa.** O catálogo de finalidades do XLSX continua `NAO_CONFIGURADO`, então
+um Estudo observado importado não pode reservar diagnóstico. As imagens visuais
+revisadas são Windows; o runner Linux e a imagem Docker não foram executados
+neste host. A URL Render também não existe nesta tarefa.
+
+**O que foi feito.** No worktree `codex/mot99-local-acceptance-implementation`,
+`stage6-acceptance.spec.ts` percorre importação real até o bloqueio, cinco mixes
+demonstrativos, reconciliação entre Diagnóstico/Replay/chat/Painel A/PDF,
+deep links, reload, privacidade, troca de conta e falhas locais. O smoke
+`stage6-render-smoke.spec.ts` fica isolado em projeto opt-in; o runner exige
+autorização explícita, URL HTTPS e credenciais efêmeras antes de abrir o browser.
+Operação, matriz, artifacts e gate foram documentados em `docs/frontend/`,
+`docs/testing.md` e `docs/MAPA.md`. Nenhum Render, Supabase ou OpenAI real foi
+chamado; não houve push, PR ou deploy. A MOT-99 permanece em progresso.
+
+**O que isso invalida.** Passar nos testes demonstrativos não prova que o
+percurso observado chega a um relatório. `LOCAL_ACCEPTANCE=FAIL` enquanto o
+catálogo e os gates locais pendentes não forem resolvidos;
+`PUBLISHED_ACCEPTANCE=NOT_RUN` até publicação autorizada e smoke HTTPS.
+
+## 2026-09-24 — Estudos excluídos deixam a lista principal (MOT-99)
+
+**Sintoma.** Depois de excluir um estudo, a tela principal de Estudos continuava
+mostrando o cartão com os rótulos “Na lixeira” e “Restaurar”.
+
+**Causa.** A lista principal renderizava indiscriminadamente todos os documentos
+recebidos do repositório, inclusive os que tinham `deletedAt` preenchido.
+
+**O que foi feito.** `StudyList` passou a renderizar e a calcular o estado vazio
+somente com estudos ativos. Um teste RED/GREEN cobre uma lista mista e garante que
+o estudo excluído e sua ação de restauração não aparecem na tela principal. A
+exclusão continua sendo lógica no armazenamento; nenhum dado foi apagado.
+
+**O que isso invalida.** Apenas a apresentação anterior que misturava lixeira e
+estudos ativos. Estudos excluídos permanecem preservados localmente.
+
+## 2026-09-24 — Testes de restore e contexto diagnóstico estáveis (MOT-97, revisão D3)
+
+**Sintoma.** Após integração local, a suíte web falhou em três testes: status
+`SAVED` em vez de `DIRTY` após restore explícito, e dois timeouts de UI lazy.
+
+**Causa.** O teste de restore usava autosave real de 10 ms e aguardava a criação
+assíncrona de outro estudo após editar. Um atraso controlado de 25 ms reproduziu
+`SAVED`: o autosave completou, mas a edição foi preservada e o restore retornou
+`null`. Esse teste usa repositório duplo e não passa pelo certificado ou pela
+divisão cooperativa. Os outros dois testes tinham limites locais menores que o
+trabalho de fixture/renderização sob carga; isolados, ambos passaram.
+
+**O que foi feito.** O teste de restore usa `ManualScheduler` para manter o
+autosave pendente enquanto verifica que o restore não substitui a edição. Só os
+dois testes de UI afetados receberam limites locais compatíveis com os outros
+testes lazy do arquivo; timeout global e budgets de desempenho não mudaram.
+Vinte repetições isoladas do caso de restore, os três arquivos juntos (80 testes)
+e a suíte web completa (1.013 testes) passaram. Typecheck, lint e build passaram.
+Não houve mudança de runtime, push, PR ou deploy.
+
+**O que isso invalida.** O status `SAVED` observado não demonstrava uma regressão
+do certificado/yield: era o autosave legítimo avançando enquanto o teste
+aguardava. Nenhuma medição de desempenho ou regra de validação muda.
+## 2026-09-24 — Endurecimento do certificado efêmero (MOT-97, revisão D3)
+
+**Sintoma.** Uma leitura de `WeakMap.get` confundia ausência de entrada com
+owner esperado `undefined`, permitindo pular a validação do builder para raw
+sem owner. `Object.freeze` não impede mutadores de `Map`/`Set`; o schema aberto
+de `PREVIEW.observedComparison` podia receber esses objetos.
+
+**Causa.** A checagem usava apenas igualdade do retorno de `WeakMap.get`; a
+fábrica não restringia a árvore a valores JSON/plain antes de certificar.
+
+**O que foi feito.** Na branch local `codex/mot97-validation-worker`, o
+certificado exige entrada real no `WeakMap` e owner esperado string válido. A
+fábrica rejeita owner ausente e não certifica `Map`, `Set`, `Date`, classe,
+getter ou ciclo, inclusive aninhados. Testes RED/GREEN cobrem raw sem owner e
+fingerprint adulterado, factory com owner ausente e PREVIEW exótico. Depois da
+correção, três séries consecutivas de 20 amostras passaram: abertura p95
+752/754/790 ms, Documento 222/209/223 ms, zero long tasks. Suíte web
+1.013/1.013, typecheck, lint, build, orçamento e 7 E2Es PASS. Sem push, PR,
+deploy ou alteração de Linear.
+
+**O que isso invalida.** A garantia anterior de que somente identidades
+imutáveis podiam ser certificadas dependia de duas condições ausentes; os
+resultados de desempenho anteriores ao endurecimento não servem como gate do
+estado atual. Aceite permanece local a Chromium Windows e à fixture medida.
+
+## 2026-09-24 — Certificado efêmero e uma divisão na validação persistida (MOT-97, D3)
+
+**Sintoma.** O worker de sessão e o fatiamento cooperativo amplo não sustentaram
+o orçamento de abertura; omitir só a segunda validação ainda deixou uma long
+task de 202 ms numa das séries.
+
+**Causa.** A leitura persistida continuava fazendo uma sequência longa de
+validação estrutural, fingerprints e execuções na mesma abertura; o builder
+repetia a validação integral de um estudo recém-validado.
+
+**O que foi feito.** Na branch local `codex/mot97-validation-worker`, a leitura
+agora clona antes do primeiro `await`, valida todas as regras com owner explícito,
+cede uma macrotask antes das execuções, congela profundamente e certifica apenas
+a identidade do snapshot num `WeakMap` privado. O builder omite a segunda
+validação integral apenas dessa identidade imutável; os outros inputs e todas
+as verificações restantes permanecem. Raw, clones e objetos forjados continuam
+validados. Três séries consecutivas finais de 20 amostras passaram: abertura p95
+745/792/752 ms, Documento 218/224/234 ms e zero long tasks em todas. Uma
+sequência anterior também passou; a medição final foi repetida após preservar
+`INVALID_STRUCTURE` para entradas persistidas não clonáveis.
+Suíte web 1.011 testes, typecheck, lint, build, sete E2Es e orçamento de bundle
+passaram. Detalhes e limites em
+`docs/frontend/etapa-6-acessibilidade-desempenho.md`. Sem push, PR, merge,
+deploy ou alteração de Linear.
+
+**O que isso invalida.** A conclusão anterior de que não havia estabilização
+local possível com escopo estreito foi superada pela combinação das duas medidas.
+O aceite ainda não vale para Linux/CI, dispositivos ou estudos maiores; não há
+aceite publicado. Nenhuma métrica financeira muda.
+
+## 2026-09-24 — Perfil de validação e worker revertido (MOT-97, D3)
+
+**Sintoma.** O gate de 20 amostras oscilava entre zero e long tasks de abertura
+acima de 200 ms, apesar dos pontos de cedência adicionados ao builder.
+
+**Causa.** A leitura persistida e o builder executam o validador completo de
+`StudyDocument` no main thread. No perfil local, cada validação levou 70–138 ms;
+as fases podem somar-se ao trabalho de abertura.
+
+**O que foi feito.** Na branch local `codex/mot97-validation-worker`, foram
+adicionadas marcas de fase e coleta no gate de desempenho. Um worker novo por
+pedido eliminou as long tasks, mas elevou a abertura p95 a 1.682 ms. Um worker
+pré-aquecido por sessão passou três séries de 20 amostras (p95 1.239, 1.236 e
+1.208 ms, zero long tasks), porém falhou em duas séries seguintes (p95 1.968 e
+2.629 ms, zero long tasks). Conforme o critério de parada, **todo o worker e a
+integração foram revertidos**. Resta apenas profiling, sem alteração da validação
+funcional. No estado revertido, novo gate registrou abertura p95 1.139 ms e
+20 long tasks >200 ms; typecheck, lint e 43 testes focados passaram. Detalhes em
+`docs/frontend/etapa-6-acessibilidade-desempenho.md`.
+Sem push, PR, merge, deploy ou alteração de Linear.
+
+**O que isso invalida.** Três séries verdes não demonstram estabilização neste
+runner Windows. O aceite de desempenho para o experimento não foi obtido;
+baselines Linux/CI e leitor de tela humano continuam pendentes. Nenhuma métrica
+financeira muda.
+
+## 2026-09-24 — Escape local no chat não modal (MOT-97, revisão D3)
+
+**Sintoma.** Escape num tooltip externo fechava o chat e roubava foco; após
+abrir “Excluir conversa”, Escape fechava o painel mas a confirmação reaparecia
+ao reabri-lo. Um evento Escape consumido por um descendente também era ignorado.
+
+**Causa.** Um listener em `document` recebia Escape de qualquer parte da página
+e chamava `chat.hide()` diretamente, sem limpar `deleteId` nem considerar
+`defaultPrevented` ou propagação.
+
+**O que foi feito.** `ChatPanel` trata Escape somente no `aside`/descendentes,
+quando o evento não foi consumido, e reutiliza `close()` para limpar exclusão
+pendente e devolver foco. Quatro regressões unitárias cobrem exclusão,
+`DefinitionTooltip` externo, `preventDefault` e `stopPropagation`. A auditoria
+de acessibilidade afirma explicitamente a região live do histórico aberto,
+em vez de apenas contar regiões sem critério.
+
+**O que isso invalida.** A afirmação anterior de que Escape era seguro em
+qualquer foco da página não valia para um painel não modal. A documentação D3
+agora delimita a asserção de live region ao chat; budgets e baselines Linux
+pendentes não mudam. Durante a revisão, o gate de long tasks oscilou entre
+6, 48 e 0 entradas >200 ms em três execuções de 20 amostras; a última passou,
+mas o gate é instável neste runner e requer repetição controlada antes do
+aceite T7. Sem push, PR ou deploy.
+
+## 2026-09-24 — Gates D3 de acessibilidade, visual e desempenho (MOT-97)
+
+**Sintoma.** O JS inicial público excedia 350 KiB gzip (~395,5 KiB); a
+geração do Documento de Comunicação produzia long tasks acima de 200 ms.
+Faltavam auditoria Axe, baselines de tela/impressão e orçamento executável.
+
+**Causa.** Rotas protegidas e seus validadores eram carregados eager antes do
+login. Clone, validação de Estudo, projeção e validação do documento
+compartilhavam um turno do main thread. A apresentação não reutilizava seu
+documento validado ao abrir o chat, e alvos de retorno eram pequenos.
+
+**O que foi feito.** No worktree local `codex/mot97-stage6-quality` a partir
+de `a0d556c`, rotas protegidas foram divididas em chunks, a construção do
+documento ganhou pontos de cedência reais sem remover validações, e o chat
+reaproveita o documento validado somente com estudo/cenário/execução iguais.
+Escape fecha o chat e restaura foco; links de retorno ganharam alvo mínimo.
+Entraram testes Axe, teclado, zoom, snapshots Windows de cinco estados e duas
+páginas A4, medição de 20 amostras e gate de orçamento no CI. A evidência e as
+limitações estão em `docs/frontend/etapa-6-acessibilidade-desempenho.md`. Sem
+push, PR, deploy, alteração de Linear ou execução da grade de 27.000.
+
+**O que isso invalida.** O bundle D2 de ~395,5 KiB gzip e a conclusão de que
+T7 ainda não tinha teste deixam de descrever esta branch. Não invalida
+números financeiros, validação/persistência ou isolamento por owner. As
+baselines Linux/CI e a revisão humana com leitor de tela continuam
+**NOT_RUN/BLOCKED**; baselines Windows não equivalem a aceite Linux.
+
+## 2026-09-24 — Linha total da receita não é participante (MOT-96)
+
+**Sintoma.** O Painel A exibia 13 participantes para a receita demonstrativa
+de 12 clientes.
+
+**Causa.** A receita traz uma linha agregada com `participant_id: null`, e a
+projeção textual contava todas as linhas de `composition`.
+
+**O que foi feito.** `web/src/presentation/facts.ts` conta apenas linhas com
+`participant_id` de participante. O teste unitário inclui a linha total, e o
+Playwright confere “12 participantes” no Painel e no texto do PDF A4.
+
+**O que isso invalida.** A contagem “13 participantes” dos PDFs locais
+anteriores não representa clientes; métricas financeiras e valores canônicos
+não mudaram. Sem push, PR ou deploy.
+
+## 2026-09-24 — Reconciliação do Painel A e gate PDF (MOT-96, D1/D2)
+
+**Sintoma.** Deep links para a apresentação descartavam comparação e Replay;
+premissas e proveniência apareciam como códigos/JSON; o inspetor podia aceitar
+texto cortado na borda direita do PDF.
+
+**Causa.** A seleção da rota preenchia ambos os contextos opcionais com `null`;
+os fatos eram impressos literalmente; a extração padrão do PyMuPDF cortava
+glifos antes de medir suas caixas.
+
+**O que foi feito.** A rota aceita `comparacao` e `dia` explícitos, valida
+owner, cenário e execuções atuais, reconstrói a comparação pelo contrato
+existente e solicita Replay pelo mesmo pedido validado da página Fronteira
+Viva. Comparação e Replay oferecem a entrada “Apresentar”; chat e seleção do
+documento seguem o mesmo par/dia. A projeção textual explica receita,
+alíquotas, spread, período, origem e limitação de custos sem alterar o
+`CommunicationDocumentV1` nem seus IDs de evidência. O helper mede caixas de
+texto sem recorte; quatro PDFs sentinela provam rejeição nos lados e limites
+verticais. O browser cobre ausência, presença separada e presença conjunta de
+comparação/Replay. O PDF tem nove páginas A4, extraídas, renderizadas e
+inspecionadas visualmente. Gates e comandos em `docs/testing.md`.
+
+**O que isso invalida.** O aceite D1/D2 anterior só cobria diagnóstico
+simples e podia deixar passar texto cortado no PDF; as evidências de oito
+páginas e de seleção opcional sempre ausente deixam de valer. A aritmética e
+os resultados canônicos da simulação não mudaram. Sem push, PR ou deploy.
+
+## 2026-09-24 — Relatório A4 do Painel A (MOT-96, D2)
+
+**Sintoma.** O Painel A navegável não oferecia impressão fiel, metadados de
+proveniência ou evidência de paginação.
+
+**Causa.** A página ainda não tinha ação de impressão, CSS paginado nem um gate
+que extraísse e renderizasse todas as páginas geradas pelo navegador.
+
+**O que foi feito.** Na base local de `codex/frontend-etapa-6-planejamento`, a
+ação “Salvar PDF” invoca a impressão nativa. O mesmo DOM semântico recebe estilo
+A4 retrato, margens de 12 mm e metadados de Estudo, cenário, execução,
+`generatedAt`, versão e build SHA, sem owner, sessão ou token. O teste Playwright
+confronta métricas, unidades e IDs de fonte com o Documento de Comunicação V1,
+confere que chat e controles desaparecem e que o snapshot local não muda. O
+helper com PyMuPDF 1.28.2 extrai texto, valida geometria/sobreposição e renderiza
+as oito páginas em PNG; todas foram inspecionadas visualmente. A dependência é
+somente do extra `web-dev`, não do lock de produção. Sem push, PR, merge ou deploy.
+
+**O que isso invalida.** O registro D1 de impressão pendente deixa de valer nesta
+base local. O teste não constitui aceite de acessibilidade/performance D3, build
+Docker D4 ou publicação D6; nenhum número da simulação foi recalculado.
+
+## 2026-09-24 — Painel A roteado e seleção explícita (MOT-96, D1)
+
+**Sintoma.** O núcleo da apresentação existia isolado, sem endereço de Estudo,
+seleção persistente, retorno ou contexto do chat.
+
+**Causa.** A aplicação e o fallback estático ainda não reconheciam a rota de
+apresentação; a página não carregava a execução escolhida do repositório local.
+
+**O que foi feito.** Nesta base local de `codex/frontend-etapa-6-planejamento`,
+`PresentationRoute` resolve Estudo, cenário e execução por identidade e owner,
+gera o mesmo `CommunicationDocumentV1`, oferece deep links às seis seções e
+retorno à seleção do diagnóstico. Shell, chat e servidor estático reconhecem
+somente a rota válida. Seleções ausentes, removidas ou incompatíveis mostram
+mensagem sem reaproveitar números. A página usa um único marco `main` do shell.
+Testes de rota, seleção, arquitetura de métricas e fallback estático passaram.
+Sem push, PR, merge ou deploy.
+
+**O que isso invalida.** A nota anterior de que o Painel A não tinha rota deixa
+de valer nesta base local. Não altera cálculo financeiro, medições históricas ou
+status de publicação; a impressão ainda depende da D2.
+
+## 2026-09-24 — Núcleo isolado do Painel A (MOT-96, D1 parcial)
+
+**Sintoma.** O Documento de Comunicação V1 já era produzido, mas ainda não havia
+componentes próprios para uma leitura executiva contínua.
+
+**Causa.** A apresentação da Etapa 6D não tinha um consumidor visual isolado do
+contrato de comunicação.
+
+**O que foi feito.** Na branch local `codex/frontend-etapa-6-planejamento`, foram
+adicionados domínio, formatter de métricas, página não roteada, cabeçalho, seis
+seções e testes sob `web/src/presentation/`. Cada métrica mantém as referências e
+IDs de fonte do documento; seleção divergente e referência ausente não exibem
+valores reaproveitados. A revisão preservou motivo e fonte dentro da definição
+semântica e alinhou dias fracionários ao formato decimal canônico. A integração de
+rota, shell, estilos, servidor, impressão e PDF fica para as próximas partes da
+MOT-96. Não houve push, PR, merge ou deploy.
+
+**O que isso invalida.** Nada na aplicação roteada ou nas medições existentes. A
+MOT-96 continua em andamento; este commit não constitui aceite de deep link,
+fidelidade de PDF ou visual A4.
+## 2026-09-24 — Histórico inacessível com 20 conversas, C6 (MOT-95)
+
+**Sintoma.** Com a quota de 20 conversas ocupada e uma conversa contendo mensagens,
+o histórico e suas fontes ficavam fora do alcance visual; o contêiner media zero
+pixels de altura no Chromium a 1280×960.
+
+**Causa.** A lista de conversas crescia no painel flexível e `.chat-messages`,
+configurado com `flex: 1` e rolagem própria, encolhia até zero. O teste anterior
+usava 20 conversas vazias e não observava o histórico.
+
+**O que foi feito.** Na branch local `codex/mot95-c6-chat-acceptance`, o histórico
+ganhou altura mínima de `8rem`. O percurso Playwright agora preenche as 20 conversas
+com mensagens e fonte de ajuda, verifica altura e rolagem, alcança a fonte por Tab
+e cobre zoom de 200% e viewport estreita. A regressão falhou com `clientHeight = 0`
+antes da correção e passou depois.
+
+**O que isso invalida.** O aceite anterior da quota de 20 conversas não provava
+acesso às mensagens e fontes. Nenhum dado, contrato ou cálculo financeiro mudou.
+
+## 2026-09-24 — Aceite local do chat contextual, C6 (MOT-95)
+
+**Sintoma.** C5 ainda não tinha aceite ponta a ponta de privacidade/browser. O
+painel não oferecia recuperação das quotas; citações para a mesma URL podiam
+manter seleção local diferente da citada; o composer saía da viewport no zoom.
+
+**Causa.** As quotas estavam restritas ao armazenamento/serviço, a restauração de
+seleção dependia só dos valores da URL e a altura fixa do painel escalava com o
+zoom. Os gates anteriores de unidade não percorriam essas interações no browser.
+
+**O que foi feito.** Na worktree isolada `9099`, branch local
+`codex/mot95-c6-chat-acceptance`, baseada em `ab32cc4`, foram adicionados provider
+fake controlável, aceite Playwright, scanner de artefatos canários e matriz de
+privacidade nas fronteiras HTTP/provider/log. Quotas ganharam nova conversa e
+exclusão explícita por CAS; citações restauram dia/par em novas navegações; painel
+respeita as bordas da viewport. As correções têm regressões RED→GREEN e revisão
+independente. Teste real opt-in criado, não executado. Resultados, comandos e
+limites em `docs/frontend/etapa-6c-aceitacao.md` e `docs/testing.md`. Sem chave real,
+chamada a provider externo, gasto, push, PR, merge ou deploy.
+
+**O que isso invalida.** A ausência de aceite browser/privacidade de C5 deixa de
+valer para as rotas implementadas nesta base. A MOT-95 continua In Progress:
+Apresentação/impressão não existem aqui e a presença/ausência do chat nessas rotas
+aguarda a integração D. Não invalida números financeiros, contratos C1–C5, schemas
+ou regras do motor; não demonstra comportamento semântico de um modelo real.
+
+## 2026-09-23 — Contrato HTTP e CAS inicial do chat, C5 (MOT-95)
+
+**Sintoma.** Comparação falhava na validação local antes do fetch; um conflito de revisão antes de gravar PENDING deixava a UI com snapshot antigo.
+
+**Causa.** O contexto local carregava `comparisonExecutionId`, proibido no HTTP estrito, e era copiado inteiro. O primeiro save não reconciliava falhas.
+
+**O que foi feito.** `chatService.ts` projeta os seis campos públicos do request e relê a conversa após falha no CAS inicial. Retry exige nova ação do usuário, sem HTTP automático. Regressões RED/GREEN usam `createApiClient` real com fetch fake. Commit local separado, sem push/PR/deploy.
+
+**O que isso invalida.** O gate anterior com transporte fake não demonstrava envio válido da comparação. Nenhuma regra financeira mudou.
+
+## 2026-09-23 — Reconciliação e identidade de contexto do chat, C5 (MOT-95)
+
+**Sintoma.** Conflito de revisão na finalização podia deixar resposta PENDING e
+impedir retry; troca de seleção na mesma URL não marcava contexto anterior; CTA de
+comparação enviava ajuda genérica; citações podiam abrir outra execução ou par.
+
+**Causa.** O serviço ignorava a segunda falha de CAS; a UI confundia último
+fragmento enviado com seleção atual; a intenção e os links não carregavam a
+identidade completa das execuções.
+
+**O que foi feito.** Nesta worktree local, releitura e CAS sobre a revisão vigente
+preservam alterações concorrentes e deixam a resposta própria retryable; a
+seleção atual controla o marcador de contexto, mantendo o fragmento histórico para
+citações. Comparação usa intenção própria; links carregam execução diagnóstica ou
+par base/hipótese e as páginas validam a seleção antes de exibir resultados.
+Regressões RED/GREEN, typecheck e lint acompanham a correção. Sem push, PR ou deploy.
+
+**O que isso invalida.** Links antigos sem identidade de execução não garantiam
+reabrir os valores citados. Uma referência cuja seleção não possa ser reconstruída
+aparece indisponível; não se escolhe outra execução automaticamente.
+
+## 2026-09-23 — Cliente, evidências e ajuda contextual, C5 (MOT-95)
+
+**Sintoma.** O chat C1–C4 persistia conversas e atendia na API, mas o cliente
+ainda não enviava perguntas, não montava evidências por contexto nem permitia
+navegar pelas citações da resposta.
+
+**Causa.** O transporte tipado, a seleção do fragmento, o lifecycle de envio e os
+acionadores de contexto são a etapa C5, posterior aos contratos e ao provider.
+
+**O que foi feito.** Neste worktree local sobre C4, `web/src/api/client.ts` ganhou
+envio/validação e timeout do chat; `web/src/chat/` ganhou serviço com CAS, retry,
+cancelamento, fragmentação e citações navegáveis; telas de diagnóstico, comparação,
+Replay, composição e importação receberam **Perguntar sobre isto**. Testes de
+unidade e documentação foram adicionados. Nenhum push, PR, merge ou deploy foi
+feito; a C6 permanece pendente.
+
+**O que isso invalida.** A afirmação de que o cliente só tem shell passivo do chat
+deixa de valer neste worktree. O aceite em browser, a privacidade adversarial da C6
+e o comportamento de um provider real não foram validados por esta entrega.
+## 2026-09-24 — Blueprint Render free preparado sem publicação (MOT-98)
+
+**Sintoma.** O empacotamento local D4 (`1b69b8f`) não possuía declaração do destino
+Render nem procedimento revisável de configuração e rollback.
+
+**Causa.** A publicação ainda era somente planejamento; faltavam fronteiras
+explícitas entre build público, segredos de runtime e autorização externa.
+
+**O que foi feito.** D5 adiciona `render.yaml`: um Web Service Docker free,
+health `/api/v1/health`, auto deploy desligado, valores sensíveis com `sync: false`
+e nenhuma database, disco, cron ou worker externo. Testes estruturais passaram em
+RED/GREEN. `docs/deploy-render.md`, README e MAPA registram configuração, convite
+Supabase, callbacks, primeiro deploy futuro, cold start, logs, rollback e chat
+desativável. Referências oficiais do Render foram consultadas; nenhuma CLI Render
+estava disponível para validação remota. Revisão independente concluiu sem achados
+pendentes após corrigir contexto Python, CSP/Ajv e gate de drift na CI.
+
+**O que isso invalida.** Nada nas regras ou números do motor. Configuração
+preparada não é serviço publicado: criação/sincronização do Blueprint e chamadas
+pagas permanecem não executadas. Imagem Docker continua BLOCKED/NOT_RUN pelo erro
+local do daemon; MOT-98 permanece In Progress. O bundle estático excede o orçamento
+T7, registrado em `docs/testing.md` para MOT-97, sem implementar essa etapa.
+Nenhum push, PR, deploy ou recurso pago foi criado.
+
+## 2026-09-24 — Contêiner único e CSP estrita do piloto (MOT-98)
+
+**Sintoma.** A base local `0fd484e` ainda não possuía empacotamento Vite/FastAPI,
+entrypoint configurável para a porta da hospedagem ou política de segurança do
+browser. Headers estritos revelaram compilação dinâmica Ajv antes do login.
+
+**Causa.** O entrypoint fixava loopback/8000; dependências só tinham lock de dev.
+Os validadores do frontend chamavam `ajv.compile` no browser, incompatível com
+`script-src 'self'`. A primeira allowlist Docker também omitia `motor/analise`.
+
+**O que foi feito.** Na worktree isolada `codex/mot98-container-render`, D4 inclui
+entrypoint puro, headers/CSP, locks com hashes, Docker multi-stage sem root,
+contexto por allowlist e smoke sintético read-only com limpeza restrita. A revisão
+ganhou regressões para importação a partir do contexto e login Chromium sob os
+headers reais. Os validadores Ajv passam a ser gerados antes do runtime, com
+schemas e APIs preservados; não se libera `unsafe-eval`. Configuração C3/C4 e
+autenticação são mantidas, sem chamadas pagas. Detalhes e evidências em
+`docs/testing.md`; plano D4/D5 executado sem MOT-96/MOT-97.
+
+**O que isso invalida.** Invalida considerar o frontend compatível com CSP estrita
+apenas pelos testes HTTP. Não altera simulação, métricas ou premissas. Docker
+Desktop está bloqueado por erro local de `sailor-ingest.sock`: o build real falhou
+por pipe `dockerDesktopLinuxEngine` ausente; smoke da imagem é NOT_RUN. Gates
+locais independentes não representam aceite da imagem nem publicação. MOT-98
+permanece In Progress; sem deploy, push ou PR.
+
+## 2026-09-23 — Reconciliação das expectativas E2E após B5/B6 (MOT-92)
+
+**Sintoma.** A suíte Playwright integrada esperava que uma sessão expirada ainda
+visse a Carteira até clicar em executar e que uma segunda conta não tivesse nenhum
+Estudo. O produto já redirecionava imediatamente ao login e instalava o Estudo
+demonstrativo sintético por conta.
+
+**Causa.** As asserções de `foundation.spec.ts` e `study-concurrency.spec.ts`
+continuaram descrevendo estados anteriores ao catálogo autenticado B5 e à
+instalação automática do demo B1/B6.
+
+**O que foi feito.** O teste de sessão expirada passou a exigir o redirecionamento
+imediato e a mensagem de expiração. O teste de isolamento passou a admitir somente
+o demo canônico na conta B, mantendo a exigência de ausência do Estudo privado da
+conta A. Ambos foram reproduzidos em RED antes do ajuste e passaram isoladamente.
+
+**O que isso invalida.** Invalida apenas as duas expectativas E2E antigas; não
+altera autenticação, isolamento, instalação do demo, regras financeiras ou dados.
+O primeiro gate integral revelou a asserção de isolamento; o segundo passou esse
+caso e teve um timeout de 30,9 s no fluxo XLSX durante trabalho paralelo, que
+passou isolado em 24,0 s. A suíte integral ainda será repetida sem contenção antes
+do aceite final. Sem push, PR, merge ou deploy.
+
+## 2026-09-23 — Correção dos três bloqueios da revisão B6 (MOT-91/MOT-92)
+
+**Sintoma.** O pacote demo gravava `desconhecida+SHA` como versão do motor; o
+comando Playwright padrão usava o HEAD do front-end e exigia override manual do
+SHA; o aceite cobria apenas comparação incompatível entre mixes independentes.
+
+**Causa.** O JSON havia sido gerado sem a distribuição Python instalada; bundle
+e servidor E2E inferiam build pelo commit atual, que muda mesmo sem alterar o
+motor; o teste não executava uma hipótese compatível até a tela de Comparação.
+
+**O que foi feito.** O gerador recusa distribuição ausente e o pacote foi
+regenerado com `.venv-t5`, versão `0.1.0+5cb78f0b…`; seu SHA-256 é
+`5072BA19841153850FE8A6E8FA9DBB378601A460AC9851BCD36694875C295E39`.
+O runner E2E controlado deriva o build do pacote versionado sem relaxar o
+portão de incompatibilidade do produto. O teste cria hipótese de janela 8 com
+ordens reaproveitadas, executa dez repetições com seed fixa no teste, compara
+com a base e confere métricas, mudança de janela e evidências do
+`CommunicationDocumentV1` contra a tela. Também conserva o caso incompatível.
+
+**O que isso invalida.** O procedimento anterior que exigia
+`MOT_E2E_BUILD_SHA` manual e a conclusão de que B6 não tinha comparação
+positiva. Tentativas com outras seeds que falharam na agregação continuam
+registradas como limitação do motor; esta correção não altera simulação.
+
+## 2026-09-23 — Gate B6 de demonstração e comunicação (MOT-92)
+
+**Sintoma.** B1–B5 tinham testes por camada, mas faltava prova de primeiro acesso,
+restauração com Estudo importado presente e igualdade da projeção de comunicação
+com Diagnóstico/Replay. A tentativa de comparar dois mixes prontos mostrou
+incompatibilidade de seeds e entradas; a de executar hipótese nova revelou
+dependência do SHA do pacote e dois erros de agregação em sementes testadas.
+
+**Causa.** O pacote demo fixa o SHA de motor usado ao gerá-lo. O servidor E2E
+usava sempre o HEAD atual; os cinco mixes são realizações independentes, enquanto
+a comparação exige seeds pareadas e proveniência de mudanças. O teste integrado
+e as condições de versão ainda não estavam explícitos.
+
+**O que foi feito.** O E2E B6 percorre instalação, reload, remoção/restauração,
+XLSX real até Estudo com bloqueio `NAO_CONFIGURADO`, cinco cenários, repetição,
+Replay, hipótese guiada, comparação incompatível coerente com a regra e catálogo
+de ajuda. Extrai o `CommunicationDocumentV1` persistido e confere métricas,
+rótulos, fingerprints e evidências. O runner aceita SHA, porta e saída isolados;
+`docs/testing.md` registra comandos, 4/4 E2E, 879/879 web, 888/888 Python
+(2 skips), lint, typecheck, build, Ruff e mypy. Nenhum catálogo fictício entrou
+na execução importada. Sem push, PR, merge ou deploy.
+
+**O que isso invalida.** A afirmação de que os cinco mixes prontos podem ser
+comparados numericamente entre si não procede no contrato vigente; a projeção
+omite comparação incompatível e a tela explica a causa. O gate B6 não prova
+diagnóstico de hipótese nova: além da exigência de SHA, duas tentativas com
+entradas geradas falharam em invariantes do Motor/diagnóstico, registradas em
+`docs/testing.md`. Esses limites pedem decisão e trabalho próprios antes de
+declarar aceite completo dessa parte. Nenhuma regra financeira foi alterada.
+
+## 2026-09-23 — Perfis demonstrativos reutilizáveis e restauração visível (MOT-91)
+
+**Sintoma.** O aceite B6 reproduziu dois bloqueios: os 12 Perfis do pacote
+demonstrativo não podiam ser adicionados de volta pela ação guiada de composição;
+após remover o demo, a restauração sumia quando havia outro Estudo salvo.
+
+**Causa.** A receita de três ordens representava a fração OUT como 2/3 com 40
+casas decimais, acima do limite público de 12 casas do derivador de Perfil. A
+página de Estudos oferecia restauração somente quando a lista inteira estava
+vazia, embora o marker do demo estivesse `REMOVED`.
+
+**O que foi feito.** A receita sintética passou a usar duas ordens OUT de 60 mil
+e uma IN de 120 mil, com fração 0,5; o pacote foi regenerado byte a byte e
+validado pelo mesmo derivador usado na composição. O repositório expõe a leitura
+do marker de instalação à página; o botão aparece quando o demo não está
+instalado, mesmo com Estudo importado presente. Testes unitários e E2E cobrem
+ambas as regressões neste worktree local.
+
+**O que isso invalida.** Fingerprints de Casos, Perfis, Estudo e resultados do
+pacote demonstrativo anterior mudaram; ele permanece estritamente sintético e
+não calibrado. Nenhuma regra do Motor, taxa real ou métrica histórica da varredura
+foi alterada. A execução de hipótese criada a partir do pacote ainda depende de
+um servidor com seu SHA fixado; o aceite B6 registra esse limite em
+`docs/testing.md`. Sem push, PR, merge ou deploy.
+## 2026-09-23 — Restrição temática, ferramentas e Responses API, C4 (MOT-94)
+
+**Sintoma.** Os contratos C3 já existiam, mas o chat não tinha provider real,
+política para questões externas/mistas ou leitura fundamentada das fontes.
+
+**Causa.** C3 entregou apenas a fronteira HTTP e as portas; classificação,
+allowlist, citações e lifecycle do transporte eram a Task C4 separada.
+
+**O que foi feito.** Na branch local `codex/mot94-c4-responses`, sobre `21541ae`,
+`servidor/chat/` ganhou adaptador HTTP Responses stateless (`store: false`), schemas
+estritos, classificação em duas fases, recusa fixa server-side e seis ferramentas
+de leitura sobre catálogo/snapshot validados. O loop admite quatro funções e duas
+rodadas, correlaciona `call_id`, preserva reasoning e rejeita capacidades/argumentos
+desconhecidos. Citações precisam existir no contexto e, no provider real, terem
+sido lidas por ferramenta nesta pergunta. Erros/refusal/incompletude são
+sanitizados; insuficiência tem mensagem explícita; timeout cobre todo o percurso.
+A factory cria/fecha seu cliente somente com chat habilitado; startup não faz
+requisição. Revisão independente encontrou fatos de seções inacessíveis; a
+regressão de quatro seções foi RED/GREEN e `consultar_premissas` passou a expô-los.
+Gates: 1.030 PASS e 2 SKIP normal e `-O`; Ruff, mypy (54 arquivos), typecheck,
+101 testes web API/chat e scanner de credenciais PASS. Detalhes em
+`docs/frontend/etapa-6c-c4-provider.md` e `docs/testing.md`. Testes usam exclusivamente
+transporte/provider fake, com rede externa e DNS externo bloqueados.
+
+**O que isso invalida.** Substitui a limitação C3 de provider ausente e classificação
+não implementada; não altera contratos HTTP ou números/regras do Motor. C5/C6 não
+foram executadas. Testes fake não atestam qualidade semântica real, validade
+regulatória ou autenticidade do snapshot do navegador. Sem chave real, chamada
+paga, push, PR, merge ou deploy; candidato local preservado para auditoria.
+
+## 2026-09-23 — Contratos HTTP e configuração do chat, C3 (MOT-94)
+
+**Sintoma.** O shell e o histórico C1+C2 existiam, mas não havia contrato HTTP,
+configuração opcional ou fronteira de transporte validada para o chat.
+
+**Causa.** A API ainda não publicava a entrada/saída do chat nem uma porta de
+provider; ativação, segredos, limites e indisponibilidade não tinham contrato.
+
+**O que foi feito.** Na branch local `codex/mot94-c3-chat-contracts`, foram criados
+`servidor/contracts/chat.py`, `servidor/routes/chat.py` e as portas em
+`servidor/chat/`. Settings valida ativação, chave/modelo e orçamentos sem imprimir
+o segredo. A rota exige bearer, limita o corpo a 1 MiB durante a leitura, revalida
+o Documento de Comunicação e aceita 4.000 caracteres por pergunta e 98 mensagens
+anteriores, reservando pergunta/resposta na quota de 100. A quota de 20 conversas
+permanece no storage C1. Respostas de provider injetado têm limite 12.000; falhas
+retornam `CHAT_INDISPONIVEL` sanitizado. OpenAPI, tipos e validadores web foram
+regenerados, com testes TDD e revisão independente. Configuração e limites estão
+em `docs/frontend/etapa-6c-c3-contratos.md`; evidência dos gates em `docs/testing.md`.
+
+**O que isso invalida.** Nada dos números ou regras do motor. Esta entrega não
+encerra a MOT-94: não há provider real, ferramentas, resolução de citações nem
+políticas temáticas C4; somente `IN_SCOPE` de implementação injetada pode produzir
+resposta, e outras classificações falham fechado até C4. Sem provider injetado o
+chat permanece indisponível; health e demais APIs continuam funcionando. Sem
+push, PR, merge, deploy ou uso pago.
+## 2026-09-23 — Ancestralidade e pares executáveis na revisão A6 (MOT-61)
+
+**Sintoma.** A revisão independente reproduziu duas permissões indevidas: editar
+todos os campos da autoria apagava a identificação XLSX; catálogo configurado
+liberava finalidades/direções que não constavam de suas entradas.
+
+**Causa.** O gate consultava somente proveniência corrente dos campos e status
+global do catálogo, sem ancestralidade persistente nem validação por par.
+
+**O que foi feito.** Astra/high reproduziu quatro REDs unitários e o RED Chromium
+de edição integral/reload. A conversão do Caso importado marca sua ancestralidade
+em `derivedFromObservedCase.importedFromXlsx`, preservada pela autoria, schema e
+fingerprint. O gate consulta esse marcador e exige todos os pares do snapshot
+antes de reserva/POST. Testes usam catálogo completo explicitamente fictício;
+produção continua não configurada. Casos demo/sintéticos não ganham o bloqueio.
+Gates deste loop estão no relatório A6 e em `docs/testing.md`; C1 não foi alterada.
+
+**O que isso invalida.** Proveniência corrente não basta para afirmar origem
+imutável; `CONFIGURADO` não significa que toda carteira seja executável. Não houve
+migração retroativa de autoria anterior ao fix, alteração financeira ou catálogo
+regulatório fabricado. O aceite importado completo permanece condicionado.
+
+## 2026-09-23 — Contexto vivo do chat entre rotas, revisão C2 (MOT-93)
+
+**Sintoma.** Navegar de Diagnóstico para Replay no mesmo Estudo selecionava de novo
+a conversa mais recente e podia recuperar como `FAILED` um `PENDING` com request
+ainda vivo. Ao sair de um Replay pronto para execução inválida ou outro Estudo,
+o contexto do chat ainda recebia cenário e dia do resultado anterior.
+
+**Causa.** O provider vinculava a carga do histórico ao `routeId`, embora a
+identidade da conversa fosse owner/Estudo. O Replay mantinha `READY` sem a identidade
+da URL que o carregou e publicava seleção a partir desse estado durante a troca.
+
+**O que foi feito.** Na branch local `codex/mot93-c2-chat-shell`, o provider conserva
+a conversa e o request enquanto owner e Estudo permanecem; a recuperação de
+`PENDING` ocorre na reabertura sem request vivo daquela conversa. A troca real de
+escopo aborta o request. `ReplayPage` associa `READY` à identidade carregada,
+limpa cenário/dia ao iniciar outra carga e impede que o resultado antigo seja
+renderizado sob a nova rota. Testes cobrem conversa antiga ativa e as duas transições
+de Replay.
+
+**O que isso invalida.** O aceite C2 anterior não cobria preservação de request e
+conversa entre rotas nem limpeza de contexto após sair de um Replay pronto; números
+e conclusões do motor não mudam.
+
+## 2026-09-23 — Shell global e contexto tipado do chat, C2 (MOT-93)
+
+**Sintoma.** A persistência C1 existia, mas as rotas autenticadas ainda não ofereciam
+um painel de chat nem transportavam a seleção da tela para uma conversa local.
+
+**Causa.** Faltavam a matriz de rotas, um provider ligado ao repositório da sessão e
+componentes de histórico, composição e foco no shell.
+
+**O que foi feito.** Na branch local `codex/mot93-c2-chat-shell`, foram adicionados
+`web/src/chat/routeContext.ts`, `ChatProvider.tsx` e os componentes `ChatPanel`,
+`ChatHistory` e `ChatComposer`; `web/src/app/providers.tsx`, `AppShell.tsx` e o CSS
+ligam o diálogo lateral não modal às rotas autenticadas. Conversas gerais e por
+Estudo são abertas no repositório da conta; mensagens pendentes reabertas passam
+pela recuperação CAS da C1. Requests registrados pelo provider são abortados ao
+desmontar, o botão de fechar restaura foco; Diagnóstico e Replay comunicam cenário,
+execução e dia aplicáveis, enquanto Comparação comunica a hipótese selecionada.
+Os testes de rota, sessão, foco, histórico e seleção acompanham a mudança. O par
+completo base/hipótese dependerá do Documento de Comunicação na C5, pois
+`RouteChatContext` possui apenas um `diagnosticExecutionId`. O envio
+de perguntas permanece indisponível até a integração da API nas C3–C5.
+
+**O que isso invalida.** Nada dos números ou conclusões do motor; o aceite C1 de
+storage isolado não cobre por si só a presença e a acessibilidade do shell C2.
+
+## 2026-09-23 — Aceite local da importação e gate de execução (MOT-61)
+
+**Sintoma.** Faltava prova integrada XLSX→Caso→Perfil→Estudo, privacidade e
+capacidade de 1.000 linhas. A primeira execução revelou que o Estudo importado
+ignorava o catálogo `NAO_CONFIGURADO`; o scanner não inspecionava segredos dentro
+do ZIP. O aceite visual também reproduziu overflow de um seletor de Perfil.
+
+**Causa.** As fronteiras tinham testes separados, mas a consulta de catálogo
+estava só na revisão. O scanner tratava XLSX como bytes compactados. O select com
+IDs longos conservava largura intrínseca, excedendo viewport 640 em zoom 200%.
+
+**O que foi feito.** Astra/high executou A6 com TDD e auditoria das fronteiras.
+Seis E2Es reais cobrem persistência manual, falhas, CAS, contas e inspeção de todas
+as stores/requests. Gate compartilhado usa a porta autenticada existente antes de
+prévia, diagnóstico, retry e Replay importados; sintético/demo segue executável.
+Scanner ZIP limitado em memória, CI com 2 workers Vitest e artifact E2E por 7 dias,
+selector de texto exato e CSS mínimo `max-width:100%` completam as correções.
+Reruns Replay usam output próprio e preservam byte a byte as evidências MOT-89.
+Medição local: 1.000 linhas em 351,7 ms no worker/1.370 ms até revisão,
+Caso 1.069.281 bytes; long tasks 265/352/98 ms, heap aproximado 50,4 MB.
+Comandos e resultados estão em `docs/testing.md`; trace e limites em
+`docs/frontend/etapa-6a-aceitacao.md`.
+
+**O que isso invalida.** Não é válido declarar importado→diagnóstico→Replay
+aceito com catálogo não configurado. O percurso importado termina em Estudo salvo
+com bloqueio explícito; execução completa aguarda catálogo legítimo. Importar
+1.000 linhas não amplia Replay: permanece a evidência independente 98×365.
+O Ruff literal do plano (`servidor tests`) ainda aponta 298 achados legados;
+o escopo CI (`servidor tests/web_api`) passa, sem ignores adicionados. Nenhum
+número financeiro, regra do motor ou grade foi alterado. Sem publicação.
+
+## 2026-09-23 — Gates e auditoria independente da C1 (MOT-93)
+
+**Sintoma.** Os contratos e a persistência do chat estavam implementados, mas ainda
+faltava registrar a regressão integrada e a revisão independente do recorte C1.
+
+**Causa.** A alteração de schema e da interface compartilhada precisava comprovar
+compatibilidade com importação, demonstração e consumidores existentes.
+
+**O que foi feito.** Sobre a base `5419f49`, os commits locais `e873569`, `af8c580`
+e `16ed3ef` entregam somente C1. O gate focado de chat/storage/migrations/recovery
+passou com **98 testes**. A suíte completa web passou com **854 testes em 92
+arquivos**, via `npm --prefix web run test:unit -- --maxWorkers 1` (440,59 s),
+incluindo regressão do importador e da demonstração. Typecheck, lint, build,
+scanner de credenciais (539 textos/32 binários) e `git diff --check 5419f49..HEAD`
+passaram; permanece o aviso preexistente de chunks maiores que 500 kB.
+
+A primeira execução ampla, simultânea ao build e aos testes focados, mostrou
+timeouts em testes existentes e duas fixtures que ainda usavam versão física 3
+como futura. As fixtures passaram a usar 4; a execução ampla foi interrompida e
+repetida com um worker, sem alterar timeouts nem código de produto para esses
+timeouts. O resultado sequencial acima é a evidência final.
+
+Auditoria independente Astra/high: **spec PASS, qualidade PASS**, sem achado
+material confirmado ou provável. Foram inspecionados CAS/quota transacionais,
+isolamento, idempotência, exclusão sem ressurreição ou cópia de texto, snapshot,
+close em voo, recovery concorrente e upgrades 1→3/2→3. Limites da evidência:
+concorrência e rollback usam `fake-indexeddb`, sem teste de crash ou duas abas
+reais; a preservação 2→3 usa registros sentinela em todas as stores anteriores e
+marcador demo, além da inspeção de que o upgrade apenas adiciona stores e atualiza
+seu marcador. A recuperação explícita e as citações `{kind, id}` aguardam,
+respectivamente, consumo por C2/C5 e validação contextual em C5. MOT-93 permanece
+In Progress porque inclui C2. Sem push, PR, merge ou deploy.
+
+**O que isso invalida.** A pendência dos gates da C1. Não implica aceite de C2+,
+da Etapa 6 completa ou de publicação; nada muda no motor ou nos números existentes.
+
+## 2026-09-23 — Higiene do schema local do chat (MOT-93)
+
+**Sintoma.** O gate `git diff --check` contra a base identificou uma linha vazia extra no fim do JSON Schema do chat.
+
+**Causa.** A gravação do arquivo acrescentou uma quebra de linha além do terminador final.
+
+**O que foi feito.** Removida somente a linha vazia excedente. Sem alteração de comportamento; os 98 testes focados, typecheck e lint permanecem a evidência funcional anterior. Gate amplo ainda em verificação pelo executor principal.
+
+**O que isso invalida.** Nada nos contratos, resultados ou funcionalidades.
+
+## 2026-09-23 — Persistência transacional e recuperação do chat, C1 (MOT-93)
+
+**Sintoma.** Conversas não tinham histórico local, controle de concorrência nem recuperação após interrupção.
+
+**Causa.** Faltavam stores, métodos do repositório e contrato de falha do chat na Etapa 6C.
+
+**O que foi feito.** Na branch local `codex/frontend-etapa-6c-c1`, IndexedDB sobe de versão física 2 para 3 no mesmo nome de banco, preservando stores, documentos e marcadores anteriores; o caminho legado 1→3 mantém a conversão existente. Conversas usam owner/Estudo/revisão, CAS transacional e IDs de operação com digest, limite de 20 por Estudo ou grupo geral e exclusão idempotente com tombstones sem texto. Retry de save retorna documento vigente; delete não permite ressuscitar conversa antiga. Fechar sessão aborta transações do chat. Helper explícito de recuperação converte PENDING em FAILED por CAS, preserva fingerprints e não reenvia pergunta; será consumido por C2/C5. TDD: RED de storage e migration, GREEN inicial 27/27; gate final C1 com 98 testes PASS, typecheck e lint PASS. Casos cobrem corrida entre instâncias, quotas, snapshot antes de await, corrupção, rollback de upgrade interrompido, fechamento em voo e recovery concorrente. Ajustes de doubles são apenas compatibilidade da interface. Commit local, sem push/PR/merge/deploy.
+
+**O que isso invalida.** O schema físico local 2 deixa de ser a versão atual; documentos do produto e números do motor permanecem iguais. C1 não entrega shell, HTTP, integração OpenAI nem acionamento automático da recuperação.
+
+## 2026-09-23 — Contrato local de conversas do chat, C1 (MOT-93)
+
+**Sintoma.** O chat planejado ainda não tinha contrato local validável de conversas e mensagens.
+
+**Causa.** A Etapa 6C ainda não havia iniciado sua persistência.
+
+**O que foi feito.** Tipos e JSON Schema 1.0.0 com owner, Estudo opcional, revisão, timestamps, estados, fingerprint e citações tipadas por ID. Validação limita 100 mensagens, 4.000 caracteres por pergunta e 12.000 por resposta, rejeita IDs duplicados, owner divergente e propriedades extras. Citações usam `{kind, id}` para evidência, métrica, limitação ou ajuda; existência no contexto será validada em C5. TDD: RED comportamental observado e 13 testes GREEN. Commit local, sem push/PR/merge/deploy.
+
+**O que isso invalida.** Nada nos contratos e números do motor. Não entrega shell, HTTP nem integração OpenAI.
+
+## 2026-09-23 — Catálogo versionado de ajuda do produto (MOT-92)
+
+**Sintoma.** A interface e o chat não dispunham de uma fonte única, versionada e
+autenticada para explicar páginas, controles e conceitos do produto; por isso, uma
+futura ajuda contextual poderia divergir da linguagem publicada ou depender do DOM.
+
+**Causa.** Os contratos HTTP existentes publicavam catálogo técnico de importação,
+mas não havia recurso validado para ajuda nem IDs literais que ligassem os
+componentes ao catálogo.
+
+**O que foi feito.** Foi publicado `ProductHelpCatalogV1` como recurso JSON
+versionado, validado e imutável na inicialização, com rota autenticada
+`GET /api/v1/catalogos/ajuda` e `Cache-Control: no-store`. O catálogo cobre
+importação, Empresa, Caso, Perfil, participante, arquétipo, composição, mix
+demonstrativo, seed, repetição, repetição selecionada, Replay, Diagnóstico,
+Comparação, Apresentação, Relatório e chat, sempre com propósito, efeito, limite,
+indisponibilidade, recuperação e referências internas fechadas. O OpenAPI e os
+artefatos TypeScript gerados foram atualizados; o front valida pelo mesmo schema
+Ajv, congela e carrega o catálogo por cliente autenticado. `helpIds.ts`
+centraliza a união literal e `HelpCatalogProvider` cria o cache em memória por
+identidade, limpa-o em logout/troca de usuário e descarta respostas em voo de uma
+sessão anterior; falha de catálogo devolve `null` e não bloqueia o produto. Os
+padrões de rota do catálogo foram alinhados ao router atual; o limite explícito
+permanece: `/empresas/:companyId/importar` ainda não é um segundo `routePattern`
+do catálogo. Testes RED→GREEN
+cobrem a rota, autenticação, versão canônica, falha de inicialização, cobertura
+dos IDs, dados malformados, schema local, cache, logout, rotas e cliente. Desvio
+de roteamento registrado: B5 foi executada com
+`gpt-5.6-terra`/`high`, por instrução explícita do Gabriel, substituindo
+`gpt-6-luna`/`high` do plano.
+
+**O que isso invalida.** A premissa de que ajuda contextual pode depender de texto
+ou estado visual arbitrário da tela. Nenhuma regra financeira, resultado do motor,
+conteúdo do vault, dado observado ou decisão regulatória foi incorporado. Sem push,
+PR, merge ou deploy.
+
+## 2026-09-23 — Primeira Empresa e decisão informada de conflito (MOT-60)
+
+**Sintoma.** A revisão independente da interface encontrou três lacunas: uma conta sem Empresa não conseguia iniciar importação; a rota de uma Empresa permitia trocar o destino no seletor; e versões em conflito apareciam apenas como IDs, sem diferenças semânticas para embasar a escolha.
+
+**Causa.** A interface original consumia somente Empresas já persistidas, reutilizava o seletor global na rota contextual e não apresentava a projeção canônica de cada versão.
+
+**O que foi feito.** `/importar` permite preparar uma Empresa nova, com ID, owner, nome, revisão e timestamps estáveis até a confirmação; apenas a transação do publisher grava Empresa e Caso juntos. A rota contextual mostra a Empresa fixa e ignora query de destino. O painel de conflito exibe lote, sequência, linha, ID de versão, cliente canônico por ID, direção, datas, valor e finalidade; o seletor referencia esses mesmos IDs. O histórico de correções mostra anterior → próximo em formato canônico, ocultando célula inválida. Testes RED/GREEN cobrem primeira Empresa, rollback/cancelamento, retry idempotente, rota adulterada, escolha entre versões que diferem só em prazo/finalidade e redação da correção. Gate local: 86 testes focados, typecheck, lint, build, 38 testes de fallback (2 ignorados), scanner (508 textos/32 binários) e diff check; aviso de chunk grande preexistente.
+
+**O que isso invalida.** A dependência de pré-cadastro para importar a primeira Empresa e a possibilidade de escolher versão por ID sem contexto. A confirmação do Caso continua sendo a única gravação deste fluxo; política e números do motor não mudam.
+
+## 2026-09-23 — Revisão visual e confirmação do Caso importado (MOT-60)
+
+**Sintoma.** Parser, revisão e publisher estavam disponíveis como contratos, mas o produto não oferecia rota para ler, corrigir e confirmar uma planilha nem continuidade para Caso, Perfil e Estudo.
+
+**Causa.** A interface e o controlador de sessão ainda não ligavam os módulos da importação ao repositório compartilhado e às páginas existentes.
+
+**O que foi feito.** `web/src/importer/controller.ts` orquestra leitura explícita em worker, cancelamento, revisão e confirmação com `operationId` estável em retry. A nova interface oferece upload, filtros, correção, alias, conflito, exclusão/restauração e links após confirmação. `StudyController` expõe uma ponte de publicação restrita ao owner. Rotas, navegação, pré-seleção validada em Perfis e fallback SPA foram conectados. Testes cobrem seleção por teclado sem processamento automático, correção, alias, conflito, publicação, recarga e isolamento entre contas. Gate local: 80 testes focados, typecheck, lint, build, 38 testes de fallback (2 ignorados), scanner (508 arquivos de texto/32 binários) e diff check passaram. O aviso de chunk grande do build já existia antes desta tarefa.
+
+**O que isso invalida.** A afirmação de que a importação só existe como contrato sem percurso React. Confirmar o Caso não cria Perfil, Estudo, prévia ou diagnóstico; esses passos continuam manuais. Nada muda nos números ou na política do motor.
+## 2026-09-23 — Instalação, remoção e restauração atômicas da B2 (MOT-91)
+
+**Sintoma.** O pacote reconciliado ainda não era instalado no primeiro acesso;
+não havia marcador para impedir duplicação ou ressurgimento após remoção.
+
+**Causa.** O ApplicationRepository tinha transações individuais para importação,
+Perfis e Estudos, sem uma mutação atômica para o pacote completo.
+
+**O que foi feito.** `installDemoStudy` valida/materializa o pacote antes da
+abertura do banco e grava Empresas, Casos, Perfis, Estudo, execuções, Replays,
+operação idempotente e marcador numa transação. O namespace inclui projeto,
+owner e instalação; `add` impede sobrescrita de documentos existentes. A
+elegibilidade automática é reavaliada sob a mesma transação, contando também
+Estudos na lixeira. Remoção permanente apaga Estudo/execuções/Replays e payloads
+de operações e marca `REMOVED` atomicamente; retries antigos não ressuscitam
+dados. Empresas, Casos e Perfis permanecem na biblioteca, como no purge vigente,
+para preservar evidência de Estudos derivados. Restauração explícita de demo
+existente preserva edições; após purge cria identidades novas sem tocar nas
+evidências retidas ou em Estudos do usuário.
+
+O ciclo de sessão carrega o JSON sob demanda e oferece **Carregar estudo
+demonstrativo** na página vazia. Falhas ficam visíveis e permitem retry; logout,
+troca de seleção e autosave pendente impedem publicação tardia. Auditoria
+independente encontrou dois casos de recovery, reproduzidos RED e corrigidos:
+fingerprint corrompido não grava restauração e instalação sem Estudo persistido
+não devolve resultado fantasma. O estado é validado antes da escrita e
+reconferido sob a transação, com retry limitado para concorrência. Não restaram
+achados materiais confirmados. O banco continua no schema físico 2.
+
+TDD cobre rollback síncrono em cada store e assíncrono, concorrência, recarga,
+remoção/restauração, isolamento, payload parcial/oculto, snapshot antes de await,
+recovery e preservação de evidência compartilhada. A preparação dos testes de
+rota carrega a fixture real antes das asserções cronometradas para não confundir
+a transformação inicial do JSON pelo Vite com latência de navegação.
+
+Gates finais: **707 testes em 86 arquivos PASS** (`test:unit -- --maxWorkers 2`),
+incluindo os 22 testes de storage da B2, storage/recovery e regressão integral do
+importador; typecheck, lint, build, scanner (508 textos/32 binários) e
+`git diff --check` PASS. O subconjunto de rotas passou também isoladamente
+(25/25), depois do ajuste de fixture. Revisão independente Astra/high; nenhum
+achado material pendente.
+
+**O que isso invalida.** O primeiro acesso vazio deixa de exigir criação manual.
+Nada nos resultados B1/B3, importador, contratos financeiros ou motor. O bundle
+passa a incluir um chunk lazy do pacote (~1,93 MB, ~187 kB gzip); permanece o aviso
+de chunks maiores que 500 kB. Aceite E2E integrado da 6B é B6 e fica fora desta
+Task B2. MOT-91 permanece In Progress aguardando aceite. Sem push, PR, merge ou
+deploy.
+
+## 2026-09-23 — Materialização isolada da demonstração B2 (MOT-91)
+
+**Sintoma.** O pacote B1 continha o owner placeholder e identidades canônicas,
+sem uma cópia validada para cada instalação local.
+
+**Causa.** Trocar apenas o owner deixaria fingerprints de Casos/Perfis e
+referências de evidência incompatíveis, além de reutilizar IDs entre instalações.
+
+**O que foi feito.** Na `codex/frontend-etapa-6b-b2`, sobre `5ef4fe8`,
+`materializeDemoPackage` captura JSON fechado antes de qualquer await, valida o
+pacote completo e deriva identidades de owner/instalação. Recalcula fingerprints
+pelas funções canônicas e reconcilia Casos, Perfis, snapshots e proveniência.
+Resultados, seeds e IDs internos do motor permanecem idênticos. TDD RED→GREEN:
+16 testes de materialização, mais 13 da validação B1, passaram; auditoria
+independente não encontrou achado material no materializador. Arrays com
+protótipos alterados, propriedades ocultas, getters, ciclos e payload parcial
+são recusados antes da persistência. Typecheck e lint globais PASS.
+
+**O que isso invalida.** Nada nos resultados de B1, contratos financeiros ou
+motor. B2 ainda depende da transação e integração de sessão no próximo commit;
+MOT-91 foi devolvida a In Progress porque B1/B3 não encerram a issue agregada.
+Sem push, PR, merge ou deploy.
+
+## 2026-09-23 — IDs opacos de operação no caminho de auditoria (MOT-56)
+
+**Sintoma.** Uma importação válida com operação `.` ou `..` falhava ao confirmar
+depois de excluir/restaurar a operação, apesar de não haver blockers.
+
+**Causa.** `encodeURIComponent` preserva pontos literais, mas o validador de paths
+recusava segmentos relativos; os IDs do domínio são opacos e aceitam esses valores.
+
+**O que foi feito.** Um encoder canônico compartilhado representa apenas os IDs
+dot-only como `%2E` e `%2E%2E`. Publisher e repositório usam o mesmo round-trip;
+slash, espaço e percent conservam a representação anterior. Dois testes públicos
+RED reproduziram o problema, acompanhados dos três casos já válidos. Paths com
+segmento adicional, inclusive após `%2E%2E`, continuam rejeitados.
+Gate: 190 testes importer/storage PASS; typecheck, lint, build, scanner (496
+textos/32 binários) e diff check PASS. Warning de chunk preexistente preservado.
+
+**O que isso invalida.** A rejeição excessiva desses dois IDs no primeiro fix A3.
+Nada no contrato de operação, motor ou schema persistido. Sem push, PR, merge ou
+deploy.
+
+## 2026-09-23 — Fronteira persistível e concorrência da Empresa endurecidas (MOT-56)
+
+**Sintoma.** Revisão adversarial da A3 encontrou propriedades `raw` em arrays
+persistidas, paths/auditoria textuais fora do contrato e sobrescrita de uma Empresa
+mais nova quando outro Caso usava snapshot antigo.
+
+**Causa.** O schema JSON validava itens de arrays, mas não suas propriedades
+nomeadas. Os eventos validavam apenas estrutura e o CAS existente protegia o Caso,
+sem comparar o documento da Empresa.
+
+**O que foi feito.** A validação recursiva recusa propriedades extras, arrays
+esparsos e accessors antes de abrir o banco. Paths são fechados por kind e auditoria
+por campo: direção, data ISO válida, Decimal canônico ou código de finalidade
+normalizado conforme contrato vigente. A mesma transação compara owner, revisão e
+conteúdo da Empresa, rejeitando snapshots obsoletos ou conflitantes antes de
+gravar qualquer store. Os 25 testes adversariais de storage falharam antes e agora
+passam. Com a correção de cronologia MOT-55, são 99 testes focados e 183 de
+regressão importer/storage PASS; typecheck, lint, build, scanner (496 textos/32
+binários) e diff check PASS. O warning preexistente de chunks >500 kB permanece.
+
+**O que isso invalida.** O aceite do primeiro candidato A3 para esses três casos
+adversariais. Nada nos cálculos, na grade ou nos schemas físicos. Sem push, PR,
+merge ou deploy.
+
+## 2026-09-23 — Cronologia única dos comandos de revisão da importação (MOT-55)
+
+**Sintoma.** O publisher emitia todos os aliases depois das correções, mesmo quando
+a associação de identidade havia ocorrido primeiro.
+
+**Causa.** Aliases estavam somente no histórico separado de identidade; o publisher
+inventava sua sequência ao final da publicação. Timestamps iguais não resolviam a
+ordem real dos comandos.
+
+**O que foi feito.** `ASSOCIATE_ALIAS` também cria um `ImportEvent` sem texto bruto
+na sequência monotônica comum no momento do comando. O publisher usa esse fluxo
+único ordenado por `eventSequence`. A associação sem mudança permanece um no-op.
+Dois testes RED→GREEN comprovam alias antes da correção com instantes distintos e
+iguais; regressão importer/storage: 183 testes PASS, typecheck e lint PASS.
+
+**O que isso invalida.** A ordem artificial de auditoria do primeiro candidato A3.
+Nada no motor ou em dados já publicados; sem push, PR, merge ou deploy.
+
+## 2026-09-23 — Publicação atômica da importação no repositório compartilhado (MOT-56)
+
+**Sintoma.** A revisão transitória XLSX ainda não podia publicar um Caso Observado
+no repositório atual. Os registros de lote/evento eram placeholders e o guard de
+binários não recusava ArrayBuffer nem suas views.
+
+**Causa.** A porta transacional da Etapa 2 já tinha CAS e idempotência, mas faltavam
+a projeção explícita da revisão e validação fechada dos metadados. O input podia
+ser alterado pelo chamador enquanto a abertura assíncrona do banco aguardava.
+
+**O que foi feito.** `confirmImport` projeta Empresa, Caso, lotes e eventos sem
+espalhar o agregado transitório. Células, nomes de cliente/arquivo brutos, contexto
+do parser e `rawValue` não entram na mutação. A auditoria mantém somente valores
+canônicos dos campos editáveis; valores originais inválidos ficam `null`. O Caso
+é revalidado e publicado com revisão persistida 1/esperada 0; a revisão semântica
+da edição não substitui o CAS. `confirmedAt` usa o instante determinístico da
+revisão, permitindo retry idêntico. Metadados ganham whitelist e snapshot antes
+do primeiro await; binários são recusados antes de abrir a base. A transação única
+existente cobre Empresa, Caso, lote, evento e operation record. Não foi necessária
+migração física: stores e chaves continuam no schema 2, sem reescrever históricos.
+Testes cobrem rollback síncrono em cada store e assíncrono, retry após reload,
+concorrência, isolamento de owner/projeto e sanitização. Modelo Astra/high conforme
+o plano. Gates focados: 50 testes; regressão importer/storage: 154 testes antes dos
+dois testes adicionais de auditoria/rollback; typecheck, lint, build e scanner
+aprovados. O build mantém o aviso preexistente de chunks acima de 500 kB.
+
+**O que isso invalida.** A aceitação anterior de buffers e campos extras em novas
+mutações de importação. Nada nos números do motor, schemas de Caso/Estudo ou grade
+histórica. Sem push, PR, merge ou deploy.
+## 2026-09-23 — Ação de composição coerente com a origem (MOT-91)
+
+**Sintoma.** Uma origem sintética legada com snapshot de geração mostrava “Criar hipótese / alterar carteira”, mas a ação levava ao editor legado, sem controles de composição.
+
+**Causa.** O resumo inferia capacidade de editar a carteira pela presença de `generationInputSnapshot`; o editor escolhe a composição somente para cenário Profile MVP.
+
+**O que foi feito.** Na branch `codex/frontend-etapa-6b-b3`, o rótulo do resumo usa o mesmo critério de origem Profile MVP do editor. Testes cobrem a ação e o foco no editor de composição para Profile MVP, além da ação honesta e do editor legado para origem sintética com snapshot.
+
+**O que isso invalida.** A afirmação da entrada B3 abaixo de que somente origens sem composição gerável exibiam “Criar hipótese” era incompleta: origens sintéticas legadas com snapshot também exibem apenas essa ação. Nenhum resultado do motor ou dado persistido muda.
+
+## 2026-09-23 — Composição descobrível e repetição identificada (MOT-91)
+
+**Sintoma.** A edição da composição ficava no fim da página do Estudo; Diagnóstico
+e Replay não mostravam juntos o total, o ID e o critério da repetição selecionada.
+
+**Causa.** A página não resumia os participantes junto dos cenários, e cada tela
+tratava isoladamente a identidade da execução. A seleção é registrada no plano do
+diagnóstico; ela não representa necessariamente a mediana das métricas.
+
+**O que foi feito.** Na Task B3 da branch `codex/frontend-etapa-6b-b3`, o Estudo
+mostra a composição persistida e uma ação que leva o foco ao editor. O editor
+explica Perfil, participante e arquétipo, preservando o cenário base e o Perfil
+imutável. Diagnóstico e Replay usam o mesmo descritor do ID, total e critério; o
+Replay recusa resposta com ID divergente. Para origens sem composição gerável, a
+ação é apenas **Criar hipótese**. Testes B3, typecheck, lint, build e scanner
+passaram; o aviso de chunks grandes do build já existia.
+
+**O que isso invalida.** Nada nos resultados do motor, nos Perfis, nas execuções
+persistidas ou no pacote demonstrativo. A descrição de “repetição mediana” não é
+suportada pelo contrato atual e não deve ser usada para esta seleção.
+## 2026-09-23 — Compatibilidade e semântica da projeção de comunicação (MOT-92)
+
+**Sintoma.** A revisão da B4 encontrou três lacunas: comparação pré-calculada
+aceita após mudança de versão da receita; unidade/rótulo de métrica incompatível
+com seu eixo; fingerprint diferente em Python e TypeScript para chaves U+E000 e
+U+10000.
+
+**Causa.** O construtor duplicava parcialmente a compatibilidade da comparação,
+conferia valores sem consultar suas definições e reutilizava a ordenação UTF-16
+do Estudo no contrato espelhado de comunicação.
+
+**O que foi feito.** Extraído gate de compatibilidade sem cálculo de deltas,
+compartilhado com `compareMvpDiagnostics`; identidade, rótulo e unidade são
+conferidos nas definições canônicas dos eixos. O fingerprint de comunicação usa
+ordem por ponto de código Unicode, igual ao Python, com fixture compartilhada.
+As sete regressões tiveram RED observado antes da correção; há prova positiva da
+preservação literal de delta decimal publicado.
+
+**O que isso invalida.** A aceitação de comparações com receitas incompatíveis ou
+semântica adulterada e fingerprints de comunicação com chaves Unicode cuja ordem
+UTF-16 difere da ordem por ponto de código. Fingerprints persistidos de Estudo,
+fontes, cálculos financeiros e o motor não mudaram.
+
+## 2026-09-23 — Projeção pura de comunicação com identidade das fontes (MOT-92)
+
+**Sintoma.** Os consumidores futuros precisavam obter uma única projeção dos
+resultados sem recalcular métricas nem associar valores a outra execução/repetição.
+
+**Causa.** O esboço síncrono da B4 não acomodava WebCrypto/validação assíncrona;
+também supunha uma comparação persistida que o Estudo V3 não possui.
+
+**O que foi feito.** `buildCommunicationDocument` agora projeta os snapshots da
+execução validada, a comparação pré-calculada recebida explicitamente e o estado
+publicado de um dia do Replay. Retorna Promise, clona antes de aguardar e congela a
+saída; data explícita ou `study.updatedAt`, sem relógio/I/O/cálculo financeiro.
+As decisões de interface e limites de confiança estão em
+`docs/frontend/etapa-6-b4-comunicacao.md`. IDs, repetição, contagem, fingerprints,
+seeds e totais do Replay são conferidos, preservando as strings decimais originais.
+TDD e revisão independente corrigiram a comparação apontando para si mesma e a
+divergência entre repetição rotulada e execução publicada. Re-revisão: duas
+regressões verdes. Ordem das chaves JSON, reload e retorno ao dia preservam SHA.
+Gate final: 95 testes Python normal e `-O`; 678 Vitest (81 arquivos, 93 testes de
+comunicação); TS, ESLint, build, Ruff, mypy do contrato, scanner (507 textos/32
+binários) e diff check verdes. O primeiro Vitest teve um timeout de rota durante
+concorrência alta; a suíte inteira passou com dois workers sem aumentar timeout.
+Mypy global conserva 13 erros preexistentes em `servidor/demo/generate_package.py`;
+o build conserva o warning de chunks >500 kB. Nenhum desvio da matriz Astra/high.
+
+**O que isso invalida.** Apenas a assinatura síncrona e a suposição de uma entidade
+de comparação persistida no esboço da B4. Não invalida números de simulação ou
+contratos existentes. Sem B5/B6, C3/chat, endpoint artificial, alteração de storage,
+ApplicationRepository ou motor; sem push, PR, merge ou deploy.
+
+## 2026-09-23 — Contratos espelhados do Documento de Comunicação V1 (MOT-92)
+
+**Sintoma.** A B4 ainda não tinha contrato comum para transportar valores publicados
+até apresentação, relatório e chat sem perder disponibilidade ou proveniência.
+
+**Causa.** Os envelopes existentes descrevem cada fonte; faltava a projeção de
+comunicação com identidade explícita e validação equivalente nas duas linguagens.
+
+**O que foi feito.** Criados modelo Pydantic, tipos TypeScript, JSON Schema gerado
+diretamente do modelo (sem endpoint), validador Ajv e fingerprint SHA-256 canônico.
+O contrato rejeita referências ausentes/duplicadas/de outro contexto, disponibilidade
+incoerente e valores numéricos que não sejam strings decimais. `generatedAt` fica
+fora do fingerprint. Fixtures observada/sintética e 64 mutações inválidas são
+compartilhadas por Python e Vitest. TDD: fixtures válidas falharam antes da
+implementação; 68 testes Python normal e `-O` e 67 Vitest passaram. A revisão
+independente conferiu o espelhamento, disponibilidade e identidade das evidências.
+MOT-92 permanece In Progress: esta entrega cobre somente B4, sem B5/B6.
+
+**O que isso invalida.** Nada nos resultados do motor. Integridade do documento não
+é atestado de autenticidade das fontes: o construtor confere os dados de origem.
+Sem alteração de OpenAPI, storage, ApplicationRepository, motor ou implantação.
+
+## 2026-09-23 — Artefato demonstrativo com bytes canônicos após integração (MOT-91)
+
+**Sintoma.** Após integrar localmente A4 e B1, o teste determinístico do pacote
+demonstrativo falhou embora o conteúdo JSON fosse igual ao gerado.
+
+**Causa.** O checkout Windows converteu o artefato versionado para CRLF, enquanto o
+gerador canônico escreve LF; a prova byte a byte corretamente detectou a diferença.
+
+**O que foi feito.** `.gitattributes` fixa LF somente para
+`web/src/demo/generated/demo-study.v1.json`; o arquivo foi regenerado pelo gerador
+canônico. O teste isolado voltou a passar, seguido por 131 testes web integrados,
+9 testes Python normal e sob `-O`, typecheck, lint, build e scanner verdes.
+
+**O que isso invalida.** Invalida apenas o artefato com finais de linha dependentes
+do checkout. Não altera os dados sintéticos, o SHA lógico, `motor/`, resultados,
+contratos públicos, nem autoriza push, PR ou deploy.
+
+## 2026-09-23 — Manifesto de lote vazio e confirmação sem operações (MOT-54/MOT-55)
+
+**Sintoma.** Um lote ativo sem linhas não aparecia no manifesto e um rascunho sem
+operações ainda podia parecer confirmável quando a posição era marcada.
+
+**Causa.** O manifesto era derivado das ordens projetadas, que naturalmente omitem
+lote vazio, e não havia bloqueio explícito para conjunto selecionado vazio.
+
+**O que foi feito.** O manifesto agora deriva de `activeBatchIds`, preservando
+SHA/tamanho de lote vazio até sua reversão; `ZERO_SELECTED_OPERATIONS` bloqueia a
+confirmação mesmo com posição identificada. Duas regressões RED e 37 testes focados
+passaram. Desvio autorizado: Terra/high substitui Luna/high.
+
+**O que isso invalida.** A ideia de que proveniência dependia de haver ordens; A3
+continua responsável por não persistir células brutas.
+
+## 2026-09-23 — Invariantes de conflito, revisão e proveniência multi-lote (MOT-54/MOT-55)
+
+**Sintoma.** A segunda revisão da A2 mostrou que duplicatas idênticas do mesmo
+arquivo eram coalescidas, a revisão do rascunho podia deixar de avançar após uma
+sequência mista e o manifesto não enumerava todas as fontes incorporadas.
+
+**Causa.** O replay distinguia conteúdo idêntico sem levar em conta a origem no
+mesmo lote; a revisão derivava de contadores independentes; e o manifesto preservava
+apenas o `ParsedImport` inicial.
+
+**O que foi feito.** Reenvios idênticos dentro do mesmo arquivo passam a exigir
+`RESOLVE_CONFLICT`; `ImportReview` guarda uma revisão semântica monotônica usada no
+rascunho; e `ImportBatch` carrega somente SHA-256/tamanho necessários para projetar
+deterministicamente cada fonte ativa no manifesto. `controlTotals` malformado vira o
+blocker estável `TOTAL_INVALID`, sem `DecimalError`. Quatro novas regressões e o
+gate focado de 35 testes confirmam esses contratos. Desvio autorizado de roteamento:
+`gpt-5.6-terra`/high substitui `gpt-6-luna`/high onde indicado originalmente.
+
+**O que isso invalida.** A coalescência automática de duplicata no mesmo arquivo e
+qualquer hipótese de que strings numéricas malformadas seriam erro excepcional; a
+fronteira transitória de `raw`/`ParsedImport` para A3 permanece inalterada.
+
+## 2026-09-23 — Replay append-only de correções e fronteiras de elegibilidade (MOT-53/MOT-54/MOT-55)
+
+**Sintoma.** A revisão independente da A2 identificou que uma correção alterava o
+lote histórico, não havia comando público para segundo lote, duplicatas do mesmo
+arquivo não eram resolvíveis e alguns blockers podiam ser comparados ou reaplicados
+de forma incorreta.
+
+**Causa.** A primeira porta tratava a revisão como snapshot mutável; por isso não
+preservava a identidade de versão como alvo do evento nem reaplicava os efeitos por
+sequência sobre a entrada original.
+
+**O que foi feito.** `portfolio.ts` agora revalida uma cópia transitória de cada
+linha a partir dos lotes imutáveis e dos eventos `OPERATION_CORRECTED` ordenados.
+`CORRECT_FIELD` exige `versionId`, registra original/antes/depois sem mutar o lote;
+`INCORPORATE_BATCH` expõe a segunda fonte em comando discriminado; duplicata de um
+mesmo arquivo entra no mesmo mecanismo explícito de conflito/resolução. A revisão
+também compara totais via Decimal, isola blockers de linha excluída, exige posição
+identificada explicitamente, bloqueia empresa de outro `ownerSub` e incrementa a
+revisão semântica após alias. Os 31 testes focados cobrem as regressões. Desvio
+autorizado de roteamento: `gpt-5.6-terra`/high substitui `gpt-6-luna`/high quando
+o papel original o indicaria.
+
+**O que isso invalida.** A interpretação anterior de que correção podia atualizar
+o lote ou que `positionIdentified` era verdadeiro por omissão. A A3 continua sendo
+a fronteira responsável por nunca persistir `raw`/`ParsedImport`.
+
+## 2026-09-23 — Correções e elegibilidade do Caso Observado na importação (MOT-55)
+
+**Sintoma.** A revisão precisava transformar as linhas canônicas em um rascunho de
+Caso Observado rastreável, sem publicar dados ainda, e manter bloqueios separados de
+avisos enquanto o usuário corrige uma linha inválida.
+
+**Causa.** A validação por linha A1 não tinha ainda o agregado puro que reconcilia
+totais OUT/IN, conflitos, exclusões, correções e proveniência com o contrato atual
+de `ObservedCaseDraft`.
+
+**O que foi feito.** Criados `web/src/importer/eligibility.ts` e seus testes.
+`createImportReview` produz o rascunho com ISO, Decimal em string, finalidade
+nullable, eFX `NOT_COLLECTED`, proveniência por campo e totais derivados;
+`applyImportCommand` é uma união discriminada para correção, alias explícito,
+resolução, exclusão/restauração e reversão. Empresa ausente, direção/data/valor
+inválidos, duplicidade, total divergente e posição não identificada bloqueiam;
+finalidade ausente e eFX não coletado avisam. A correção de uma linha inicialmente
+inválida usa células brutas apenas enquanto a revisão está em memória e as descarta
+na fronteira de publicação da A3. Desvio autorizado de roteamento:
+`gpt-5.6-terra`/high substitui `gpt-6-luna`/high onde a matriz o indicaria.
+
+**O que isso invalida.** Nada: os lotes ainda não foram persistidos, nenhuma UI ou
+chamada de rede foi criada e o motor, P0, EDF e a grade histórica não mudaram.
+
+## 2026-09-23 — Lotes e conflitos puros na revisão de importação (MOT-54)
+
+**Sintoma.** A importação já validava cada linha, mas ainda não tinha uma projeção
+canônica para distinguir uma operação nova de reenvio idêntico ou conflito entre
+versões.
+
+**Causa.** Lotes, eventos e suas sequências existiam apenas na pilha XLSX auditada,
+que não pode ser incorporada diretamente à arquitetura atual de Caso Observado.
+
+**O que foi feito.** Criados os contratos portáveis de lote, versão, evento e
+projeção em `web/src/importer/domain.ts` e o replay puro em
+`web/src/importer/portfolio.ts`. Lotes e eventos usam sequências, nunca timestamps,
+e um conflito divergente permanece sem vencedor até comando explícito. A reversão
+remove deterministicamente o lote da projeção sem apagar sua auditoria. Os quatro
+testes de `portfolio.test.ts` cobrem novo, idêntico, divergente/resolvido e reversão.
+Desvio autorizado de roteamento: `gpt-5.6-terra`/high substitui
+`gpt-6-luna`/high quando esse papel apareceria na matriz.
+
+**O que isso invalida.** Nada: nenhuma persistência, UI, execução ou regra do motor
+foi alterada; a projeção continua local e será entregue ao publisher somente em A3.
+
+## 2026-09-23 — Identidade mecânica de clientes para revisão de importação (MOT-53)
+
+**Sintoma.** A revisão de um XLSX canônico ainda não tinha uma identidade local
+determinística para os participantes das ordens, nem caminho auditável para unir
+variantes de nome confirmadas pelo usuário.
+
+**Causa.** A portabilidade A1 termina nas linhas normalizadas; aliases e identidade
+eram contratos da pilha auditada, não tipos ou funções do domínio atual de Caso
+Observado.
+
+**O que foi feito.** Criados `web/src/importer/clients.ts` e seus contratos em
+`web/src/importer/domain.ts`, com NFKC, diacríticos, espaços e caixa mecânicos,
+sem fuzzy merge; aliases exigem associação explícita e a identidade já confirmada
+reutiliza o UUID. Testes em `clients.test.ts` cobrem as variantes e a associação.
+Desvio autorizado de roteamento: esta tarefa foi executada por
+`gpt-5.6-terra`/high em substituição ao `gpt-6-luna`/high indicado originalmente.
+
+**O que isso invalida.** Nada: ainda não há persistência, UI, execução ou mudança
+do motor; o contrato será consumido pelos lotes e pela elegibilidade da própria A2.
+
+## 2026-09-23 — Referências esparsas e perfil inválido fechados após revisão (MOT-51/MOT-52)
+
+1. **Sintoma.** Uma célula com referência de linha extrema sem atributo `row r` não era barrada pelo SAX; e um perfil acima de 120 caracteres podia interromper a validação inteira em vez de produzir erro de linha.
+2. **Causa.** O preflight verificava somente o atributo da linha; `normalizeProfileClassification` era invocado depois do capturador de erros por campo.
+3. **O que foi feito.** O preflight compara o teto de 1.001 contra `row r` e o sufixo numérico de `c r`, sem regex sobre XML; a classificação agora passa por `validate`, preservando erros da mesma linha e linhas posteriores. RED/GREEN cobre `<row><c r="A1000000">` e perfil de 121 caracteres combinado com direção/valor inválidos e uma linha seguinte válida. Por instrução autorizada do Gabriel, esta rodada foi executada por gpt-5.6-terra/high em substituição ao roteamento Luna/high; a revisão independente prevista continua em gpt-6-sol/medium.
+4. **O que isso invalida.** Invalida a conclusão anterior de que apenas o atributo `row r` bastaria como preflight e de que todos os limites de normalização já eram reportados por linha. Não muda motor, persistência, HTTP, execução, timeout ou limites publicados; sem push, PR, merge ou deploy.
+
+---
+
+## 2026-09-23 — Preflight e normalização da importação endurecidos após revisão (MOT-51/MOT-52)
+
+1. **Sintoma.** A revisão independente identificou que o leitor removia espaços significativos, os limites textuais do layout não eram aplicados, arquivos inválidos podiam ser lidos antes da rejeição e uma referência de linha esparsa podia alcançar o leitor de células.
+2. **Causa.** O port inicial manteve o trim padrão de `read-excel-file`, concentrou limite de tamanho apenas no preflight do buffer e não confrontava o índice de linha OOXML com o limite de 1.000 operações.
+3. **O que foi feito.** `xlsxParser.ts` usa `trim: false`; `normalization.ts` impõe 128/200/120/128 caracteres para ID, cliente, perfil e finalidade; `workerClient.ts` recusa extensão e tamanho antes de `arrayBuffer()`/Worker; `xlsxPreflight.ts` recusa células após a linha 1.001 ainda no SAX. Testes RED/GREEN cobrem campos com espaços, os quatro pares máximo/máximo+1, extensão/tamanho sem leitura e referência esparsa extrema. Por instrução autorizada do Gabriel, esta rodada foi executada por gpt-5.6-terra/high em substituição ao roteamento Luna/high; a revisão independente prevista continua em gpt-6-sol/medium.
+4. **O que isso invalida.** Invalida a conclusão anterior de que o parser A1 já preservava texto exato e aplicava integralmente seus limites na fronteira mais cedo. Não altera motor, persistência, HTTP, execução, timeout ou limites publicados; sem push, PR, merge ou deploy.
+
+---
+
+## 2026-09-23 — Validação por linha da importação portado (MOT-52)
+
+1. **Sintoma.** Após o parsing estrutural, o destino ainda não distinguia linhas válidas, inválidas e com finalidade ausente de modo revisável.
+2. **Causa.** A validação por campo e a regra de IDs duplicados estavam acopladas ao `ImportBatchDraft` da origem antiga, que não pode atravessar a fronteira de Caso Observado atual.
+3. **O que foi feito.** `web/src/importer/validation.ts` valida cada célula sem descartar as demais, preserva erros estruturados por linha, mantém `PURPOSE_MISSING` como aviso e torna todas as ocorrências de um ID repetido inválidas. O relatório retornado é serializável e não cria lote, repositório, preview ou execução. Testes cobrem linha válida com aviso, acúmulo de falhas e duplicidade. Por instrução autorizada do Gabriel, esta tarefa foi executada por gpt-5.6-terra/high em substituição ao roteamento Luna/high; a revisão independente prevista continua em gpt-6-sol/medium.
+4. **O que isso invalida.** Invalida somente a lacuna de validação local por linha. Não altera contrato HTTP, persistência, Caso/Empresa, motor, resultado financeiro, nem autoriza push, PR, merge ou deploy.
+## 2026-09-23 — Contrato obrigatório do catálogo no ApiClient (MOT-58)
+
+1. **Sintoma.** Um consumidor tipado como `ApiClient` não podia ser passado diretamente a `loadImportCatalog`, embora a fábrica sempre publique `getImportCatalog`; os testes estreitavam o tipo para esconder essa divergência.
+2. **Causa.** O método do catálogo estava declarado como opcional no contrato público de `ApiClient`, enquanto a fronteira do importador exigia que ele existisse.
+3. **O que foi feito.** `getImportCatalog` passou a ser obrigatório em `ApiClient`; o carregador usa o recorte normal desse contrato, os doubles tipados o implementam e o teste de integração cria um `ApiClient` real sem cast. Foram removidos os casts que simulavam artificialmente o método do catálogo nos testes do cliente.
+4. **O que isso invalida.** Invalida a hipótese de que consumidores do `ApiClient` possam omitir a rota canônica já publicada. Não altera endpoint, autenticação, validação AJV, estado `NAO_CONFIGURADO`, revisão local, execução, persistência, conteúdo regulatório, `motor/`, push, PR, merge ou deploy.
+
+---
+
+## 2026-09-23 — Estado indisponível do cliente de catálogo (MOT-58)
+
+1. **Sintoma.** Se a leitura autenticada do catálogo falhasse, o cliente propagava apenas a exceção e não oferecia à camada seguinte o estado explícito que mantém a revisão local disponível e bloqueia confirmação executável.
+2. **Causa.** `loadImportCatalog` só transformava respostas de sucesso em disponibilidade; não representava a indisponibilidade como parte tipada do seu resultado.
+3. **O que foi feito.** A leitura agora retorna a união discriminada `AVAILABLE | UNAVAILABLE`. Falhas uniformes do `ApiClient` (`ApiError`) tornam-se `UNAVAILABLE`, com `localReviewAvailable: true`, `canConfirmExecution: false` e o próprio erro seguro para apresentação. Erros fora da fronteira continuam propagando. Foi acrescentado teste de payload inválido que confirma que `ApiClient` preserva `RESPOSTA_INVALIDA` antes dessa adaptação.
+4. **O que isso invalida.** Invalida a leitura de que ausência temporária do catálogo deveria impedir revisão local ou que um payload inválido pudesse entrar no fluxo. Não adiciona cache, TanStack, UI, elegibilidade, execução, persistência, conteúdo regulatório, alteração em `motor/`, push, PR, merge ou deploy.
+
+---
+
+## 2026-09-23 — Imutabilidade profunda do catálogo de importação (MOT-57)
+
+1. **Sintoma.** Embora o modelo externo do catálogo fosse congelado, uma lista ou modelo aninhado podia ser alterado depois do carregamento e antes de outra resposta reutilizar o estado da aplicação.
+2. **Causa.** `frozen=True` do Pydantic não congela recursivamente coleções e os contratos aninhados de custos/origem herdavam modelos mutáveis.
+3. **O que foi feito.** As camadas publicadas do catálogo agora usam modelos congelados e tuplas para finalidades, alíquotas e regras de IOF; o loader converte somente as coleções do JSON para a representação imutável depois de calcular seu hash canônico. O JSON HTTP permanece array e o endpoint/OpenAPI preserva o formato público. Os testes tentam alterar valores, tuplas e modelos aninhados de um catálogo configurado fictício e exigem falha.
+4. **O que isso invalida.** Invalida a suposição de que `frozen=True` no envelope bastava para proteger o grafo cacheado. Não altera finalidades de produção, valores técnicos, autenticação, revisão local, execução, `motor/`, persistência, push, PR, merge ou deploy.
+
+---
+
+## 2026-09-23 — Cliente do catálogo técnico da importação (MOT-58)
+
+1. **Sintoma.** O front-end não conseguia consultar nem validar pelo caminho comum o estado técnico do catálogo de importação.
+2. **Causa.** O `ApiClient` e seus validators gerados ainda não conheciam o endpoint canônico, e não havia modelo local que distinguisse revisão possível de confirmação de execução.
+3. **O que foi feito.** `ApiClient.getImportCatalog` consulta somente `GET /api/v1/catalogos/importacao`, preservando Bearer, timeout, erro uniforme e validação AJV. `web/src/importer/catalogClient.ts` usa exclusivamente essa porta e expõe que `NAO_CONFIGURADO` mantém a revisão local disponível, mas torna a confirmação de execução indisponível. `contracts/openapi.json`, `web/src/api/generated.ts`, `schemas.json` e `validators.ts` foram atualizados exclusivamente por `python -m servidor.export_openapi` e `npm --prefix web run generate:api`; o script do gerador recebeu o validator do novo schema. A alteração do contrato invalidou o `tsconfig.tsbuildinfo` e expôs duas fixtures de `dates.test.ts` que passavam `string` onde a API exige `ISODate`; elas agora usam o normalizador público, sem alterar produção ou comportamento. Os testes cobrem a rota do cliente e a indisponibilidade de confirmação sem afetar a revisão. Por instrução autorizada do Gabriel, a implementação foi feita em `gpt-5.6-terra/high` em vez de Luna/high; a revisão Sol/medium continua pendente.
+4. **O que isso invalida.** Invalida a ausência de leitura tipada do catálogo no front. Não cria cache TanStack, tela, estado de `ImportStudy`, parâmetros, elegibilidade, execução, persistência, rota adicional, conteúdo regulatório, alteração em `motor/`, push, PR, merge ou deploy.
+
+---
+
+## 2026-09-23 — Catálogo técnico autenticado da importação (MOT-57)
+
+1. **Sintoma.** A importação não tinha um contrato público versionado para declarar que as finalidades regulatórias e os custos reais ainda não estão configurados.
+2. **Causa.** O catálogo da pilha anterior não podia ser portado cegamente: seus contratos e integração não eram os da aplicação atual, enquanto o piloto não autoriza inventar finalidades, alíquotas ou calibração.
+3. **O que foi feito.** Foram criados o recurso empacotado `servidor/catalogs/importacao.v1.json`, seu loader canônico SHA-256 e os contratos/rota estritos em `servidor/contracts/importation.py` e `servidor/routes/importation.py`. A aplicação valida o recurso ao iniciar e publica `GET /api/v1/catalogos/importacao` somente com Bearer, `no-store`, estado `NAO_CONFIGURADO`, lista vazia e defaults técnicos sintéticos não calibrados. O schema OpenAPI registra a rota; `pyproject.toml` inclui somente esse JSON como package data. Os testes cobrem autenticação, cache, schema, hash, startup inválido e ausência de finalidade em produção. A execução foi autorizada em `gpt-5.6-terra/high` em vez do roteamento planejado Luna/high; a revisão independente Sol/medium permanece pendente. A hierarquia da especificação/plano 6A aprovada limita esta MOT ao catálogo: não foram implementados parâmetros de `ImportStudy`, cache TanStack, elegibilidade, domínio ou rotas históricas conflitantes.
+4. **O que isso invalida.** Invalida a ausência de um gate técnico explícito do catálogo. Não configura conteúdo regulatório, não torna importação executável, não altera revisão local, `motor/`, persistência, casos, perfis, estudos, push, PR, merge ou deploy.
+## 2026-09-23 — Tipagem do gerador demonstrativo (MOT-91, B1)
+
+1. **Sintoma.** O gate `mypy servidor` da integração apontou 13 erros em `servidor/demo/generate_package.py`.
+2. **Causa.** Duas entradas de preparação eram declaradas como `object`, a coleção de custos misturava decimais e lista, a versão era inferida como `str`, e duas factories de ID usavam lambdas com argumento padrão cuja assinatura não era inferida; a lista de execuções também precisava de tipo explícito.
+3. **O que foi feito.** Na branch local `codex/frontend-etapa-6b-b1`, o gerador recebeu `PreparationResponse` e `Literal` nas fronteiras correspondentes, separou os campos decimais de custo, fixou os IDs antes de passá-los às factories e tipou a lista de execuções. `mypy` passou de 13 erros para zero em 38 arquivos; Ruff passou. O JSON regenerado permaneceu byte a byte idêntico (SHA-256 `A819CE3B1A4047937BCA7199519DC939C69C609D8D4F65543A19522AF34331CD`). Testes Python normal e `-O`: 2/2 cada; Vitest B1: 13/13.
+4. **O que isso invalida.** Invalida somente a pendência de tipagem do gerador B1. Não altera a receita, os números, o pacote versionado, contratos públicos nem o motor. Sem push, PR, merge ou deploy.
+
+---
+
+## 2026-09-23 — Reconciliação completa do Replay demonstrativo (MOT-91, B1)
+
+1. **Sintoma.** Adulterações isoladas de autonetting, netting multilateral, resíduo, ID e revisão do cenário, seeds dos participantes ou versão do motor no Replay ainda eram aceitas pelo validador do pacote.
+2. **Causa.** `web/src/demo/validation.ts` comparava com o diagnóstico somente bruto, casado e taxa de netabilidade, além de parte da identidade do Replay. Os outros campos eram validados quanto à forma, mas não ligados aos dados canônicos selecionados.
+3. **O que foi feito.** Na branch local `codex/frontend-etapa-6b-b1`, sete testes de adulteração isolada falharam antes da correção e passaram depois. O validador passou a comparar os três volumes restantes com `agregado`, cenário e revisão com o cenário, requisição e execução selecionada, seeds com plano e resumo da repetição selecionada, e versão do motor com o manifesto. O JSON gerado permaneceu byte a byte idêntico (SHA-256 `A819CE3B1A4047937BCA7199519DC939C69C609D8D4F65543A19522AF34331CD`). Vitest focado: 13 testes; Python normal e `-O`: 2 testes cada; ESLint e scanner de credenciais: passaram. `typecheck` e `build` ainda param nos dois erros preexistentes de `ISODate` em `web/src/importer/dates.test.ts:19–20`.
+4. **O que isso invalida.** Invalida a afirmação anterior de que a validação TypeScript já rejeitava todas as adulterações independentes de totais e identidade do Replay. Não altera a receita, o pacote gerado, os números demonstrativos nem o motor. Sem push, PR, merge ou deploy.
+
+---
+
+## 2026-09-23 — Estudo demonstrativo gerado e reconciliado (MOT-91, B1)
+
+1. **Sintoma.** A Etapa 6 ainda não tinha um pacote demonstrativo atual para o primeiro acesso; os cinco mixes existentes descreviam somente pesos e os números da grade histórica pertencem à política anterior.
+2. **Causa.** Faltavam uma receita versionada e uma geração pelas fronteiras vigentes de preparação, diagnóstico e Replay, com validação de Perfis, Estudo, seeds e fingerprints.
+3. **O que foi feito.** Na branch local `codex/frontend-etapa-6b-b1`, `servidor/demo/generate_package.py` gera `DemoStudyPackageV1` com 12 empresas, Casos e Perfis integralmente sintéticos, cinco composições por alocação inteira dos pesos de `motor.mixes.TODOS`, 30 dias de aquecimento, 30 de medição, janela 7, cadência derivada de até quatro ordens mensais por participante e dez repetições explícitas por cenário. O primeiro item do plano de repetição alimenta o Replay. A receita registra deslocamento de uma posição nas seeds do `corporativo_pesado`: o conjunto inicialmente primeiro fazia o diagnóstico vigente rejeitar o teto estrutural na borda entre aquecimento e medição; os mesmos dez conjuntos continuam na distribuição. Para esta amostra, o custo fixo foi definido como `0` e o spread permaneceu `25` bps: com tarifa fixa `40`, o agregado vigente não reconciliou a soma exata das economias por mecanismo; `motor/` não foi alterado. Os cinco Replays selecionados têm 67, 64, 63, 60 e 53 ordens; a medição termina no dia 60 e a liquidação vai no máximo ao dia 87. O pacote fixa `5cb78f0b6ddd45b8b63f170153e6be8cd1928497` como build da base, preserva `$OWNER_SUB` para a materialização da B2 e traz rótulo explícito de hipótese sintética não calibrada. A origem de cada participante guarda a linhagem do Perfil, permitindo abrir uma hipótese de composição sem mudar o Perfil. Os testes Python reconciliam os envelopes e reconstroem cada Replay; o teste TypeScript valida o pacote inteiro, recalcula os Perfis pela API pública e prova rejeição de adulterações. Gates B1: Python normal e `-O`, Vitest, Ruff dos novos arquivos, ESLint e scanner de credenciais passaram; `npm --prefix web run typecheck` segue vermelho por dois erros preexistentes em `src/importer/dates.test.ts:19-20` na base `5cb78f0`.
+4. **O que isso invalida.** Invalida apenas a ausência de um artefato demonstrativo reproduzível. Não substitui resultados históricos por resultados atuais, não calibra custos nem comprova validade regulatória; instalação local, recuperação, UI guiada e aceite E2E permanecem para B2, B3 e B6. Não houve execução da grade, acesso ao vault, alteração em `motor/`, push, PR, merge ou deploy.
+
+---
+
+## 2026-09-23 — Parser XLSX seguro portado (MOT-51)
+
+1. **Sintoma.** O destino não inspecionava nem convertia o XLSX canônico sem expor binário, XML ou metadados pessoais a camadas posteriores.
+2. **Causa.** O parser seguro estava somente na origem auditada `3999ae660fd9b6fd163d53edf264a178e8146a13`, com dependências e fixtures que não pertenciam ao worktree atual.
+3. **O que foi feito.** Foram fixadas `fflate@0.8.3`, `read-excel-file@9.3.10` e `saxen@11.1.1`; portados preflight ZIP/OOXML, parser de células, worker e fronteira `parseCanonicalXlsx`. O preflight aplica limites de 5 MiB, 25 MiB e 128 entradas, e rejeita OLE/criptografia, macros, links, fórmulas, merges, abas e cabeçalhos inválidos. O resultado é `ParsedImport` serializável, contendo somente layout, hash, tamanho e linhas; o worker é terminado no sucesso, erro ou cancelamento e ignora resposta tardia. Fixtures são sintéticas da origem auditada. Por instrução autorizada do Gabriel, esta tarefa foi executada por gpt-5.6-terra/high em substituição ao roteamento Luna/high; a revisão independente prevista continua em gpt-6-sol/medium.
+4. **O que isso invalida.** Invalida a ausência de parsing seguro no destino. Não autoriza persistência, preview, HTTP, execução, `ImportStudy`, repositório próprio ou alteração em `motor/`; não houve push, PR, merge ou deploy.
+
+---
+
+## 2026-09-23 — Domínio canônico da importação portado (MOT-50)
+
+1. **Sintoma.** A base da Etapa 6 não possuía tipos, datas civis, decimais BRL ou normalização local para ler linhas do XLSX canônico.
+2. **Causa.** A implementação auditada vivia numa pilha anterior, cujo `domain.ts` também carregava `ImportStudy`, repositório e contrato HTTP incompatíveis com o Caso Observado atual.
+3. **O que foi feito.** Na branch `codex/frontend-etapa-6-planejamento`, foram portados somente `web/src/importer/domain.ts`, `errors.ts`, `dates.ts`, `decimals.ts` e `normalization.ts`, com testes reais de formato, calendário civil, precisão decimal e normalização. O domínio é serializável e não inclui `File`, armazenamento, HTTP, execução ou `ImportStudy`. Por instrução autorizada do Gabriel, esta tarefa foi executada por gpt-5.6-terra/high em substituição ao roteamento Luna/high; a revisão independente prevista continua em gpt-6-sol/medium.
+4. **O que isso invalida.** Nada de produto ou de regras do motor; invalida somente a ausência desses utilitários no destino. Não houve mudança em `motor/`, persistência, API, execução, push, PR, merge ou deploy.
+
+---
+
+## 2026-09-23 — Matriz de portabilidade e baseline da importação 6A (MOT-90)
+
+1. **Sintoma.** A pilha de importação remota não era ancestral da base da Etapa 5
+   e incluía persistência e execução próprias incompatíveis com o fluxo vigente.
+2. **Causa.** A origem `3999ae6` partiu de `c2ad175`; no HEAD inicial `7d72a2d`,
+   havia 101 commits exclusivos do destino e 16 da origem. Um merge integral
+   reaplicaria contratos já integrados e recriaria ImportStudy/ImportRepository.
+3. **O que foi feito.** `docs/frontend/etapa-6-importacao-portabilidade.md` registra
+   SHA por arquivo, decisões PORTAR/REESCREVER/DESCARTAR, fronteiras reais de Caso,
+   Empresa, mutação transacional, Perfil e Estudo, e a ausência de publisher na
+   origem. Baseline local: 173 testes focados, TS/ESLint, Ruff/mypy, pytest 794/2
+   normal e `-O`, build/scanner e 22 E2E PASS. Vitest completo passou 481 testes
+   com `--maxWorkers=2`; duas tentativas com concorrência padrão tiveram um timeout
+   de rota de 5 s, enquanto a rota isolada passou 25/25. Nenhum timeout, teste ou
+   config foi relaxado. As cinco evidências MOT-89 regravadas pelo E2E foram
+   restauradas ao HEAD; não fazem parte da auditoria. A correção estática está
+   separada no commit `02e5c0c`. A issue MOT-90 foi consultada somente para leitura.
+4. **O que isso invalida.** Invalida portar a pilha inteira ou tratar seu domínio
+   antigo como contrato do importador. Não modifica produto da Etapa 6, motor,
+   resultados financeiros, contratos públicos ou decisões regulatórias. Mantém
+   explícitos o timeout dependente de concorrência e os 308 achados históricos
+   Ruff não reproduzidos. Nenhum push, PR, merge ou deploy foi executado.
+
+---
+
+## 2026-09-23 — Gates estáticos do Replay reconciliados em A0 (MOT-90)
+
+1. **Sintoma.** O baseline anterior à Etapa 6 registrava Ruff e mypy vermelhos.
+   Na árvore inicial `7d72a2d`, mypy reproduziu 30 erros em `servidor/replay.py`;
+   Ruff 0.16.7 reproduziu 10 achados, não os 308 registrados no planejamento.
+2. **Causa.** A fila do waterfall misturava DTO e Decimal em listas inferidas como
+   object; gatilhos tinham tipo amplo e construtores tipados recebiam o formato de
+   entrada textual exigido por DecimalSaida. Os demais achados eram imports,
+   Decimal inteiro em testes e iteração de dicionário. A diferença histórica de
+   contagem Ruff não foi explicada: a execução atual usa defaults e Py311 inferido
+   do pyproject, sem evidência de versão/configuração para atribuir a divergência.
+3. **O que foi feito.** Na branch `codex/frontend-etapa-6-planejamento`, tuplas
+   tipadas e ReplayTrigger explicitam os tipos; seis modelos passam a validar os
+   mesmos payloads com `model_validate`, preservando texto decimal e validadores.
+   Ajustes mecânicos em `servidor/app.py`, `tests/web_api/measure_replay.py`,
+   `test_replay.py` e `test_replay_contracts.py` resolvem o lint. RED observado nos
+   gates antes da edição; GREEN: Ruff sem achados e mypy sem erros em 36 arquivos.
+   Replay passou 18 testes; pytest completo passou 794/2 normal e 794/2 sob `-O`.
+   O baseline web focado passou 173 testes, typecheck e lint. Nenhuma regra,
+   ignore, exclude, baseline, dependência ou contrato público foi alterado.
+4. **O que isso invalida.** Invalida o estado de gates estáticos vermelhos na base
+   local da Etapa 6. Não invalida resultados financeiros, contrato de Replay ou
+   aceite da Etapa 5. Nenhum arquivo de `motor/` foi alterado; sem push/PR/deploy.
+
+---
+
+## 2026-09-23 — Especificação, plano técnico e issues da Etapa 6 (MOT-90)
+
+1. **Sintoma.** O plano geral reservava chat, relatório, apresentação, acabamento e
+   publicação para a Etapa 6, mas não definia o recorte do piloto, a fronteira de
+   dados do chat, o formato visual nem o destino de hospedagem.
+2. **Causa.** Esses subsistemas dependiam do diagnóstico, comparação e Replay reais
+   das Etapas 3–5 e precisavam ser reconciliados com a persistência local antes de
+   receber um plano executável.
+3. **O que foi feito.** A branch `codex/frontend-etapa-6-planejamento` recebeu a
+   especificação aprovada e um plano mestre dividido em quatro planos executáveis:
+   integração da importação, demonstração/comunicação, chat e apresentação/publicação.
+   Eles detalham arquivos, contratos, TDD, gates, commits e dependências para o
+   Documento de Comunicação V1, chat lateral somente leitura
+   e restrito ao projeto, histórico local, Painel A contínuo, relatório pelo navegador,
+   OpenAI Responses API com `store: false`, contêiner único e Render gratuito. A
+   proposta também torna visível o editor de composição existente, distingue Perfil,
+   participante, arquétipo, repetição e Replay e define um Estudo demonstrativo local
+   com cinco composições sintéticas regeneradas pelo motor vigente. Resultados da
+   varredura histórica não são reaproveitados. A revisão constatou que a importação
+   XLSX MOT-49–MOT-61 existe apenas numa pilha remota anterior às Etapas 2–5; a
+   especificação agora exige uma 6A que porte seus módulos válidos, publique no
+   `ApplicationRepository` atual e conecte Caso → Empresa → Perfil → Estudo antes do
+   piloto. Os documentos registram contratos, limites, testes, riscos, publicação
+   separada do aceite local e a incorporação parcial da Evolução 5C. Uma busca
+   read-only no Linear confirmou inicialmente que não existiam issues novas da
+   Etapa 6. Após autorização explícita do Gabriel, foram criadas MOT-90–MOT-99 no
+   projeto `Motor de fluxo de CNR`, em Backlog, com dependências, prioridades,
+   critérios de evidência e roteamento de modelos. O plano usa Astra apenas nas
+   fronteiras de maior risco, Sol como padrão e Luna em portabilidade, catálogos e
+   trabalho repetitivo com revisão superior. O baseline registrou a divergência
+   `100 16` contra a pilha de importação; pytest normal e `-O` passaram com 794/2,
+   Vitest passou 481 testes, Playwright passou 22, e typecheck, ESLint, build e
+   scanner ficaram verdes. Ruff revelou 308 achados preexistentes e mypy 30 erros
+   preexistentes em `servidor/replay.py`; ambos permanecem dívida explícita de T0/A0,
+   sem correção ou máscara neste commit. Nenhum código de produto foi alterado.
+4. **O que isso invalida.** Invalida a leitura de que a Etapa 6 terminaria apenas com
+   preparo local sem URL para a Amanda. Não invalida o aceite da Etapa 5, números do
+   Motor, regras financeiras ou o escopo futuro de 5A/5B. A entrada ainda não possui
+   implementação ainda não começou. As issues e o plano autorizam a execução local
+   futura, mas não autorizam push, merge, criação do serviço Render ou deploy.
+
+---
+
+## 2026-09-23 — Ritmo, diário acumulado e linguagem visual do Replay (MOT-89)
+
+1. **Sintoma.** O diário mostrava somente o dia selecionado, a reprodução padrão e
+   as setas desapareciam rápido demais, e a cena não distinguia visualmente
+   autonetting intracliente de netting multilateral. Com um `.env.local` real, o E2E
+   também semeava e lia namespaces IndexedDB diferentes.
+2. **Causa.** A apresentação consumia apenas `presentReplayDay`; os temporizadores
+   eram 1,6 s por dia e 1,3 s por evento; as duas origens usavam a mesma linguagem
+   gráfica. O modo E2E derivava `projectRef` da URL Supabase local enquanto sua ponte
+   semeava explicitamente `local`.
+3. **O que foi feito.** Na branch `codex/frontend-etapa-5`, o diário passou a agrupar
+   todas as operações até o dia selecionado, omitindo dias vazios e futuro; 1× passou
+   a 3,2 s por dia e as conexões permanecem 2,6 s. Autonetting e multilateral ganharam
+   cores, legenda e rótulos distintos ligados às setas. O namespace E2E ficou
+   hermético, e as capturas/hashes, runbook, matriz e regressões foram atualizados.
+4. **O que isso invalida.** Invalida as capturas e hashes anteriores da MOT-89 e os
+   tempos visuais de 1,6 s/1,3 s. Não altera `motor/`, alocações, prioridade EDF,
+   autonetting preferencial, números financeiros, capacidade medida ou evoluções
+   5A/5B/5C.
+
+---
+
+## 2026-09-22 — Integração e aceite local do Replay temporal (MOT-89)
+
+1. **Sintoma.** A fatia vertical do Replay ainda não provava os percursos observado
+   e sintético no browser, reload pela origem estática, responsividade real, limites
+   de volume nem regressão conjunta das Etapas 1–4. O teto nominal de 1.000 ordens
+   também não havia sido confrontado com o contrato que efetivamente alimenta a
+   projeção.
+2. **Causa.** O fallback SPA aceitava diagnóstico, mas não a rota profunda do Replay;
+   em 200% a grade de três colunas comprimia os cartões; e o contrato do diagnóstico
+   limita proveniência a 500 itens, embora o schema isolado do Replay aceite 1.000
+   ordens. Faltavam fixtures E2E orientadas aos eventos de aceite e medição pelo
+   pipeline real.
+3. **O que foi feito.** A branch `codex/frontend-etapa-5` ganhou E2E observado e de
+   hipótese sintética por Perfil, medição 98 × 365, fallback estrito da rota,
+   empilhamento responsivo com curvas verticais ancoradas, capturas com SHA-256 e
+   guias de operação/aceite. O Chromium cobre chegada, parcial, gatilhos simultâneos,
+   dias vazios, controles, reload, remessas OUT/IN, resize, 200% e tela estreita. O
+   gate final passou com 794 testes Python + 2 ignorados normal e `-O`, 477 unitários
+   web, lint/typecheck/build, E2E novo 3/3 duas vezes e Playwright integral 22/22. A
+   execução Vitest paralela reproduziu o timeout conhecido de um teste antigo; ele
+   passou 25/25 isolado e a suíte passou integralmente com um worker.
+4. **O que isso invalida.** Invalida a suposição de capacidade ponta a ponta
+   1.000 × 365: com nove entradas fixas e cinco por ordem, o teto real vigente é 98
+   ordens e 499 entradas de proveniência. Não invalida números do Motor, custos,
+   cenário Amanda ou a grade histórica; `motor/` não mudou e as 27.000 simulações não
+   foram reexecutadas. 5A (seleção/inspeção), 5B (baseline sincronizado) e 5C
+   (apresentação/escala/exportação) continuam posteriores.
+
+```text
+test: fecha integração e aceite do replay temporal (MOT-89)
+```
+
+---
+
+## 2026-09-22 — Cena Fronteira Viva orientada a eventos (MOT-88)
+
+1. **Sintoma.** O Replay já reconstruía qualquer dia de forma determinística, mas
+   ainda não oferecia a leitura operacional aprovada: cartões por lado, fronteira
+   central, conexões ancoradas, métricas reconciliadas e diário factual.
+2. **Causa.** A MOT-87 entregou deliberadamente o estado e os controles antes da
+   camada visual. Faltavam apresentação própria, geometria responsiva e um ciclo de
+   transição que animasse somente eventos reais sem contaminar saltos ou recargas.
+3. **O que foi feito.** A branch `codex/frontend-etapa-5` ganhou a cena Brasil/CNR/
+   Exterior, cartões OUT/IN com saldo parcial, controles e linha do tempo, métricas
+   separando posição e contribuição dos dois lados, diário operacional e conexões
+   SVG derivadas da decomposição ilustrativa publicada pelo servidor. Chegadas,
+   fechamentos, casamentos, saldos e remessas usam transições finitas; voltar,
+   saltar, recarregar e dias vazios aplicam o estado final sem movimento decorativo.
+   `ResizeObserver`, preferência de movimento reduzido e saída sincronizada de
+   cartões/conexões completam a implementação. Os testes focados somam 21 casos e
+   passaram junto de typecheck e lint; a inspeção real no navegador cobriu saldo
+   parcial, liquidação, casamento e remessas OUT/IN.
+4. **O que isso invalida.** O placeholder visual e qualquer leitura do protótipo
+   externo como fonte de cálculos ou lógica temporal. A autoridade continua sendo
+   o documento Python reconciliado; conexões continuam ilustrativas, sem afirmar
+   contraparte persistida. Não altera números do motor nem a grade histórica.
+
+---
+
+## 2026-09-22 — Estado determinístico e rota local do Replay (MOT-87)
+
+1. **Sintoma.** O contrato temporal já existia, mas o front ainda não conseguia
+   reabrir uma execução persistida, reconstruir um dia por seleção direta nem
+   controlar a reprodução sem depender do estado anterior da animação.
+2. **Causa.** A rota antiga `/replay` era apenas um placeholder e o cliente HTTP
+   não consumia `POST /api/v1/replays`. Também não havia um redutor puro que
+   reconciliasse saldos publicados, nem ciclo de playback com cancelamento de
+   respostas tardias.
+3. **O que foi feito.** A branch `codex/frontend-etapa-5` ganhou cliente AJV tipado,
+   estado puro com `Decimal`, reconciliação diária, transições descritivas e
+   controles determinísticos de play/pause, 1×/2×/4×, navegação, fechamento,
+   repetição e recomeço. A rota
+   `/estudos/:studyId/replay?executionId=...` resolve o `StudyDocument` do owner,
+   usa o `DiagnosticEnvelope` persistido mesmo após a expiração do job, cancela e
+   ignora respostas tardias e oferece retorno ao diagnóstico. O gate focado teve
+   34 testes passando, o typecheck e o lint passaram; o teste de roteador que
+   atingiu o timeout conhecido sob carga passou isoladamente.
+4. **O que isso invalida.** Invalida qualquer navegação baseada em mutação
+   incremental da cena, qualquer leitura do job efêmero para recarregar a página e
+   qualquer cálculo financeiro novo em JavaScript; o front apenas reduz os eventos
+   explícitos e confere os saldos do documento Python.
+
+```text
+feat: adiciona estado determinístico e rota do replay (MOT-87)
+```
+
+---
+
+## 2026-09-22 — Contrato temporal reconciliado do Replay (MOT-86)
+
+1. **Sintoma.** A especificação visual do Replay ainda deixava tipos indefinidos,
+   tratava gatilho de fechamento como valor único, não separava posição casada da
+   contribuição das duas pontas e pressupunha acesso a um resultado por um job que
+   expira no servidor.
+2. **Causa.** O diagnóstico completo é persistido no Estudo local em IndexedDB, mas
+   o executor do backend mantém jobs apenas em memória. A projeção temporal também
+   precisava respeitar aquecimento, coorte medida, liquidação natural e as fases
+   hierárquicas do autonetting preferencial.
+3. **O que foi feito.** A especificação aprovada foi reconciliada e ganhou o plano
+   executável `docs/superpowers/plans/2026-09-22-frontend-etapa-5-replay.md`. Foram
+   criados `servidor/contracts/replay.py`, `servidor/replay.py` e
+   `servidor/routes/replay.py`: `POST /api/v1/replays` recebe o envelope diagnóstico
+   persistido, autentica a sessão, reconcilia conservação/coorte/totais, publica dias
+   vazios, gatilhos simultâneos, posição versus contribuição, remessas por direção e
+   segmentos ilustrativos em fases intracliente e intercliente. OpenAPI, tipos e
+   validators web foram regenerados. O gate focado teve 23 testes passando; a linha
+   de base anterior teve 774 testes Python passando e 2 ignorados.
+4. **O que isso invalida.** Invalida o tipo preliminar com `seed` único,
+   `trigger` singular e `matchedBrl` ambíguo; invalida também qualquer implementação
+   que consulte o job expirado ou faça waterfall global antes do autonetting.
+
+---
+
+## 2026-09-22 — Especificação do Replay temporal da Etapa 5
+
+1. **Sintoma.** A Etapa 5 possuía somente requisitos gerais e uma referência visual
+   aprovada. O protótipo visual demonstrava a direção desejada, mas continha erros de
+   cálculo, estado, ancoragem de linhas e sequência de animações que não podiam virar
+   comportamento de produto.
+2. **Causa.** Ainda não existia um contrato temporal próprio nem uma fronteira clara
+   entre resultado canônico, reconstrução de estado e animação. A especificação global
+   também proibia linhas entre cartões, enquanto a referência aprovada passou a usá-las
+   como explicação visual do agregado.
+3. **O que foi feito.** Foi criada
+   `docs/superpowers/specs/2026-09-22-frontend-etapa-5-replay-design.md`, com o MVP,
+   contrato V1, invariantes, máquina temporal, direção `Fronteira Viva`, critérios de
+   aceite e evoluções 5A–5C. A especificação global foi alinhada para permitir somente
+   uma decomposição ilustrativa, determinística e não persistida do casado. `MAPA.md`
+   passou a indexar a nova especificação. Nenhum código de produto foi alterado.
+4. **O que isso invalida.** Invalida a proibição absoluta de conexões visuais entre
+   cartões no Replay e qualquer expectativa de aproveitar os cálculos do protótipo.
+   Permanecem válidas a posição agregada de tesouraria e a proibição de apresentar
+   essas conexões como contraparte, custódia, pareamento físico ou benefício individual.
 
 ---
 

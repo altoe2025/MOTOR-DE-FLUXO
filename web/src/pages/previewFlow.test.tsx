@@ -60,12 +60,16 @@ function renderFlow(apiClient: ApiClient) {
 function api(runPreview: ApiClient['runPreview'] = async (input) => matchingEnvelope(input)): ApiClient {
   return {
     getReferenceExample: vi.fn(async () => structuredClone(referenceFixture)),
+    getImportCatalog: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
+    getProductHelpCatalog: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
     runPreview: vi.fn(runPreview),
     submitDiagnostic: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
     getDiagnosticJob: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
     getDiagnosticResult: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
     cancelDiagnostic: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
     retryDiagnostic: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
+    buildReplay: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
+    sendChatMessage: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
   };
 }
 

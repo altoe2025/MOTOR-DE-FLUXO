@@ -126,13 +126,14 @@ export function DiagnosticAxesView({ axes, consequences, limitations }: Readonly
       <DistributionAxisTable economics={axes.economic_robustness} />
     </AxisSection>
     <AxisSection id="axis-operational" title="7. Perfil operacional da carteira" question="Qual foi a carga operacional observada na execução?" axis="OPERATIONAL_PROFILE" axisKey="operational_profile" rows={operational} {...common} />
-    <section className="diagnostic-card" aria-labelledby="all-limitations-heading"><h2 id="all-limitations-heading">Limitações do diagnóstico</h2>{limitations.length === 0 ? <p>Nenhuma limitação registrada.</p> : <ul>{limitations.map((item) => <li key={item.code}><strong>{item.code}</strong> ({item.severity}) — {item.condition}<EvidenceRefs refs={item.evidence_refs} /></li>)}</ul>}</section>
+    <section className="diagnostic-card" aria-labelledby="all-limitations-heading"><h2 id="all-limitations-heading">Limitações do diagnóstico</h2>
+      {limitations.length === 0 ? <p>Nenhuma limitação registrada.</p> : <ul>{limitations.map((item) => <li key={item.code}><strong>{item.code}</strong> ({item.severity}) — {item.condition}<EvidenceRefs refs={item.evidence_refs} /></li>)}</ul>}</section>
   </div>;
 }
 
-function BreakdownTable({ rows, title }: Readonly<{ rows: DiagnosticEnvelope['axes']['cross_border_residual']['by_day']; title: string }>) {
+function BreakdownTable({ rows, title }: Readonly<{ rows: DiagnosticEnvelope['axes']['cross_border_residual']['by_day'] | DiagnosticEnvelope['axes']['cross_border_residual']['by_purpose']; title: string }>) {
   if (rows.length === 0) return <p className="evidence-unavailable">{title}: sem itens.</p>;
-  return <div className="table-scroll" role="region" tabIndex={0} aria-label={`Tabela rolável — ${title}`}><table className="diagnostic-table"><caption>{title}</caption><thead><tr><th scope="col">Chave</th><th scope="col">Direção</th><th scope="col">Valor</th></tr></thead><tbody>{rows.map((row) => <tr key={`${row.key}-${row.direction}`}><th scope="row">{row.key}</th><td>{row.direction}</td><td>{formatMetric(row.value_brl, 'BRL')}</td></tr>)}</tbody></table></div>;
+  return <div className="table-scroll" role="region" tabIndex={0} aria-label={`Tabela rolável — ${title}`}><table className="diagnostic-table"><caption>{title}</caption><thead><tr><th scope="col">Chave</th><th scope="col">Direção</th><th scope="col">Valor</th></tr></thead><tbody>{rows.map((row) => <tr key={JSON.stringify([row.key, row.direction])}><th scope="row">{row.key ?? 'Finalidade não coletada'}</th><td>{row.direction}</td><td>{formatMetric(row.value_brl, 'BRL')}</td></tr>)}</tbody></table></div>;
 }
 
 function DistributionAxisTable({ economics }: Readonly<{ economics: DiagnosticEnvelope['axes']['economic_robustness'] }>) {

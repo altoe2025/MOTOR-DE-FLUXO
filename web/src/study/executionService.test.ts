@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { PreviaRequest, PreviewEnvelope } from '../api/client';
 import { ApiError } from '../api/errors';
+import { fictionalCatalog } from '../importer/__fixtures__/catalog';
 import type { CompanyRecord, ObservedCase } from '../cases/domain';
 import type { OperationalProfileVersion } from '../profiles/domain';
 import { buildPreviewRequest, type PreviewRequestProvenance } from '../preparation/buildPreviewRequest';
@@ -60,6 +61,12 @@ function deferred<T>() {
 }
 
 class MemoryRepository implements ApplicationRepository {
+  async getDemoInstallationStatus(): Promise<null> { return null; }
+  async listChatConversations(): Promise<never[]> { return []; }
+  async getChatConversation(): Promise<null> { return null; }
+  async saveChatConversation(): Promise<never> { throw new Error('Chat outside fixture scope'); }
+  async deleteChatConversation(): Promise<void> { throw new Error('Chat outside fixture scope'); }
+  async installDemoStudy(): Promise<StudyDocument> { throw new Error('Demonstração não usada neste double de execução.'); }
   document: StudyDocument | null;
   readonly additionalDocuments = new Map<string, StudyDocument>();
   readonly saves: CASMutation<StudyDocument>[] = [];
@@ -155,6 +162,26 @@ function matchingEnvelope(input: PreviaRequest, executionId: string): PreviewEnv
 }
 
 describe('executeStudyScenario', () => {
+  it.each([
+    { name: 'sem cliente de catálogo', getImportCatalog: undefined },
+    { name: 'catálogo indisponível', getImportCatalog: vi.fn(async () => { throw new Error('offline'); }) },
+    { name: 'catálogo não configurado', getImportCatalog: vi.fn(async () => ({ ...fictionalCatalog(), status: 'NAO_CONFIGURADO' as const })) },
+    { name: 'catálogo configurado sem par', getImportCatalog: vi.fn(async () => fictionalCatalog()) },
+  ])('executa XLSX $name com premissas persistidas', async ({ getImportCatalog }) => {
+    const subject = await setup();
+    const imported = makeObservedSnapshot();
+    imported.provenance = [{ kind: 'OBSERVED', source: 'xlsx-operacoes', version: '1.0.0', recordedAt: FIXTURE_NOW }];
+    const edited = await updateScenario(subject.study, subject.study.baseScenarioId, { sourceSnapshot: imported }, FIXTURE_NOW);
+    subject.controller.edit(edited);
+    await subject.controller.flush();
+    const runPreview = vi.fn(async (input: PreviaRequest) => matchingEnvelope(input, envelopeFixture.execution_id));
+    const result = await executeStudyScenario({ ...subject, scenarioId: edited.baseScenarioId, runPreview, ...(getImportCatalog === undefined ? {} : { getImportCatalog }) });
+    expect(result.status).toBe('SUCCEEDED');
+    expect(runPreview).toHaveBeenCalledOnce();
+    expect(runPreview.mock.calls[0]![0].cenario.custo).toEqual(edited.scenarios[0]!.premises.costs);
+    expect(subject.controller.snapshot.document!.executions.at(-1)?.status).toBe('SUCCEEDED');
+    if (getImportCatalog) expect(getImportCatalog).not.toHaveBeenCalled();
+  });
   it('faz flush de edição pendente antes de capturar snapshot e construir request', async () => {
     const subject = await setup();
     const current = subject.controller.snapshot.document!;

@@ -231,6 +231,23 @@ describe('StudyEditor', () => {
     expect(JSON.stringify(observedCase)).toBe(originalJson);
   });
 
+  it('salva finalidade ausente como null e permite texto exato na autoria explícita', async () => {
+    const fixture = makeObservedCase();
+    const observedCase = { ...fixture, orders: [{ ...fixture.orders[0]!, purposeCode: null }] };
+    const { onSourceChange } = await subject({ observedCases: [observedCase] });
+    const user = userEvent.setup();
+    await user.click(screen.getByLabelText('Caso observado'));
+    await user.selectOptions(screen.getByLabelText('Caso confirmado'), observedCase.id);
+    await user.click(screen.getByRole('button', { name: 'Converter para autoria manual' }));
+    const purpose = screen.getByLabelText('Finalidade da operação observed-order-1');
+    expect(purpose).toHaveValue('');
+    await user.click(screen.getByRole('button', { name: 'Salvar operações explícitas' }));
+    expect(onSourceChange.mock.calls.at(-1)?.[0].definition.orders[0].finalidade).toBeNull();
+    await user.type(purpose, 'SERVICO');
+    await user.click(screen.getByRole('button', { name: 'Salvar operações explícitas' }));
+    expect(onSourceChange.mock.calls.at(-1)?.[0].definition.orders[0].finalidade).toBe('SERVICO');
+  });
+
   it('marca somente campos explícitos alterados e nunca envia valor corrigido como observado', async () => {
     const { onSourceChange, observedCase } = await subject(); const user = userEvent.setup();
     await user.click(screen.getByLabelText('Caso observado'));
@@ -307,5 +324,37 @@ describe('StudyList', () => {
     expect(screen.getByRole('button', { name: 'Renomear Estudo teste' })).toBeVisible();
     expect(screen.getByRole('button', { name: 'Duplicar Estudo teste' })).toBeVisible();
     expect(screen.getByRole('button', { name: 'Excluir Estudo teste' })).toBeVisible();
+  });
+
+  it('oculta da lista principal os estudos movidos para a lixeira', async () => {
+    const active = await study();
+    const deleted = {
+      ...active,
+      id: '00000000-0000-4000-8000-000000000100',
+      name: 'Estudo excluído',
+      deletedAt: '2026-09-24T12:00:00Z',
+    };
+    render(<StudyList studies={[active, deleted]} selectedId={null} onCreate={vi.fn()} onOpen={vi.fn()} onRename={vi.fn()} onDuplicate={vi.fn()} onRestore={vi.fn()} onDelete={vi.fn()} />);
+
+    expect(screen.getByRole('button', { name: 'Abrir Estudo teste' })).toBeVisible();
+    expect(screen.queryByText('Estudo excluído')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Restaurar Estudo excluído' })).not.toBeInTheDocument();
+  });
+
+  it('permite abrir a lixeira por teclado e restaurar sem abrir o estudo excluído', async () => {
+    const active = await study();
+    const deleted = { ...active, id: '00000000-0000-4000-8000-000000000101',
+      name: 'Estudo excluído', deletedAt: '2026-09-24T12:00:00Z' };
+    const onRestore = vi.fn(); const onOpen = vi.fn();
+    render(<StudyList studies={[active, deleted]} selectedId={null} onCreate={vi.fn()} onOpen={onOpen}
+      onRename={vi.fn()} onDuplicate={vi.fn()} onRestore={onRestore} onDelete={vi.fn()} />);
+    const user = userEvent.setup();
+    screen.getByRole('button', { name: 'Lixeira de estudos' }).focus();
+    await user.keyboard('{Enter}');
+    expect(screen.getByRole('list', { name: 'Lixeira de estudos' })).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Abrir Estudo excluído' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Restaurar Estudo excluído' }));
+    expect(onRestore).toHaveBeenCalledWith(deleted);
+    expect(onOpen).not.toHaveBeenCalled();
   });
 });

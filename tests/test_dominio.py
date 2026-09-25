@@ -52,6 +52,10 @@ def ordem(**overrides) -> Ordem:
     return Ordem(**campos)
 
 
+def test_ordem_aceita_finalidade_ausente():
+    assert ordem(finalidade=None).finalidade is None
+
+
 def test_carregar_cenario_exemplo_amanda():
     cenario = carregar_cenario(str(CENARIO_EXEMPLO))
 
@@ -429,3 +433,9 @@ def test_carregar_cenario_sem_tabela_de_finalidade_continua_valendo(tmp_path):
     cenario = carregar_cenario(_escrever_cenario(tmp_path, _ORDEM_OK))
 
     assert cenario.custo.iof_por_finalidade == {}
+
+
+def test_carregar_cenario_preserva_finalidade_nula(tmp_path):
+    ordens = _ORDEM_OK.replace('finalidade: "ANEXO_V_BENS_SERVICOS"', 'finalidade: null')
+    cenario = carregar_cenario(_escrever_cenario(tmp_path, ordens))
+    assert cenario.ordens[0].finalidade is None

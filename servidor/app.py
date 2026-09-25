@@ -21,23 +21,43 @@ from servidor.auth import (
     SessionInvalid,
     TokenVerifier,
 )
+from servidor.catalogs.importacao import load_import_catalog
+from servidor.catalogs.product_help import (
+    ProductHelpCatalogV1,
+    load_product_help_catalog,
+)
+from servidor.chat.service import ChatProvider
 from servidor.config import Settings
+from servidor.contracts.chat import ChatRequestV1, ChatResponseV1
 from servidor.contracts.diagnostics import (
     DiagnosticEnvelope,
     DiagnosticRequest,
     DiagnosticRetryRequest,
     JobSnapshot,
 )
+from servidor.contracts.importation import CatalogoImportacao
 from servidor.contracts.input import PreviaRequest
 from servidor.contracts.preparation import PreparationRequest, PreparationResponse
 from servidor.contracts.preview import PreviewEnvelope, ReferenceExample
 from servidor.contracts.primitives import UUIDValue
+from servidor.contracts.replay import ReplayDocumentV1, ReplayRequestV1
 from servidor.contracts.session import HealthResponse, SessionResponse
 from servidor.diagnostics.executor import DiagnosticExecutor
 from servidor.errors import ApiFailure, entrada_invalida, failure_response
 from servidor.generate_reference_fixture import build_reference_request
 from servidor.preparation import preparar_carteira
-from servidor.routes import diagnostics, examples, preparation, preview, session
+from servidor.routes import (
+    chat,
+    diagnostics,
+    examples,
+    importation,
+    preparation,
+    preview,
+    product_help,
+    replay,
+    session,
+)
+from servidor.security_headers import security_headers
 from servidor.static import install_static_routes
 
 _LOGGER = logging.getLogger("servidor.http")
@@ -52,6 +72,7 @@ def create_app(
     settings: Settings | None = None,
     verifier: TokenVerifier | None = None,
     diagnostic_executor: DiagnosticExecutor | None = None,
+    chat_provider: ChatProvider | None = None,
 ) -> FastAPI:
     configured = settings or Settings()  # type: ignore[call-arg]
     owns_verifier = verifier is None
@@ -59,6 +80,8 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
+        app.state.import_catalog = load_import_catalog()
+        app.state.product_help_catalog = load_product_help_catalog()
         executor = diagnostic_executor or DiagnosticExecutor(
             build_sha=configured.motor_build_sha,
             max_workers=configured.diagnostic_max_workers,
@@ -73,9 +96,18 @@ def create_app(
             periodo=fixture.periodo,
             proveniencia=fixture.proveniencia,
         )
+        owned_chat_provider = None
         try:
+            if configured.chat_enabled and chat_provider is None:
+                from servidor.chat.openai_provider import OpenAIChatProvider
+
+                owned_chat_provider = OpenAIChatProvider(configured)
+                app.state.chat_provider = owned_chat_provider
             yield
         finally:
+            if owned_chat_provider is not None:
+                await owned_chat_provider.aclose()
+                app.state.chat_provider = None
             executor.close()
             if owns_verifier and isinstance(configured_verifier, JWKSTokenVerifier):
                 configured_verifier.close()
@@ -87,7 +119,9 @@ def create_app(
     )
     app.state.settings = configured
     app.state.token_verifier = configured_verifier
+    app.state.chat_provider = chat_provider if configured.chat_enabled else None
     app.state.preview_slot = threading.BoundedSemaphore(1)
+    browser_headers = security_headers(configured)
 
     @app.middleware("http")
     async def trace_request(request: Request, call_next):
@@ -100,6 +134,7 @@ def create_app(
                 request,
                 ApiFailure(500, "ERRO_INTERNO", "Ocorreu um erro interno."),
             )
+        response.headers.update(browser_headers)
         response.headers["X-Request-ID"] = str(request.state.request_id)
         if request.url.path.startswith("/api/v1/") and request.url.path != "/api/v1/health":
             response.headers["Cache-Control"] = "no-store"
@@ -157,10 +192,14 @@ def create_app(
         )
 
     app.include_router(session.router)
+    app.include_router(chat.router)
+    app.include_router(importation.router)
+    app.include_router(product_help.router)
     app.include_router(examples.router)
     app.include_router(preparation.router)
     app.include_router(preview.router)
     app.include_router(diagnostics.router)
+    app.include_router(replay.router)
 
     @app.api_route(
         "/api/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"]
@@ -182,6 +221,10 @@ def create_app(
 def create_schema_app() -> FastAPI:
     app = FastAPI(title="Motor de Fluxo API", version="1.0.0")
 
+    @app.post("/api/v1/chat", response_model=ChatResponseV1, responses=chat.CHAT_RESPONSES)
+    def chat_schema(_: SchemaBearer, request: ChatRequestV1) -> ChatResponseV1:
+        raise HTTPException(status_code=503, detail="CHAT_INDISPONIVEL")
+
     @app.get("/api/v1/health", response_model=HealthResponse)
     def health_schema() -> HealthResponse:
         return HealthResponse(status="ok")
@@ -189,6 +232,14 @@ def create_schema_app() -> FastAPI:
     @app.get("/api/v1/session", response_model=SessionResponse)
     def session_schema(_: SchemaBearer) -> SessionResponse:
         raise HTTPException(status_code=501, detail="endpoint disponível na T3")
+
+    @app.get("/api/v1/catalogos/importacao", response_model=CatalogoImportacao)
+    def import_catalog_schema(_: SchemaBearer) -> CatalogoImportacao:
+        raise HTTPException(status_code=501, detail="endpoint disponível na Etapa 6")
+
+    @app.get("/api/v1/catalogos/ajuda", response_model=ProductHelpCatalogV1)
+    def product_help_catalog_schema(_: SchemaBearer) -> ProductHelpCatalogV1:
+        raise HTTPException(status_code=501, detail="endpoint disponível na Etapa 6")
 
     @app.get("/api/v1/examples/reference", response_model=ReferenceExample)
     def reference_example_schema(_: SchemaBearer) -> ReferenceExample:
@@ -246,5 +297,9 @@ def create_schema_app() -> FastAPI:
         request: DiagnosticRetryRequest,
     ) -> JobSnapshot:
         raise HTTPException(status_code=501, detail="endpoint disponível na T7")
+
+    @app.post("/api/v1/replays", response_model=ReplayDocumentV1)
+    def replay_schema(_: SchemaBearer, request: ReplayRequestV1) -> ReplayDocumentV1:
+        raise HTTPException(status_code=501, detail="endpoint disponível na Etapa 5")
 
     return app

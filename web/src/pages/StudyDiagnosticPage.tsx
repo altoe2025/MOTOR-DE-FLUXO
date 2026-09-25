@@ -1,16 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 
 import type { JobSnapshot } from '../api/client';
 import { useDiagnosticRuntime } from '../app/providers';
+import { useOptionalChat } from '../chat/ChatProvider';
+import { selectionId } from '../chat/routeContext';
 import type { FieldProvenance } from '../cases/domain';
 import { buildDiagnosticRequest, DiagnosticRequestBuildError } from '../diagnostics/buildDiagnosticRequest';
-import { DiagnosticAxesView } from '../diagnostics/components/DiagnosticAxesView';
 import { DiagnosticControls } from '../diagnostics/components/DiagnosticControls';
-import { DiagnosticDistribution } from '../diagnostics/components/DiagnosticDistribution';
-import { DiagnosticHistory } from '../diagnostics/components/DiagnosticHistory';
+import { DiagnosticEngineResult } from '../diagnostics/components/DiagnosticEngineResult';
 import { DiagnosticStatus, type DiagnosticViewState } from '../diagnostics/components/DiagnosticStatus';
-import { SelectedExecution } from '../diagnostics/components/SelectedExecution';
+import { currentDiagnostic, VariationComparison } from '../levers/VariationComparison';
 import {
   cancelStudyDiagnostic,
   executeStudyDiagnostic,
@@ -88,8 +88,14 @@ export function StudyDiagnosticPage() {
   const { studyId } = useParams();
   const [searchParams] = useSearchParams();
   const requestedScenarioId = searchParams.get('scenarioId');
-  const screenIdentity = `${studyId ?? ''}:${requestedScenarioId ?? ''}`;
+  const rawExecutionId = searchParams.get('executionId');
+  const requestedExecutionId = selectionId(rawExecutionId);
+  const screenIdentity = `${studyId ?? ''}:${requestedScenarioId ?? ''}:${rawExecutionId ?? ''}`;
   const { controller, client } = useDiagnosticRuntime();
+  const chat = useOptionalChat();
+  const setChatScenarioId = chat?.setScenarioId;
+  const setChatExecutionId = chat?.setDiagnosticExecutionId;
+  const publishCommunication = chat?.publishCommunication;
   const heading = useRef<HTMLHeadingElement>(null);
   const resumedAttempts = useRef(new Set<string>());
   const mounted = useRef(true);
@@ -98,6 +104,7 @@ export function StudyDiagnosticPage() {
   const [viewState, setViewState] = useState<DiagnosticViewState | null>(null);
   const [runInProgress, setRunInProgress] = useState(false);
   const [cancelInFlight, setCancelInFlight] = useState(false);
+  const [runAllProgress, setRunAllProgress] = useState<string | null>(null);
   const cancelInFlightRef = useRef(false);
   const identityToken = useRef(0);
   const activeIdentity = useRef(screenIdentity);
@@ -110,6 +117,7 @@ export function StudyDiagnosticPage() {
     resumedAttempts.current = new Set();
     setViewState(null);
     setRunInProgress(false);
+    setRunAllProgress(null);
     setCancelInFlight(false);
     heading.current?.focus();
     if (studyId === undefined) return () => { mounted.current = false; };
@@ -123,9 +131,15 @@ export function StudyDiagnosticPage() {
       }
       const selectedId = requestedScenarioId ?? loaded.baseScenarioId;
       const selected = loaded.scenarios.find((item) => item.id === selectedId);
-      setViewState(selected === undefined
-        ? { kind: 'UNAVAILABLE', reason: 'O cenário solicitado não existe neste estudo.' }
-        : persistedState(latestDiagnostic(loaded, selected)));
+      if (selected === undefined) setViewState({ kind: 'UNAVAILABLE', reason: 'O cenário solicitado não existe neste estudo.' });
+      else if (rawExecutionId !== null) {
+        const cited = selectionId(rawExecutionId) === null ? undefined : diagnosticsForScenario(loaded, selected).find((item) =>
+          item.id === requestedExecutionId && item.status === 'SUCCEEDED' && item.envelope !== null
+          && isCurrentForScenario(item, selected));
+        setViewState(cited === undefined
+          ? { kind: 'UNAVAILABLE', reason: 'A execução citada não está disponível neste Estudo.' }
+          : persistedState(cited));
+      } else setViewState(persistedState(latestDiagnostic(loaded, selected)));
     }).catch(() => {
       if (active && mounted.current) setViewState({ kind: 'UNAVAILABLE', reason: 'Não foi possível abrir o estudo.' });
     });
@@ -139,7 +153,7 @@ export function StudyDiagnosticPage() {
       }
     });
     return () => { active = false; mounted.current = false; unsubscribe(); };
-  }, [controller, requestedScenarioId, screenIdentity, studyId]);
+  }, [controller, requestedScenarioId, requestedExecutionId, rawExecutionId, screenIdentity, studyId]);
 
   const selectedScenarioId = requestedScenarioId ?? study?.baseScenarioId;
   const scenario = study?.scenarios.find((item) => item.id === selectedScenarioId) ?? null;
@@ -196,12 +210,54 @@ export function StudyDiagnosticPage() {
   }, [complete, controller, effectiveCount, runInProgress, scenario, study, trackedApi]);
 
   useEffect(() => {
-    if (study === null || scenario === null || runInProgress) return;
+    if (study === null || scenario === null || runInProgress || rawExecutionId !== null) return;
     const latest = latestDiagnostic(study, scenario);
     if (latest?.status !== 'QUEUED' || resumedAttempts.current.has(latest.attemptId)) return;
     resumedAttempts.current.add(latest.attemptId);
     void run();
-  }, [run, runInProgress, scenario, study]);
+  }, [run, runInProgress, scenario, study, rawExecutionId]);
+
+  const runAll = async () => {
+    if (study === null || runInProgress || runAllProgress !== null) return;
+    const token = identityToken.current;
+    const isActive = () => mounted.current && identityToken.current === token;
+    const pending = study.scenarios.filter((item) => currentDiagnostic(study, item) === null);
+    setRunInProgress(true);
+    try {
+      for (const [index, item] of pending.entries()) {
+        if (!isActive()) return;
+        setRunAllProgress(`Rodando ${index + 1} de ${pending.length}…`);
+        const itemCount = item.sourceSnapshot.generationInputSnapshot !== undefined ? count : 1;
+        const attempt = await executeStudyDiagnostic({
+          authority: controller,
+          scenarioId: item.id,
+          api: { submitDiagnostic: client.submitDiagnostic, getDiagnosticJob: client.getDiagnosticJob, getDiagnosticResult: client.getDiagnosticResult },
+          buildRequest: async ({ study: currentStudy, scenario: currentScenario, attemptId }) => {
+            const preview = await buildPreviewRequest(
+              currentScenario.sourceSnapshot, currentScenario.premises, currentScenario.period,
+              { requestId: crypto.randomUUID(), studyId: currentStudy.id, scenarioId: currentScenario.id, scenarioRevision: currentScenario.revision },
+              requestProvenance(currentStudy, currentScenario),
+            );
+            return buildDiagnosticRequest({
+              requestId: preview.request_id, idempotencyKey: crypto.randomUUID(), studyId: currentStudy.id,
+              scenario: currentScenario, count: itemCount, baseSeed: attemptId, previewRequest: preview,
+            });
+          },
+        });
+        if (!isActive()) return;
+        if (attempt.status !== 'SUCCEEDED') {
+          complete(attempt);
+          return;
+        }
+        const current = controller.snapshot.document;
+        if (current?.id === study.id) setStudy(current);
+      }
+    } catch {
+      if (isActive()) setViewState({ kind: 'FAILED', attemptId: 'não persistida', publicMessage: 'Não foi possível rodar todas as variações. As que terminaram ficaram salvas.' });
+    } finally {
+      if (isActive()) { setRunAllProgress(null); setRunInProgress(false); }
+    }
+  };
 
   const cancel = async () => {
     if (scenario === null || cancelInFlightRef.current) return;
@@ -227,35 +283,44 @@ export function StudyDiagnosticPage() {
       const result = await retryStudyDiagnostic({ authority: controller, executionId: terminal.id,
         idempotencyKey: crypto.randomUUID(), api: { ...trackedApi(), retryDiagnostic: client.retryDiagnostic } });
       complete(result);
+    } catch {
+      if (mounted.current) setViewState({ kind: 'FAILED', attemptId: 'não persistida', publicMessage: 'Não foi possível repetir o diagnóstico.' });
     } finally { if (mounted.current) setRunInProgress(false); }
   };
 
   const scenarioDiagnostics = study === null || scenario === null ? [] : diagnosticsForScenario(study, scenario);
-  const terminal = scenario === null ? null : [...scenarioDiagnostics].reverse().find((item) =>
-    item.status === 'SUCCEEDED' && item.envelope !== null && isCurrentForScenario(item, scenario)) ?? null;
+  const terminal = scenario === null || (rawExecutionId !== null && requestedExecutionId === null) ? null
+    : [...scenarioDiagnostics].reverse().find((item) =>
+    item.status === 'SUCCEEDED' && item.envelope !== null && isCurrentForScenario(item, scenario)
+      && (requestedExecutionId === null || item.id === requestedExecutionId)) ?? null;
   const envelope = terminal?.envelope ?? null;
+  const hasIofFallback = envelope?.selected_execution.input_snapshot.cenario?.ordens.some((order) =>
+    order.finalidade === null || !terminal!.premisesSnapshot.costs.iof_por_finalidade.some((rule) =>
+      rule.finalidade === order.finalidade && rule.direcao === order.direcao));
+  const chatScenarioId = study?.id === studyId ? scenario?.id ?? null : null;
+  const chatExecutionId = study?.id === studyId ? terminal?.id ?? null : null;
+  useEffect(() => { setChatScenarioId?.(chatScenarioId); }, [setChatScenarioId, chatScenarioId]);
+  useEffect(() => { setChatExecutionId?.(chatExecutionId); }, [setChatExecutionId, chatExecutionId]);
+  useEffect(() => {
+    publishCommunication?.(study !== null && scenario !== null && terminal !== null
+      ? { study, scenarioId: scenario.id, diagnosticExecutionId: terminal.id,
+        comparisonExecutionId: null, replay: null, replayDay: null } : null);
+  }, [publishCommunication, study, scenario, terminal]);
   return <article className="diagnostic-page">
     <p className="eyebrow">Estudo {study?.name ?? ''}</p>
     <h1 ref={heading} tabIndex={-1}>Diagnóstico robusto</h1>
     <p className="page-introduction">Múltiplas repetições quando a origem é gerável; uma execução individual quando a entrada já está fixa.</p>
     {study === null || scenario === null ? <DiagnosticStatus state={viewState ?? { kind: 'UNAVAILABLE', reason: 'Carregando estudo…' }} /> : <>
       <DiagnosticControls generated={generated} count={effectiveCount} onCountChange={setCount} onRun={() => void run()} disabled={runInProgress || controller.snapshot.status === 'STORAGE_FAILURE'} />
-      {viewState === null ? null : <DiagnosticStatus state={viewState} {...(cancelInFlight ? {} : { onCancel: () => void cancel() })} onRetry={(attemptId) => void retry(attemptId)} />}
-      <DiagnosticHistory executions={scenarioDiagnostics} />
+      <VariationComparison study={study} selectedScenarioId={scenario.id} running={runInProgress} progress={runAllProgress} onRunAll={() => void runAll()} />
+      {viewState === null || viewState.kind === 'SUCCEEDED' ? null : <DiagnosticStatus state={viewState} {...(cancelInFlight ? {} : { onCancel: () => void cancel() })} onRetry={(attemptId) => void retry(attemptId)} />}
       {envelope === null ? null : <>
-        <DiagnosticDistribution statistics={envelope.statistics} repetitions={envelope.repetitions} economics={envelope.axes.economic_robustness} />
-        <SelectedExecution selectedExecution={envelope.selected_execution} />
-        <DiagnosticAxesView axes={envelope.axes} consequences={envelope.consequences} limitations={envelope.limitations} />
-        <section className="diagnostic-card" aria-labelledby="provenance-heading"><h2 id="provenance-heading">Proveniência</h2>
-          <dl className="diagnostic-identity"><div><dt>Job</dt><dd>{envelope.job_id}</dd></div><div><dt>Fingerprint do request</dt><dd>{envelope.request_fingerprint}</dd></div><div><dt>Versão do schema</dt><dd>{envelope.schema_version}</dd></div></dl>
-          <div className="table-scroll" role="region" tabIndex={0} aria-label="Tabela rolável — Origem dos campos do request"><table className="diagnostic-table"><caption>Origem dos campos do request</caption><thead><tr><th scope="col">Caminho</th><th scope="col">Tipo</th><th scope="col">Fonte</th><th scope="col">Registrado em</th></tr></thead><tbody>{Object.entries(envelope.provenance.request_paths).map(([path, origin]) => <tr key={path}><th scope="row">{path}</th><td>{origin.tipo}</td><td>{origin.fonte}</td><td>{origin.registrado_em_utc}</td></tr>)}</tbody></table></div>
-          <EvidenceList refs={envelope.provenance.evidence_refs} />
-        </section>
+        <Link className="button-link replay-cta" to={`/estudos/${study.id}/replay?executionId=${encodeURIComponent(terminal!.id)}`}>Abrir Replay · Fronteira Viva</Link>
+        <DiagnosticEngineResult envelope={envelope} />
+        {hasIofFallback ? <p><strong>IOF padrão por direção</strong>: ordens sem regra específica para a combinação de finalidade e direção usam as premissas da simulação por direção, sem classificação regulatória inferida ou cotação.</p> : null}
+        <Link className="button-link" to={`/estudos/${study.id}/apresentacao?cenario=${encodeURIComponent(scenario.id)}&execucao=${encodeURIComponent(terminal!.id)}`}>Apresentar esta execução</Link>
       </>}
     </>}
   </article>;
 }
 
-function EvidenceList({ refs }: Readonly<{ refs: readonly string[] }>) {
-  return refs.length === 0 ? <p>Sem referências adicionais.</p> : <ul className="evidence-refs">{refs.map((item) => <li key={item}><code>{item}</code></li>)}</ul>;
-}

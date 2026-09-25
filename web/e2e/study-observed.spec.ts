@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { expectCanonicalPreview, persistedPreviews } from './helpers/persistedPreview';
 
 const OWNER = '00000000-0000-4000-8000-000000000021';
 const NOW = '2026-09-19T12:00:00Z';
@@ -41,25 +42,29 @@ test('confirmed observed case becomes an immutable study snapshot and survives r
   await page.getByRole('button', { name: 'Executar cenário atual' }).click();
   await expect.poll(() => page.evaluate((id) => window.__MOTOR_E2E__!.studyExecutionStatuses(id), studyId))
     .toContain('SUCCEEDED');
-  await expect(page.getByRole('heading', { name: 'Resultado do motor' })).toBeVisible({ timeout: 30_000 });
-  await expect(page.getByRole('heading', { name: 'Observado × Motor' })).toBeVisible();
-  await expect(page.getByRole('cell', { name: 'Coincide' })).toBeVisible();
+  const observed = await expectCanonicalPreview(page, studyId);
+  expect(observed.sourceSnapshot?.source.kind).toBe('OBSERVED_CASE');
+  expect(observed.observedComparison?.rows).toContainEqual(expect.objectContaining({
+    code: 'GROSS_OUT_BRL', status: 'MATCHED', observedValue: '100', difference: '0',
+  }));
+  expect(Number(observed.envelope!.result.agregado.volume_bruto_periodo_brl)).toBe(100);
 
   await page.reload();
   await expect(page.getByRole('radio', { name: 'Caso observado' })).toBeChecked();
   await expect(page.getByLabel('Caso confirmado')).toHaveValue('case-e2e');
-  await expect(page.getByRole('heading', { name: 'Resultado do motor' })).toBeVisible();
+  expect(await persistedPreviews(page, studyId)).toEqual([observed]);
 
   await page.getByRole('button', { name: 'Converter para autoria manual' }).click();
   await expect.poll(() => page.evaluate((id) => window.__MOTOR_E2E__!.studySource(id), studyId))
     .toBe('AUTHORED');
   await expect.poll(() => page.evaluate((id) => window.__MOTOR_E2E__!.studyExecutionStatuses(id), studyId))
     .toEqual(['RUNNING', 'SUCCEEDED']);
-  await expect(page.getByRole('button', { name: /Abrir execução/ })).toHaveCount(1);
-  await expect(page.getByText('Concluída', { exact: true })).toBeVisible();
+  await expect.poll(async () => (await persistedPreviews(page, studyId)).length).toBe(1);
+  expect((await persistedPreviews(page, studyId))[0]!.status).toBe('SUCCEEDED');
 
   await page.evaluate(() => { document.documentElement.style.zoom = '200%'; });
-  await expect(page.getByRole('heading', { name: 'Resultado do motor' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Resultado do estudo', exact: true })).toBeVisible();
+  expect(await persistedPreviews(page, studyId)).toEqual([observed]);
   await page.screenshot({ path: testInfo.outputPath('observed-study-zoom-200.png'), fullPage: true });
   const network = JSON.stringify(requests);
   expect(network).not.toContain('arquivo-bruto-secreto.xlsx');

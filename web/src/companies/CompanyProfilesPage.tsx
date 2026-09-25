@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 
 import { useStudyController } from '../app/providers';
 import { ProfileBuilder } from '../profiles/components/ProfileBuilder';
@@ -10,6 +10,7 @@ import { useCompanyResources } from './useCompanyResources';
 
 export function CompanyProfilesPage() {
   const { companyId } = useParams();
+  const [query] = useSearchParams();
   const controller = useStudyController();
   const resources = useCompanyResources(companyId);
   const [profiles, setProfiles] = useState<readonly OperationalProfileVersion[]>([]);
@@ -18,6 +19,12 @@ export function CompanyProfilesPage() {
   useEffect(() => setProfiles(resources.profiles), [resources.profiles]);
   if (resources.loading || resources.company === null) return <CompanyRouteState loading={resources.loading} error={resources.error} />;
   const studies = resources.studies.filter((study) => study.deletedAt === null);
+  const requestedId = query.get('caseId');
+  const requestedRevision = query.get('caseRevision');
+  const revision = requestedRevision !== null && /^[1-9][0-9]*$/.test(requestedRevision) ? Number(requestedRevision) : NaN;
+  const preselectedCase = query.getAll('caseId').length === 1 && query.getAll('caseRevision').length === 1 && requestedId !== null && Number.isSafeInteger(revision)
+    ? resources.cases.find((item) => item.id === requestedId && item.revision === revision && item.companyId === resources.company?.id && item.ownerSub === resources.company?.ownerSub) ?? null
+    : null;
   return (
     <CompanyPageFrame company={resources.company} title={`Perfis de ${resources.company.displayName}`} introduction="Selecione casos, confirme uma versão imutável e preserve o snapshot como evidência de um estudo.">
       <p><Link to={`/empresas/${resources.company.id}#comparacao-temporal`}>Comparar observações no tempo</Link></p>
@@ -25,6 +32,7 @@ export function CompanyProfilesPage() {
         company={resources.company}
         cases={resources.cases}
         versions={profiles}
+        preselectedCase={preselectedCase}
         onConfirm={async (profile) => {
           setMessage(null);
           const stored = await controller.appendOperationalProfileVersion(profile);

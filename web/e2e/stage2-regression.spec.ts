@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { expectCanonicalPreview, persistedPreviews } from './helpers/persistedPreview';
 
 const OWNER = '00000000-0000-4000-8000-000000000021';
 const fixture = (name: string) => readFileSync(resolve('src/storage/__fixtures__', name), 'utf8')
@@ -30,13 +31,17 @@ test('Stage 2 observed, authored, synthetic, migration, history and unique termi
   await expect(page).toHaveURL(/\/carteira\/[0-9a-f-]+$/);
   const studyId = page.url().split('/').at(-1)!;
   await executeAndWait(page);
-  await expect(page.getByRole('heading', { name: 'Resultado do motor' })).toBeVisible();
+  const synthetic = await expectCanonicalPreview(page, studyId);
+  expect(synthetic.sourceSnapshot?.source.kind).toBe('SYNTHETIC');
   await page.getByRole('radio', { name: 'Autoria manual' }).check();
   await page.getByRole('button', { name: 'Preparar carteira manual' }).click();
   await executeAndWait(page);
-  await expect(page.getByRole('button', { name: /Abrir execução/ })).toHaveCount(2);
+  await expect.poll(async () => (await persistedPreviews(page, studyId)).length).toBe(2);
+  const authored = await expectCanonicalPreview(page, studyId, 2);
+  expect(authored.sourceSnapshot?.source.kind).toBe('AUTHORED');
   await page.reload();
   await expect(page.getByRole('radio', { name: 'Autoria manual' })).toBeChecked();
+  expect(await persistedPreviews(page, studyId)).toEqual([synthetic, authored]);
   await expect.poll(() => page.evaluate((id) => window.__MOTOR_E2E__!.previewAttemptShapes(id), studyId))
     .toEqual([{ reservation: 1, terminal: 1 }, { reservation: 1, terminal: 1 }]);
 });

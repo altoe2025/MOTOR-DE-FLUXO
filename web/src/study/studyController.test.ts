@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { CompanyRecord, ObservedCase } from '../cases/domain';
 import type { OperationalProfileVersion } from '../profiles/domain';
+import type { DemoStudyPackageV1 } from '../demo/domain';
+import generatedDemo from '../demo/generated/demo-study.v1.json';
 import type {
   ApplicationRepository,
   AppendProfileVersionMutation,
@@ -9,7 +11,8 @@ import type {
   ConfirmObservedCaseMutation,
 } from '../storage/applicationRepository';
 import { calculateOperationalProfile } from '../profiles/calculateOperationalProfile';
-import { OperationConflictError, RevisionConflictError } from '../storage/errors';
+import { createImportReview } from '../importer/eligibility';
+import { DemoInstallSkippedError, OperationConflictError, RevisionConflictError } from '../storage/errors';
 import { attachOperationalProfileEvidence, createStudy, renameStudy } from './domain';
 import { FIXTURE_NOW, FIXTURE_OWNER, makeObservedCase, makeScenarioDraft } from './fixtures';
 import type { StudyDocument } from './model';
@@ -46,6 +49,11 @@ async function makeStudy(ownerSub = FIXTURE_OWNER, id = 'study-1'): Promise<Stud
 }
 
 class RepositoryDouble implements ApplicationRepository {
+  async getDemoInstallationStatus(): Promise<null> { return null; }
+  async listChatConversations(): Promise<never[]> { return []; }
+  async getChatConversation(): Promise<null> { return null; }
+  async saveChatConversation(): Promise<never> { throw new Error('Chat outside fixture scope'); }
+  async deleteChatConversation(): Promise<void> { throw new Error('Chat outside fixture scope'); }
   closed = false;
   readonly saveCalls: CASMutation<StudyDocument>[] = [];
   readonly appendProfileCalls: AppendProfileVersionMutation[] = [];
@@ -57,6 +65,7 @@ class RepositoryDouble implements ApplicationRepository {
     initial: StudyDocument | null = null,
     readonly profiles: OperationalProfileVersion[] = [],
   ) {
+    this.studies = initial === null ? [] : [initial];
     this.getStudyImplementation = async () => initial;
     this.saveStudyImplementation = async (input) => input.document;
   }
@@ -79,7 +88,14 @@ class RepositoryDouble implements ApplicationRepository {
     this.profiles.push(structuredClone(input.document));
     return input.document;
   }
-  async listStudies(): Promise<StudyDocument[]> { return []; }
+  studies: StudyDocument[] = [];
+  installDemoImplementation: ApplicationRepository['installDemoStudy'] = async () => {
+    throw new DemoInstallSkippedError();
+  };
+  async installDemoStudy(input: Parameters<ApplicationRepository['installDemoStudy']>[0]): Promise<StudyDocument> {
+    return this.installDemoImplementation(input);
+  }
+  async listStudies(): Promise<StudyDocument[]> { return this.studies; }
   async getStudy(id: string): Promise<StudyDocument | null> {
     return this.getStudyImplementation(id);
   }
@@ -175,6 +191,131 @@ function controller(input: {
 }
 
 describe('StudyController', () => {
+  it('publica revisão importada somente na sessão e empresa proprietárias', async () => {
+    const repository = new RepositoryDouble(FIXTURE_OWNER);
+    const subject = controller({ repositories: [repository, new RepositoryDouble(OWNER_B)] });
+    await subject.switchSession(FIXTURE_OWNER);
+    const company: CompanyRecord = { id: 'company-1', ownerSub: FIXTURE_OWNER, displayName: 'Empresa', aliases: [], createdAt: FIXTURE_NOW, updatedAt: FIXTURE_NOW, revision: 1 };
+    const review = createImportReview({
+      parsed: { layout: 'xlsx-operacoes/1.0.0', sha256: 'a'.repeat(64), byteSize: 100, rows: [{ operacao_id: 'OP-1', cliente_nome: 'Cliente', classificacao_perfil: null, direcao: 'OUT', data_conhecida: '2026-09-22', data_limite: '2026-09-23', valor_brl: '100', finalidade_codigo: null }] },
+      company, ownerSub: FIXTURE_OWNER, now: FIXTURE_NOW, positionIdentified: true,
+    });
+    await expect(subject.confirmImportedCase(review, 'stable-id')).resolves.toMatchObject({ status: 'CONFIRMED', companyId: 'company-1' });
+    await subject.switchSession(OWNER_B);
+    await expect(subject.confirmImportedCase(review, 'stable-id')).rejects.toBeInstanceOf(StudyControllerSessionError);
+  });
+
+  it('instala automaticamente a demonstração na primeira sessão vazia', async () => {
+    const demo = await makeStudy(FIXTURE_OWNER, 'demo');
+    const repository = new RepositoryDouble(FIXTURE_OWNER);
+    repository.installDemoImplementation = async () => {
+      repository.studies = [demo];
+      return demo;
+    };
+    const subject = controller({ repositories: [repository] });
+
+    await subject.switchSession(FIXTURE_OWNER);
+
+    expect(await subject.listStudies()).toEqual([demo]);
+    expect(subject.snapshot).toMatchObject({ status: 'IDLE', document: null, error: null });
+    subject.close();
+  });
+
+  it('mantém falha de instalação visível e permite recuperação explícita', async () => {
+    const repository = new RepositoryDouble(FIXTURE_OWNER);
+    const failure = new Error('QuotaExceededError');
+    repository.installDemoImplementation = async () => { throw failure; };
+    const subject = controller({ repositories: [repository] });
+    await subject.switchSession(FIXTURE_OWNER);
+    expect(subject.snapshot).toMatchObject({ status: 'STORAGE_FAILURE', error: failure });
+
+    const demo = await makeStudy(FIXTURE_OWNER, 'demo');
+    repository.installDemoImplementation = async () => {
+      repository.studies = [demo];
+      return demo;
+    };
+    expect(await subject.restoreDemoStudy()).toEqual(demo);
+    expect(subject.snapshot).toMatchObject({ status: 'SAVED', document: demo, error: null });
+    subject.close();
+  });
+
+  it('cancela instalação antes da persistência se a conta mudar durante carga do pacote', async () => {
+    const packageLoad = deferred<DemoStudyPackageV1>();
+    const repositoryA = new RepositoryDouble(FIXTURE_OWNER);
+    const repositoryB = new RepositoryDouble(OWNER_B);
+    repositoryB.studies = [await makeStudy(OWNER_B)];
+    let installed = false;
+    repositoryA.installDemoImplementation = async () => { installed = true; return makeStudy(); };
+    let loading = false;
+    const subject = new StudyController({
+      repositoryFactory: (owner) => owner === FIXTURE_OWNER ? repositoryA : repositoryB,
+      demoPackageLoader: () => { loading = true; return packageLoad.promise; },
+    });
+    const previous = subject.switchSession(FIXTURE_OWNER);
+    await vi.waitFor(() => expect(loading).toBe(true));
+    await subject.switchSession(OWNER_B);
+    packageLoad.resolve(generatedDemo as unknown as DemoStudyPackageV1);
+    await previous;
+    expect(installed).toBe(false);
+    expect(subject.snapshot).toMatchObject({ ownerSub: OWNER_B, status: 'IDLE', document: null });
+    subject.close();
+  });
+
+  it('não publica instalação da conta antiga após troca de sessão', async () => {
+    const installation = deferred<StudyDocument>();
+    const repositoryA = new RepositoryDouble(FIXTURE_OWNER);
+    const repositoryB = new RepositoryDouble(OWNER_B);
+    repositoryB.studies = [await makeStudy(OWNER_B)];
+    let installing = false;
+    repositoryA.installDemoImplementation = () => { installing = true; return installation.promise; };
+    const subject = controller({ repositories: [repositoryA, repositoryB] });
+    const previous = subject.switchSession(FIXTURE_OWNER);
+    await vi.waitFor(() => expect(installing).toBe(true));
+    await subject.switchSession(OWNER_B);
+    installation.resolve(await makeStudy(FIXTURE_OWNER, 'demo'));
+    await previous;
+    expect(subject.snapshot).toMatchObject({ ownerSub: OWNER_B, status: 'IDLE', document: null });
+    subject.close();
+  });
+
+  it('não substitui edição corrente quando restauração explícita termina', async () => {
+    const original = await makeStudy();
+    const repository = new RepositoryDouble(FIXTURE_OWNER, original);
+    repository.studies = [original];
+    const scheduler = new ManualScheduler();
+    const subject = controller({ repositories: [repository], scheduler });
+    await subject.switchSession(FIXTURE_OWNER);
+    const installation = deferred<StudyDocument>();
+    repository.installDemoImplementation = () => installation.promise;
+    const restoring = subject.restoreDemoStudy();
+    await subject.loadStudy(original.id);
+    const edited = await renameStudy(original, 'Nome em edição', FIXTURE_NOW);
+    subject.edit(edited);
+    installation.resolve(await makeStudy(FIXTURE_OWNER, 'demo'));
+    expect(await restoring).toBeNull();
+    expect(subject.snapshot).toMatchObject({ status: 'DIRTY', document: edited });
+    expect(scheduler.pending.size).toBe(1);
+    subject.close();
+  });
+
+  it('preserva autosave pendente quando restauração começa com um estudo em edição', async () => {
+    const original = await makeStudy();
+    const repository = new RepositoryDouble(FIXTURE_OWNER, original);
+    const scheduler = new ManualScheduler();
+    const subject = controller({ repositories: [repository], scheduler });
+    await subject.switchSession(FIXTURE_OWNER);
+    await subject.loadStudy(original.id);
+    const edited = await renameStudy(original, 'Edição ainda não salva', FIXTURE_NOW);
+    subject.edit(edited);
+    repository.installDemoImplementation = () => makeStudy(FIXTURE_OWNER, 'demo');
+
+    expect(await subject.restoreDemoStudy()).toBeNull();
+    expect(subject.snapshot).toMatchObject({ status: 'DIRTY', document: edited });
+    expect(await subject.flush()).toEqual(edited);
+    expect(repository.saveCalls).toHaveLength(1);
+    subject.close();
+  });
+
   async function profile(ownerSub = FIXTURE_OWNER, version = 1, id = `profile-${version}`): Promise<OperationalProfileVersion> {
     const observed = makeObservedCase();
     return calculateOperationalProfile({
@@ -190,7 +331,7 @@ describe('StudyController', () => {
     const document = await profile();
 
     await expect(subject.appendOperationalProfileVersion(document)).resolves.toEqual(document);
-    expect(repository.appendProfileCalls[0]).toEqual({ operationId: 'operation-1', document });
+    expect(repository.appendProfileCalls[0]).toEqual({ operationId: 'operation-2', document });
     expect(await subject.listOperationalProfileVersions(document.companyId)).toEqual([document]);
   });
 

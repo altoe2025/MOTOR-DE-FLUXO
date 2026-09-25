@@ -110,4 +110,24 @@ describe('CompositionHypothesisBuilder', () => {
       windowDays: 10, participantChanges: [],
     }));
   });
+
+  it('explica as entidades e mantém o Perfil intacto ao remover um participante da hipótese', async () => {
+    const user = userEvent.setup();
+    const original = profile('profile-a', 'empresa-a');
+    const originalBytes = JSON.stringify(original);
+    const other = profile('profile-c', 'empresa-c');
+    const onCreate = vi.fn();
+    render(<CompositionHypothesisBuilder baseScenario={base()}
+      availableProfiles={[original, other]} onCreate={onCreate} />);
+    expect(screen.getByText(/Perfil Operacional é uma versão imutável/i)).toBeVisible();
+    expect(screen.getByText(/Participante é a presença de uma empresa/i)).toBeVisible();
+    expect(screen.getByText(/Arquétipo gerador é um padrão sintético/i)).toBeVisible();
+    await user.selectOptions(screen.getByLabelText(/adicionar perfil/i), 'profile-c');
+    await user.click(screen.getByRole('button', { name: /remover empresa-a/i }));
+    await user.click(screen.getByRole('button', { name: /criar hipótese/i }));
+    expect(onCreate).toHaveBeenCalledWith(expect.objectContaining({
+      participantChanges: expect.arrayContaining([expect.objectContaining({ kind: 'REMOVE_PARTICIPANT' })]),
+    }));
+    expect(JSON.stringify(original)).toBe(originalBytes);
+  });
 });

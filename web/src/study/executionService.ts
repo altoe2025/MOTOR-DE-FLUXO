@@ -222,6 +222,7 @@ async function execute(options: ExecuteStudyScenarioOptions): Promise<ExecutionA
       }
       const scenario = study.scenarios.find((item) => item.id === options.scenarioId);
       if (scenario === undefined) throw new Error('Cenário não encontrado para execução.');
+      if (signal.aborted || options.controller.snapshot.ownerSub !== ownerSub || options.controller.snapshot.sessionEpoch !== epoch) return attempt(executionId, 'INTERRUPTED', null);
       const context = { requestId, executionId, study, scenario };
       request = options.buildRequest(context);
       assertRequestIdentity(request, context);

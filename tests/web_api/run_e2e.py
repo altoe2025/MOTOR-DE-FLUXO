@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-import subprocess
+import json
+import os
+import re
 from collections import deque
 from concurrent.futures import Future
 from pathlib import Path
@@ -18,6 +20,8 @@ from servidor.auth import AuthenticatedUser, SessionInvalid
 from servidor.config import Settings
 from servidor.diagnostics.executor import DiagnosticExecutor
 from servidor.diagnostics.service import RepetitionTask, execute_repetition
+from tests.web_api.chat_e2e_provider import ControlledChatProvider
+from tests.web_api.measure_replay import measure_limit_replay
 
 CONTROLLED_TOKEN = "mot21-controlled-e2e-token"
 CONTROLLED_USER_ID = UUID("00000000-0000-4000-8000-000000000021")
@@ -118,14 +122,12 @@ class ControlledVerifier:
             raise SessionInvalid("token controlado inválido") from error
 
 
-def _head_sha() -> str:
-    return subprocess.run(
-        ["git", "rev-parse", "HEAD"],
-        cwd=ROOT,
-        check=True,
-        capture_output=True,
-        text=True,
-    ).stdout.strip()
+def _demo_build_sha() -> str:
+    package_path = ROOT / "web" / "src" / "demo" / "generated" / "demo-study.v1.json"
+    value = json.loads(package_path.read_text(encoding="utf-8"))["motorBuildSha"]
+    if not isinstance(value, str) or re.fullmatch(r"[0-9a-f]{40}", value) is None:
+        raise ValueError("SHA de motor inválido no pacote demo E2E")
+    return value
 
 
 def build_e2e_app(
@@ -138,9 +140,13 @@ def build_e2e_app(
         supabase_url="https://e2e.invalid",
         supabase_jwt_issuer="https://e2e.invalid/auth/v1",
         supabase_allowed_user_ids=frozenset({CONTROLLED_USER_ID, CONTROLLED_USER_ID_B}),
-        motor_build_sha=_head_sha(),
+        motor_build_sha=os.environ.get("MOT_E2E_BUILD_SHA") or _demo_build_sha(),
         web_dist_dir=ROOT / "web" / "dist",
         diagnostic_max_workers=diagnostic_max_workers,
+        chat_enabled=True,
+        openai_api_key="controlled-fake-provider-only",
+        openai_chat_model="controlled-fake",
+        openai_chat_timeout_seconds=2,
     )
     pool = diagnostic_worker_pool or ControlledDiagnosticPool()
     executor = DiagnosticExecutor(
@@ -151,10 +157,12 @@ def build_e2e_app(
         max_jobs_global=settings.diagnostic_max_jobs_global,
         retention_seconds=settings.diagnostic_retention_seconds,
     )
+    chat = ControlledChatProvider()
     app = create_app(
         settings=settings,
         verifier=ControlledVerifier(),
         diagnostic_executor=executor,
+        chat_provider=chat,
     )
     app.state.e2e_diagnostic_pool = pool
 
@@ -167,8 +175,26 @@ def build_e2e_app(
     def diagnostic_state() -> dict[str, object]:
         return pool.snapshot()
 
-    control_routes = app.router.routes[-2:]
-    del app.router.routes[-2:]
+    @app.get("/__e2e__/replay/limit", include_in_schema=False)
+    def replay_limit() -> dict[str, object]:
+        report, document = measure_limit_replay()
+        return {
+            "report": report,
+            "document": json.loads(document.model_dump_json()),
+        }
+
+    @app.post("/__e2e__/chat/control", include_in_schema=False)
+    async def chat_control(payload: dict[str, str]) -> dict[str, int]:
+        chat.control(payload["mode"])
+        app.state.chat_provider = None if payload["mode"] == "disabled" else chat
+        return chat.snapshot()
+
+    @app.get("/__e2e__/chat/state", include_in_schema=False)
+    async def chat_state() -> dict[str, int]:
+        return chat.snapshot()
+
+    control_routes = app.router.routes[-5:]
+    del app.router.routes[-5:]
     app.router.routes[0:0] = control_routes
 
     return app
@@ -176,7 +202,9 @@ def build_e2e_app(
 
 def main() -> None:
     app = build_e2e_app()
-    config = uvicorn.Config(app, host="127.0.0.1", port=8021, access_log=False)
+    config = uvicorn.Config(
+        app, host="127.0.0.1", port=int(os.environ.get("MOT_E2E_PORT", "8021")), access_log=False
+    )
     server = uvicorn.Server(config)
 
     @app.post("/__e2e__/shutdown", include_in_schema=False)

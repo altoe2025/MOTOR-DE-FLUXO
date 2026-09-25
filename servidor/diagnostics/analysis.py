@@ -20,6 +20,7 @@ from servidor.contracts.diagnostics import (
     OperationalProfileAxis,
     ParticipantShare,
     PolicyCaptureAxis,
+    PurposeResidualBreakdown,
     RepetitionSummary,
     ResidualBreakdown,
     StructuralPotentialAxis,
@@ -411,7 +412,7 @@ def analyze_diagnostic_repetitions(
         }
     )
     by_day: dict[tuple[int, str], Decimal] = defaultdict(Decimal)
-    by_purpose: dict[tuple[str, str], Decimal] = defaultdict(Decimal)
+    by_purpose: dict[tuple[str | None, str], Decimal] = defaultdict(Decimal)
     remitted_out = remitted_in = Decimal(0)
     for allocation in allocations:
         if allocation.tipo != "REMETIDO":
@@ -446,12 +447,14 @@ def analyze_diagnostic_repetitions(
                 for (day, direction), value in sorted(by_day.items())
             ],
             "by_purpose": [
-                ResidualBreakdown(
+                PurposeResidualBreakdown(
                     key=purpose,
                     direction=cast(Literal["OUT", "IN"], direction),
                     value_brl=_decimal_text(value),
                 )
-                for (purpose, direction), value in sorted(by_purpose.items())
+                for (purpose, direction), value in sorted(
+                    by_purpose.items(), key=lambda item: (item[0][0] is not None, item[0][0] or "", item[0][1])
+                )
             ],
         }
     )

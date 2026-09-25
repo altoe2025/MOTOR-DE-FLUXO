@@ -18,6 +18,36 @@ def test_reference_preserves_decimal_text(reference_payload):
     assert request.model_dump(mode="json")["cenario"] == reference_payload["cenario"]
 
 
+def test_request_preserves_null_purpose_and_not_collected_provenance(reference_payload):
+    path = "/ordens/0/finalidade"
+    reference_payload["cenario"]["ordens"][0]["finalidade"] = None
+    reference_payload["proveniencia"][path]["tipo"] = "NAO_COLETADO"
+    request = PreviaRequest.model_validate(reference_payload)
+    assert request.cenario.ordens[0].finalidade is None
+    assert request.model_dump(mode="json")["cenario"]["ordens"][0]["finalidade"] is None
+
+
+def test_not_collected_rejects_textual_purpose(reference_payload):
+    reference_payload["proveniencia"]["/ordens/0/finalidade"]["tipo"] = "NAO_COLETADO"
+    with pytest.raises(ValidationError):
+        PreviaRequest.model_validate(reference_payload)
+
+
+@pytest.mark.parametrize("purpose", ["", "  ", " SERVICOS", "SERVICOS "])
+def test_order_purpose_still_rejects_empty_or_external_spaces(reference_payload, purpose):
+    reference_payload["cenario"]["ordens"][0]["finalidade"] = purpose
+    with pytest.raises(ValidationError):
+        PreviaRequest.model_validate(reference_payload)
+
+
+def test_iof_rule_still_requires_textual_purpose(reference_payload):
+    reference_payload["cenario"]["custo"]["iof_por_finalidade"] = [
+        {"finalidade": None, "direcao": "OUT", "aliquota": "0.01"}
+    ]
+    with pytest.raises(ValidationError):
+        PreviaRequest.model_validate(reference_payload)
+
+
 def test_input_preserves_opposite_legs_from_the_same_client(reference_payload):
     scenario = deepcopy(reference_payload["cenario"])
     out_order = deepcopy(scenario["ordens"][0])

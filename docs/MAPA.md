@@ -1,9 +1,16 @@
 # Mapa do repositório
 
 Índice para achar as coisas sem procurar. Estado técnico e planejamento do
-front-end atualizados em 2026-09-21.
+front-end atualizados em 2026-09-22.
 
 ## Comece por aqui
+
+**Consolidação em andamento (2026-09-25):** `codex/integracao-etapas-5-6`
+reúne as Etapas 5/6, finalidade opcional e a bancada do Claude
+(`feat/bancada-exploracao`). Inclui quadro `/quadro`, alavancas por empresa e
+chat flutuante ORKE AI. `origin/main` verificada antes da integração estava em
+`6c623a8` (Etapa 4). As referências históricas abaixo não substituem este estado.
+Publicação e CI devem ser conferidas no PR; não houve deploy nesta integração.
 
 **Branch integrada: `main` em `c2ad175` pelo PR #37.** A sensibilidade, o fechamento
 funcional, as MOT-15–MOT-22 e a política de autonetting preferencial já foram
@@ -38,6 +45,77 @@ make test          # a contagem vigente é registrada em docs/testing.md
 
 ## Onde está cada resposta
 
+MOT-99 / D6 local: `web/e2e/stage6-acceptance.spec.ts` integra XLSX observado,
+cinco mixes demonstrativos, Diagnóstico, Replay, chat, Painel A, PDF e falhas
+controladas. O smoke `web/e2e/stage6-render-smoke.spec.ts` é opt-in e não foi
+executado; `web/scripts/run-real-e2e.mjs --render` exige aprovação explícita,
+URL HTTPS onrender.com e credenciais efêmeras. Operação, matriz de aceite e
+proveniência dos artifacts: `docs/frontend/etapa-6-operacao.md`,
+`docs/frontend/etapa-6-aceitacao.md` e
+`docs/frontend/evidencias/etapa-6/README.md`. A decisão de finalidade opcional
+de 2026-09-24 permite XLSX de sete colunas até Diagnóstico, Replay, Painel A e PDF,
+com “IOF padrão por direção”. Visual Linux e imagem Docker continuam gates
+independentes do aceite local integral; publicação segue NOT_RUN.
+
+MOT-96 / D1–D2 local: `web/src/presentation/PresentationRoute.tsx` carrega a seleção
+explícita do Estudo e constrói o `CommunicationDocumentV1` para o Painel A.
+`selection.ts` recusa owner, cenário ou execução incompatível;
+`web/src/app/router.tsx`, `AppShell.tsx` e `servidor/static.py` registram a rota
+`/estudos/:studyId/apresentacao?cenario=...&execucao=...`, com `comparacao=...`
+e `dia=...` opcionais e explícitos. Comparação e Replay oferecem links para
+essa seleção; `facts.ts` traduz os fatos publicados sem recomputá-los. As seções, formatter e
+testes de fidelidade vivem em `web/src/presentation/`. Chat e ajuda acompanham o
+fragmento da seção. `PrintActions.tsx`, `PrintMetadata.tsx` e
+`web/src/styles/print.css` imprimem o mesmo DOM em A4 pelo navegador, sem PDF no
+servidor. O aceite Playwright está em `web/e2e/stage6-presentation.spec.ts`; o
+inspetor de nove páginas/PNG está em `tests/web_api/render_stage6_pdf.py`;
+quatro regressões de corte estão em `test_render_stage6_pdf.py`.
+Resultados e limites estão em `docs/testing.md`. A rota é local, sem publicação.
+
+MOT-98 / D4: `Dockerfile`, `.dockerignore`, `requirements/web.lock` e
+`requirements/build.lock` definem o empacotamento. `servidor/__main__.py` interpreta
+HOST/PORT e `servidor/security_headers.py` define a política do browser.
+`scripts/smoke_container.py` verifica a imagem local; os contratos vivem em
+`tests/web_api/test_container_contract.py`, `test_security_headers.py`,
+`test_server_entrypoint.py` e `test_smoke_container.py`.
+Validadores browser são pré-compilados por `web/scripts/generate-validators.mjs`,
+com saída em `web/src/generated/validators/`; smoke da CSP em
+`web/scripts/smoke-csp.mjs` (`npm --prefix web run test:csp`).
+Evidências e bloqueios locais: seção MOT-98 de `docs/testing.md`.
+Aceite publicado continua NOT_RUN.
+D5 está em `render.yaml` (um serviço free, auto deploy desligado),
+`tests/web_api/test_render_blueprint.py` e `docs/deploy-render.md`
+(configuração, convite/callbacks, cold start, rollback e autorização de publicação).
+Etapa 6C C6 local (MOT-95): matriz browser/privacidade, correções de quota,
+restauração de citações e limite de aceite em `docs/frontend/etapa-6c-aceitacao.md`.
+Percurso em `web/e2e/stage6-chat.spec.ts`, fake em
+`tests/web_api/chat_e2e_provider.py`, matriz adversarial em
+`tests/web_api/test_chat_privacy.py` e scanner em `tests/web_api/scan_credentials.py`.
+A MOT-95 continua In Progress até verificar chat nas futuras rotas Apresentação e
+impressão; essas rotas não existem na base `ab32cc4`. Teste real opt-in criado e
+não executado. Não houve push/PR/deploy nem alteração financeira.
+
+Etapa 6A integrada localmente: o percurso real de importação e os limites estão em
+`docs/frontend/etapa-6a-aceitacao.md`; o teste reproduzível está em
+`web/e2e/import-observed-case.spec.ts`. Parser/worker/revisão/publicação vivem em
+`web/src/importer/`, sem repositório próprio. Catálogo autenticado em
+`servidor/catalogs/importacao.py` e `servidor/routes/importation.py`; produção
+continua `NAO_CONFIGURADO`, como metadado informativo: o cenário usa seu snapshot
+e custos persistidos, sem exigir finalidade. Scanner XLSX em
+`tests/web_api/scan_credentials.py`, regressões em `test_import_acceptance.py`.
+O limite de 1.000 linhas importadas não substitui o orçamento do Replay da Etapa 5.
+
+Etapa 6B B6 local: aceite reproduzível em
+`web/e2e/stage6-demo-communication.spec.ts`, projeção de comunicação testável
+em `web/src/e2eBridge.ts`, instalação/restauração em `web/src/pages/StudiesPage.tsx`
+e pacote sintético em `servidor/demo/generate_package.py`/
+`web/src/demo/generated/demo-study.v1.json`. Comandos, evidências e limites
+de versão/comparação estão em `docs/testing.md`, seção "Aceitação local da
+Etapa 6B". O runner E2E lê o SHA do pacote; o teste cobre comparação positiva
+de hipótese executada e execução do Estudo importado sem finalidade, preservado
+durante restauração demo. Regras específicas exigem par exato finalidade/direção;
+na ausência, aplicam-se os padrões da direção.
+
 | Pergunta | Arquivo |
 |---|---|
 | Regras do repo, restrições, o que não mexer | `AGENTS.md` |
@@ -69,6 +147,15 @@ make test          # a contagem vigente é registrada em docs/testing.md
 | Aceite técnico do MVP da Etapa 4 | `docs/frontend/etapa-4-mvp-aceitacao.md` |
 | Design, plano e auditoria da Evolução B da Etapa 4 | `docs/superpowers/specs/2026-09-21-frontend-etapa-4-evolucao-b-design.md`, `docs/superpowers/plans/2026-09-21-frontend-etapa-4-evolucao-b.md`, `docs/frontend/etapa-4-evolucao-b-auditoria.md` |
 | Aceite técnico da Evolução B da Etapa 4 | `docs/frontend/etapa-4-evolucao-b-aceitacao.md` |
+| Especificação aprovada e plano executável da Etapa 5 — Replay temporal | `docs/superpowers/specs/2026-09-22-frontend-etapa-5-replay-design.md`, `docs/superpowers/plans/2026-09-22-frontend-etapa-5-replay.md` |
+| Operar o Replay Fronteira Viva da Etapa 5 | `docs/frontend/etapa-5-replay-operacao.md` |
+| Aceite, evidências visuais e limite efetivo da Etapa 5 | `docs/frontend/etapa-5-replay-aceitacao.md`, `docs/frontend/evidencias/mot89-*` |
+| Especificação e plano mestre da Etapa 6 — importação, chat, apresentação, relatório e Render | `docs/superpowers/specs/2026-09-23-frontend-etapa-6-comunicacao-publicacao-design.md`, `docs/superpowers/plans/2026-09-23-frontend-etapa-6-plano-mestre.md` |
+| Operação, aceite e evidências locais da Etapa 6 (MOT-99) | `docs/frontend/etapa-6-operacao.md`, `docs/frontend/etapa-6-aceitacao.md`, `docs/frontend/evidencias/etapa-6/README.md` |
+| Planos executáveis 6A–6D da Etapa 6 | `docs/superpowers/plans/2026-09-23-frontend-etapa-6a-importacao-plano.md`, `docs/superpowers/plans/2026-09-23-frontend-etapa-6b-demonstracao-comunicacao-plano.md`, `docs/superpowers/plans/2026-09-23-frontend-etapa-6c-chat-plano.md`, `docs/superpowers/plans/2026-09-23-frontend-etapa-6d-apresentacao-publicacao-plano.md` |
+| Contratos HTTP, limites e configuração do chat C3 (sem provider real C4) | `docs/frontend/etapa-6c-c3-contratos.md`, `servidor/contracts/chat.py`, `servidor/routes/chat.py`, `servidor/chat/service.py` |
+| Provider Responses, política temática e ferramentas somente leitura C4 | `docs/frontend/etapa-6c-c4-provider.md`, `servidor/chat/openai_provider.py`, `servidor/chat/tools.py`, `servidor/chat/prompts.py` |
+| Cliente, contexto, citações e ajuda contextual C5 | `docs/frontend/etapa-6c-c5-cliente.md`, `web/src/chat/chatService.ts`, `web/src/chat/contextFragment.ts`, `web/src/chat/components/ChatCitation.tsx`, `web/src/help/AskAboutThis.tsx` |
 | IDs T0–T12 e auditoria de `50fc384`/`1270458` | seção "Rastreabilidade aprovada no Linear" e matriz da Task 0 no plano técnico v2 da Etapa 2 |
 | Importação de fontes reais e Caso Observado | `docs/superpowers/specs/2026-09-19-importacao-dados-reais-design-v2.md` |
 | Plano vigente do importador | `docs/superpowers/plans/2026-09-19-importacao-dados-reais-plano-tecnico-v2.md` |
@@ -81,7 +168,9 @@ versões de 2026-09-19.
 Os dois relatórios são **autocontidos**: não pressupõem a conversa que os gerou.
 
 O gate documental da Etapa 2 é MOT-62. A Etapa 3 usa MOT-65–MOT-77 para T0–T12.
-O MVP da Etapa 4 usa MOT-78–MOT-81 e a Evolução B usa MOT-82–MOT-85. Os candidatos e matrizes de evidência não
+O MVP da Etapa 4 usa MOT-78–MOT-81, a Evolução B usa MOT-82–MOT-85 e o Replay
+da Etapa 5 usa MOT-86–MOT-89. A Etapa 6 usa MOT-90–MOT-99; o plano mestre contém
+a matriz Astra/Sol/Luna para execução econômica por risco. Os candidatos e matrizes de evidência não
 implicam autorização de publicação, merge ou deploy.
 
 ## Dados

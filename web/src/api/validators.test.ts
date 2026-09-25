@@ -191,6 +191,13 @@ describe('generated runtime validation', () => {
     expect(validatePreviaRequest(payload)).toBe(true);
   });
 
+  it('accepts an explicit null purpose in a preview request', () => {
+    const payload = JSON.parse(readFileSync(fixturePath, 'utf8'));
+    payload.cenario.ordens[0].finalidade = null;
+    payload.proveniencia['/ordens/0/finalidade'].tipo = 'NAO_COLETADO';
+    expect(validatePreviaRequest(payload)).toBe(true);
+  });
+
   it('rejects a JSON number where decimal text is required', () => {
     const payload = JSON.parse(readFileSync(fixturePath, 'utf8'));
     payload.cenario.ordens[0].valor_brl = 10800000;

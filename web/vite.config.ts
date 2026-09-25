@@ -15,7 +15,7 @@ export default defineConfig({
     manifest: true,
   },
   test: {
-    exclude: ["e2e/**", "node_modules/**", "dist/**"],
+    exclude: ["e2e/**", "node_modules/**", "dist/**", "scripts/render-smoke-gate.test.mjs"],
     setupFiles: ["./src/test/setup.ts"],
   },
 });

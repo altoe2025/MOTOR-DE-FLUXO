@@ -5,6 +5,11 @@
 > [`2026-09-19-importacao-dados-reais-design-v2.md`](2026-09-19-importacao-dados-reais-design-v2.md).
 > Limites, inspeção OOXML, códigos de erro, parsing, aliases, auditoria, segurança e
 > desempenho do XLSX canônico continuam normativos onde a v2 os referencia.
+>
+> **Revisão de 2026-09-24:** finalidade obrigatória e catálogo como gate, decisões
+> originais deste anexo, foram superados por
+> [`finalidade opcional`](2026-09-24-finalidade-opcional-importacao-design.md).
+> Os trechos normativos abaixo refletem a revisão; a data original é preservada.
 
 Data: 2026-09-17. Estado: decisões funcionais aprovadas pelo Gabriel; documento de
 handoff para implementação pelo Felipe. Esta especificação não autoriza regenerar a
@@ -109,8 +114,11 @@ A ordem e a grafia devem ser exatas:
 
 ```text
 operacao_id | cliente_nome | classificacao_perfil | direcao |
-data_conhecida | data_limite | valor_brl | finalidade_codigo
+data_conhecida | data_limite | valor_brl
 ```
+
+Uma oitava coluna opcional pode ser acrescentada com o header exato
+`finalidade_codigo`; não se interpreta texto em H2 como finalidade sem esse header.
 
 Não há colunas extras, aliases de cabeçalho ou inferência por posição. A versão
 interna deste layout é `xlsx-operacoes/1.0.0` e é inferida pelo cabeçalho; não existe
@@ -127,7 +135,7 @@ uma célula de versão obrigatória.
 | `data_conhecida` | sim | data Excel válida ou texto `DD/MM/AAAA` |
 | `data_limite` | sim | mesma forma; maior ou igual à data conhecida |
 | `valor_brl` | sim | célula numérica ou texto decimal positivo, máximo `10^12`, até 6 casas |
-| `finalidade_codigo` | na execução | texto exato de 1–128 caracteres e par finalidade/direção presente no catálogo |
+| `finalidade_codigo` | não | oitava coluna opcional; texto normalizado de 1–128 caracteres; ausência/vazio vira `null` com proveniência `NOT_COLLECTED` |
 
 `valor_brl` representa BRL. Não há moeda, corredor nem conversão cambial nesta etapa.
 Texto monetário aceita dígitos com vírgula decimal, sem separador de milhar, por
@@ -199,9 +207,6 @@ DATE_ORDER_INVALID
 DIRECTION_INVALID
 DUPLICATE_ID_IN_BATCH
 CONFLICTING_ID_ACROSS_BATCHES
-PURPOSE_MISSING
-PURPOSE_UNKNOWN
-PURPOSE_DIRECTION_INVALID
 RECUT_TOO_LONG
 DEADLINE_OUT_OF_RANGE
 EXECUTION_LIMIT_EXCEEDED
@@ -296,9 +301,11 @@ Não existe editor regulatório nesta etapa. O arquivo de produção nasce
 intencionalmente sem finalidades e com `status=NAO_CONFIGURADO`; nenhuma finalidade
 ou alíquota é inventada. Testes usam catálogo injetado e explicitamente fictício.
 
-Importar e revisar não depende do catálogo configurado. Uma operação só é
-executável quando seu par `(finalidade_codigo, direcao)` existe no catálogo. A
-execução registra a versão e um snapshot das entradas usadas.
+Importar, revisar e executar não dependem de catálogo configurado. O cenário usa
+somente suas premissas persistidas: regra específica quando existir combinação
+exata de finalidade e direção; sem ela, IOF padrão por direção (`iof_out`/`iof_in`).
+Catálogo vazio, `NAO_CONFIGURADO` ou indisponível não bloqueia esse cenário.
+A execução registra versão e snapshot das entradas usadas, sem inferir finalidade.
 
 Parâmetros fora da planilha: janela P0, PTAX, IOF fallback, carry CNR, spread, custo
 fixo e custo de oportunidade. Defaults são visíveis, versionados, editáveis no
@@ -362,7 +369,7 @@ exportação nesta etapa.
 2. **Revisão:** tabela pesquisável com todas as linhas, erros, conflitos, aliases,
    correção inline, exclusão/restauração e desfazer lote.
 3. **Recorte e parâmetros:** escolher datas, janela e custos; mostrar origem,
-   calibração, versão do catálogo e bloqueios.
+   calibração, versão do catálogo, IOF padrão por direção e bloqueios operacionais.
 4. **Confirmação:** resumir total importado, fora do recorte, inválido, excluído,
    substituído e executável. Se qualquer linha não for enviada, exigir confirmação
    explícita “Executar apenas N operações”.
@@ -370,8 +377,8 @@ exportação nesta etapa.
    diagnóstico existente. Falha não apaga nem altera o estudo.
 
 Zero operações, conflitos entre lotes não resolvidos, mais de 1.000 operações
-selecionadas, recorte acima de 730 dias ou ausência de finalidade válida para todas
-as selecionadas bloqueiam o POST. Linhas inválidas, excluídas ou fora do recorte não
+selecionadas, recorte acima de 730 dias ou premissas inválidas bloqueiam o POST.
+Ausência de finalidade não bloqueia. Linhas inválidas, excluídas ou fora do recorte não
 bloqueiam as válidas depois da confirmação parcial.
 
 Interface deve funcionar por teclado, usar tabela semântica, foco previsível,
@@ -405,9 +412,10 @@ perda de ações.
 6. Duas abas não sobrescrevem revisões; conflito CAS é visível e recuperável.
 7. Troca de conta não expõe estudos ou aliases da conta anterior.
 8. O arquivo original não aparece em IndexedDB, requests, logs ou artefatos.
-9. Catálogo não configurado permite revisão e bloqueia execução com mensagem clara.
-10. eFX aparece como não coletado; o servidor barra `NAO_COLETADO` em qualquer outro
-    campo ou com `eh_efx=true`.
+9. XLSX sem header/células de finalidade percorre Diagnóstico, Replay, Painel A e
+   PDF; o resultado/documento informa “IOF padrão por direção”.
+10. eFX aparece como não coletado; `NAO_COLETADO` também é aceito em finalidade
+    somente com valor `null`, e continua incompatível com `eh_efx=true`.
 11. Request e response passam os validators gerados, o gate de publicação e as
     suítes normal e `python -O`.
 12. Typecheck, lint, unitários, build, E2E local e verificação de credenciais passam.
@@ -434,8 +442,8 @@ e publicar apenas catálogo técnico no servidor.
 planilha fora da superfície de ataque do backend e separa regras testáveis da UI.
 
 **Trade-offs:** IndexedDB, workers, OOXML e concorrência entre abas aumentam o volume
-de código; dados locais não acompanham outro dispositivo; catálogo regulatório é um
-gate externo real.
+de código; dados locais não acompanham outro dispositivo; sem regra específica,
+o resultado usa premissas padrão por direção, sem representar cotação calibrada.
 
 **Premissas:** navegador Chromium moderno; no máximo 1.000 linhas por arquivo e por
 execução; BRL único; usuário autenticado; backend e motor canônicos já publicados.

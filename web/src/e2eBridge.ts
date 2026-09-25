@@ -5,10 +5,17 @@ import type { DeepMutable, PreviewExecutionRecord, StudyDocument } from './study
 import { calculateOperationalProfile } from './profiles/calculateOperationalProfile';
 import { createStudy } from './study/domain';
 import { resolvePortfolioSource } from './preparation/resolvePortfolioSource';
+import type { ReplayDocument } from './replay/domain';
+import { replayStateAt } from './replay/state';
+import { buildCommunicationDocument } from './communication/buildCommunicationDocument';
+import type { CommunicationDocumentV1 } from './communication/domain';
+import { compareMvpDiagnostics } from './hypotheses/comparison';
 
 const E2E_OWNER_SUB = '00000000-0000-4000-8000-000000000021';
 const STAGE4_OBSERVED_ID = '00000000-0000-4000-8000-000000000901';
 const STAGE4_PROFILE_ID = '00000000-0000-4000-8000-000000000902';
+const STAGE5_OBSERVED_ID = '00000000-0000-4000-8000-000000000905';
+const STAGE5_OBSERVED_SCENARIO_ID = '00000000-0000-4000-8000-000000000915';
 
 export type Stage4Fixture = 'OBSERVED_HYPOTHESIS' | 'PROFILE_HYPOTHESIS';
 export type Stage4Snapshot = Readonly<{
@@ -25,6 +32,20 @@ export type Stage4Snapshot = Readonly<{
 }>;
 
 export type MotorE2EBridge = Readonly<{
+  demoAcceptanceSnapshot(): Promise<Readonly<{
+    studies: readonly Readonly<{
+      id: string; name: string; ownerSub: string; deletedAt: string | null;
+      scenarios: readonly Readonly<{ id: string; name: string; inputFingerprint: string; participantCount: number }>[];
+      diagnostics: readonly Readonly<{ id: string; scenarioId: string; repetitionId: string; count: number; savingsBrl: string; netability: string }>[];
+    }>[];
+    profiles: readonly Readonly<{ id: string; documentFingerprint: string; version: number }>[];
+    marker: 'INSTALLED' | 'REMOVED' | null;
+  }>>;
+  purgeDemoForAcceptance(id: string): Promise<void>;
+  projectDemoCommunication(input: Readonly<{
+    studyId: string; scenarioId: string; diagnosticExecutionId: string;
+    comparisonExecutionId?: string; replayDay: number | null;
+  }>): Promise<CommunicationDocumentV1>;
   migrateLegacyStudy(raw: string): Promise<readonly string[]>;
   seedObservedCase(company: CompanyRecord, observedCase: ObservedCase): Promise<void>;
   studySource(studyId: string): Promise<string | null>;
@@ -43,8 +64,27 @@ export type MotorE2EBridge = Readonly<{
     | Readonly<{ stage: 'write'; event: 'abort'; requestEvent: 'success' | 'error'; errorName: string }>
   >;
   seedStage4(fixture: Stage4Fixture): Promise<void>;
+  seedStage5Observed(): Promise<Readonly<{ studyId: string; scenarioId: string }>>;
+  measureReplayState(document: ReplayDocument, day: number, iterations: number): Readonly<{ p50Ms: number; maxMs: number }>;
   stage4Snapshot(studyId: string): Promise<Stage4Snapshot>;
 }>;
+
+async function demoMetadata<T>(key: string): Promise<T | null> {
+  const database = await new Promise<IDBDatabase>((resolve, reject) => {
+    const request = indexedDB.open(`motor-fluxo:app:v2:local:${E2E_OWNER_SUB}`);
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+  try {
+    const transaction = database.transaction('meta', 'readonly');
+    const row = await new Promise<{ value: T } | undefined>((resolve, reject) => {
+      const request = transaction.objectStore('meta').get(key);
+      request.onsuccess = () => resolve(request.result as { value: T } | undefined);
+      request.onerror = () => reject(request.error);
+    });
+    return row?.value ?? null;
+  } finally { database.close(); }
+}
 
 function stage4Case(companyId: string, suffix: string): ObservedCase {
   const recordedAt = '2026-09-20T12:00:00Z';
@@ -72,6 +112,28 @@ function stage4Case(companyId: string, suffix: string): ObservedCase {
   };
 }
 
+function stage5ObservedCase(companyId: string): ObservedCase {
+  const recordedAt = '2026-09-20T12:00:00Z';
+  const provenance = { kind: 'OBSERVED' as const, source: 'stage5-replay', version: '1', recordedAt };
+  return {
+    schemaVersion: '2.0.0', id: 'stage5-replay-case', ownerSub: E2E_OWNER_SUB,
+    companyId, status: 'CONFIRMED', revision: 1,
+    window: { startDate: '2026-01-01', endDate: '2026-01-05', closingDate: '2026-01-05' },
+    orders: [
+      { id: 'stage5-out-partial', clientId: 'cliente-out', direction: 'OUT', knownDate: '2026-01-01', deadlineDate: '2026-01-03', valueBrl: '100', purposeCode: 'ANEXO_V_REMESSA_TERCEIRO', efxStatus: 'NO', provenance: [provenance] },
+      { id: 'stage5-in-match', clientId: 'cliente-in', direction: 'IN', knownDate: '2026-01-01', deadlineDate: '2026-01-01', valueBrl: '40', purposeCode: 'ANEXO_V_DISPONIBILIDADE', efxStatus: 'NO', provenance: [provenance] },
+    ],
+    controlTotals: [
+      { code: 'GROSS_OUT_BRL', valueBrl: '100', provenance },
+      { code: 'GROSS_IN_BRL', valueBrl: '40', provenance },
+    ],
+    sourceManifest: { adapterId: 'stage5-e2e', adapterVersion: '1', sourceKind: 'XLSX', files: [{ name: 'stage5-replay.xlsx', sizeBytes: 10, sha256: '5'.repeat(64) }] },
+    normalization: { rulesetId: 'stage5-e2e', rulesetVersion: '1', normalizedAt: recordedAt },
+    quality: { blockers: [], warnings: [] }, corrections: [], observedOutcome: null,
+    confirmedAt: recordedAt,
+  };
+}
+
 async function fingerprint(value: unknown): Promise<string> {
   const bytes = new TextEncoder().encode(JSON.stringify(value));
   const digest = await crypto.subtle.digest('SHA-256', bytes);
@@ -86,6 +148,116 @@ declare global {
 
 export function installE2EBridge(): void {
   window.__MOTOR_E2E__ = Object.freeze({
+    async demoAcceptanceSnapshot() {
+      const repository = new IndexedDbApplicationRepository({ projectRef: 'local', ownerSub: E2E_OWNER_SUB });
+      try {
+        const [studies, profiles, marker] = await Promise.all([
+          repository.listStudies({ includeDeleted: true }), repository.listOperationalProfileVersions(),
+          demoMetadata<{ status: 'INSTALLED' | 'REMOVED' }>('demo:installation'),
+        ]);
+        return {
+          studies: studies.map((study) => ({
+            id: study.id, name: study.name, ownerSub: study.ownerSub, deletedAt: study.deletedAt,
+            scenarios: study.scenarios.map((scenario) => ({
+              id: scenario.id, name: scenario.name, inputFingerprint: scenario.inputFingerprint,
+              participantCount: scenario.sourceSnapshot.generationInputSnapshot?.participants.length ?? 0,
+            })),
+            diagnostics: study.executions.flatMap((execution) => execution.kind === 'DIAGNOSTIC'
+              && execution.status === 'SUCCEEDED' && execution.envelope !== null ? [{
+                id: execution.id, scenarioId: execution.scenarioId,
+                repetitionId: execution.envelope.statistics.selected_repetition_id,
+                count: execution.envelope.statistics.count,
+                savingsBrl: execution.envelope.selected_execution.result.agregado.economia_periodo_brl,
+                netability: execution.envelope.selected_execution.result.agregado.taxa_netabilidade_periodo,
+              }] : []),
+          })),
+          profiles: profiles.map((profile) => ({ id: profile.id, documentFingerprint: profile.documentFingerprint, version: profile.version })),
+          marker: marker?.status ?? null,
+        };
+      } finally { repository.close(); }
+    },
+    async purgeDemoForAcceptance(id: string) {
+      const repository = new IndexedDbApplicationRepository({ projectRef: 'local', ownerSub: E2E_OWNER_SUB });
+      try { await repository.purgeStudy(id); } finally { repository.close(); }
+    },
+    async projectDemoCommunication(input: { studyId: string; scenarioId: string; diagnosticExecutionId: string; comparisonExecutionId?: string; replayDay: number | null }) {
+      const repository = new IndexedDbApplicationRepository({ projectRef: 'local', ownerSub: E2E_OWNER_SUB });
+      try {
+        const study = await repository.getStudy(input.studyId);
+        if (study === null) throw new Error('Estudo demonstrativo ausente.');
+        const replays = input.replayDay === null ? null
+          : await demoMetadata<Record<string, ReplayDocument>>(`demo:replays:${study.id}`);
+        const replay = replays?.[input.scenarioId] ?? null;
+        if (input.replayDay !== null && replay === null) throw new Error('Replay demonstrativo ausente.');
+        let comparison = null;
+        if (input.comparisonExecutionId !== undefined) {
+          const current = study.executions.find((item) => item.id === input.diagnosticExecutionId);
+          const other = study.executions.find((item) => item.id === input.comparisonExecutionId);
+          if (current?.kind !== 'DIAGNOSTIC' || other?.kind !== 'DIAGNOSTIC') throw new Error('Execuções de comparação ausentes.');
+          const base = current.scenarioId === study.baseScenarioId ? current : other;
+          const hypothesis = base === current ? other : current;
+          const result = compareMvpDiagnostics(base, hypothesis);
+          if (!result.ok) throw new Error(result.reason);
+          comparison = { baseExecutionId: base.id, hypothesisExecutionId: hypothesis.id, value: result.value };
+        }
+        return buildCommunicationDocument({ study, scenarioId: input.scenarioId,
+          diagnosticExecutionId: input.diagnosticExecutionId,
+          comparisonExecutionId: input.comparisonExecutionId ?? null,
+          comparison, replay, replayDay: input.replayDay });
+      } finally { repository.close(); }
+    },
+    async compareDemoExecutions(studyId: string, baseId: string, hypothesisId: string) {
+      const repository = new IndexedDbApplicationRepository({ projectRef: 'local', ownerSub: E2E_OWNER_SUB });
+      try {
+        const study = await repository.getStudy(studyId);
+        const base = study?.executions.find((item) => item.id === baseId);
+        const hypothesis = study?.executions.find((item) => item.id === hypothesisId);
+        if (base?.kind !== 'DIAGNOSTIC' || hypothesis?.kind !== 'DIAGNOSTIC') throw new Error('Execuções de comparação ausentes.');
+        return compareMvpDiagnostics(base, hypothesis);
+      } finally { repository.close(); }
+    },
+    measureReplayState(document: ReplayDocument, day: number, iterations: number) {
+      replayStateAt(document, day);
+      const durations: number[] = [];
+      for (let index = 0; index < iterations; index += 1) {
+        const started = performance.now();
+        replayStateAt(document, day);
+        durations.push(performance.now() - started);
+      }
+      durations.sort((left, right) => left - right);
+      return {
+        p50Ms: durations[Math.floor(durations.length / 2)] ?? 0,
+        maxMs: durations.at(-1) ?? 0,
+      };
+    },
+    async seedStage5Observed() {
+      const repository = new IndexedDbApplicationRepository({ projectRef: 'local', ownerSub: E2E_OWNER_SUB });
+      const now = '2026-09-20T12:00:00Z';
+      try {
+        if (await repository.getStudy(STAGE5_OBSERVED_ID) === null) {
+          const company: CompanyRecord = { id: 'stage5-company', ownerSub: E2E_OWNER_SUB, displayName: 'Empresa Replay', aliases: [], createdAt: now, updatedAt: now, revision: 1 };
+          const observedCase = stage5ObservedCase(company.id);
+          if (await repository.getObservedCase(observedCase.id) === null) {
+            await repository.confirmObservedCase({ expectedRevision: 0, operationId: crypto.randomUUID(), company, observedCase, batches: [], events: [] });
+          }
+          const snapshot = await resolvePortfolioSource({ kind: 'OBSERVED_CASE', caseId: observedCase.id, caseRevision: 1 }, {
+            getObservedCase: (id) => repository.getObservedCase(id),
+            preparePortfolio: async () => { throw new Error('Preparação não esperada ao semear Replay observado.'); },
+            now: () => now,
+          });
+          const created = await createStudy({
+            id: STAGE5_OBSERVED_ID, ownerSub: E2E_OWNER_SUB, name: 'Etapa 5 observada', now,
+            baseScenario: {
+              id: STAGE5_OBSERVED_SCENARIO_ID, revision: 1, name: 'Replay observado', sourceSnapshot: snapshot,
+              premises: { windowDays: 2, costs: { iof_out: '0', iof_in: '0', carry_cnr: '0', spread_rail_bps: '0', custo_fixo_remessa: '0', custo_oportunidade_aa: '0', ptax: '5.4', iof_por_finalidade: [] } },
+              period: { httpPeriod: { modo: 'NATURAL', dias_aquecimento: 0, periodo_medicao_dias: 4 } },
+            },
+          });
+          await repository.saveStudy({ expectedRevision: 0, operationId: crypto.randomUUID(), document: created });
+        }
+        return { studyId: STAGE5_OBSERVED_ID, scenarioId: STAGE5_OBSERVED_SCENARIO_ID };
+      } finally { repository.close(); }
+    },
     async seedStage4(fixture: Stage4Fixture) {
       const repository = new IndexedDbApplicationRepository({ projectRef: 'local', ownerSub: E2E_OWNER_SUB });
       const now = '2026-09-20T12:00:00Z';

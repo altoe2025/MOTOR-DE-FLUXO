@@ -1,9 +1,6 @@
-import Ajv2020, { type ErrorObject, type ValidateFunction } from 'ajv/dist/2020';
-import addFormats from 'ajv-formats';
+import type { ErrorObject } from 'ajv';
+import { validateStudyV2Schema, validateExecutionSchema, validatePreviewExecutionSchema, validateDiagnosticExecutionSchema, validateStudyV3Schema } from '../generated/validators/study.js';
 
-import httpSchemas from '../api/schemas.json';
-import observedCaseSchema from '../cases/observedCase.schema.json';
-import operationalProfileSchema from '../profiles/operationalProfile.schema.json';
 import { validateOperationalProfile } from '../profiles/validation';
 import { validateDiagnosticEnvelope, validateDiagnosticRequest } from '../api/validators';
 import { diagnosticAttemptHasPersistedShape } from '../diagnostics/attemptIdentity';
@@ -20,31 +17,10 @@ import type {
   DiagnosticExecutionRecord,
   PreviewExecutionRecord,
   StudyDocument,
-  StudyDocumentV2,
   StudyDocumentV3,
   StudyValidation,
   StudyValidationIssue,
 } from './model';
-import studySchema from './study.schema.json';
-
-const ajv = new Ajv2020({ allErrors: true, strict: true });
-addFormats(ajv);
-ajv.addSchema(httpSchemas);
-ajv.addSchema(observedCaseSchema);
-ajv.addSchema(operationalProfileSchema);
-const validateStudyV2Schema: ValidateFunction<StudyDocumentV2> = ajv.compile(studySchema);
-const validateExecutionSchema: ValidateFunction<ExecutionRecord> = ajv.compile({
-  $ref: `${studySchema.$id}#/$defs/ExecutionRecord`,
-});
-const validatePreviewExecutionSchema = ajv.compile({
-  $ref: `${studySchema.$id}#/$defs/PreviewExecutionRecord`,
-});
-const validateDiagnosticExecutionSchema = ajv.compile({
-  $ref: `${studySchema.$id}#/$defs/DiagnosticExecutionRecord`,
-});
-const validateStudyV3Schema: ValidateFunction<StudyDocumentV3> = ajv.compile({
-  $ref: `${studySchema.$id}#/$defs/StudyDocumentV3`,
-});
 
 function structuralIssue(error: ErrorObject): StudyValidationIssue {
   return {
@@ -248,9 +224,10 @@ export function validateExecutionRecord(
   return { ok: true, value: execution };
 }
 
-export async function validateStudyDocument(
+async function validateStudyDocumentCore(
   value: unknown,
   expectedOwnerSub?: string,
+  yieldBeforeExecutions = false,
 ): Promise<StudyValidation<StudyDocument>> {
   if (!validateStudyV3Schema(value)) {
     return { ok: false, issues: (validateStudyV3Schema.errors ?? []).map(structuralIssue) };
@@ -323,6 +300,7 @@ export async function validateStudyDocument(
       ));
     }
   }
+  if (yieldBeforeExecutions) await new Promise<void>((resolve) => setTimeout(resolve, 0));
   const executionIds = value.executions.map((execution) => execution.id);
   if (new Set(executionIds).size !== executionIds.length) {
     issues.push(issue('/executions', 'DUPLICATE_ID', 'Identificador de execução repetido.'));
@@ -370,6 +348,21 @@ export async function validateStudyDocument(
     }
   }
   return issues.length === 0 ? { ok: true, value } : { ok: false, issues };
+}
+
+export function validateStudyDocument(
+  value: unknown,
+  expectedOwnerSub?: string,
+): Promise<StudyValidation<StudyDocument>> {
+  return validateStudyDocumentCore(value, expectedOwnerSub);
+}
+
+/** The persisted-read path alone yields one macrotask before execution checks. */
+export function validateStudyDocumentWithExecutionYield(
+  value: unknown,
+  expectedOwnerSub: string,
+): Promise<StudyValidation<StudyDocument>> {
+  return validateStudyDocumentCore(value, expectedOwnerSub, true);
 }
 
 export async function assertValidStudy(

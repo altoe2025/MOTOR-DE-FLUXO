@@ -1,4 +1,55 @@
 export interface paths {
+    "/api/v1/catalogos/ajuda": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Product Help Catalog Schema */
+        get: operations["product_help_catalog_schema_api_v1_catalogos_ajuda_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalogos/importacao": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Import Catalog Schema */
+        get: operations["import_catalog_schema_api_v1_catalogos_importacao_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/chat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Chat Schema */
+        post: operations["chat_schema_api_v1_chat_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/diagnosticos": {
         parameters: {
             query?: never;
@@ -152,6 +203,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/replays": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Replay Schema */
+        post: operations["replay_schema_api_v1_replays_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/session": {
         parameters: {
             query?: never;
@@ -201,6 +269,42 @@ export interface components {
             /** Volume Remetido Periodo Brl */
             volume_remetido_periodo_brl: string;
         };
+        /** AliquotaFinalidade */
+        AliquotaFinalidade: {
+            /** Aliquota */
+            aliquota: string;
+            /**
+             * Direcao
+             * @enum {string}
+             */
+            direcao: "OUT" | "IN";
+        };
+        /** AllocationEventV1 */
+        AllocationEventV1: {
+            /**
+             * Allocation Type
+             * @enum {string}
+             */
+            allocation_type: "CASADO" | "REMETIDO";
+            /**
+             * Direction
+             * @enum {string}
+             */
+            direction: "OUT" | "IN";
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "ALLOCATION";
+            /** Matching Origin */
+            matching_origin: ("INTRA_CLIENTE" | "INTER_CLIENTE") | null;
+            /** Order Id */
+            order_id: string;
+            /** Sequence */
+            sequence: number;
+            /** Value Brl */
+            value_brl: string;
+        };
         /** AlocacaoDTO */
         AlocacaoDTO: {
             /** Dia */
@@ -240,6 +344,35 @@ export interface components {
             state: "AVAILABLE";
             value: components["schemas"]["DistributionSummary"];
         };
+        /** CatalogoImportacao */
+        CatalogoImportacao: {
+            /** Catalog Version */
+            catalog_version: string;
+            /**
+             * Custos Calibrados
+             * @constant
+             */
+            custos_calibrados: false;
+            custos_origem: components["schemas"]["OrigemCatalogo"];
+            custos_padrao: components["schemas"]["CustoPadraoCatalogo"];
+            /** Finalidades */
+            finalidades: components["schemas"]["FinalidadeCatalogo"][];
+            /**
+             * Publicado Em Utc
+             * Format: date-time
+             */
+            publicado_em_utc: string;
+            /**
+             * Schema Version
+             * @constant
+             */
+            schema_version: "1.0.0";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "CONFIGURADO" | "NAO_CONFIGURADO";
+        };
         /** CenarioEntrada */
         CenarioEntrada: {
             custo: components["schemas"]["CustoEntrada"];
@@ -252,6 +385,84 @@ export interface components {
              * @description Operações explícitas que não devem ser pré-netadas; OUT e IN do mesmo cliente permanecem entradas distintas para a política P0.
              */
             ordens: components["schemas"]["OrdemEntrada"][];
+        };
+        /** ChatAssistantHistoryItem */
+        ChatAssistantHistoryItem: {
+            /** Contextfingerprint */
+            contextFingerprint: string | null;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            role: "ASSISTANT";
+            /** Text */
+            text: string;
+        };
+        /** ChatCitation */
+        ChatCitation: {
+            /** Id */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "EVIDENCE" | "METRIC" | "LIMITATION" | "HELP";
+        };
+        /** ChatRequestV1 */
+        ChatRequestV1: {
+            /**
+             * Apiversion
+             * @constant
+             */
+            apiVersion: "1.0.0";
+            communication: components["schemas"]["CommunicationDocumentV1"] | null;
+            /** Conversationid */
+            conversationId: string;
+            /**
+             * History
+             * @description Mensagens anteriores; reserva pergunta e resposta na quota de 100.
+             */
+            history: (components["schemas"]["ChatUserHistoryItem"] | components["schemas"]["ChatAssistantHistoryItem"])[];
+            /** Message */
+            message: string;
+            /** Messageid */
+            messageId: string;
+            routeContext: components["schemas"]["RouteChatContext"];
+        };
+        /** ChatResponseV1 */
+        ChatResponseV1: {
+            /** Answer */
+            answer: string;
+            /**
+             * Apiversion
+             * @constant
+             */
+            apiVersion: "1.0.0";
+            /** Citations */
+            citations: components["schemas"]["ChatCitation"][];
+            /**
+             * Classification
+             * @enum {string}
+             */
+            classification: "IN_SCOPE" | "INSUFFICIENT_EVIDENCE" | "OUT_OF_SCOPE" | "MIXED";
+            /** Contextfingerprint */
+            contextFingerprint: string | null;
+            /** Limitationcodes */
+            limitationCodes: string[];
+            /** Messageid */
+            messageId: string;
+        };
+        /** ChatUserHistoryItem */
+        ChatUserHistoryItem: {
+            /** Contextfingerprint */
+            contextFingerprint: string | null;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            role: "USER";
+            /** Text */
+            text: string;
         };
         /** CicloDTO */
         CicloDTO: {
@@ -273,6 +484,172 @@ export interface components {
             /** Residuo */
             residuo: string;
         };
+        /** CommunicationDocumentV1 */
+        CommunicationDocumentV1: {
+            /**
+             * Apiversion
+             * @constant
+             */
+            apiVersion: "1.0.0";
+            /** Assumptions */
+            assumptions: components["schemas"]["CommunicationFact"][];
+            comparison: components["schemas"]["CommunicationSection"] | null;
+            composition: components["schemas"]["CommunicationSection"];
+            /** Contextfingerprint */
+            contextFingerprint: string;
+            economics: components["schemas"]["CommunicationSection"];
+            /** Evidenceindex */
+            evidenceIndex: {
+                [key: string]: components["schemas"]["CommunicationEvidence"];
+            };
+            /** Executivemetrics */
+            executiveMetrics: components["schemas"]["CommunicationMetric"][];
+            /** Generatedat */
+            generatedAt: string;
+            /** Limitations */
+            limitations: components["schemas"]["CommunicationLimitation"][];
+            mechanism: components["schemas"]["CommunicationSection"];
+            /**
+             * Presentationversion
+             * @constant
+             */
+            presentationVersion: "1.0.0";
+            /** Provenance */
+            provenance: components["schemas"]["CommunicationFact"][];
+            replaySnapshot: components["schemas"]["CommunicationReplaySnapshot"] | null;
+            robustness: components["schemas"]["CommunicationSection"];
+            selection: components["schemas"]["CommunicationSelection"];
+            source: components["schemas"]["CommunicationSource"];
+            study: components["schemas"]["CommunicationStudy"];
+            /** Versions */
+            versions: components["schemas"]["CommunicationFact"][];
+        };
+        /** CommunicationEvidence */
+        CommunicationEvidence: {
+            /** Diagnosticexecutionid */
+            diagnosticExecutionId: string;
+            /** Path */
+            path: string;
+            /** Repetitionid */
+            repetitionId: string;
+            /** Scenarioid */
+            scenarioId: string;
+            /** Scenariorevision */
+            scenarioRevision: number;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "STUDY" | "DIAGNOSTIC" | "COMPARISON" | "REPLAY";
+            /** Sourceid */
+            sourceId: string;
+            /** Studyid */
+            studyId: string;
+            /** Value */
+            value: string | null;
+        };
+        /** CommunicationFact */
+        CommunicationFact: {
+            /** Code */
+            code: string;
+            /** Evidencerefs */
+            evidenceRefs: string[];
+            /** Label */
+            label: string;
+            /** Value */
+            value: string;
+        };
+        /** CommunicationLimitation */
+        CommunicationLimitation: {
+            /** Code */
+            code: string;
+            /** Evidencerefs */
+            evidenceRefs: string[];
+            /**
+             * Severity
+             * @enum {string}
+             */
+            severity: "INFO" | "WARNING";
+            /** Statement */
+            statement: string;
+        };
+        /** CommunicationMetric */
+        CommunicationMetric: {
+            /**
+             * Availability
+             * @enum {string}
+             */
+            availability: "AVAILABLE" | "UNAVAILABLE";
+            /** Code */
+            code: string;
+            /** Evidencerefs */
+            evidenceRefs: string[];
+            /** Label */
+            label: string;
+            /** Meaning */
+            meaning: string;
+            /**
+             * Unit
+             * @enum {string}
+             */
+            unit: "BRL" | "FRACTION" | "DAYS" | "COUNT" | "BPS" | "TEXT";
+            /** Value */
+            value: string | null;
+        };
+        /** CommunicationReplaySnapshot */
+        CommunicationReplaySnapshot: {
+            /** Day */
+            day: number;
+            /** Facts */
+            facts: components["schemas"]["CommunicationFact"][];
+            /** Metrics */
+            metrics: components["schemas"]["CommunicationMetric"][];
+        };
+        /** CommunicationSection */
+        CommunicationSection: {
+            /** Facts */
+            facts: components["schemas"]["CommunicationFact"][];
+            /** Metrics */
+            metrics: components["schemas"]["CommunicationMetric"][];
+            /** Title */
+            title: string;
+        };
+        /** CommunicationSelection */
+        CommunicationSelection: {
+            /** Comparisonexecutionid */
+            comparisonExecutionId: string | null;
+            /** Diagnosticexecutionid */
+            diagnosticExecutionId: string;
+            /** Repetitionid */
+            repetitionId: string;
+            /** Replayday */
+            replayDay: number | null;
+            /** Scenarioid */
+            scenarioId: string;
+            /** Scenariorevision */
+            scenarioRevision: number;
+        };
+        /** CommunicationSource */
+        CommunicationSource: {
+            /**
+             * Family
+             * @enum {string}
+             */
+            family: "OBSERVED" | "PROFILE_SIMULATION";
+            /** Label */
+            label: string;
+            /** Synthetic */
+            synthetic: boolean;
+        };
+        /** CommunicationStudy */
+        CommunicationStudy: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Revision */
+            revision: number;
+        };
         /** CompositionDependencyAxis */
         CompositionDependencyAxis: {
             /** Hhi */
@@ -287,7 +664,7 @@ export interface components {
             /** By Day */
             by_day: components["schemas"]["ResidualBreakdown"][];
             /** By Purpose */
-            by_purpose: components["schemas"]["ResidualBreakdown"][];
+            by_purpose: components["schemas"]["PurposeResidualBreakdown"][];
             /** In Brl */
             in_brl: components["schemas"]["AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"] | components["schemas"]["UnavailableEvidenceMetric"];
             /** Out Brl */
@@ -309,6 +686,25 @@ export interface components {
             iof_out: string;
             /** Iof Por Finalidade */
             iof_por_finalidade: components["schemas"]["RegraIOF"][];
+            /** Ptax */
+            ptax: string;
+            /** Spread Rail Bps */
+            spread_rail_bps: string;
+        };
+        /** CustoPadraoCatalogo */
+        CustoPadraoCatalogo: {
+            /** Carry Cnr */
+            carry_cnr: string;
+            /** Custo Fixo Remessa */
+            custo_fixo_remessa: string;
+            /** Custo Oportunidade Aa */
+            custo_oportunidade_aa: string;
+            /** Iof In */
+            iof_in: string;
+            /** Iof Out */
+            iof_out: string;
+            /** Iof Por Finalidade */
+            iof_por_finalidade: components["schemas"]["RegraIOFCatalogo"][];
             /** Ptax */
             ptax: string;
             /** Spread Rail Bps */
@@ -620,6 +1016,15 @@ export interface components {
             /** Seed */
             seed: null;
         };
+        /** FinalidadeCatalogo */
+        FinalidadeCatalogo: {
+            /** Aliquotas */
+            aliquotas: components["schemas"]["AliquotaFinalidade"][];
+            /** Codigo */
+            codigo: string;
+            /** Descricao */
+            descricao: string;
+        };
         /** FixedDeadline */
         FixedDeadline: {
             /** Days */
@@ -827,11 +1232,38 @@ export interface components {
             /** Eh Efx */
             eh_efx: boolean;
             /** Finalidade */
-            finalidade: string;
+            finalidade: string | null;
             /** Id */
             id: string;
             /** Valor Brl */
             valor_brl: string;
+        };
+        /** OrderArrivedEventV1 */
+        OrderArrivedEventV1: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "ORDER_ARRIVED";
+            /** Order Id */
+            order_id: string;
+            /** Sequence */
+            sequence: number;
+        };
+        /** OrigemCatalogo */
+        OrigemCatalogo: {
+            /** Fonte */
+            fonte: string;
+            /**
+             * Registrado Em Utc
+             * Format: date-time
+             */
+            registrado_em_utc: string;
+            /**
+             * Tipo
+             * @enum {string}
+             */
+            tipo: "PADRAO_SINTETICO" | "ESTIMATIVA_USUARIO" | "DADO_OBSERVADO" | "NAO_COLETADO";
         };
         /** OrigemValor */
         OrigemValor: {
@@ -1101,6 +1533,50 @@ export interface components {
              */
             study_id: string;
         };
+        /**
+         * ProductHelpCatalogV1
+         * @description Documento imutável servido ao chat e à ajuda contextual.
+         */
+        ProductHelpCatalogV1: {
+            /**
+             * Apiversion
+             * @constant
+             */
+            apiVersion: "1.0.0";
+            /** Catalogversion */
+            catalogVersion: string;
+            /** Items */
+            items: components["schemas"]["ProductHelpItem"][];
+        };
+        /**
+         * ProductHelpItem
+         * @description Explicação contextual fechada, independente de conteúdo visual da página.
+         */
+        ProductHelpItem: {
+            /** Changes */
+            changes: string;
+            /** Disabledwhen */
+            disabledWhen: string[];
+            /** Doesnotchange */
+            doesNotChange: string;
+            /**
+             * Elementkind
+             * @enum {string}
+             */
+            elementKind: "PAGE" | "SECTION" | "CONTROL" | "METRIC" | "MESSAGE";
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+            /** Purpose */
+            purpose: string;
+            /** Recovery */
+            recovery: string[];
+            /** Relatedconceptids */
+            relatedConceptIds: string[];
+            /** Routepattern */
+            routePattern: string;
+        };
         /** ProfileDeadline */
         ProfileDeadline: {
             /**
@@ -1108,6 +1584,18 @@ export interface components {
              * @enum {string}
              */
             mode: "PROFILE";
+        };
+        /** PurposeResidualBreakdown */
+        PurposeResidualBreakdown: {
+            /**
+             * Direction
+             * @enum {string}
+             */
+            direction: "OUT" | "IN";
+            /** Key */
+            key: string | null;
+            /** Value Brl */
+            value_brl: string;
         };
         /** RealizedComposition */
         RealizedComposition: {
@@ -1136,6 +1624,18 @@ export interface components {
         };
         /** RegraIOF */
         RegraIOF: {
+            /** Aliquota */
+            aliquota: string;
+            /**
+             * Direcao
+             * @enum {string}
+             */
+            direcao: "OUT" | "IN";
+            /** Finalidade */
+            finalidade: string;
+        };
+        /** RegraIOFCatalogo */
+        RegraIOFCatalogo: {
             /** Aliquota */
             aliquota: string;
             /**
@@ -1183,6 +1683,199 @@ export interface components {
             repetition_id: string;
             /** Savings Brl */
             savings_brl: string;
+        };
+        /** ReplayClosingV1 */
+        ReplayClosingV1: {
+            /** Flow Segments */
+            flow_segments: components["schemas"]["ReplayFlowSegmentV1"][];
+            /** Gross In Brl */
+            gross_in_brl: string;
+            /** Gross Out Brl */
+            gross_out_brl: string;
+            /** Inter Client Position Brl */
+            inter_client_position_brl: string;
+            /** Intra Client Position Brl */
+            intra_client_position_brl: string;
+            /** Matched Contribution Brl */
+            matched_contribution_brl: string;
+            /** Matched Position Brl */
+            matched_position_brl: string;
+            /** Remitted In Brl */
+            remitted_in_brl: string;
+            /** Remitted Out Brl */
+            remitted_out_brl: string;
+            /** Triggers */
+            triggers: ("WINDOW" | "DEADLINE" | "HORIZON_END")[];
+        };
+        /** ReplayDayV1 */
+        ReplayDayV1: {
+            closing: components["schemas"]["ReplayClosingV1"] | null;
+            /** Day */
+            day: number;
+            end_state: components["schemas"]["ReplayEndStateV1"];
+            /** Events */
+            events: (components["schemas"]["OrderArrivedEventV1"] | components["schemas"]["AllocationEventV1"])[];
+        };
+        /** ReplayDocumentV1 */
+        ReplayDocumentV1: {
+            /**
+             * Api Version
+             * @constant
+             */
+            api_version: "1.0.0";
+            /**
+             * Currency
+             * @constant
+             */
+            currency: "BRL";
+            /** Days */
+            days: components["schemas"]["ReplayDayV1"][];
+            /**
+             * Diagnostic Execution Id
+             * Format: uuid
+             */
+            diagnostic_execution_id: string;
+            /** Execution Fingerprint */
+            execution_fingerprint: string;
+            /** Motor Version */
+            motor_version: string;
+            /** Orders */
+            orders: components["schemas"]["ReplayOrderV1"][];
+            /** Participant Seeds */
+            participant_seeds: {
+                [key: string]: string;
+            };
+            period: components["schemas"]["ReplayPeriodV1"];
+            /**
+             * Policy
+             * @constant
+             */
+            policy: "P0";
+            /**
+             * Repetition Id
+             * Format: uuid
+             */
+            repetition_id: string;
+            /** Result Fingerprint */
+            result_fingerprint: string;
+            /**
+             * Scenario Id
+             * Format: uuid
+             */
+            scenario_id: string;
+            /** Scenario Revision */
+            scenario_revision: number;
+            totals: components["schemas"]["ReplayTotalsV1"];
+        };
+        /** ReplayEndStateV1 */
+        ReplayEndStateV1: {
+            /** Matched Position Accumulated Brl */
+            matched_position_accumulated_brl: string;
+            /** Measured Matched Contribution Accumulated Brl */
+            measured_matched_contribution_accumulated_brl: string;
+            /** Open In Brl */
+            open_in_brl: string;
+            /** Open Out Brl */
+            open_out_brl: string;
+            /** Remitted In Accumulated Brl */
+            remitted_in_accumulated_brl: string;
+            /** Remitted Out Accumulated Brl */
+            remitted_out_accumulated_brl: string;
+        };
+        /** ReplayFlowSegmentV1 */
+        ReplayFlowSegmentV1: {
+            /** Closing Day */
+            closing_day: number;
+            /** In Order Id */
+            in_order_id: string;
+            /**
+             * Matching Origin
+             * @enum {string}
+             */
+            matching_origin: "INTRA_CLIENTE" | "INTER_CLIENTE";
+            /**
+             * Meaning
+             * @constant
+             */
+            meaning: "ILLUSTRATIVE_AGGREGATE_DECOMPOSITION";
+            /** Out Order Id */
+            out_order_id: string;
+            /** Value Brl */
+            value_brl: string;
+        };
+        /** ReplayOrderV1 */
+        ReplayOrderV1: {
+            /** Client Id */
+            client_id: string;
+            /**
+             * Cohort
+             * @enum {string}
+             */
+            cohort: "WARMUP" | "MEASUREMENT";
+            /** Deadline Day */
+            deadline_day: number;
+            /**
+             * Direction
+             * @enum {string}
+             */
+            direction: "OUT" | "IN";
+            /** Id */
+            id: string;
+            /** Known Day */
+            known_day: number;
+            /** Value Brl */
+            value_brl: string;
+        };
+        /** ReplayPeriodV1 */
+        ReplayPeriodV1: {
+            /** Measurement End Day */
+            measurement_end_day: number;
+            /** Measurement Start Day */
+            measurement_start_day: number;
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "LEGADO" | "NATURAL";
+            /** Settlement End Day */
+            settlement_end_day: number;
+            /** Warmup Days */
+            warmup_days: number;
+        };
+        /** ReplayRequestV1 */
+        ReplayRequestV1: {
+            /**
+             * Api Version
+             * @constant
+             */
+            api_version: "1.0.0";
+            diagnostic_envelope: components["schemas"]["DiagnosticEnvelope"];
+            /**
+             * Diagnostic Execution Id
+             * Format: uuid
+             */
+            diagnostic_execution_id: string;
+        };
+        /** ReplayTotalsV1 */
+        ReplayTotalsV1: {
+            /** Execution Matched Position Brl */
+            execution_matched_position_brl: string;
+            /** Execution Remitted In Brl */
+            execution_remitted_in_brl: string;
+            /** Execution Remitted Out Brl */
+            execution_remitted_out_brl: string;
+            /** Measured Autonetting Contribution Brl */
+            measured_autonetting_contribution_brl: string;
+            /** Measured Gross Brl */
+            measured_gross_brl: string;
+            /** Measured Matched Contribution Brl */
+            measured_matched_contribution_brl: string;
+            /** Measured Multilateral Contribution Brl */
+            measured_multilateral_contribution_brl: string;
+            /** Measured Remitted Brl */
+            measured_remitted_brl: string;
+            /** Netability Fraction */
+            netability_fraction: string;
         };
         /** ResidualBreakdown */
         ResidualBreakdown: {
@@ -1246,6 +1939,21 @@ export interface components {
             economia_brl: string;
             /** Volume Brl */
             volume_brl: string;
+        };
+        /** RouteChatContext */
+        RouteChatContext: {
+            /** Diagnosticexecutionid */
+            diagnosticExecutionId: string | null;
+            /** Helpid */
+            helpId: string | null;
+            /** Replayday */
+            replayDay: number | null;
+            /** Routeid */
+            routeId: string;
+            /** Scenarioid */
+            scenarioId: string | null;
+            /** Studyid */
+            studyId: string | null;
         };
         /** SessionResponse */
         SessionResponse: {
@@ -1335,6 +2043,112 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    product_help_catalog_schema_api_v1_catalogos_ajuda_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductHelpCatalogV1"];
+                };
+            };
+        };
+    };
+    import_catalog_schema_api_v1_catalogos_importacao_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogoImportacao"];
+                };
+            };
+        };
+    };
+    chat_schema_api_v1_chat_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChatRequestV1"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatResponseV1"];
+                };
+            };
+            /** @description JSON ou Content-Length inválido (JSON_INVALIDO). */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bearer ausente ou inválido (SESSAO_INVALIDA). */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Usuário sem acesso (ACESSO_NAO_PERMITIDO). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Corpo excede 1 MiB (LIMITE_EXCEDIDO). */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Contrato ou documento inválido (ENTRADA_INVALIDA). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Chat desabilitado ou indisponível (CHAT_INDISPONIVEL). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     diagnostic_schema_api_v1_diagnosticos_post: {
         parameters: {
             query?: never;
@@ -1589,6 +2403,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PreviewEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    replay_schema_api_v1_replays_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReplayRequestV1"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReplayDocumentV1"];
                 };
             };
             /** @description Validation Error */

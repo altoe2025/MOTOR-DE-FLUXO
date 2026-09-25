@@ -1,5 +1,8 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest';
+// Prepare the actual demo fixture before timing route assertions; its first Vite
+// transform is not navigation latency. The controller still runs its real loader.
+import '../demo/generated/demo-study.v1.json';
 
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -11,7 +14,10 @@ import { AuthProvider } from '../auth/AuthProvider';
 import type { AuthClient, AuthSession } from '../auth/types';
 import type { ApiClient, DiagnosticRequest, JobSnapshot } from '../api/client';
 import type { CompanyRecord, ObservedCase } from '../cases/domain';
+import { comparisonInput, observedInput } from '../communication/testFixtures';
+import { fictionalCatalog } from '../importer/__fixtures__/catalog';
 import type { OperationalProfileVersion } from '../profiles/domain';
+import { DemoInstallSkippedError } from '../storage/errors';
 import type {
   ApplicationRepository,
   AppendProfileVersionMutation,
@@ -21,8 +27,15 @@ import type {
 import { createStudy } from '../study/domain';
 import { makeObservedCase, makeScenarioDraft } from '../study/fixtures';
 import type { StudyDocument } from '../study/model';
+import { parseCanonicalXlsx } from '../importer/workerClient';
 import { ApplicationProviders } from './providers';
 import { AppRoutes } from './router';
+
+vi.mock('../importer/workerClient', () => ({ parseCanonicalXlsx: vi.fn(async () => ({
+  layout: 'xlsx-operacoes/1.0.0', sha256: 'a'.repeat(64), byteSize: 128,
+  rows: [{ operacao_id: 'OP-1', cliente_nome: 'Cliente da fonte', classificacao_perfil: null,
+    direcao: 'OUT', data_conhecida: '2026-09-22', data_limite: '2026-09-23', valor_brl: '100', finalidade_codigo: null }],
+})) }));
 
 function session(userId = 'user-a'): AuthSession {
   return { access_token: `token-${userId}`, expires_at: Math.floor(Date.now() / 1000) + 3600, user: { id: userId } };
@@ -55,6 +68,15 @@ function RouteSwitch({ to }: Readonly<{ to: string }>) {
 }
 
 class RepositoryDouble implements ApplicationRepository {
+  async getDemoInstallationStatus(): Promise<'REMOVED'> { return 'REMOVED'; }
+  async listChatConversations(): Promise<never[]> { return []; }
+  async getChatConversation(): Promise<null> { return null; }
+  async saveChatConversation(): Promise<never> { throw new Error('Chat outside fixture scope'); }
+  async deleteChatConversation(): Promise<void> { throw new Error('Chat outside fixture scope'); }
+  failImportConfirmation = false;
+  readonly importAttempts: ConfirmObservedCaseMutation[] = [];
+  // Route fixtures represent an existing account that already removed its demo.
+  async installDemoStudy(): Promise<StudyDocument> { throw new DemoInstallSkippedError(); }
   constructor(
     readonly companies: CompanyRecord[] = [],
     readonly cases: ObservedCase[] = [],
@@ -64,7 +86,13 @@ class RepositoryDouble implements ApplicationRepository {
   async listCompanies() { return this.companies; }
   async listObservedCases(companyId?: string) { return companyId === undefined ? this.cases : this.cases.filter((item) => item.companyId === companyId); }
   async getObservedCase(id: string) { return this.cases.find((item) => item.id === id) ?? null; }
-  async confirmObservedCase(input: ConfirmObservedCaseMutation) { return input.observedCase; }
+  async confirmObservedCase(input: ConfirmObservedCaseMutation) {
+    this.importAttempts.push(input);
+    if (this.failImportConfirmation) throw new Error('Falha de armazenamento');
+    if (!this.companies.some((item) => item.id === input.company.id)) this.companies.push(input.company);
+    this.cases.push(input.observedCase);
+    return input.observedCase;
+  }
   async listOperationalProfileVersions(companyId?: string) { return companyId === undefined ? this.profiles : this.profiles.filter((item) => item.companyId === companyId); }
   async getOperationalProfileVersion(id: string) { return this.profiles.find((item) => item.id === id) ?? null; }
   async appendOperationalProfileVersion(input: AppendProfileVersionMutation) {
@@ -88,16 +116,21 @@ function renderAppAt(
   authClient: AuthClient = client(session()),
   repository: ApplicationRepository | null = null,
   extra: ReactNode = null,
-  providedApiClient?: ApiClient,
+  providedApiClient?: Partial<ApiClient>,
 ) {
-  const apiClient: ApiClient = providedApiClient ?? {
+  const apiClient: ApiClient = {
     getReferenceExample: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
+    getImportCatalog: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
+    getProductHelpCatalog: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
     runPreview: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
     submitDiagnostic: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
     getDiagnosticJob: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
     getDiagnosticResult: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
     cancelDiagnostic: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
     retryDiagnostic: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
+    buildReplay: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
+    sendChatMessage: vi.fn(async () => { throw new Error('não chamado neste teste'); }),
+    ...providedApiClient,
   };
   return render(
     <AuthProvider client={authClient}>
@@ -129,6 +162,283 @@ function diagnosticSnapshot(request: DiagnosticRequest, status: JobSnapshot['sta
 }
 
 describe('application routes', () => {
+  it('abre deep link completo da apresentação e mantém a seleção no retorno', async () => {
+    const input = await observedInput();
+    renderAppAt(`/estudos/${input.study.id}/apresentacao?cenario=${input.scenarioId}&execucao=${input.diagnosticExecutionId}#premissas`,
+      client(session(input.study.ownerSub)), new RepositoryDouble([], [], [], [input.study]));
+    expect(await screen.findByRole('heading', { level: 1, name: input.study.name }, { timeout: 5_000 })).toBeVisible();
+    expect(screen.getAllByRole('main')).toHaveLength(1);
+    expect(screen.getByRole('region', { name: 'Premissas e proveniência' })).toHaveAttribute('id', 'premissas');
+    expect(screen.getByRole('link', { name: 'Voltar ao diagnóstico' })).toHaveAttribute('href',
+      `/estudos/${input.study.id}/diagnostico?scenarioId=${input.scenarioId}&executionId=${input.diagnosticExecutionId}`);
+    expect(screen.getByRole('button', { name: 'Perguntar' })).toBeVisible();
+    expect(within(screen.getByRole('navigation', { name: 'Navegação principal' }))
+      .getByRole('link', { name: 'Apresentar' })).toHaveAttribute('href',
+      `/estudos/${input.study.id}/apresentacao?cenario=${input.scenarioId}&execucao=${input.diagnosticExecutionId}`);
+  }, 15_000);
+
+  it('não substitui seleção inválida por outra execução', async () => {
+    const input = await observedInput();
+    renderAppAt(`/estudos/${input.study.id}/apresentacao?cenario=${input.scenarioId}&execucao=ausente`,
+      client(session(input.study.ownerSub)), new RepositoryDouble([], [], [], [input.study]));
+    expect(await screen.findByRole('alert')).toHaveTextContent(/execução solicitada/);
+    expect(screen.queryByText('Economia simulada')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Selecionar no Estudo' })).toHaveAttribute('href', `/carteira/${input.study.id}`);
+  });
+  it('restaura comparação explicitamente selecionada no deep link da apresentação', async () => {
+    const input = await comparisonInput();
+    const hypothesis = input.study.executions.find((item) => item.id === input.comparisonExecutionId)!;
+    renderAppAt(`/estudos/${input.study.id}/apresentacao?cenario=${hypothesis.scenarioId}&execucao=${hypothesis.id}&comparacao=${input.diagnosticExecutionId}`,
+      client(session(input.study.ownerSub)), new RepositoryDouble([], [], [], [input.study]));
+    expect(await screen.findByRole('heading', { level: 1, name: input.study.name }, { timeout: 5_000 })).toBeVisible();
+    expect(screen.getByRole('region', { name: 'Consequência econômica e comparação' }))
+      .not.toHaveTextContent('Nenhuma comparação selecionada');
+    expect(screen.getByRole('region', { name: 'Consequência econômica e comparação' }))
+      .toHaveTextContent('base');
+  }, 15_000);
+
+  it('recusa comparação inválida na URL sem publicar resultado simples', async () => {
+    const input = await observedInput();
+    renderAppAt(`/estudos/${input.study.id}/apresentacao?cenario=${input.scenarioId}&execucao=${input.diagnosticExecutionId}&comparacao=ausente`,
+      client(session(input.study.ownerSub)), new RepositoryDouble([], [], [], [input.study]));
+    expect(await screen.findByRole('alert')).toHaveTextContent(/comparação solicitada/);
+    expect(screen.queryByText('Economia simulada')).not.toBeInTheDocument();
+  });
+  it.each(['/empresas', '/empresas/acme/perfis', '/importar', '/estudos', '/carteira', '/diagnostico', '/comparar', '/replay'])
+  ('offers the global chat on authenticated route %s', async (path) => {
+    renderAppAt(path, client(session('user-a')), new RepositoryDouble());
+    expect(await screen.findByRole('button', { name: 'Perguntar' })).toBeVisible();
+  });
+
+  it.each(['/auth/callback', '/auth/definir-senha'])
+  ('omits chat on authentication route %s', async (path) => {
+    renderAppAt(path, client(session('user-a')), new RepositoryDouble());
+    await screen.findByTestId('location');
+    expect(screen.queryByRole('button', { name: 'Perguntar' })).not.toBeInTheDocument();
+  });
+
+  it('omits chat on the public login page without a session', async () => {
+    renderAppAt('/login', client(null), new RepositoryDouble());
+    expect(await screen.findByRole('heading', { name: 'Entrar' })).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Perguntar' })).not.toBeInTheDocument();
+  });
+
+  it('redirects authenticated login to the protected portfolio with global chat', async () => {
+    renderAppAt('/login', client(session('user-a')), new RepositoryDouble());
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/carteira'));
+    expect(await screen.findByRole('button', { name: 'Perguntar' })).toBeVisible();
+  });
+
+  it('prepara primeira empresa sem persistir até confirmação atômica do Caso', async () => {
+    const repository = new RepositoryDouble();
+    const user = userEvent.setup();
+    renderAppAt('/importar', client(session('user-a')), repository);
+    await user.type(await screen.findByLabelText('Nome da nova empresa'), 'Primeira Empresa');
+    await user.click(screen.getByRole('button', { name: 'Usar nova empresa neste Caso' }));
+    expect(repository.companies).toHaveLength(0);
+    await user.upload(screen.getByLabelText('Planilha canônica XLSX'), new File(['planilha'], 'operacoes.xlsx'));
+    await user.click(screen.getByRole('checkbox', { name: /linhas representam operações explícitas/i }));
+    await user.click(screen.getByRole('button', { name: 'Ler planilha' }));
+    expect(await screen.findByRole('heading', { name: 'Revisar operações' })).toBeVisible();
+    expect(repository.companies).toHaveLength(0);
+    await user.click(screen.getByRole('button', { name: 'Confirmar Caso Observado' }));
+    expect(await screen.findByRole('heading', { name: 'Caso confirmado' })).toBeVisible();
+    expect(repository.companies).toEqual([expect.objectContaining({ displayName: 'Primeira Empresa', ownerSub: 'user-a', revision: 1 })]);
+    expect(repository.cases[0]?.companyId).toBe(repository.companies[0]?.id);
+  });
+
+  it('não persiste empresa preparada após falha ou cancelamento da confirmação', async () => {
+    const repository = new RepositoryDouble();
+    repository.failImportConfirmation = true;
+    const user = userEvent.setup();
+    renderAppAt('/importar', client(session('user-a')), repository);
+    await user.type(await screen.findByLabelText('Nome da nova empresa'), 'Empresa não gravada');
+    await user.click(screen.getByRole('button', { name: 'Usar nova empresa neste Caso' }));
+    await user.upload(screen.getByLabelText('Planilha canônica XLSX'), new File(['planilha'], 'operacoes.xlsx'));
+    await user.click(screen.getByRole('checkbox', { name: /linhas representam operações explícitas/i }));
+    await user.click(screen.getByRole('button', { name: 'Ler planilha' }));
+    await user.click(await screen.findByRole('button', { name: 'Confirmar Caso Observado' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Falha de armazenamento');
+    expect(repository.companies).toHaveLength(0);
+    await user.click(screen.getByRole('button', { name: 'Cancelar importação' }));
+    expect(repository.companies).toHaveLength(0);
+  });
+
+  it('reutiliza identidade da nova empresa e operationId após resultado incerto', async () => {
+    const repository = new RepositoryDouble();
+    repository.failImportConfirmation = true;
+    const user = userEvent.setup();
+    renderAppAt('/importar', client(session('user-a')), repository);
+    await user.type(await screen.findByLabelText('Nome da nova empresa'), 'Empresa Retry');
+    await user.click(screen.getByRole('button', { name: 'Usar nova empresa neste Caso' }));
+    await user.upload(screen.getByLabelText('Planilha canônica XLSX'), new File(['planilha'], 'operacoes.xlsx'));
+    await user.click(screen.getByRole('checkbox', { name: /linhas representam operações explícitas/i }));
+    await user.click(screen.getByRole('button', { name: 'Ler planilha' }));
+    await user.click(await screen.findByRole('button', { name: 'Confirmar Caso Observado' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Falha de armazenamento');
+    repository.failImportConfirmation = false;
+    await user.click(screen.getByRole('button', { name: 'Confirmar Caso Observado' }));
+    expect(await screen.findByRole('heading', { name: 'Caso confirmado' })).toBeVisible();
+    expect(repository.importAttempts).toHaveLength(2);
+    expect(repository.importAttempts[1]?.operationId).toBe(repository.importAttempts[0]?.operationId);
+    expect(repository.importAttempts[1]?.company).toEqual(repository.importAttempts[0]?.company);
+    expect(repository.companies).toHaveLength(1);
+  });
+
+  it('fixa empresa da rota mesmo com outra disponível e query adulterada', async () => {
+    const companies: CompanyRecord[] = ['A', 'B'].map((id) => ({ id, ownerSub: 'user-a', displayName: `Empresa ${id}`, aliases: [], createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', revision: 1 }));
+    const repository = new RepositoryDouble(companies);
+    const user = userEvent.setup();
+    renderAppAt('/empresas/A/importar?companyId=B', client(session('user-a')), repository);
+    expect(await screen.findByRole('heading', { name: 'Importar operações de Empresa A' })).toBeVisible();
+    expect(screen.queryByRole('combobox', { name: 'Empresa' })).not.toBeInTheDocument();
+    expect(screen.getByText('Empresa A')).toBeVisible();
+    await user.upload(screen.getByLabelText('Planilha canônica XLSX'), new File(['planilha'], 'operacoes.xlsx'));
+    await user.click(screen.getByRole('checkbox', { name: /linhas representam operações explícitas/i }));
+    await user.click(screen.getByRole('button', { name: 'Ler planilha' }));
+    await user.click(await screen.findByRole('button', { name: 'Confirmar Caso Observado' }));
+    expect(await screen.findByRole('heading', { name: 'Caso confirmado' })).toBeVisible();
+    expect(repository.cases.at(-1)?.companyId).toBe('A');
+  });
+  it.each([
+    { name: 'indisponível', getImportCatalog: vi.fn(async () => { throw new Error('offline'); }) },
+    { name: 'não configurado', getImportCatalog: vi.fn(async () => ({ ...fictionalCatalog(), status: 'NAO_CONFIGURADO' as const })) },
+  ])('espera Ler planilha, revisa e confirma Caso com catálogo $name', async ({ getImportCatalog }) => {
+    vi.mocked(parseCanonicalXlsx).mockClear();
+    const company: CompanyRecord = { id: 'company-1', ownerSub: 'user-a', displayName: 'Empresa A', aliases: [], createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', revision: 1 };
+    const repository = new RepositoryDouble([company]);
+    const user = userEvent.setup();
+    const view = renderAppAt('/importar', client(session('user-a')), repository, null, { getImportCatalog });
+    expect(await screen.findByText(/Sem regras específicas de finalidade.*IOF padrão por direção/)).toBeVisible();
+    expect(screen.queryByText(/execução bloqueada/i)).not.toBeInTheDocument();
+    await user.selectOptions(await screen.findByLabelText('Empresa'), company.id);
+    await user.upload(screen.getByLabelText('Planilha canônica XLSX'), new File(['planilha'], 'operacoes.xlsx', { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+    expect(parseCanonicalXlsx).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('checkbox', { name: /linhas representam operações explícitas/i }));
+    await user.keyboard('{Tab}');
+    expect(screen.getByRole('button', { name: 'Ler planilha' })).toHaveFocus();
+    await user.keyboard('{Enter}');
+    expect(await screen.findByRole('table', { name: 'Linhas importadas' })).toHaveTextContent('OP-1');
+    expect(parseCanonicalXlsx).toHaveBeenCalledTimes(1);
+    await user.click(screen.getByRole('button', { name: 'Confirmar Caso Observado' }));
+    expect(await screen.findByRole('heading', { name: 'Caso confirmado' })).toBeVisible();
+    expect(repository.cases).toHaveLength(1);
+    expect(screen.getByRole('link', { name: 'Criar Perfil Operacional' })).toHaveAttribute('href', expect.stringContaining('/empresas/company-1/perfis?caseId='));
+    expect(screen.getByRole('link', { name: 'Abrir Estudos' })).toHaveAttribute('href', '/empresas/company-1/estudos');
+    const caseId = repository.cases[0]!.id;
+    view.unmount();
+    renderAppAt(`/empresas/company-1/casos#caso-${caseId}`, client(session('user-a')), repository);
+    expect(await screen.findByRole('table', { name: 'Histórico de casos' })).toContainElement(document.getElementById(`caso-${caseId}`));
+  });
+  it('mantém confirmação bloqueada até corrigir uma direção inválida', async () => {
+    vi.mocked(parseCanonicalXlsx).mockResolvedValueOnce({ layout: 'xlsx-operacoes/1.0.0', sha256: 'b'.repeat(64), byteSize: 128,
+      rows: [{ operacao_id: 'OP-2', cliente_nome: 'Cliente', classificacao_perfil: null, direcao: 'INDEFINIDA', data_conhecida: '2026-09-22', data_limite: '2026-09-23', valor_brl: '100', finalidade_codigo: null }] });
+    const company: CompanyRecord = { id: 'company-1', ownerSub: 'user-a', displayName: 'Empresa A', aliases: [], createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', revision: 1 };
+    const user = userEvent.setup();
+    renderAppAt('/empresas/company-1/importar', client(session('user-a')), new RepositoryDouble([company]));
+    await user.upload(await screen.findByLabelText('Planilha canônica XLSX'), new File(['planilha'], 'operacoes.xlsx'));
+    await user.click(screen.getByRole('checkbox', { name: /linhas representam operações explícitas/i }));
+    await user.click(screen.getByRole('button', { name: 'Ler planilha' }));
+    expect(await screen.findByRole('button', { name: 'Confirmar Caso Observado' })).toBeDisabled();
+    await user.click(screen.getByRole('button', { name: 'Corrigir' }));
+    await user.type(screen.getByLabelText('Valor corrigido'), 'IN');
+    await user.click(screen.getByRole('button', { name: 'Aplicar correção' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Confirmar Caso Observado' })).toBeEnabled());
+  });
+  it('associa alias explícito e resolve conflito de versões na revisão', async () => {
+    const row = { operacao_id: 'OP-1', cliente_nome: 'Cliente Norte', classificacao_perfil: null, direcao: 'OUT', data_conhecida: '2026-09-22', data_limite: '2026-09-23', valor_brl: '100', finalidade_codigo: null };
+    vi.mocked(parseCanonicalXlsx).mockResolvedValueOnce({ layout: 'xlsx-operacoes/1.0.0', sha256: 'c'.repeat(64), byteSize: 128,
+      rows: [row, { ...row, operacao_id: 'OP-2', cliente_nome: 'Cliente Norte SA' }, { ...row, valor_brl: '200' }] });
+    const company: CompanyRecord = { id: 'company-1', ownerSub: 'user-a', displayName: 'Empresa A', aliases: [], createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', revision: 1 };
+    const user = userEvent.setup();
+    renderAppAt('/empresas/company-1/importar', client(session('user-a')), new RepositoryDouble([company]));
+    await user.upload(await screen.findByLabelText('Planilha canônica XLSX'), new File(['planilha'], 'operacoes.xlsx'));
+    await user.click(screen.getByRole('checkbox', { name: /linhas representam operações explícitas/i }));
+    await user.click(screen.getByRole('button', { name: 'Ler planilha' }));
+    expect(await screen.findByRole('region', { name: 'Conflitos de versão' })).toHaveTextContent('OP-1');
+    await user.type(screen.getByLabelText('Nome na fonte'), 'Cliente Norte SA');
+    await user.selectOptions(screen.getByLabelText('Cliente canônico'), screen.getByRole('option', { name: 'Cliente Norte' }));
+    await user.click(screen.getByRole('button', { name: 'Associar alias' }));
+    expect(within(screen.getByRole('row', { name: /OP-2/ })).getByRole('cell', { name: 'Cliente Norte' })).toBeVisible();
+    const conflict = screen.getByRole('region', { name: 'Conflitos de versão' });
+    const options = within(conflict).getByLabelText('Versão a manter').querySelectorAll('option');
+    await user.selectOptions(within(conflict).getByLabelText('Versão a manter'), options[1]!.value);
+    await waitFor(() => expect(screen.queryByRole('region', { name: 'Conflitos de versão' })).not.toBeInTheDocument());
+    expect(screen.getByRole('button', { name: 'Confirmar Caso Observado' })).toBeEnabled();
+  });
+  it('compara prazo e finalidade das versões e publica apenas a escolha informada', async () => {
+    const row = { operacao_id: 'OP-CONFLICT', cliente_nome: 'NOME BRUTO SIGILOSO', classificacao_perfil: null, direcao: 'OUT', data_conhecida: '2026-09-22', data_limite: '2026-09-23', valor_brl: '100', finalidade_codigo: 'SERVICO' };
+    vi.mocked(parseCanonicalXlsx).mockResolvedValueOnce({ layout: 'xlsx-operacoes/1.0.0', sha256: 'd'.repeat(64), byteSize: 128,
+      rows: [row, { ...row, data_limite: '2026-09-25', finalidade_codigo: 'COMERCIO' }] });
+    const company: CompanyRecord = { id: 'company-1', ownerSub: 'user-a', displayName: 'Empresa A', aliases: [], createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', revision: 1 };
+    const repository = new RepositoryDouble([company]);
+    const user = userEvent.setup();
+    renderAppAt('/empresas/company-1/importar', client(session('user-a')), repository);
+    await user.upload(await screen.findByLabelText('Planilha canônica XLSX'), new File(['planilha'], 'operacoes.xlsx'));
+    await user.click(screen.getByRole('checkbox', { name: /linhas representam operações explícitas/i }));
+    await user.click(screen.getByRole('button', { name: 'Ler planilha' }));
+    const conflict = await screen.findByRole('region', { name: 'Conflitos de versão' });
+    expect(conflict).toHaveTextContent('2026-09-23');
+    expect(conflict).toHaveTextContent('2026-09-25');
+    expect(conflict).toHaveTextContent('SERVICO');
+    expect(conflict).toHaveTextContent('COMERCIO');
+    expect(conflict).toHaveTextContent('Lote 1');
+    expect(conflict).toHaveTextContent('Linha 3');
+    expect(conflict).not.toHaveTextContent('NOME BRUTO SIGILOSO');
+    const options = within(conflict).getByLabelText('Versão a manter').querySelectorAll('option');
+    expect(conflict).toHaveTextContent(options[2]!.value);
+    await user.selectOptions(within(conflict).getByLabelText('Versão a manter'), options[2]!.value);
+    await user.click(screen.getByRole('button', { name: 'Confirmar Caso Observado' }));
+    expect(await screen.findByRole('heading', { name: 'Caso confirmado' })).toBeVisible();
+    expect(repository.cases.at(-1)?.orders).toEqual([expect.objectContaining({ deadlineDate: '2026-09-25', purposeCode: 'COMERCIO' })]);
+  });
+
+  it('mostra histórico de correção com valores canônicos e oculta célula inválida', async () => {
+    vi.mocked(parseCanonicalXlsx).mockResolvedValueOnce({ layout: 'xlsx-operacoes/1.0.0', sha256: 'e'.repeat(64), byteSize: 128,
+      rows: [{ operacao_id: 'OP-SECRET', cliente_nome: 'Cliente', classificacao_perfil: null, direcao: 'SEGREDO CELULA', data_conhecida: '2026-09-22', data_limite: '2026-09-23', valor_brl: '100', finalidade_codigo: null }] });
+    const company: CompanyRecord = { id: 'company-1', ownerSub: 'user-a', displayName: 'Empresa A', aliases: [], createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', revision: 1 };
+    const user = userEvent.setup();
+    renderAppAt('/empresas/company-1/importar', client(session('user-a')), new RepositoryDouble([company]));
+    await user.upload(await screen.findByLabelText('Planilha canônica XLSX'), new File(['planilha'], 'operacoes.xlsx'));
+    await user.click(screen.getByRole('checkbox', { name: /linhas representam operações explícitas/i }));
+    await user.click(screen.getByRole('button', { name: 'Ler planilha' }));
+    await user.click(await screen.findByRole('button', { name: 'Corrigir' }));
+    await user.type(screen.getByLabelText('Valor corrigido'), 'IN');
+    await user.click(screen.getByRole('button', { name: 'Aplicar correção' }));
+    const history = await screen.findByRole('region', { name: 'Histórico de correções' });
+    expect(history).toHaveTextContent('não validado → IN');
+    expect(history).not.toHaveTextContent('SEGREDO CELULA');
+  });
+  it('oferece importação protegida e predefine apenas empresa do owner', async () => {
+    const company: CompanyRecord = { id: 'company-1', ownerSub: 'user-a', displayName: 'Empresa A', aliases: [], createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', revision: 1 };
+    const repository = new RepositoryDouble([company]);
+    const view = renderAppAt('/importar', client(session('user-a')), repository);
+    expect(await screen.findByRole('heading', { level: 1, name: 'Importar operações' })).toBeVisible();
+    expect(await screen.findByRole('button', { name: 'Ler planilha' })).toBeDisabled();
+    view.unmount();
+    renderAppAt('/empresas/company-1/importar', client(session('user-a')), repository);
+    expect(await screen.findByRole('heading', { level: 1, name: 'Importar operações de Empresa A' })).toBeVisible();
+    expect(screen.getByLabelText('Empresa')).toHaveTextContent(company.displayName);
+  });
+  it('recusa importar para empresa de outra conta', async () => {
+    const foreign: CompanyRecord = { id: 'foreign', ownerSub: 'user-b', displayName: 'Empresa secreta', aliases: [], createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', revision: 1 };
+    renderAppAt('/empresas/foreign/importar', client(session('user-a')), new RepositoryDouble([foreign]));
+    expect(await screen.findByRole('heading', { name: 'Empresa não encontrada' })).toBeVisible();
+    expect(screen.queryByLabelText('Planilha canônica XLSX')).not.toBeInTheDocument();
+    expect(screen.queryByText('Empresa secreta')).not.toBeInTheDocument();
+  });
+
+  it('pré-seleciona em Perfis apenas o Caso e a revisão válidos, sem confirmar versão', async () => {
+    const company: CompanyRecord = { id: 'company-1', ownerSub: 'user-a', displayName: 'Empresa A', aliases: [], createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', revision: 1 };
+    const observed = { ...makeObservedCase(), id: 'case-1', revision: 4, ownerSub: 'user-a', companyId: company.id };
+    const repository = new RepositoryDouble([company], [observed]);
+    const valid = renderAppAt('/empresas/company-1/perfis?caseId=case-1&caseRevision=4', client(session('user-a')), repository);
+    await waitFor(() => expect(screen.getByRole('checkbox', { name: /case-1.*revisão 4/i })).toBeChecked());
+    expect(repository.profiles).toHaveLength(0);
+    valid.unmount();
+    renderAppAt('/empresas/company-1/perfis?caseId=case-1&caseRevision=3', client(session('user-a')), repository);
+    expect(await screen.findByRole('checkbox', { name: /case-1.*revisão 4/i })).not.toBeChecked();
+  });
   it.each([
     ['/empresas', 'Empresas'], ['/estudos', 'Estudos'],
   ])('protege %s e marca o destino ativo', async (path, destination) => {
@@ -238,7 +548,9 @@ describe('application routes', () => {
     expect(navigation).toHaveTextContent('Empresas');
     expect(navigation).toHaveTextContent('Estudos');
     expect(navigation).toHaveTextContent('Diagnóstico');
-    expect(navigation.querySelectorAll('a')).toHaveLength(3);
+    expect(navigation).toHaveTextContent('Importar');
+    expect(navigation).toHaveTextContent('Quadro comparativo');
+    expect(navigation.querySelectorAll('a')).toHaveLength(5);
     expect(screen.getByRole('link', { name: 'Empresas' })).toHaveAttribute('aria-current', 'page');
   });
 
@@ -254,7 +566,7 @@ describe('application routes', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Diagnóstico robusto' }, { timeout: 5000 })).toBeVisible();
     expect(await screen.findByText(/entrada fixa.*uma execução individual/i)).toBeVisible();
     expect(screen.getByTestId('location')).toHaveTextContent('/estudos/study-diagnostic/diagnostico');
-  });
+  }, 15_000);
 
   it('descarta load tardio do estudo anterior ao trocar a rota diagnóstica', async () => {
     const first = await createStudy({ id: 'study-first', ownerSub: 'user-a', name: 'Estudo anterior', baseScenario: makeScenarioDraft(), now: '2026-01-01T00:00:00Z' });
@@ -300,12 +612,16 @@ describe('application routes', () => {
     });
     const apiClient: ApiClient = {
       getReferenceExample: vi.fn(async () => { throw new Error('não chamado'); }),
+      getImportCatalog: vi.fn(async () => { throw new Error('não chamado'); }),
+      getProductHelpCatalog: vi.fn(async () => { throw new Error('não chamado'); }),
       runPreview: vi.fn(async () => { throw new Error('não chamado'); }),
       submitDiagnostic,
       getDiagnosticJob,
       getDiagnosticResult: vi.fn(async () => { throw new Error('não chamado'); }),
       cancelDiagnostic,
       retryDiagnostic: vi.fn(async () => { throw new Error('não chamado'); }),
+      buildReplay: vi.fn(async () => { throw new Error('não chamado'); }),
+      sendChatMessage: vi.fn(async () => { throw new Error('não chamado'); }),
     };
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
     const user = userEvent.setup();
@@ -327,9 +643,8 @@ describe('application routes', () => {
       expect(cancelDiagnostic).toHaveBeenCalledTimes(1);
     });
     expect(await screen.findByRole('heading', { name: 'Diagnóstico cancelado' }, { timeout: 5000 })).toBeVisible();
-    const history = screen.getByRole('table', { name: 'Histórico de tentativas diagnósticas' });
-    expect(history).toHaveTextContent('CANCELLED');
-    expect(history).toHaveTextContent(request.idempotency_key);
+    expect(screen.getByRole('region', { name: 'Estado do diagnóstico' })).toHaveTextContent(/Tentativa \S+/);
+    expect(screen.getByRole('button', { name: 'Tentar novamente' })).toBeVisible();
   }, 15_000);
 
   it('navega pelo catálogo e pelas quatro áreas da empresa com foco no título', async () => {

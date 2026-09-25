@@ -1,0 +1,44 @@
+@page { size: A4 portrait; margin: 12mm; }
+
+@media screen {
+  .print-metadata { display: none; }
+  .print-controls { align-items: center; display: flex; flex-wrap: wrap; gap: 12px; margin: 18px 0; }
+  .print-controls p { color: var(--muted); font-size: .875rem; margin: 0; }
+}
+
+@media print {
+  html, body, #root { background: #fff !important; color: #172a25 !important; margin: 0 !important; min-width: 0 !important; }
+  body { font-size: 9pt; line-height: 1.35; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  .app-shell { display: block !important; min-height: 0 !important; }
+  .workspace { display: block !important; margin: 0 !important; }
+  .workspace-content { margin: 0 !important; max-width: none !important; padding: 0 !important; }
+  .sidebar, .workspace-header, .skip-link, .chat-panel, .presentation-return,
+  .presentation-header nav, .print-controls, .ask-about-this, .tooltip-content,
+  .definition-trigger, .definition-tooltip, button, [role='tooltip'] { display: none !important; }
+  .presentation-page { color: #172a25 !important; display: block !important; margin: 0 !important; max-width: none !important; }
+  .presentation-header { background: #edf4f0 !important; border: 1px solid #829b90; border-radius: 0; color: #172a25 !important; padding: 8mm; }
+  .presentation-header .eyebrow, .presentation-header dt { color: #334c40 !important; }
+  .presentation-header h1 { font-size: 23pt; margin: 3mm 0; }
+  .presentation-header dl { display: grid; gap: 2mm 5mm; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 4mm 0 0; }
+  .presentation-header dd { font-size: 8pt; }
+  .presentation-page > section { background: #fff !important; border: 0; border-radius: 0; box-shadow: none; margin: 5mm 0 0; padding: 0; }
+  .presentation-page #composicao, .presentation-page #comparacao { break-before: page; page-break-before: always; }
+  .presentation-page h2 { border-color: #236658; font-size: 16pt; margin: 0 0 3mm; padding: 0 0 2mm; }
+  .presentation-page h3 { color: #205b50; font-size: 11pt; margin: 4mm 0 2mm; }
+  .presentation-page h2, .presentation-page h3 { break-after: avoid; page-break-after: avoid; }
+  .presentation-metrics, .presentation-facts { gap: 2mm; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .presentation-facts > div:only-child { grid-column: 1 / -1; }
+  .presentation-metrics > div, .presentation-facts > div { background: #f6f8f6 !important; border-left: 2px solid #236658; break-inside: avoid; page-break-inside: avoid; padding: 2mm; }
+  .presentation-metrics dt, .presentation-facts dt { color: #40584f; font-size: 8pt; }
+  .presentation-metrics dd, .presentation-facts dd { font-size: 9pt; margin-top: 1mm; }
+  .presentation-evidence { color: #40584f; font-size: 6.5pt; margin-top: 1mm; }
+  .presentation-page section > ul li { break-inside: avoid; }
+  .presentation-page table { border-collapse: collapse; width: 100%; }
+  .presentation-page thead { display: table-header-group; }
+  .presentation-page tr { break-inside: avoid; }
+  .print-metadata { border-top: 1px solid #829b90; break-inside: avoid; display: block; font-size: 8pt; margin-top: 6mm; padding-top: 3mm; }
+  .print-metadata h2 { font-size: 11pt; }
+  .print-metadata dl { display: grid; gap: 1mm 4mm; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0; }
+  .print-metadata dt { color: #40584f; }
+  .print-metadata dd { margin: 0; overflow-wrap: anywhere; }
+}

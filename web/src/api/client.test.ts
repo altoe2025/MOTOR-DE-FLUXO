@@ -3,8 +3,14 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { components } from './generated';
-import { createApiClient } from './client';
+import { createApiClient, type ChatRequest } from './client';
 import { ApiError } from './errors';
+import productHelp from '../../../servidor/catalogs/product_help.v1.json';
+import { buildCommunicationDocument } from '../communication/buildCommunicationDocument';
+import { observedInput } from '../communication/testFixtures';
+import { selectChatContext } from '../chat/contextFragment';
+
+const productHelpFixture = { ...productHelp, catalogVersion: 'a'.repeat(64) };
 
 type PreviaRequest = components['schemas']['PreviaRequest'];
 type DiagnosticRequest = components['schemas']['DiagnosticRequest'];
@@ -100,6 +106,98 @@ function jobSnapshotFixture(status: 'QUEUED' | 'RUNNING' | 'CANCEL_REQUESTED' = 
 }
 
 describe('typed API client', () => {
+  it('transports a validated canonical metric fragment and its fingerprint', async () => {
+    const full = await buildCommunicationDocument(await observedInput());
+    const fragment = await selectChatContext(full, { kind: 'METRIC', id: 'SAVINGS_BRL' });
+    const fetch = vi.fn(async (_path: RequestInfo | URL, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body)) as { communication: typeof fragment };
+      expect(body.communication?.contextFingerprint).toBe(fragment?.contextFingerprint);
+      expect(body.communication?.executiveMetrics.map((metric) => metric.code)).toEqual(['SAVINGS_BRL']);
+      return jsonResponse({ apiVersion: '1.0.0', messageId: 'reply-1', classification: 'IN_SCOPE',
+        answer: 'Economia simulada', citations: [{ kind: 'METRIC', id: 'SAVINGS_BRL' }],
+        contextFingerprint: fragment?.contextFingerprint, limitationCodes: [] });
+    });
+    const client = createApiClient({ getAccessToken: async () => 'token', fetch });
+    await expect(client.sendChatMessage({ apiVersion: '1.0.0', conversationId: 'conversation-1',
+      messageId: 'reply-1', message: 'Qual é a economia?',
+      routeContext: { routeId: 'diagnostic', helpId: null, studyId: full.study.id,
+        scenarioId: full.selection.scenarioId, diagnosticExecutionId: full.selection.diagnosticExecutionId,
+        replayDay: null }, communication: fragment as ChatRequest['communication'], history: [],
+    })).resolves.toMatchObject({ answer: 'Economia simulada' });
+  });
+
+  it('validates chat before fetch and rejects a mismatched response', async () => {
+    const response = { apiVersion: '1.0.0', messageId: 'other', classification: 'IN_SCOPE',
+      answer: 'Resposta', citations: [], contextFingerprint: null, limitationCodes: [] };
+    const fetch = vi.fn().mockResolvedValue(jsonResponse(response));
+    const client = createApiClient({ getAccessToken: async () => 'token', fetch });
+    const request = { apiVersion: '1.0.0' as const, conversationId: 'conversation-1', messageId: 'message-1',
+      message: 'Pergunta', routeContext: { routeId: 'studies', helpId: null, studyId: null,
+        scenarioId: null, diagnosticExecutionId: null, replayDay: null }, communication: null, history: [] };
+    await expect(client.sendChatMessage({ ...request, message: '' })).rejects.toMatchObject({ code: 'ENTRADA_CLIENTE_INVALIDA' });
+    expect(fetch).not.toHaveBeenCalled();
+    await expect(client.sendChatMessage(request)).rejects.toMatchObject({ code: 'RESPOSTA_INVALIDA' });
+    expect(fetch).toHaveBeenCalledWith('/api/v1/chat', expect.objectContaining({ method: 'POST' }));
+  });
+
+  it('obtém e valida o catálogo de ajuda pela rota autenticada', async () => {
+    const fetch = vi.fn().mockResolvedValue(jsonResponse(productHelpFixture));
+    const client = createApiClient({ getAccessToken: async () => 'token', fetch });
+
+    await expect(client.getProductHelpCatalog()).resolves.toEqual(productHelpFixture);
+    expect(fetch).toHaveBeenCalledWith('/api/v1/catalogos/ajuda', expect.objectContaining({
+      method: 'GET', headers: expect.objectContaining({ Authorization: 'Bearer token' }),
+    }));
+  });
+
+  it('obtém e valida o catálogo técnico pela rota canônica', async () => {
+    const catalog = {
+      schema_version: '1.0.0', catalog_version: 'a'.repeat(64),
+      status: 'NAO_CONFIGURADO', publicado_em_utc: '2026-09-23T00:00:00Z',
+      finalidades: [],
+      custos_padrao: {
+        iof_out: '0.035', iof_in: '0.0038', carry_cnr: '0.0004',
+        spread_rail_bps: '25', custo_fixo_remessa: '40',
+        custo_oportunidade_aa: '0', ptax: '5.4', iof_por_finalidade: [],
+      },
+      custos_origem: {
+        tipo: 'PADRAO_SINTETICO', fonte: 'Parâmetros técnicos sintéticos não calibrados',
+        registrado_em_utc: '2026-09-23T00:00:00Z',
+      },
+      custos_calibrados: false,
+    };
+    const fetch = vi.fn().mockResolvedValue(jsonResponse(catalog));
+    const catalogClient = createApiClient({ getAccessToken: async () => 'token', fetch });
+
+    await expect(catalogClient.getImportCatalog()).resolves.toEqual(catalog);
+    expect(fetch).toHaveBeenCalledWith('/api/v1/catalogos/importacao', expect.objectContaining({
+      method: 'GET',
+      headers: expect.objectContaining({ Authorization: 'Bearer token' }),
+    }));
+  });
+
+  it('rejeita catálogo inválido pela mesma resposta segura da API', async () => {
+    const fetch = vi.fn().mockResolvedValue(jsonResponse({ schema_version: '1.0.0' }));
+    const catalogClient = createApiClient({ getAccessToken: async () => 'token', fetch });
+
+    await expect(catalogClient.getImportCatalog()).rejects.toMatchObject({
+      status: 200,
+      code: 'RESPOSTA_INVALIDA',
+    });
+  });
+
+  it('bloqueia Replay local inválido antes de chamar a API', async () => {
+    const fetch = vi.fn();
+    const client = createApiClient({ getAccessToken: async () => 'token', fetch });
+
+    await expect(client.buildReplay({
+      api_version: '1.0.0',
+      diagnostic_execution_id: '00000000-0000-4000-8000-000000000701',
+      diagnostic_envelope: { file_payload: 'invalid' },
+    } as never)).rejects.toMatchObject({ code: 'ENTRADA_CLIENTE_INVALIDA' });
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it('submete diagnóstico validado uma única vez pela rota oficial', async () => {
     const request = diagnosticRequestFixture();
     const snapshot = jobSnapshotFixture();

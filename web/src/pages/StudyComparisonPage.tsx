@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
 
 import { useStudyController } from '../app/providers';
+import { useOptionalChat } from '../chat/ChatProvider';
+import { selectionId } from '../chat/routeContext';
 import { compareMvpDiagnostics, type MvpComparisonResult } from '../hypotheses/comparison';
 import { ScenarioComparison } from '../hypotheses/components/ScenarioComparison';
 import { isProfileMvpScenario } from '../hypotheses/hypothesis';
@@ -23,9 +25,17 @@ function sourceLabel(scenario: ScenarioDocument | undefined): string | null {
 }
 
 export function StudyComparisonPage() {
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const studyId = searchParams.get('studyId');
+  const baseFromUrl = searchParams.get('baseExecutionId');
+  const hypothesisFromUrl = searchParams.get('hypothesisExecutionId');
   const controller = useStudyController();
+  const chat = useOptionalChat();
+  const setChatScenarioId = chat?.setScenarioId;
+  const setChatExecutionId = chat?.setDiagnosticExecutionId;
+  const setChatComparisonId = chat?.setComparisonExecutionId;
+  const publishCommunication = chat?.publishCommunication;
   const heading = useRef<HTMLHeadingElement>(null);
   const [study, setStudy] = useState<StudyDocument | null>(null);
   const [baseId, setBaseId] = useState('');
@@ -42,9 +52,26 @@ export function StudyComparisonPage() {
       if (!active) return;
       setStudy(loaded);
       if (loaded === null) setError('O estudo não existe ou pertence a outra conta.');
+      if (loaded !== null && (baseFromUrl !== null || hypothesisFromUrl !== null)) {
+        const baseCandidate = loaded.executions.find((item): item is DiagnosticExecutionRecord =>
+          item.kind === 'DIAGNOSTIC' && item.id === selectionId(baseFromUrl)
+          && item.scenarioId === loaded.baseScenarioId && item.status === 'SUCCEEDED' && item.envelope !== null
+          && loaded.scenarios.some((scenario) => scenario.id === item.scenarioId && current(item, scenario)));
+        const hypothesisCandidate = loaded.executions.find((item): item is DiagnosticExecutionRecord =>
+          item.kind === 'DIAGNOSTIC' && item.id === selectionId(hypothesisFromUrl)
+          && item.scenarioId !== loaded.baseScenarioId && item.status === 'SUCCEEDED' && item.envelope !== null
+          && loaded.scenarios.some((scenario) => scenario.id === item.scenarioId && current(item, scenario)));
+        if (baseCandidate === undefined || hypothesisCandidate === undefined) {
+          setError('A comparação citada não está disponível neste Estudo.');
+        } else {
+          const restored = compareMvpDiagnostics(baseCandidate, hypothesisCandidate);
+          if (restored.ok) { setBaseId(baseCandidate.id); setHypothesisId(hypothesisCandidate.id); setResult(restored); }
+          else setError('A comparação citada não está disponível neste Estudo.');
+        }
+      }
     }).catch(() => { if (active) setError('Não foi possível abrir o estudo.'); });
     return () => { active = false; };
-  }, [controller, studyId]);
+  }, [controller, studyId, baseFromUrl, hypothesisFromUrl, location.key]);
 
   const candidates = study?.executions.filter((item): item is DiagnosticExecutionRecord => {
     if (item.kind !== 'DIAGNOSTIC' || item.status !== 'SUCCEEDED' || item.envelope === null) return false;
@@ -53,6 +80,17 @@ export function StudyComparisonPage() {
   }) ?? [];
   const base = candidates.filter((item) => item.scenarioId === study?.baseScenarioId);
   const hypotheses = candidates.filter((item) => item.scenarioId !== study?.baseScenarioId);
+  const selectedHypothesis = study?.id === studyId ? hypotheses.find((item) => item.id === hypothesisId) : undefined;
+  useEffect(() => { setChatScenarioId?.(selectedHypothesis?.scenarioId ?? null); }, [setChatScenarioId, selectedHypothesis?.scenarioId]);
+  useEffect(() => { setChatExecutionId?.(selectedHypothesis?.id ?? null); }, [setChatExecutionId, selectedHypothesis?.id]);
+  useEffect(() => { setChatComparisonId?.(baseId || null); }, [setChatComparisonId, baseId]);
+  useEffect(() => {
+    publishCommunication?.(study !== null && result?.ok === true && selectedHypothesis !== undefined && baseId !== ''
+      ? { study, scenarioId: selectedHypothesis.scenarioId, diagnosticExecutionId: selectedHypothesis.id,
+        comparisonExecutionId: baseId,
+        comparison: { baseExecutionId: baseId, hypothesisExecutionId: selectedHypothesis.id, value: result.value },
+        replay: null, replayDay: null } : null);
+  }, [publishCommunication, study, result, selectedHypothesis, baseId]);
   const compare = () => {
     const left = base.find((item) => item.id === baseId);
     const right = hypotheses.find((item) => item.id === hypothesisId);
@@ -77,6 +115,10 @@ export function StudyComparisonPage() {
       <label>Execução da hipótese<select value={hypothesisId} onChange={(event) => { setHypothesisId(event.target.value); setResult(null); }}><option value="">Selecione</option>{hypotheses.map(option)}</select></label>
       <Button disabled={baseId === '' || hypothesisId === '' || baseId === hypothesisId} onClick={compare}>Comparar</Button>
     </section>}
-    {result?.ok === true ? <ScenarioComparison comparison={result.value} /> : null}
+    {result?.ok === true ? <>{study !== null && selectedHypothesis !== undefined && baseId !== '' ? <Link
+      to={`/estudos/${encodeURIComponent(study.id)}/apresentacao?cenario=${encodeURIComponent(selectedHypothesis.scenarioId)}&execucao=${encodeURIComponent(selectedHypothesis.id)}&comparacao=${encodeURIComponent(baseId)}`}>
+      Apresentar comparação
+    </Link> : null}
+      <ScenarioComparison comparison={result.value} /></> : null}
   </article>;
 }

@@ -39,7 +39,7 @@ jobs:
         run: |
           python -m servidor.export_openapi
           npm --prefix web run generate:api
-          git diff --exit-code -- contracts web/src/api/generated.ts web/src/api/schemas.json web/src/api/validators.ts
+          git diff --exit-code -- contracts web/src/api/generated.ts web/src/api/schemas.json web/src/api/validators.ts web/src/generated/validators
 
       - name: Verify Python
         run: |
@@ -60,7 +60,7 @@ jobs:
         run: |
           npm --prefix web run typecheck
           npm --prefix web run lint
-          npm --prefix web run test:unit
+          npm --prefix web run test:unit -- --maxWorkers=2
           npm --prefix web run build
 
       - name: Scan tracked files and production bundle
@@ -71,6 +71,18 @@ jobs:
 
       - name: Run same-origin browser acceptance
         run: npm --prefix web run test:e2e
+
+      - name: Assert Stage 6 browser budgets
+        if: always()
+        run: python tests/web_api/measure_stage6.py --assert-budget
+
+      - name: Preserve browser acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-acceptance-evidence
+          path: web/test-results/
+          retention-days: 7
 
       - name: Measure the reference and diagnostic limits
         run: |

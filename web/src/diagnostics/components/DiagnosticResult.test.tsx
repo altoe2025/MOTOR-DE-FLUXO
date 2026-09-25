@@ -33,6 +33,39 @@ const axes: DiagnosticEnvelope['axes'] = {
 };
 
 describe('resultado do diagnóstico', () => {
+  it.each([
+    { name: 'finalidade não coletada', purposes: [null], direction: 'OUT', fallback: true },
+    { name: 'finalidade textual sem regra', purposes: ['DESCONHECIDA'], direction: 'OUT', fallback: true },
+    { name: 'finalidade conhecida com direção incompatível', purposes: ['INFORMADA'], direction: 'IN', fallback: true },
+    { name: 'carteira mista com uma ordem sem par exato', purposes: ['INFORMADA', 'DESCONHECIDA'], direction: 'OUT', fallback: true },
+    { name: 'todas as ordens com regra exata', purposes: ['INFORMADA', 'INFORMADA'], direction: 'OUT', fallback: false },
+  ])('explica o IOF por direção somente quando há fallback: $name', ({ purposes, direction, fallback }) => {
+    const envelope = {
+      statistics: { kind: 'SINGLE_EXECUTION', count: 1, selected_repetition_id: 'repeticao' },
+      selected_execution: {
+        statistics: { repetition_id: 'repeticao' }, result: {},
+        input_snapshot: { cenario: { ordens: purposes.map((finalidade) => ({ finalidade, direcao: direction })) } },
+      },
+    } as unknown as DiagnosticEnvelope;
+    render(<SelectedExecution envelope={envelope} iofRules={[
+      { finalidade: 'INFORMADA', direcao: 'OUT', aliquota: '0.01' },
+    ]} />);
+
+    if (fallback) {
+      expect(screen.getByText('IOF padrão por direção', { exact: true })).toBeVisible();
+    } else {
+      expect(screen.queryByText('IOF padrão por direção', { exact: true })).not.toBeInTheDocument();
+    }
+  });
+
+  it('mostra finalidade não coletada apenas na tabela de resíduo', () => {
+    const localAxes = structuredClone(axes);
+    localAxes.cross_border_residual.by_purpose = [{ key: null, direction: 'OUT', value_brl: '40' }];
+    render(<DiagnosticAxesView axes={localAxes} consequences={[]} limitations={[]} />);
+    const table = screen.getByRole('table', { name: 'Resíduo por finalidade' });
+    expect(within(table).getByRole('rowheader', { name: 'Finalidade não coletada' })).toBeVisible();
+    expect(localAxes.cross_border_residual.by_purpose[0]!.key).toBeNull();
+  });
   it('mantém distribuição separada da execução selecionada', () => {
     const repetitions: DiagnosticEnvelope['repetitions'] = [{
       repetition_id: '00000000-0000-4000-8000-000000000001', participant_seeds: {},
@@ -47,7 +80,9 @@ describe('resultado do diagnóstico', () => {
     expect(screen.getByRole('heading', { name: 'Distribuição de repetições' })).toBeVisible();
     expect(screen.getByText(/método EMPIRICAL_NEAREST_RANK/)).toBeVisible();
 
-    rerender(<SelectedExecution selectedExecution={{
+    rerender(<SelectedExecution iofRules={[]} envelope={{
+      statistics: { kind: 'SINGLE_EXECUTION', count: 1, selected_repetition_id: '00000000-0000-4000-8000-000000000005', percentile_method: null },
+      selected_execution: {
       kind: 'PREVIA', api_version: '1.0.0', request_id: '00000000-0000-4000-8000-000000000001',
       execution_id: '00000000-0000-4000-8000-000000000002', study_id: '00000000-0000-4000-8000-000000000003',
       scenario_id: '00000000-0000-4000-8000-000000000004', scenario_revision: 1,
@@ -55,7 +90,8 @@ describe('resultado do diagnóstico', () => {
       presentation: {} as never, presentation_version: '1.0.0', provenance_fingerprint: 'e'.repeat(64),
       statistics: { kind: 'SINGLE_EXECUTION', count: 1, repetition_id: '00000000-0000-4000-8000-000000000005', percentile_method: null, seed: null },
       result: {} as never,
-    }} />);
+      },
+    } as unknown as DiagnosticEnvelope} />);
     expect(screen.getByRole('heading', { name: 'Execução selecionada' })).toBeVisible();
     expect(screen.getByText('c'.repeat(64))).toBeVisible();
   });
