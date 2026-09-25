@@ -117,6 +117,25 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 4. **O que isso invalida.** Catálogo não configurado ou indisponível deixa de
    significar execução bloqueada. Validação de snapshots, autenticação, identidade
    e persistência continuam vigentes; esta task não altera parser ou contratos.
+## 2026-09-24 — Comunicação distingue IOF específico e fallback (MOT-90, Task 4)
+
+1. **Sintoma.** O documento de comunicação listava premissas de IOF, mas não dizia
+   se a carteira da execução usou pares específicos, fallback por direção ou ambos;
+   no diagnóstico, uma finalidade `null` aparecia como célula vazia.
+2. **Causa.** A projeção não classificava as ordens por par exato
+   `(finalidade, direção)`, e a tabela de resíduo imprimia a chave nula sem rótulo.
+3. **O que foi feito.** Na branch `codex/finalidade-comunicacao`, o fato
+   `IOF_APPLICATION_MODE` passou a refletir exclusivamente ordens e regras do
+   snapshot da execução selecionada. Duas evidências canônicas compactas
+   apontam para a tabela de regras e o fingerprint da entrada. Com o Estudo
+   fornecido, o validador recompõe o modo e rejeita adulteração; sem o Estudo,
+   valida enum, referências e fingerprint documental. A apresentação traduz os
+   três modos e informa que são
+   premissas da simulação, sem cotação. O diagnóstico mostra "Finalidade não
+   coletada" somente na UI, mantendo `null` nos dados.
+4. **O que isso invalida.** O documento anterior não permitia concluir qual regra
+   de IOF foi aplicável à carteira. Nenhuma alíquota, custo ou resultado numérico
+   mudou; o fato descreve a regra por ordem, não atribui custo por cliente.
 
 ## 2026-09-24 — Núcleo aceita finalidade ausente (MOT-90, Task 1)
 

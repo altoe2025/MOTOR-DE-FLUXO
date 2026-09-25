@@ -33,6 +33,14 @@ const axes: DiagnosticEnvelope['axes'] = {
 };
 
 describe('resultado do diagnóstico', () => {
+  it('mostra finalidade não coletada apenas na tabela de resíduo', () => {
+    const localAxes = structuredClone(axes);
+    localAxes.cross_border_residual.by_purpose = [{ key: null, direction: 'OUT', value_brl: '40' }];
+    render(<DiagnosticAxesView axes={localAxes} consequences={[]} limitations={[]} />);
+    const table = screen.getByRole('table', { name: 'Resíduo por finalidade' });
+    expect(within(table).getByRole('rowheader', { name: 'Finalidade não coletada' })).toBeVisible();
+    expect(localAxes.cross_border_residual.by_purpose[0]!.key).toBeNull();
+  });
   it('mantém distribuição separada da execução selecionada', () => {
     const repetitions: DiagnosticEnvelope['repetitions'] = [{
       repetition_id: '00000000-0000-4000-8000-000000000001', participant_seeds: {},

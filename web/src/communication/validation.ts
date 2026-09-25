@@ -1,9 +1,43 @@
 import { validateShape } from '../generated/validators/communication.js';
+import { canonical } from '../study/fingerprints';
+import type { StudyDocument } from '../study/model';
 
 import type { CommunicationDocumentV1 } from './domain';
 import { fingerprintCommunicationDocument } from './evidence';
 
 const decimal = /^-?(0|[1-9][0-9]*)(\.[0-9]+)?$/;
+
+function validIofApplicationMode(value: CommunicationDocumentV1, fact: CommunicationDocumentV1['assumptions'][number],
+  study?: StudyDocument): boolean {
+  if (fact.evidenceRefs.length !== 2) return false;
+  const [rulesRef, fingerprintRef] = fact.evidenceRefs;
+  const rulesEvidence = value.evidenceIndex[rulesRef!];
+  const fingerprintEvidence = value.evidenceIndex[fingerprintRef!];
+  if (rulesEvidence?.source !== 'STUDY' || fingerprintEvidence?.source !== 'STUDY'
+    || rulesRef !== `STUDY:${rulesEvidence.path}` || fingerprintRef !== `STUDY:${fingerprintEvidence.path}`) return false;
+  const rulesMatch = /^\/executions\/([0-9]+)\/premisesSnapshot\/costs\/iof_por_finalidade$/.exec(rulesEvidence.path);
+  if (rulesMatch === null || fingerprintEvidence.path !== `/executions/${rulesMatch[1]}/inputFingerprint`) return false;
+  if (!['FALLBACK_ONLY', 'SPECIFIC_ONLY', 'MIXED'].includes(fact.value)) return false;
+  if (study === undefined) return true;
+  const execution = study.executions[Number(rulesMatch[1])];
+  if (study.id !== value.study.id || execution?.kind !== 'DIAGNOSTIC'
+    || execution.id !== value.selection.diagnosticExecutionId
+    || execution.scenarioId !== value.selection.scenarioId
+    || execution.scenarioRevision !== value.selection.scenarioRevision
+    || rulesEvidence.value !== canonical(execution.premisesSnapshot.costs.iof_por_finalidade)
+    || fingerprintEvidence.value !== execution.inputFingerprint) return false;
+  try {
+    const exact = new Set(execution.premisesSnapshot.costs.iof_por_finalidade.map((rule) =>
+      JSON.stringify([rule.finalidade, rule.direcao])));
+    let specific = false;
+    let fallback = false;
+    for (const order of execution.sourceSnapshot.orders) {
+      if (order.finalidade !== null && exact.has(JSON.stringify([order.finalidade, order.direcao]))) specific = true;
+      else fallback = true;
+    }
+    return fact.value === (specific ? (fallback ? 'MIXED' : 'SPECIFIC_ONLY') : 'FALLBACK_ONLY');
+  } catch { return false; }
+}
 
 /** Rejects calendar overflow as well as non-UTC and malformed RFC3339 strings. */
 function validUtc(value: string): boolean {
@@ -18,7 +52,7 @@ function validUtc(value: string): boolean {
     && date.getUTCSeconds() === second;
 }
 
-export async function validateCommunicationDocument(value: unknown): Promise<
+export async function validateCommunicationDocument(value: unknown, study?: StudyDocument): Promise<
   { ok: true; value: CommunicationDocumentV1 } | { ok: false; issues: readonly string[] }
 > {
   if (!validateShape(value)) {
@@ -72,7 +106,9 @@ export async function validateCommunicationDocument(value: unknown): Promise<
     const evidence = item.evidenceRefs.map((ref) => Object.hasOwn(value.evidenceIndex, ref)
       ? value.evidenceIndex[ref] : undefined);
     fail(evidence.every((entry) => entry !== undefined), `MISSING_REF:${item.code}`);
-    if ('availability' in item && item.availability === 'UNAVAILABLE') {
+    if ('value' in item && !('availability' in item) && item.code === 'IOF_APPLICATION_MODE') {
+      fail(validIofApplicationMode(value, item, study), 'IOF_APPLICATION_MODE');
+    } else if ('availability' in item && item.availability === 'UNAVAILABLE') {
       fail(evidence.some((entry) => entry && (entry.value === null || entry.value === item.meaning)),
         `UNAVAILABLE_EVIDENCE:${item.code}`);
     } else {
@@ -87,7 +123,7 @@ export async function validateCommunicationDocument(value: unknown): Promise<
   return { ok: true, value };
 }
 
-export async function assertValidCommunicationDocument(value: unknown): Promise<void> {
-  const result = await validateCommunicationDocument(value);
+export async function assertValidCommunicationDocument(value: unknown, study?: StudyDocument): Promise<void> {
+  const result = await validateCommunicationDocument(value, study);
   if (!result.ok) throw new Error(`Documento de comunicação inválido: ${result.issues.join('; ')}`);
 }
