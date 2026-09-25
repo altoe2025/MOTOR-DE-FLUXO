@@ -89,6 +89,44 @@ class CommunicationEvidence(StrictModel):
     value: Text | None
 
 
+def _valid_iof_application_mode(
+    fact: CommunicationFact, evidence_index: dict[str, CommunicationEvidence]
+) -> bool:
+    if fact.value not in {"FALLBACK_ONLY", "SPECIFIC_ONLY", "MIXED"}:
+        return False
+    if len(fact.evidenceRefs) != 2:
+        return False
+    rules_ref, fingerprint_ref = fact.evidenceRefs
+    rules = evidence_index[rules_ref]
+    fingerprint = evidence_index[fingerprint_ref]
+    match = re.fullmatch(
+        r"/executions/([0-9]+)/premisesSnapshot/costs/iof_por_finalidade", rules.path
+    )
+    if (
+        match is None
+        or rules_ref != f"STUDY:{rules.path}"
+        or fingerprint_ref != f"STUDY:/executions/{match.group(1)}/inputFingerprint"
+        or fingerprint.path != f"/executions/{match.group(1)}/inputFingerprint"
+        or rules.source != "STUDY"
+        or fingerprint.source != "STUDY"
+        or fingerprint.value is None
+        or re.fullmatch(r"[0-9a-f]{64}", fingerprint.value) is None
+    ):
+        return False
+    try:
+        published_rules = json.loads(rules.value) if rules.value is not None else None
+    except (TypeError, ValueError):
+        return False
+    return isinstance(published_rules, list) and all(
+        isinstance(rule, dict)
+        and isinstance(rule.get("finalidade"), str)
+        and bool(rule["finalidade"])
+        and rule.get("direcao") in {"OUT", "IN"}
+        and isinstance(rule.get("aliquota"), str)
+        for rule in published_rules
+    )
+
+
 class CommunicationStudy(StrictModel):
     id: Identificador
     name: Label
@@ -191,7 +229,10 @@ class CommunicationDocumentV1(StrictModel):
             if len(refs) != len(set(refs)) or any(ref not in self.evidenceIndex for ref in refs):
                 raise ValueError("referência de evidência ausente ou duplicada")
             values = [self.evidenceIndex[ref].value for ref in refs]
-            if isinstance(item, CommunicationMetric) and item.availability == "UNAVAILABLE":
+            if isinstance(item, CommunicationFact) and item.code == "IOF_APPLICATION_MODE":
+                if not _valid_iof_application_mode(item, self.evidenceIndex):
+                    raise ValueError("modo de IOF sem evidências canônicas esperadas")
+            elif isinstance(item, CommunicationMetric) and item.availability == "UNAVAILABLE":
                 if None not in values and item.meaning not in values:
                     raise ValueError("indisponibilidade sem evidência de ausência ou motivo")
             else:

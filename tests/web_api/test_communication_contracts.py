@@ -25,6 +25,59 @@ def sign(document):
     ).hexdigest()
 
 
+def with_iof_application_mode(mode="MIXED"):
+    document = load("observed")
+    base = "/executions/0"
+    rules_path = f"{base}/premisesSnapshot/costs/iof_por_finalidade"
+    fingerprint_path = f"{base}/inputFingerprint"
+    for path, value in ((rules_path, "[]"), (fingerprint_path, "a" * 64)):
+        document["evidenceIndex"][f"STUDY:{path}"] = {
+            **deepcopy(document["evidenceIndex"]["assumption"]),
+            "path": path, "value": value,
+        }
+    document["assumptions"].append({
+        "code": "IOF_APPLICATION_MODE", "label": "Aplicação de IOF", "value": mode,
+        "evidenceRefs": [f"STUDY:{rules_path}", f"STUDY:{fingerprint_path}"],
+    })
+    sign(document)
+    return document
+
+
+@pytest.mark.parametrize("mode", ["FALLBACK_ONLY", "SPECIFIC_ONLY", "MIXED"])
+def test_accepts_derived_iof_mode_with_exact_snapshot_evidence(mode):
+    document = with_iof_application_mode(mode)
+    assert CommunicationDocumentV1.model_validate(document).assumptions[-1].value == mode
+
+
+@pytest.mark.parametrize("change", [
+    ("mode", "OTHER"), ("refs", ["assumption", "STUDY:/executions/0/inputFingerprint"]),
+    ("source", "DIAGNOSTIC"), ("path", "/executions/1/inputFingerprint"),
+])
+def test_rejects_invalid_derived_iof_mode_evidence(change):
+    kind, value = change
+    document = with_iof_application_mode()
+    if kind == "mode":
+        document["assumptions"][-1]["value"] = value
+    elif kind == "refs":
+        document["assumptions"][-1]["evidenceRefs"] = value
+    elif kind == "source":
+        document["evidenceIndex"]["STUDY:/executions/0/inputFingerprint"]["source"] = value
+        document["evidenceIndex"]["STUDY:/executions/0/inputFingerprint"]["sourceId"] = "diagnostic-1"
+    else:
+        document["evidenceIndex"]["STUDY:/executions/0/inputFingerprint"]["path"] = value
+    sign(document)
+    with pytest.raises(ValidationError):
+        CommunicationDocumentV1.model_validate(document)
+
+
+def test_derived_iof_exception_does_not_relax_other_facts():
+    document = with_iof_application_mode()
+    document["assumptions"][0]["value"] = "adulterado"
+    sign(document)
+    with pytest.raises(ValidationError, match="valor publicado"):
+        CommunicationDocumentV1.model_validate(document)
+
+
 @pytest.mark.parametrize("name", ["observed", "synthetic", "unicode"])
 def test_preserves_shared_document_decimals_availability_and_fingerprint(name):
     document = load(name)

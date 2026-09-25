@@ -132,7 +132,10 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
    valida enum, referências e fingerprint documental. A apresentação traduz os
    três modos e informa que são
    premissas da simulação, sem cotação. O diagnóstico mostra "Finalidade não
-   coletada" somente na UI, mantendo `null` nos dados.
+   coletada" somente na UI, mantendo `null` nos dados. O contrato Python de
+   `CommunicationDocumentV1` reconhece esse único fato derivado mediante enum
+   e as duas evidências canônicas esperadas, preservando igualdade literal para
+   todos os outros fatos; `ChatRequestV1` aceita o documento completo.
 4. **O que isso invalida.** O documento anterior não permitia concluir qual regra
    de IOF foi aplicável à carteira. Nenhuma alíquota, custo ou resultado numérico
    mudou; o fato descreve a regra por ordem, não atribui custo por cliente.
