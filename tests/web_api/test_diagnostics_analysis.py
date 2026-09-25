@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from servidor.contracts.input import PreviaRequest
 from servidor.contracts.diagnostics import CrossBorderResidualAxis
+from servidor.contracts.input import PreviaRequest
 from servidor.contracts.preview import PreviewEnvelope
 from servidor.diagnostics.analysis import (
     RepetitionInput,

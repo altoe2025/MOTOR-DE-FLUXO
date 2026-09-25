@@ -1,13 +1,17 @@
 """Chat boundary: bounded history, typed context and revalidated evidence."""
 
+import json
 from copy import deepcopy
 from importlib import import_module
-import json
 
 import pytest
 from pydantic import ValidationError
 
-from tests.web_api.test_communication_contracts import load, sign, with_iof_application_mode
+from tests.web_api.test_communication_contracts import (
+    load,
+    sign,
+    with_iof_application_mode,
+)
 
 
 def payload(with_document=False):

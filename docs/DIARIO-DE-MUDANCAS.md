@@ -75,6 +75,13 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-25 — Verificação da integração e referências visuais (MOT-99)
+
+1. **Sintoma.** O candidato integrado precisava verificar regressões do novo chat/quadro e ainda não possuía referências visuais Linux.
+2. **Causa.** A UI mudou após os baselines Windows; snapshots dependem da plataforma de renderização.
+3. **O que foi feito.** Typecheck/lint focal, 14 testes unitários focais e 31 casos E2E de chat/aceite/importação/diagnóstico passaram. A revisão do quadro/variações validou 9 casos; o lote assíncrono recebeu 3 testes de navegação/falha. Visual Windows passou 2/2, sete PNG foram inspecionados e o PDF manteve nove páginas. Build Docker e smoke passaram em `desktop-linux` (saúde, SPA, assets, auth, headers, nonroot, readonly e scanner); scanner local também passou. PR #56 aberto em rascunho. Workflow temporário gera referências Linux como artefato para revisão, sem aprovar nem substituir o gate visual normal; será removido após incorporar os PNG revisados.
+4. **O que isso invalida.** Docker deixa de ser bloqueio local. Referências Windows anteriores de importação, Estudos, chat e apresentação ficam superadas. CI integral e aceite Linux continuam separados dessas aprovações locais. Nenhum deploy foi feito.
+
 ## 2026-09-25 — Consolidação das Etapas 5/6 e bancada de exploração (MOT-99)
 
 1. **Sintoma.** Replay, comunicação, chat, apresentação/PDF, Docker/Render declarativo e finalidade opcional estavam em branches locais; o trabalho final do Claude ainda não estava no GitHub.

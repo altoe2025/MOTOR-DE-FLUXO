@@ -1,0 +1,35 @@
+name: visual-baseline-review
+
+on:
+  pull_request: {}
+
+permissions:
+  contents: read
+
+# Temporary bootstrap: produces review artifacts, never approves the visual gate.
+jobs:
+  linux-references:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install test dependencies
+        run: |
+          python -m pip install -r requirements/web-dev.lock
+          python -m pip install --no-deps -e .
+          npm --prefix web ci
+          npx --prefix web playwright install --with-deps chromium
+      - name: Generate Linux references for human review
+        run: npm --prefix web run test:e2e -- stage6-visual.spec.ts --update-snapshots
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: linux-visual-references
+          path: web/e2e/stage6-visual.spec.ts-snapshots/*-linux.png
+          retention-days: 7
