@@ -15,4 +15,8 @@ describe("Vite dev proxy", () => {
       },
     });
   });
+
+  it("exclui o smoke gate de Render destinado ao runner node:test", () => {
+    expect(config.test?.exclude).toContain("scripts/render-smoke-gate.test.mjs");
+  });
 });

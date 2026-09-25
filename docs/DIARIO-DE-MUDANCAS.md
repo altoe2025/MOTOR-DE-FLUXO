@@ -74,6 +74,26 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-24 — Vitest deixa o smoke gate de Render com seu runner próprio (MOT-99)
+
+1. **Sintoma.** O comando serial `test:unit` coletava
+   `scripts/render-smoke-gate.test.mjs` e terminava em `No test suite found`, apesar
+   de os 1.038 testes Vitest terem passado.
+2. **Causa.** O arquivo é um teste `node:test` destinado exclusivamente a
+   `node --test`, mas seu sufixo `*.test.mjs` também corresponde à coleta padrão do
+   Vitest e não constava nas exclusões da configuração.
+3. **O que foi feito.** `web/vite.config.ts` exclui exatamente
+   `scripts/render-smoke-gate.test.mjs`; `vite.config.test.ts` protege essa
+   separação. O teste focado passou (2/2), o gate dedicado de Render passou (4/4),
+   e typecheck, lint e diff-check passaram. A suíte unitária passou pela coleta e
+   executou 1.039 testes, mas terminou com bloqueador separado em
+   `src/app/router.test.tsx` (1 falha, 1.038 passes): em `/login`, o botão
+   “Perguntar” está presente apesar da expectativa de ausência. Esse teste não foi
+   alterado nesta correção.
+4. **O que isso invalida.** Fica superado o bloqueio de aceite causado por o Vitest
+   tentar executar o smoke gate do Render. A falha de rota é um bloqueador distinto;
+   nenhum aceite integral é promovido por esta mudança.
+
 ## 2026-09-24 — Diagnóstico explica todo fallback de IOF (MOT-99, Task 5 fix 1)
 
 1. **Sintoma.** O Diagnóstico explicava IOF padrão somente para finalidade `null`,
