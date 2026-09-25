@@ -32,7 +32,7 @@ python -m tests.web_api.scan_credentials
 
 O teste `stage6-acceptance.spec.ts` percorre a importação real pela interface, cinco cenários demonstrativos, Diagnóstico, Replay, chat, Painel A, deep link/reload e PDF A4 renderizado em páginas. Também injeta falhas locais: XLSX proibido, IndexedDB indisponível, API de job expirada com resultado já salvo, offline após carregar a tela, chat desabilitado, timeout, saída inválida e transporte temporariamente indisponível. As suites da 6A e 6C detalham conflitos, cancelamento, quotas, isolamento e privacidade.
 
-As imagens de referência visual atualmente revisadas são `*-local-win32.png`. O gate Linux exige gerar e revisar sete imagens no runner Linux, sem copiar ou renomear as imagens Windows. O smoke da imagem Docker exige o daemon Docker; ambos estão registrados como pendências em `etapa-6-aceitacao.md`.
+As referências visuais revisadas incluem `*-local-win32.png` e `*-local-linux.png`. As sete imagens Linux foram geradas no runner Ubuntu (run `36099835253`, PR #56), sem copiar ou renomear as imagens Windows. O build e smoke Docker da integração passaram em `desktop-linux`; a CI normal deve confirmar os baselines e o restante do conjunto. Esses checks não substituem o smoke HTTPS de uma publicação autorizada.
 
 ## Smoke HTTPS futuro
 

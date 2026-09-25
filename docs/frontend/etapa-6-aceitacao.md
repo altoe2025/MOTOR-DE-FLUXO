@@ -1,5 +1,18 @@
 # Etapa 6 — aceite local e limites de publicação (MOT-99)
 
+## Atualização de integração — 2026-09-25, PR #56
+
+Esta atualização substitui as pendências locais de Docker e referências Linux
+descritas no registro histórico abaixo. Build da imagem integrada e smoke Docker
+passaram (`desktop-linux`, saúde/SPA/assets/auth/headers/nonroot/readonly/scanner).
+O frontend integrado com o Claude passou 31 E2Es focados e o visual Windows
+(2 testes, sete imagens inspecionadas). As sete referências Linux foram geradas
+e revisadas no run `36099835253`; a comparação normal e o conjunto integral
+permanecem sujeitos à CI do PR. Deploy Render e providers reais continuam
+**NOT_RUN**, separados da integração de código.
+
+## Registro histórico de 2026-09-24
+
 **Data:** 2026-09-24. **Base histórica D6:** `723461c89bb9ec721ff45695081f3cfd74dcb834` + `aa9ad9f`. **Revisão finalidade opcional:** Tasks 1–4 integradas em `e9effcf`, branch `codex/frontend-etapa-6-planejamento`, sem push, PR, merge ou deploy.
 
 **OBSERVED_FLOW=PASS local. LOCAL_ACCEPTANCE=FAIL. PUBLISHED_ACCEPTANCE=NOT_RUN.** O XLSX sem finalidade chega a Diagnóstico, Replay, Painel A e PDF com “IOF padrão por direção”. O catálogo de produção permanece `NAO_CONFIGURADO`, agora informativo: o cenário usa premissas persistidas e fallback quando não há par exato de finalidade e direção. Visual Linux/CI e imagem Docker continuam sem aceite neste host, como gates separados. Nenhum resultado local autoriza marcar MOT-99 Done.

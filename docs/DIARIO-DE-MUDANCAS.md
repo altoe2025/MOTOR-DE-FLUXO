@@ -75,6 +75,13 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-25 — Referências Linux revisadas no PR #56 (MOT-99)
+
+1. **Sintoma.** A comparação visual da CI não tinha baselines Linux.
+2. **Causa.** As sete referências anteriores tinham sido geradas somente no Windows.
+3. **O que foi feito.** Run `36099835253`, commit `dbb4097`, gerou sete PNG Linux com Playwright no Ubuntu. Todos foram inspecionados e copiados byte a byte, com SHA-256 conferido, para `stage6-visual.spec.ts-snapshots`. Workflow temporário removido; a CI normal continua comparando imagens, sem atualização automática. A primeira CI aprovou 1.203 testes Python (normal e otimizado); dois imports de testes foram ordenados pelo Ruff para liberar a etapa seguinte.
+4. **O que isso invalida.** Fica superada a ausência de referências Linux, não o requisito de aprovação da CI sobre elas. Nenhum deploy, alteração de pixels ou flexibilização de tolerância.
+
 ## 2026-09-25 — Verificação da integração e referências visuais (MOT-99)
 
 1. **Sintoma.** O candidato integrado precisava verificar regressões do novo chat/quadro e ainda não possuía referências visuais Linux.
