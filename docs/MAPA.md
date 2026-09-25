@@ -5,6 +5,13 @@ front-end atualizados em 2026-09-22.
 
 ## Comece por aqui
 
+**Consolidação em andamento (2026-09-25):** `codex/integracao-etapas-5-6`
+reúne as Etapas 5/6, finalidade opcional e a bancada do Claude
+(`feat/bancada-exploracao`). Inclui quadro `/quadro`, alavancas por empresa e
+chat flutuante ORKE AI. `origin/main` verificada antes da integração estava em
+`6c623a8` (Etapa 4). As referências históricas abaixo não substituem este estado.
+Publicação e CI devem ser conferidas no PR; não houve deploy nesta integração.
+
 **Branch integrada: `main` em `c2ad175` pelo PR #37.** A sensibilidade, o fechamento
 funcional, as MOT-15–MOT-22 e a política de autonetting preferencial já foram
 integrados. A grade histórica não foi regenerada e continua identificada como legado

@@ -9,7 +9,7 @@ const OWNER = '00000000-0000-4000-8000-000000000021';
 const REFUSAL = 'Posso ajudar apenas com o Motor de Fluxo, o funcionamento da aplicação e os dados deste projeto.';
 type Demo = { studies: { id: string; scenarios: { id: string }[]; diagnostics: { id: string; scenarioId: string; repetitionId: string; savingsBrl: string }[] }[] };
 type Bridge = { demoAcceptanceSnapshot(): Promise<Demo> };
-const panel = (page: Page) => page.getByRole('dialog', { name: 'Chat', exact: true });
+const panel = (page: Page) => page.getByRole('dialog', { name: 'ORKE AI', exact: true });
 const messages = (page: Page) => panel(page).getByRole('list', { name: 'Mensagens da conversa' });
 
 async function demo(page: Page) {
@@ -91,7 +91,7 @@ test('presença global nas rotas implementadas; auth sem painel e deep links pre
     `/comparar?studyId=${study.id}`, '/replay', `/estudos/${study.id}/replay?executionId=${execution.id}&day=31`, '/premissas']) {
     await page.goto(path);
     // Wait for lazy route content before testing focus restoration in that screen.
-    if (path.includes('/diagnostico?')) await expect(page.getByRole('region', { name: 'Execução selecionada' })).toBeVisible();
+    if (path.includes('/diagnostico?')) await expect(page.getByRole('region', { name: 'Resultado do motor' })).toBeVisible();
     if (path.includes('/replay?')) await expect(page.getByRole('heading', { name: 'Fronteira Viva', exact: true })).toBeVisible();
     await open(page);
     expect(new URL(page.url()).pathname).toBe(path.split('?')[0]);
@@ -129,18 +129,19 @@ test('quatro classes, recusa server-side, histórico/reload e isolamento de cont
   await page.reload(); await open(page); await expect(messages(page).locator('article')).toHaveCount(0);
 });
 
-test('métrica mínima, evidências reais, fingerprint e citação restauram execução após reload', async ({ page }) => {
+test('contexto da execução, evidências reais, fingerprint e citação restauram execução após reload', async ({ page }) => {
   const study = await demo(page); const execution = study.diagnostics[0]!;
   await page.goto(`/estudos/${study.id}/diagnostico?scenarioId=${execution.scenarioId}&executionId=${execution.id}`);
-  await page.getByRole('button', { name: 'Perguntar sobre economia', exact: true }).click();
-  await expect(panel(page).getByLabel('Sua pergunta')).toBeFocused();
+  await open(page);
   const result = await send(page, 'Explique a economia selecionada.');
   expect(result.status).toBe(200); const document = result.request.communication!;
-  expect(document.executiveMetrics.map((item) => item.code)).toEqual(['SAVINGS_BRL']);
-  expect(document.executiveMetrics[0]!.value).toBe(execution.savingsBrl);
-  const refs = document.executiveMetrics[0]!.evidenceRefs;
-  expect(Object.keys(document.evidenceIndex).sort()).toEqual([...refs].sort());
-  expect(document.assumptions).toEqual([]); expect(document.provenance).toEqual([]);
+  const expectedDocument = await page.evaluate((input) => window.__MOTOR_E2E__!.projectDemoCommunication(input), {
+    studyId: study.id, scenarioId: execution.scenarioId, diagnosticExecutionId: execution.id, replayDay: null,
+  });
+  expect(document).toEqual(expectedDocument);
+  const savings = document.executiveMetrics.find((item) => item.code === 'SAVINGS_BRL')!;
+  expect(savings.value).toBe(execution.savingsBrl);
+  for (const ref of savings.evidenceRefs) expect(document.evidenceIndex[ref]).toBeDefined();
   expect(result.response.contextFingerprint).toBe(document.contextFingerprint);
   const serialized = JSON.stringify(result.request);
   for (const forbidden of [OWNER, 'ownerSub', 'access_token', 'mot21-controlled-e2e-token', ...study.diagnostics.slice(1).map((item) => item.id)]) expect(serialized).not.toContain(forbidden);
@@ -149,7 +150,9 @@ test('métrica mínima, evidências reais, fingerprint e citação restauram exe
   const link = panel(page).getByRole('navigation', { name: 'Fontes da resposta' }).getByRole('link');
   await expect(link).toHaveAttribute('href', new RegExp(`executionId=${execution.id}`));
   await link.click();
-  await expect(page.getByRole('region', { name: 'Execução selecionada' })).toContainText(execution.repetitionId);
+  await expect(page.getByRole('region', { name: 'Resultado do motor' })).toBeVisible();
+  const restored = await page.evaluate(() => window.__MOTOR_E2E__!.demoAcceptanceSnapshot());
+  expect(restored.studies.find((item) => item.id === study.id)!.diagnostics.find((item) => item.id === execution.id)!.repetitionId).toBe(execution.repetitionId);
   expect(new URL(page.url()).searchParams.get('executionId')).toBe(execution.id);
 });
 
@@ -192,7 +195,7 @@ test('cancelamento de request em voo mantém FAILED e retry manual', async ({ pa
   await panel(page).getByLabel('Sua pergunta').fill('Explique importar após cancelar.');
   const sent = page.waitForRequest('**/api/v1/chat');
   await panel(page).getByRole('button', { name: 'Enviar', exact: true }).click(); await sent;
-  await expect(panel(page).getByRole('button', { name: 'Enviar', exact: true })).toBeDisabled();
+  await expect(panel(page).getByLabel('Sua pergunta')).toBeDisabled();
   await panel(page).getByRole('button', { name: 'Cancelar envio' }).click();
   await expect(panel(page).getByRole('button', { name: 'Tentar novamente' })).toBeVisible();
   expect((await conversations(page))[0]!.messages.at(-1)?.status).toBe('FAILED');
@@ -225,17 +228,20 @@ test('quotas de 100 mensagens e 20 conversas oferecem saída sem apagar históri
   await expect(panel(page).getByLabel('Sua pergunta')).toBeEnabled();
   expect((await conversations(page)).some((item) => item.messages.length === 100)).toBe(true);
   await page.setViewportSize({ width: 1280, height: 960 });
-  await seedQuota(page, 20, 8, true); await page.reload(); await open(page);
+  await seedQuota(page, 20, 20, true); await page.reload(); await open(page);
   await expect(panel(page)).toContainText('20 conversas');
   expect(await conversations(page)).toHaveLength(20);
-  await expect(messages(page).locator('article')).toHaveCount(8);
-  const historySize = await messages(page).evaluate((element) => ({ visible: element.clientHeight, content: element.scrollHeight }));
+  await expect(messages(page).locator('article')).toHaveCount(20);
+  const historySize = await panel(page).locator('.chat-body').evaluate((element) => ({ visible: element.clientHeight, content: element.scrollHeight }));
   expect(historySize.visible).toBeGreaterThan(0);
   expect(historySize.content).toBeGreaterThan(historySize.visible);
   const citation = panel(page).getByRole('navigation', { name: 'Fontes da resposta' }).getByRole('link', { name: 'Importação' });
-  await panel(page).getByRole('navigation', { name: 'Conversas do chat' }).getByRole('button').last().focus();
-  await page.keyboard.press('Tab');
-  await expect(panel(page).getByRole('button', { name: 'Excluir conversa', exact: true })).toBeFocused();
+  await panel(page).getByRole('button', { name: 'Conversas', exact: true }).click();
+  const conversation = panel(page).getByRole('navigation', { name: 'Conversas do chat' }).getByRole('button').first();
+  await conversation.focus();
+  await page.keyboard.press('Enter');
+  await expect(messages(page)).toBeVisible();
+  await panel(page).getByRole('button', { name: 'Fechar chat' }).focus();
   await page.keyboard.press('Tab');
   await expect(citation).toBeFocused();
   await expect(citation).toBeInViewport();
@@ -261,8 +267,8 @@ test('teclado, aria-live incremental, foco e layout a 200%', async ({ page }, te
   await page.goto('/importar');
   const trigger = page.getByRole('button', { name: 'Perguntar', exact: true });
   await trigger.focus(); await page.keyboard.press('Enter');
-  await expect(panel(page).getByRole('heading', { name: 'Chat', exact: true })).toBeFocused();
-  await page.keyboard.press('Tab'); await expect(panel(page).getByRole('button', { name: 'Fechar chat' })).toBeFocused();
+  await expect(panel(page).getByRole('heading', { name: 'ORKE AI', exact: true })).toBeFocused();
+  await page.keyboard.press('Tab'); await expect(panel(page).getByRole('button', { name: 'Conversas', exact: true })).toBeFocused();
   const result = await send(page, 'Como usar a importação pelo teclado?');
   await expect(panel(page).locator('[aria-live="polite"]')).toHaveText(result.response.answer);
   await expect(messages(page)).not.toHaveAttribute('aria-live');
@@ -309,7 +315,7 @@ test('arquivo XLSX/raw, credenciais e dados não selecionados ficam fora de requ
   writeFileSync(testInfo.outputPath('privacy-canaries.json'), JSON.stringify({ question: 'PERGUNTA_PRIVADA_C6', answer: result.response.answer, owner: OWNER, bearer: 'mot21-controlled-e2e-token', file: 'ARQUIVO_PRIVADO_C6', 'raw-client': 'RAW_CLIENT_C6', 'raw-profile': 'RAW_PROFILE_C6', 'financial-value': '987.65' }));
 });
 
-test('comparação mínima e citação restauram o par base/hipótese após reload', async ({ page }) => {
+test('contexto da comparação e citação restauram o par base/hipótese após reload', async ({ page }) => {
   test.setTimeout(180_000);
   const study = await demo(page); const base = study.diagnostics.find((item) => item.scenarioId === study.scenarios[0]!.id)!;
   await page.goto(`/carteira/${study.id}`);
@@ -332,13 +338,13 @@ test('comparação mínima e citação restauram o par base/hipótese após relo
     await expect.poll(async () => (await page.request.get('/__e2e__/diagnostics/state', { maxRetries: 1 })).json()).toMatchObject({ pending: 1, submitted: before.submitted + index + 1 });
     expect((await page.request.post('/__e2e__/diagnostics/release', { data: { fail: false } })).ok()).toBe(true);
   }
-  await expect(page.getByRole('heading', { name: 'Diagnóstico concluído' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Resultado do motor' })).toBeVisible();
   const after = await page.evaluate(() => (window.__MOTOR_E2E__ as unknown as Bridge).demoAcceptanceSnapshot());
   const hypothesis = after.studies[0]!.diagnostics.find((item) => item.scenarioId === scenarioId)!;
   expect(hypothesis).toBeDefined();
   const path = `/comparar?studyId=${study.id}&baseExecutionId=${base.id}&hypothesisExecutionId=${hypothesis.id}`;
   await page.goto(path); await expect(page.getByRole('heading', { name: '4. Exposição residual' })).toBeVisible();
-  await page.locator('.comparison-page > .ask-about-this').click();
+  await open(page);
   const result = await send(page, 'Explique esta comparação.'); expect(result.status).toBe(200);
   expect(result.request.routeContext).not.toHaveProperty('comparisonExecutionId');
   const doc = result.request.communication!;
@@ -346,7 +352,7 @@ test('comparação mínima e citação restauram o par base/hipótese após relo
   expect(doc.selection.diagnosticExecutionId).toBe(hypothesis.id);
   expect(doc.executiveMetrics).toEqual([]); expect(doc.comparison?.metrics.length).toBeGreaterThan(0);
   expect(result.response.contextFingerprint).toBe(doc.contextFingerprint);
-  const metric = doc.comparison!.metrics.find((item) => item.code === result.response.citations[0]!.id)!;
+  const metric = [...doc.executiveMetrics, ...doc.comparison!.metrics].find((item) => item.code === result.response.citations[0]!.id)!;
   expect(result.response.answer).toContain(metric.value!);
   for (const ref of metric.evidenceRefs) expect(doc.evidenceIndex[ref]).toBeDefined();
   await expect(messages(page)).toContainText(result.response.answer);

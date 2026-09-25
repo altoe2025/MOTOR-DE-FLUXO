@@ -143,7 +143,7 @@ test('Caso observado: finalidade opcional preserva privacidade até prévia e di
   await page.getByRole('button', { name: 'Executar diagnóstico', exact: true }).click();
   await expect.poll(async () => (await page.request.get('/__e2e__/diagnostics/state')).json()).toMatchObject({ pending: 1 });
   expect((await page.request.post('/__e2e__/diagnostics/release', { data: { fail: false } })).ok()).toBe(true);
-  await expect(page.getByRole('heading', { name: 'Diagnóstico concluído' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Resultado do motor' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Abrir Replay · Fronteira Viva' })).toBeVisible();
   expect(await page.evaluate((id) => window.__MOTOR_E2E__!.studyExecutionStatuses(id), studyId)).toEqual(['RUNNING', 'SUCCEEDED', 'QUEUED', 'SUCCEEDED']);
   expect(requests.filter((request) => /\/(?:previas|diagnosticos)$/.test(request.url) && request.body !== null)).toHaveLength(2);

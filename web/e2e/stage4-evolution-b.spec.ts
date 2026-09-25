@@ -34,7 +34,7 @@ async function runDiagnostic(page: Page, studyId: string, scenarioId: string) {
   const state = await (await page.request.get('/__e2e__/diagnostics/state')).json() as { submitted: number };
   await page.getByRole('button', { name: 'Executar diagnóstico' }).click();
   await releaseDiagnostics(page, 10, state.submitted);
-  await expect(page.getByRole('heading', { name: 'Diagnóstico concluído' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Resultado do motor' })).toBeVisible();
   await expect.poll(async () => (await page.evaluate(
     (id) => window.__MOTOR_E2E__!.stage4Snapshot(id), studyId,
   )).diagnosticExecutionIds.length, { timeout: 15_000 })

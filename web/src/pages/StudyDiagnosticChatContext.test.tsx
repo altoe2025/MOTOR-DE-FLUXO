@@ -33,6 +33,9 @@ describe('diagnostic chat context', () => {
       scenarioId: input.scenarioId, diagnosticExecutionId: input.diagnosticExecutionId,
       comparisonExecutionId: null, replay: null, replayDay: null,
     })));
+    expect(screen.getByRole('link', { name: 'Apresentar esta execução' })).toHaveAttribute('href',
+      `/estudos/${input.study.id}/apresentacao?cenario=${input.scenarioId}&execucao=${input.diagnosticExecutionId}`);
+    expect(screen.getByRole('region', { name: 'Tabela de decomposição de custos' })).toHaveAttribute('tabindex', '0');
   });
 
   it('reopens the cited execution even when a newer execution exists for the same scenario', async () => {

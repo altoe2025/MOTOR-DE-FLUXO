@@ -22,9 +22,9 @@ test('demo, chat and presentation preserve keyboard focus and readable structure
   const opener = page.getByRole('button', { name: 'Perguntar', exact: true });
   await opener.focus();
   await page.keyboard.press('Enter');
-  const chat = page.getByRole('dialog', { name: 'Chat' });
+  const chat = page.getByRole('dialog', { name: 'ORKE AI' });
   await expect(chat).toBeVisible();
-  await expect(chat.getByRole('heading', { name: 'Chat' })).toBeFocused();
+  await expect(chat.getByRole('heading', { name: 'ORKE AI' })).toBeFocused();
   await auditAccessibility(page);
   await expect(chat.locator('[aria-live="polite"][aria-atomic="true"]')).toHaveCount(1);
   await page.keyboard.press('Escape');

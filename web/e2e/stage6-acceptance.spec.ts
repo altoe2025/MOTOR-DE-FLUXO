@@ -39,7 +39,7 @@ async function demo(page: Page) {
 
 async function chat(page: Page, question: string) {
   await page.getByRole('button', { name: 'Perguntar', exact: true }).click();
-  const panel = page.getByRole('dialog', { name: 'Chat', exact: true });
+  const panel = page.getByRole('dialog', { name: 'ORKE AI', exact: true });
   await panel.getByLabel('Sua pergunta').fill(question);
   const response = page.waitForResponse((item) => item.url().endsWith('/api/v1/chat') && item.request().method() === 'POST');
   await panel.getByRole('button', { name: 'Enviar', exact: true }).click();
@@ -81,7 +81,7 @@ test('Etapa 6: finalidade opcional percorre Caso observado, Diagnóstico, Replay
   await page.getByRole('button', { name: 'Executar diagnóstico', exact: true }).click();
   await expect.poll(async () => (await page.request.get('/__e2e__/diagnostics/state')).json()).toMatchObject({ pending: 1 });
   expect((await page.request.post('/__e2e__/diagnostics/release', { data: { fail: false } })).ok()).toBe(true);
-  await expect(page.getByRole('heading', { name: 'Diagnóstico concluído' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Resultado do motor' })).toBeVisible();
   await expect(page.getByText('IOF padrão por direção', { exact: true })).toBeVisible();
   expect(await page.evaluate((id) => window.__MOTOR_E2E__!.studyExecutionStatuses(id), studyId)).toEqual(['QUEUED', 'SUCCEEDED']);
   expect(bodies.join('\n')).not.toMatch(/CLIENTE_BRUTO_MOT99|PERFIL_BRUTO_MOT99|FONTE_BRUTA_MOT99|PK\\u0003\\u0004/);
@@ -95,7 +95,7 @@ test('Etapa 6: finalidade opcional percorre Caso observado, Diagnóstico, Replay
   expect(document.source.synthetic).toBe(false);
   expect(document.selection.repetitionId).toBe(execution.repetitionId);
   expect(document.assumptions).toContainEqual(expect.objectContaining({ code: 'IOF_APPLICATION_MODE', value: 'FALLBACK_ONLY' }));
-  const selected = page.getByRole('region', { name: 'Execução selecionada' });
+  const selected = page.getByRole('region', { name: 'Resultado do motor' });
   await expect(selected.getByTestId('economia-brl')).toHaveText(formatMoney(execution.savingsBrl));
   await expect(selected.getByTestId('netabilidade')).toHaveText(formatFraction(execution.netability));
   await page.getByRole('link', { name: 'Abrir Replay · Fronteira Viva' }).click();
@@ -176,10 +176,10 @@ test('cinco mixes demonstrativos reconciliam diagnóstico, Replay, chat, Painel 
       for (const ref of metric.evidenceRefs) expect(document.evidenceIndex[ref]).toBeDefined();
     }
     await page.goto(`/estudos/${study.id}/diagnostico?scenarioId=${scenario.id}&executionId=${execution.id}`);
-    const selected = page.getByRole('region', { name: 'Execução selecionada' });
+    const selected = page.getByRole('region', { name: 'Resultado do motor' });
     await expect(selected.getByTestId('economia-brl')).toHaveText(formatMoney(execution.savingsBrl));
     await expect(selected.getByTestId('netabilidade')).toHaveText(formatFraction(execution.netability));
-    await expect(selected).toContainText(execution.repetitionId);
+    expect(document.selection.repetitionId).toBe(execution.repetitionId);
     await page.goto(`/estudos/${study.id}/replay?executionId=${execution.id}&day=31`);
     await expect(page.getByRole('region', { name: 'Repetição exibida' })).toContainText(execution.repetitionId);
     await page.goto(`/estudos/${study.id}/apresentacao?cenario=${scenario.id}&execucao=${execution.id}&dia=31#resumo`);
@@ -268,9 +268,11 @@ test('falhas locais conservam a fonte e não transformam ausência em resultado'
     expiredJobRequests += 1; await route.fulfill({ status: 410, body: '' });
   });
   await page.goto(`/estudos/${study.id}/diagnostico?scenarioId=${execution.scenarioId}&executionId=${execution.id}`);
-  await expect(page.getByRole('region', { name: 'Execução selecionada' })).toContainText(execution.repetitionId);
+  await expect(page.getByRole('region', { name: 'Resultado do motor' }).getByTestId('economia-brl')).toHaveText(formatMoney(execution.savingsBrl));
   await page.reload();
-  await expect(page.getByRole('region', { name: 'Execução selecionada' })).toContainText(execution.repetitionId);
+  await expect(page.getByRole('region', { name: 'Resultado do motor' }).getByTestId('economia-brl')).toHaveText(formatMoney(execution.savingsBrl));
+  const persisted = await page.evaluate(() => window.__MOTOR_E2E__!.demoAcceptanceSnapshot());
+  expect(persisted.studies.find((item) => item.id === study.id)!.diagnostics.find((item) => item.id === execution.id)).toEqual(execution);
   expect(expiredJobRequests).toBe(0);
   await page.goto(`/estudos/${study.id}/apresentacao?cenario=${execution.scenarioId}&execucao=${execution.id}`);
   await expect(page.getByRole('heading', { name: study.name, level: 1 })).toBeVisible();
@@ -313,7 +315,7 @@ test('timeout, resposta inválida e transporte temporariamente indisponível per
   await expect(page.getByRole('region', { name: 'Resumo executivo' })).toBeVisible();
   await page.route('**/api/v1/chat', (route) => route.abort('failed'));
   await page.getByRole('button', { name: 'Perguntar', exact: true }).click();
-  const panel = page.getByRole('dialog', { name: 'Chat', exact: true });
+  const panel = page.getByRole('dialog', { name: 'ORKE AI', exact: true });
   await panel.getByLabel('Sua pergunta').fill('Explique o piloto.');
   await panel.getByRole('button', { name: 'Enviar', exact: true }).click();
   await expect(panel.getByRole('button', { name: 'Tentar novamente' })).toBeVisible();

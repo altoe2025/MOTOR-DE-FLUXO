@@ -6,7 +6,7 @@ import type { CanonicalAuthoredOrder, CostPremises, PreviewEnvelope } from '../s
 // prefixo do ID da operação antes do primeiro hífen (AP-…, X-…, Y-…), porque o
 // nome do cliente não fica salvo depois da importação.
 //
-// IOF e carry são exatos por alocação, como em motor/custo.py. Spread e custo fixo
+// IOF, carry e espera são exatos por alocação, como em motor/custo.py. Spread e custo fixo
 // do netado são cobrados por remessa agregada, sem dono; aqui são repartidos na
 // proporção do volume REMETIDO de cada empresa.
 
@@ -48,9 +48,8 @@ type Accumulator = {
 
 export function breakdownByCompany(
   envelope: PreviewEnvelope,
-  orders: readonly CanonicalAuthoredOrder[],
-  costs: CostPremises,
 ): Breakdown {
+  const { ordens: orders, custo: costs } = envelope.input_snapshot.cenario;
   const aggregate = envelope.result.agregado;
   const measured = new Set(aggregate.ids_ordens_medidas);
   const orderById = new Map(orders.map((order) => [order.id, order]));
@@ -87,6 +86,10 @@ export function breakdownByCompany(
       if (order === undefined || !measured.has(order.id)) continue;
       const value = new Decimal(allocation.valor_brl);
       const target = bucket(order.id);
+      const wait = value.times(allocation.dia - order.dia_conhecida)
+        .times(costs.custo_oportunidade_aa).div(365);
+      target.nettedExact = target.nettedExact.plus(wait);
+      exactTotal = exactTotal.plus(wait);
       if (allocation.tipo === 'REMETIDO') {
         const iof = value.times(iofRate(costs, order));
         target.remitted = target.remitted.plus(value);

@@ -26,7 +26,7 @@ function rowFor(study: StudyDocument, scenario: ScenarioDocument): Row {
   let breakdown: Breakdown | null = null;
   if (execution !== null && envelope !== null) {
     try {
-      breakdown = breakdownByCompany(envelope, execution.sourceSnapshot.orders, execution.premisesSnapshot.costs);
+      breakdown = breakdownByCompany(envelope);
     } catch {
       breakdown = null;
     }
@@ -44,6 +44,8 @@ export function VariationComparison({ study, selectedScenarioId, running, progre
   if (study.scenarios.length < 2) return null;
   const rows = study.scenarios.map((scenario) => rowFor(study, scenario));
   const base = rows.find((row) => row.scenario.id === study.baseScenarioId) ?? rows[0]!;
+  const mixedSampling = base.execution?.requestSnapshot.sampling.kind === 'GENERATED_INPUT'
+    && rows.some((row) => row !== base && row.execution?.requestSnapshot.sampling.kind === 'FIXED_INPUT');
   const pending = rows.filter((row) => row.execution === null).length;
   const groups = [...new Set(rows.flatMap((row) => row.breakdown?.companies.map((item) => item.group) ?? []))].sort();
   const delta = (value: string | undefined, reference: string | undefined) =>
@@ -52,11 +54,15 @@ export function VariationComparison({ study, selectedScenarioId, running, progre
 
   return <section className="variation-comparison" aria-labelledby="variation-comparison-title">
     <h2 id="variation-comparison-title">Original × variações</h2>
+    {mixedSampling ? <p role="note" className="field-hint">
+      O original foi regenerado e há variações com ordens fixas. As carteiras podem diferir;
+      a diferença de economia não isola o efeito da alavanca.
+    </p> : null}
     <div className="source-actions">
       <span className="field-hint">{pending === 0 ? 'Todos os cenários têm diagnóstico atual.' : `${pending} cenário(s) sem diagnóstico atual.`}</span>
       <Button disabled={running || pending === 0} onClick={onRunAll}>{running ? progress ?? 'Rodando…' : 'Rodar todas'}</Button>
     </div>
-    <div className="table-scroll">
+    <div className="table-scroll" role="region" tabIndex={0} aria-label="Comparação dos cenários">
       <table className="company-table">
         <caption>Diferença sempre contra “{base.scenario.name}”</caption>
         <thead><tr>
@@ -69,7 +75,7 @@ export function VariationComparison({ study, selectedScenarioId, running, progre
           return <tr key={row.scenario.id} aria-current={row.scenario.id === selectedScenarioId ? 'true' : undefined}>
             <th scope="row"><Link to={link(row.scenario)}>{row.scenario.name}</Link>
               <small>{row === base ? 'original' : 'variação'}{row.execution === null ? ' · sem diagnóstico' : ''}</small></th>
-            <td>{row.scenario.sourceSnapshot.orders.length}</td>
+            <td>{row.envelope?.input_snapshot.cenario.ordens.length ?? row.scenario.sourceSnapshot.orders.length}</td>
             <td>{aggregate === undefined ? '—' : formatFraction(aggregate.taxa_netabilidade_periodo)}</td>
             <td>{aggregate === undefined ? '—' : formatMoney(aggregate.baseline_periodo.total)}</td>
             <td>{aggregate === undefined ? '—' : formatMoney(aggregate.netado_periodo.total)}</td>
@@ -79,12 +85,14 @@ export function VariationComparison({ study, selectedScenarioId, running, progre
         })}</tbody>
       </table>
     </div>
-    {groups.length === 0 ? null : <div className="table-scroll">
+    {groups.length === 0 ? null : <div className="table-scroll" role="region" tabIndex={0} aria-label="Economia por empresa nos cenários">
       <table className="company-table">
         <caption>Economia por empresa (prefixo do ID da operação)</caption>
         <thead><tr><th scope="col">Cenário</th>{groups.map((group) => <th scope="col" key={group}>{group}</th>)}</tr></thead>
         <tbody>{rows.map((row) => <tr key={row.scenario.id}>
-          <th scope="row">{row.scenario.name}</th>
+          <th scope="row">{row.scenario.name}
+            {row.breakdown?.reconciled === false ? <small role="note">conferência com o total não bateu</small> : null}
+          </th>
           {groups.map((group) => {
             const item = row.breakdown?.companies.find((company) => company.group === group);
             const reference = base.breakdown?.companies.find((company) => company.group === group);

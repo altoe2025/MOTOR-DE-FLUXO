@@ -32,7 +32,7 @@ test('HTTPS, login, demonstração, chat real, apresentação, PDF e deep links'
   await page.getByRole('button', { name: 'Abrir Estudo demonstrativo sintético' }).click();
   await expect(page).toHaveURL(/\/estudos\/[0-9a-f-]+$/);
   await page.getByRole('button', { name: 'Executar diagnóstico' }).first().click();
-  await expect(page.getByRole('region', { name: 'Execução selecionada' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Resultado do motor' })).toBeVisible();
   await page.getByRole('link', { name: 'Apresentar esta execução' }).click();
   await expect(page.getByRole('region', { name: 'Resumo executivo' })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Limitações e versões' })).toBeVisible();
@@ -48,7 +48,7 @@ test('HTTPS, login, demonstração, chat real, apresentação, PDF e deep links'
   await expect(page).toHaveURL(deepLink);
   await expect(page.getByRole('region', { name: 'Resumo executivo' })).toBeVisible();
   await page.getByRole('button', { name: 'Perguntar', exact: true }).click();
-  const panel = page.getByRole('dialog', { name: 'Chat', exact: true });
+  const panel = page.getByRole('dialog', { name: 'ORKE AI', exact: true });
   await panel.getByLabel('Sua pergunta').fill('Qual é a economia BRL desta execução e qual evidência sustenta esse valor?');
   const chatResponse = page.waitForResponse((item) => item.url().endsWith('/api/v1/chat')
     && item.request().method() === 'POST', { timeout: 90_000 });
@@ -115,7 +115,7 @@ test('XLSX sintético permanece local e o Caso alcança diagnóstico observado',
   await page.getByRole('button', { name: 'Usar como evidência em estudo' }).click();
   await page.goto(`/estudos/${studyId}/diagnostico`);
   await page.getByRole('button', { name: 'Executar diagnóstico', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Diagnóstico concluído' })).toBeVisible({ timeout: 90_000 });
+  await expect(page.getByRole('heading', { name: 'Resultado do motor' })).toBeVisible({ timeout: 90_000 });
   await expect(page.getByRole('link', { name: 'Apresentar esta execução' })).toBeVisible();
   expect(bodies.join('\n')).not.toMatch(/smoke-sintetico\.xlsx|PK\\u0003\\u0004|<worksheet/);
 });

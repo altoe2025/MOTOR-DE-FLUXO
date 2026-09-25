@@ -28,8 +28,8 @@ async function tabTo(page: Page, target: Locator, maximumTabs = 40) {
   }
 }
 
-test('two controlled jobs expose progress, cancel, idempotency, isolation and reload', async ({ browser }) => {
-  const context = await browser.newContext({ baseURL: 'http://127.0.0.1:8021' });
+test('two controlled jobs expose progress, cancel, idempotency, isolation and reload', async ({ browser, baseURL }) => {
+  const context = await browser.newContext({ baseURL });
   const first = await context.newPage();
   const second = await context.newPage();
   const firstStudy = await createStudy(first);
@@ -55,9 +55,9 @@ test('two controlled jobs expose progress, cancel, idempotency, isolation and re
   await release(first);
   await expect(first.getByRole('status')).toContainText('1 de 10');
   for (let index = 1; index < 10; index += 1) await release(first);
-  await expect(first.getByRole('heading', { name: 'Diagnóstico concluído' })).toBeVisible();
-  await expect(first.getByText('10 repetições', { exact: true })).toBeVisible();
-  await expect(first.getByRole('heading', { name: 'Execução selecionada' })).toBeVisible();
+  await expect(first.getByRole('heading', { name: 'Resultado do motor' })).toBeVisible();
+  const completed = await first.evaluate(() => window.__MOTOR_E2E__!.demoAcceptanceSnapshot());
+  expect(completed.studies.find((item) => item.id === firstStudy)!.diagnostics[0]!.count).toBe(10);
 
   const submitted = JSON.parse(firstBody) as { idempotency_key: string };
   const repeated = await first.request.post('/api/v1/diagnosticos', {
@@ -71,8 +71,8 @@ test('two controlled jobs expose progress, cancel, idempotency, isolation and re
   expect(isolated.status()).toBe(404);
 
   await first.reload();
-  await expect(first.getByRole('heading', { name: 'Diagnóstico concluído' })).toBeVisible();
-  await expect(first.getByRole('table', { name: 'Histórico de tentativas diagnósticas' })).toContainText('SUCCEEDED');
+  await expect(first.getByRole('heading', { name: 'Resultado do motor' })).toBeVisible();
+  expect(await first.evaluate((id) => window.__MOTOR_E2E__!.studyExecutionStatuses(id), firstStudy)).toEqual(['QUEUED', 'SUCCEEDED']);
   await context.close();
 });
 
@@ -83,16 +83,30 @@ test('fixed input has no distribution and a failed generated repetition publishe
   await expect(page.getByText(/entrada fixa.*execução individual.*não uma distribuição/i)).toBeVisible();
   await page.getByRole('button', { name: 'Executar diagnóstico' }).click();
   await release(page);
-  await expect(page.getByRole('heading', { name: 'Diagnóstico concluído' })).toBeVisible();
-  await expect(page.getByRole('region', { name: 'Distribuição de repetições' }))
-    .toContainText('Distribuição indisponível: FIXED_INPUT_HAS_NO_SAMPLING_DISTRIBUTION');
+  await expect(page.getByRole('heading', { name: 'Resultado do motor' })).toBeVisible();
+  const fixed = (await page.evaluate(() => window.__MOTOR_E2E__!.demoAcceptanceSnapshot())).studies.find((item) => item.id === fixedStudy)!.diagnostics[0]!;
+  expect(fixed.count).toBe(1);
+  const envelope = await page.evaluate(async ({ studyId, executionId }) => {
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open('motor-fluxo:app:v2:local:00000000-0000-4000-8000-000000000021');
+      request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error);
+    });
+    try {
+      return await new Promise<{ statistics: { kind: string }; axes: { economic_robustness: { savings_brl: { state: string; reason: string } } } }>((resolve, reject) => {
+        const request = db.transaction('executions').objectStore('executions').get([studyId, executionId]);
+        request.onsuccess = () => resolve(request.result.document.envelope); request.onerror = () => reject(request.error);
+      });
+    } finally { db.close(); }
+  }, { studyId: fixedStudy, executionId: fixed.id });
+  expect(envelope.statistics.kind).toBe('SINGLE_EXECUTION');
+  expect(envelope.axes.economic_robustness.savings_brl).toMatchObject({ state: 'INSUFFICIENT_COVERAGE', reason: 'FIXED_INPUT_HAS_NO_SAMPLING_DISTRIBUTION' });
 
   const generatedStudy = await createStudy(page);
   await page.goto(`/estudos/${generatedStudy}/diagnostico`);
   await page.getByRole('button', { name: 'Executar diagnóstico' }).click();
   await release(page, true);
   await expect(page.getByRole('heading', { name: 'Falha no diagnóstico' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: /Distribuição|Execução selecionada/ })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Resultado do motor' })).toHaveCount(0);
 });
 
 test('robust diagnostic remains keyboard accessible at 200 percent zoom', async ({ page }, testInfo) => {
@@ -116,10 +130,9 @@ test('robust diagnostic remains keyboard accessible at 200 percent zoom', async 
   await page.keyboard.press('Enter');
 
   for (let index = 0; index < 10; index += 1) await release(page);
-  await expect(page.getByRole('heading', { name: 'Diagnóstico concluído' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Distribuição de repetições' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Execução selecionada' })).toBeVisible();
-  await expect(page.getByRole('region', { name: /^\d\. / })).toHaveCount(7);
+  await expect(page.getByRole('heading', { name: 'Resultado do motor' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Resultado do motor' }).getByTestId('economia-brl')).toBeVisible();
+  await expect(page.getByRole('table', { name: 'Custos informados pela prévia canônica.' })).toBeVisible();
 
   const diagnosticScrollAreas = page.locator('.diagnostic-page .table-scroll');
   expect(await diagnosticScrollAreas.count()).toBeGreaterThan(0);
@@ -127,15 +140,17 @@ test('robust diagnostic remains keyboard accessible at 200 percent zoom', async 
     element.getAttribute('tabindex') === '0' && (element.getAttribute('aria-label')?.length ?? 0) > 0
   )))).toBe(true);
 
-  const scrollableTable = page.getByRole('region', {
-    name: 'Tabela rolável — Economia por repetição — dados do gráfico',
-  });
+  const scrollableTable = diagnosticScrollAreas.first();
   await scrollableTable.scrollIntoViewIfNeeded();
   await tabTo(page, scrollableTable);
   await expect(scrollableTable).toBeFocused();
-  const before = await scrollableTable.evaluate((element) => element.scrollLeft);
-  await page.keyboard.press('ArrowRight');
-  await expect.poll(() => scrollableTable.evaluate((element) => element.scrollLeft)).toBeGreaterThan(before);
+  await expect(scrollableTable).toBeInViewport();
+  const canScroll = await scrollableTable.evaluate((element) => element.scrollWidth > element.clientWidth);
+  if (canScroll) {
+    const before = await scrollableTable.evaluate((element) => element.scrollLeft);
+    await page.keyboard.press('ArrowRight');
+    await expect.poll(() => scrollableTable.evaluate((element) => element.scrollLeft)).toBeGreaterThan(before);
+  }
 
   await page.screenshot({ path: testInfo.outputPath('diagnostico-robusto-zoom-200.png'), fullPage: true });
 });

@@ -12,6 +12,7 @@ import type { ExecutionRecordV3, PreviewEnvelope, ScenarioDocument, StudyDocumen
 type BoardRow = Readonly<{
   key: string;
   studyId: string;
+  scenarioId: string;
   studyName: string;
   scenarioName: string;
   origin: string;
@@ -39,9 +40,10 @@ function envelopeOf(execution: ExecutionRecordV3): PreviewEnvelope | null {
 
 function latestExecution(study: StudyDocument, scenario: ScenarioDocument) {
   const succeeded = study.executions
-    .filter((execution) => execution.scenarioId === scenario.id && envelopeOf(execution) !== null)
+    .filter((execution) => execution.scenarioId === scenario.id && envelopeOf(execution) !== null
+      && execution.scenarioRevision === scenario.revision && execution.inputFingerprint === scenario.inputFingerprint)
     .sort((left, right) => (right.finishedAt ?? '').localeCompare(left.finishedAt ?? ''));
-  return succeeded.find((execution) => execution.kind === 'DIAGNOSTIC') ?? succeeded[0];
+  return succeeded[0];
 }
 
 function originLabel(scenario: ScenarioDocument, cases: readonly ObservedCase[], companies: readonly CompanyRecord[]): string {
@@ -55,7 +57,7 @@ function originLabel(scenario: ScenarioDocument, cases: readonly ObservedCase[],
   return 'Sintético';
 }
 
-function buildRows(
+export function buildRows(
   studies: readonly StudyDocument[],
   cases: readonly ObservedCase[],
   companies: readonly CompanyRecord[],
@@ -64,7 +66,7 @@ function buildRows(
     const execution = latestExecution(study, scenario);
     const envelope = execution === undefined ? null : envelopeOf(execution);
     if (execution === undefined || envelope === null) return [];
-    const orders = execution.sourceSnapshot?.orders ?? scenario.sourceSnapshot.orders;
+    const orders = envelope.input_snapshot.cenario.ordens;
     const sum = (direction: 'IN' | 'OUT') => orders
       .filter((order) => order.direcao === direction)
       .reduce((total, order) => total.plus(order.valor_brl), new Decimal(0))
@@ -73,10 +75,11 @@ function buildRows(
     return [{
       key: `${study.id}:${scenario.id}`,
       studyId: study.id,
+      scenarioId: scenario.id,
       studyName: study.name,
       scenarioName: scenario.name,
       origin: originLabel(scenario, cases, companies),
-      windowDays: (execution.premisesSnapshot ?? scenario.premises).windowDays,
+      windowDays: envelope.input_snapshot.cenario.janela_dias,
       orderCount: orders.length,
       inBrl: sum('IN'),
       outBrl: sum('OUT'),
@@ -86,7 +89,7 @@ function buildRows(
       savings: aggregate.economia_periodo_brl,
       diagnosticExecutionId: execution.kind === 'DIAGNOSTIC' ? execution.id : null,
       finishedAt: execution.finishedAt ?? '',
-      breakdown: safeBreakdown(envelope, orders, (execution.premisesSnapshot ?? scenario.premises).costs),
+      breakdown: safeBreakdown(envelope),
     }];
   }));
 }
@@ -197,7 +200,7 @@ export function ComparisonBoardPage() {
     <p className="eyebrow">Estudos</p>
     <h1 ref={heading} tabIndex={-1}>Quadro comparativo</h1>
     <p className="page-introduction">
-      Escolha os estudos que entram no quadro. Vale a última execução concluída de cada cenário; com diagnóstico de várias repetições, os números são da repetição representativa.
+      Escolha os estudos que entram no quadro. Vale a última execução concluída da revisão atual de cada cenário; com diagnóstico de várias repetições, os números são da repetição representativa.
     </p>
     {error ? <p role="alert" className="field-error">{error}</p> : null}
     {rows === null && error === null ? <p role="status">Carregando estudos…</p> : null}
@@ -247,7 +250,7 @@ export function ComparisonBoardPage() {
             <th scope="row">
               <Link to={row.diagnosticExecutionId === null
                 ? `/carteira/${encodeURIComponent(row.studyId)}`
-                : `/estudos/${encodeURIComponent(row.studyId)}/diagnostico`}>{row.studyName}</Link>
+                : `/estudos/${encodeURIComponent(row.studyId)}/diagnostico?scenarioId=${encodeURIComponent(row.scenarioId)}&executionId=${encodeURIComponent(row.diagnosticExecutionId)}`}>{row.studyName}</Link>
               <small>{row.scenarioName}</small>
             </th>
             <td>{row.origin}</td>
@@ -267,7 +270,7 @@ export function ComparisonBoardPage() {
       <section className="board-breakdown" aria-labelledby="board-breakdown-title">
         <h2 id="board-breakdown-title">Economia por empresa</h2>
         <p className="field-hint">
-          A empresa de cada ordem é o prefixo do ID da operação antes do primeiro hífen (AP-…, X-…, Y-…). IOF e carry são exatos por ordem; spread e custo fixo das remessas agregadas são repartidos pelo volume que cada empresa remeteu. Abaixo da economia: quanto do volume da empresa não cruzou a fronteira (casando com ela mesma + com as outras).
+          A empresa de cada ordem é o prefixo do ID da operação antes do primeiro hífen (AP-…, X-…, Y-…). IOF, carry e espera são exatos por ordem; spread e custo fixo das remessas agregadas são repartidos pelo volume que cada empresa remeteu. Abaixo da economia: quanto do volume da empresa não cruzou a fronteira (casando com ela mesma + com as outras).
         </p>
         <div className="source-actions">
           {groups.map((group) => <label key={group}>Nome de {group}<input value={names[group] ?? ''} placeholder={group} onChange={(event) => rename(group, event.target.value)} /></label>)}

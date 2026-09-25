@@ -37,7 +37,7 @@ test('login, import, demo, chat and presentation match reviewed baselines', asyn
   await expect.poll(async () => (await page.evaluate(() => window.__MOTOR_E2E__!.demoAcceptanceSnapshot())).studies.length).toBe(1);
   await expect(page).toHaveScreenshot('demo.png', { fullPage: true });
   await page.getByRole('button', { name: 'Perguntar', exact: true }).click();
-  await expect(page.getByRole('dialog', { name: 'Chat' })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: 'ORKE AI' })).toBeVisible();
   await expect(page).toHaveScreenshot('chat.png', { fullPage: true });
   await page.getByRole('button', { name: 'Fechar chat' }).click();
 

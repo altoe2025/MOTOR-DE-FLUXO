@@ -38,7 +38,7 @@ test('deep link e relatório A4 conservam a publicação e ocultam controles', a
     .toContainText('Receita sintética perfil-operacional-mvp');
   await expect(page.getByRole('region', { name: 'Composição e mecanismo' })).toContainText('12 participantes');
   await page.getByRole('button', { name: 'Perguntar', exact: true }).click();
-  const chat = page.getByRole('dialog', { name: 'Chat', exact: true });
+  const chat = page.getByRole('dialog', { name: 'ORKE AI', exact: true });
   await expect(chat.locator('.chat-context-label')).toHaveText('Contexto: Apresentação');
   await chat.getByRole('button', { name: 'Fechar chat' }).click();
   await page.getByRole('navigation', { name: 'Seções da apresentação' }).getByRole('link', { name: 'Composição' }).click();
@@ -132,7 +132,7 @@ test('comparação e Replay chegam ao Painel somente quando explicitamente escol
     const released = await page.request.post('/__e2e__/diagnostics/release', { data: { fail: false } });
     expect(released.ok(), await released.text()).toBe(true);
   }
-  await expect(page.getByRole('heading', { name: 'Diagnóstico concluído' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Resultado do motor' })).toBeVisible();
   const hypothesis = (await page.evaluate(() => window.__MOTOR_E2E__!.demoAcceptanceSnapshot()))
     .studies[0]!.diagnostics.find((item) => item.scenarioId === scenarioId)!;
   await page.goto(`/comparar?studyId=${study.id}`);

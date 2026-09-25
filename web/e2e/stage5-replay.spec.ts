@@ -23,8 +23,7 @@ async function runDiagnostic(page: Page, studyId: string, scenarioId: string, re
   const state = await (await page.request.get('/__e2e__/diagnostics/state')).json() as { submitted: number };
   await page.getByRole('button', { name: 'Executar diagnóstico' }).click();
   await releaseDiagnostics(page, repetitions, state.submitted);
-  await expect(page.getByRole('heading', { name: 'Diagnóstico concluído' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Execução selecionada' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Resultado do motor' })).toBeVisible();
 }
 
 async function openReplay(page: Page): Promise<ReplayDocument> {

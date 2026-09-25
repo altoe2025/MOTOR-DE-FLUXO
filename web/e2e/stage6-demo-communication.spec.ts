@@ -138,7 +138,7 @@ test('Etapa 6: finalidade opcional executa XLSX e demo restaura com Estudo impor
   await page.getByRole('button', { name: 'Executar diagnóstico', exact: true }).click();
   await expect.poll(async () => (await page.request.get('/__e2e__/diagnostics/state')).json()).toMatchObject({ pending: 1 });
   expect((await page.request.post('/__e2e__/diagnostics/release', { data: { fail: false } })).ok()).toBe(true);
-  await expect(page.getByRole('heading', { name: 'Diagnóstico concluído' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Resultado do motor' })).toBeVisible();
   expect(await page.evaluate((id) => window.__MOTOR_E2E__!.studyExecutionStatuses(id), importedStudyId)).toEqual(['RUNNING', 'SUCCEEDED', 'QUEUED', 'SUCCEEDED']);
   await page.goto('/estudos');
   await expect(page.getByRole('button', { name: 'Carregar estudo demonstrativo' })).toBeVisible();
@@ -161,12 +161,11 @@ test('cinco cenários exibem repetição e Replay; documento projeta as mesmas e
     expect(scenario.inputFingerprint).toMatch(/^[0-9a-f]{64}$/);
     await page.goto(`/estudos/${study.id}/diagnostico?scenarioId=${scenario.id}`);
     await expect(page.getByRole('heading', { name: 'Diagnóstico robusto' })).toBeVisible();
-    const selection = page.getByRole('heading', { name: 'Execução selecionada' }).locator('..');
-    await expect(selection).toContainText(diagnostic.repetitionId);
-    await expect(selection).toContainText('10 repetições');
+    const selection = page.getByRole('heading', { name: 'Resultado do motor' }).locator('..');
+    expect(diagnostic.count).toBe(10);
     await expect(selection.getByTestId('economia-brl')).toHaveText(formatMoney(diagnostic.savingsBrl));
     await expect(selection.getByTestId('netabilidade')).toHaveText(formatFraction(diagnostic.netability));
-    await selection.getByRole('link', { name: 'Abrir Replay · Fronteira Viva' }).click();
+    await page.getByRole('link', { name: 'Abrir Replay · Fronteira Viva' }).click();
     await expect(page.getByRole('heading', { name: 'Fronteira Viva', exact: true })).toBeVisible();
     await expect(page.getByRole('region', { name: 'Repetição exibida' })).toContainText(diagnostic.repetitionId);
     const projected = await page.evaluate((input) => (window.__MOTOR_E2E__ as unknown as AcceptanceBridge).projectDemoCommunication(input), {
@@ -250,7 +249,7 @@ test('hipótese guiada preserva Perfis; compara diagnóstico compatível e expli
   });
   await page.getByRole('button', { name: 'Executar diagnóstico', exact: true }).click();
   await releaseDiagnostics(page, 10, before.submitted);
-  await expect(page.getByRole('heading', { name: 'Diagnóstico concluído' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Resultado do motor' })).toBeVisible();
   const comparable = (await snapshot(page)).studies[0]!.diagnostics.find((item) => item.scenarioId === comparableScenarioId);
   expect(comparable).toBeDefined();
   await page.goto(`/comparar?studyId=${study.id}`);

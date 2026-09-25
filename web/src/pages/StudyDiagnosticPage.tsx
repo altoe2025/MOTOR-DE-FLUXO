@@ -117,6 +117,7 @@ export function StudyDiagnosticPage() {
     resumedAttempts.current = new Set();
     setViewState(null);
     setRunInProgress(false);
+    setRunAllProgress(null);
     setCancelInFlight(false);
     heading.current?.focus();
     if (studyId === undefined) return () => { mounted.current = false; };
@@ -218,14 +219,16 @@ export function StudyDiagnosticPage() {
 
   const runAll = async () => {
     if (study === null || runInProgress || runAllProgress !== null) return;
+    const token = identityToken.current;
+    const isActive = () => mounted.current && identityToken.current === token;
     const pending = study.scenarios.filter((item) => currentDiagnostic(study, item) === null);
     setRunInProgress(true);
     try {
       for (const [index, item] of pending.entries()) {
-        if (!mounted.current) return;
+        if (!isActive()) return;
         setRunAllProgress(`Rodando ${index + 1} de ${pending.length}…`);
         const itemCount = item.sourceSnapshot.generationInputSnapshot !== undefined ? count : 1;
-        await executeStudyDiagnostic({
+        const attempt = await executeStudyDiagnostic({
           authority: controller,
           scenarioId: item.id,
           api: { submitDiagnostic: client.submitDiagnostic, getDiagnosticJob: client.getDiagnosticJob, getDiagnosticResult: client.getDiagnosticResult },
@@ -241,13 +244,18 @@ export function StudyDiagnosticPage() {
             });
           },
         });
+        if (!isActive()) return;
+        if (attempt.status !== 'SUCCEEDED') {
+          complete(attempt);
+          return;
+        }
         const current = controller.snapshot.document;
-        if (current !== null && mounted.current) setStudy(current);
+        if (current?.id === study.id) setStudy(current);
       }
     } catch {
-      if (mounted.current) setViewState({ kind: 'FAILED', attemptId: 'não persistida', publicMessage: 'Não foi possível rodar todas as variações. As que terminaram ficaram salvas.' });
+      if (isActive()) setViewState({ kind: 'FAILED', attemptId: 'não persistida', publicMessage: 'Não foi possível rodar todas as variações. As que terminaram ficaram salvas.' });
     } finally {
-      if (mounted.current) { setRunAllProgress(null); setRunInProgress(false); }
+      if (isActive()) { setRunAllProgress(null); setRunInProgress(false); }
     }
   };
 
@@ -286,6 +294,9 @@ export function StudyDiagnosticPage() {
     item.status === 'SUCCEEDED' && item.envelope !== null && isCurrentForScenario(item, scenario)
       && (requestedExecutionId === null || item.id === requestedExecutionId)) ?? null;
   const envelope = terminal?.envelope ?? null;
+  const hasIofFallback = envelope?.selected_execution.input_snapshot.cenario?.ordens.some((order) =>
+    order.finalidade === null || !terminal!.premisesSnapshot.costs.iof_por_finalidade.some((rule) =>
+      rule.finalidade === order.finalidade && rule.direcao === order.direcao));
   const chatScenarioId = study?.id === studyId ? scenario?.id ?? null : null;
   const chatExecutionId = study?.id === studyId ? terminal?.id ?? null : null;
   useEffect(() => { setChatScenarioId?.(chatScenarioId); }, [setChatScenarioId, chatScenarioId]);
@@ -301,11 +312,13 @@ export function StudyDiagnosticPage() {
     <p className="page-introduction">Múltiplas repetições quando a origem é gerável; uma execução individual quando a entrada já está fixa.</p>
     {study === null || scenario === null ? <DiagnosticStatus state={viewState ?? { kind: 'UNAVAILABLE', reason: 'Carregando estudo…' }} /> : <>
       <DiagnosticControls generated={generated} count={effectiveCount} onCountChange={setCount} onRun={() => void run()} disabled={runInProgress || controller.snapshot.status === 'STORAGE_FAILURE'} />
-      <VariationComparison study={study} selectedScenarioId={scenario.id} running={runAllProgress !== null} progress={runAllProgress} onRunAll={() => void runAll()} />
+      <VariationComparison study={study} selectedScenarioId={scenario.id} running={runInProgress} progress={runAllProgress} onRunAll={() => void runAll()} />
       {viewState === null || viewState.kind === 'SUCCEEDED' ? null : <DiagnosticStatus state={viewState} {...(cancelInFlight ? {} : { onCancel: () => void cancel() })} onRetry={(attemptId) => void retry(attemptId)} />}
       {envelope === null ? null : <>
         <Link className="button-link replay-cta" to={`/estudos/${study.id}/replay?executionId=${encodeURIComponent(terminal!.id)}`}>Abrir Replay · Fronteira Viva</Link>
         <DiagnosticEngineResult envelope={envelope} />
+        {hasIofFallback ? <p><strong>IOF padrão por direção</strong>: ordens sem regra específica para a combinação de finalidade e direção usam as premissas da simulação por direção, sem classificação regulatória inferida ou cotação.</p> : null}
+        <Link className="button-link" to={`/estudos/${study.id}/apresentacao?cenario=${encodeURIComponent(scenario.id)}&execucao=${encodeURIComponent(terminal!.id)}`}>Apresentar esta execução</Link>
       </>}
     </>}
   </article>;

@@ -14,6 +14,7 @@ export function CostTable({ envelope }: { envelope: PreviewEnvelope }) {
   return (
     <section className="cost-table-section" aria-labelledby="cost-table-title">
       <h2 id="cost-table-title">Decomposição de custos</h2>
+      <div className="table-scroll" role="region" aria-label="Tabela de decomposição de custos" tabIndex={0}>
       <table>
         <caption>Custos informados pela prévia canônica.</caption>
         <thead><tr><th scope="col">Componente</th><th scope="col">Sem agrupamento</th><th scope="col">Com agrupamento</th></tr></thead>
@@ -22,6 +23,7 @@ export function CostTable({ envelope }: { envelope: PreviewEnvelope }) {
           {rows.map(([label, key]) => <tr key={key}><th scope="row">{label}</th><td>{formatMoney(aggregate.baseline_periodo[key])}</td><td>{formatMoney(aggregate.netado_periodo[key])}</td></tr>)}
         </tbody>
       </table>
+      </div>
     </section>
   );
 }

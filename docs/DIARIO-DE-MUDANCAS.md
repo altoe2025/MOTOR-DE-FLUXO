@@ -33,10 +33,11 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-09-23, durante o planejamento da Etapa 6.
+Atualizada em 2026-09-25, durante a consolidação das Etapas 5 e 6.
 
 | Branch | Situação | Dono |
 |---|---|---|
+| `codex/integracao-etapas-5-6` | Consolida `feat/bancada-exploracao` e `codex/finalidade-verificacao`, incluindo histórico de `origin/main`; publicação/CI em preparação, sem deploy | Codex |
 | `main` | Autonetting preferencial e integração final incorporados até o PR #37 (`c2ad175`); grade histórica não regenerada | os dois |
 | `netting/p1` | spike do P1, **NÃO MERGEAR** — dominado, e agora sabemos que a folga é zero em N ≥ 50. Só local, nunca foi pro GitHub | Felipe |
 | `fix/semantica-remessa-p0` | PR #11, mergeada | Felipe |
@@ -73,6 +74,13 @@ Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. 
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+## 2026-09-25 — Consolidação das Etapas 5/6 e bancada de exploração (MOT-99)
+
+1. **Sintoma.** Replay, comunicação, chat, apresentação/PDF, Docker/Render declarativo e finalidade opcional estavam em branches locais; o trabalho final do Claude ainda não estava no GitHub.
+2. **Causa.** Desenvolvimento paralelo sem a integração final, com testes de navegador ainda ligados aos antigos botões e blocos técnicos.
+3. **O que foi feito.** Worktree isolada `codex/integracao-etapas-5-6`, juntando `feat/bancada-exploracao` (incluindo `dffc24b`, `c3a8e67`, `91c613b`) e `codex/finalidade-verificacao`, preservando `origin/main`. Mantidos quadro, alavancas e ORKE AI; restaurados aviso de fallback de IOF e acesso ao Painel no diagnóstico. A decomposição por empresa passa a usar a carteira efetivamente executada e a contabilizar espera por alocação; o quadro recusa resultados obsoletos e preserva a seleção no link. O lote de variações não atualiza outra tela após navegação. Testes E2E foram alinhados à UI simplificada, sem mudar regras do motor. Verificações finais e CI são registradas no PR; não se presume aceite Linux nem deploy a partir de teste Windows.
+4. **O que isso invalida.** Totais por empresa anteriores podiam omitir/redistribuir espera ou usar carteira gerada diferente. O rateio visual de spread/tarifa por volume remetido é uma decomposição de apresentação, não um novo rateio contratual implementado no motor. Diferenças entre original regenerado e variação fixa não isolam causalmente a alavanca. Nenhuma premissa regulatória, dado de negócio ou regra de simulação foi alterada. Deploy permanece não autorizado nesta consolidação.
 
 ## 2026-09-25 — Baseline Windows da apresentação revisada para modo de IOF (MOT-99)
 
