@@ -371,5 +371,5 @@ export function StudyPortfolioPage() {
     <HypothesisBuilder key={selectedBase.id} baseScenario={selectedBase}
       availableProfiles={availableProfiles} onCreate={createHypothesis} />
   </div>
-  {displayedExecution === null ? null : <StudyResultPage study={study} execution={displayedExecution} onSelectExecution={setSelectedExecution} />}</>;
+  {displayedExecution === null ? null : <StudyResultPage study={study} execution={displayedExecution} />}</>;
 }

@@ -184,6 +184,8 @@ a { color: inherit; }
 .scenario-list { display: grid; gap: var(--space-3); list-style: none; margin: 0 0 var(--space-4); padding: 0; }
 .scenario-list li { align-items: center; border: 1px solid var(--border); border-radius: var(--radius); display: grid; gap: var(--space-2); grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) auto; padding: var(--space-3); }
 .scenario-list span { color: var(--muted); }
+.scenario-list .button { background: #5aa9f5; border-color: #3b8fe0; color: #000; }
+.scenario-list .button:hover:not(:disabled) { background: #3b8fe0; }
 .portfolio-composition-summary { background: var(--canvas); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: var(--space-4); padding: var(--space-4); }
 .portfolio-composition-summary h3 { font-family: var(--font-heading); margin: 0 0 var(--space-2); }
 .portfolio-composition-summary ul { display: grid; gap: var(--space-2); list-style: none; padding: 0; }

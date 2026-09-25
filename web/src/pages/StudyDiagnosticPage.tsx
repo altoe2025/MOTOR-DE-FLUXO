@@ -7,12 +7,9 @@ import { useOptionalChat } from '../chat/ChatProvider';
 import { selectionId } from '../chat/routeContext';
 import type { FieldProvenance } from '../cases/domain';
 import { buildDiagnosticRequest, DiagnosticRequestBuildError } from '../diagnostics/buildDiagnosticRequest';
-import { DiagnosticAxesView } from '../diagnostics/components/DiagnosticAxesView';
 import { DiagnosticControls } from '../diagnostics/components/DiagnosticControls';
-import { DiagnosticDistribution } from '../diagnostics/components/DiagnosticDistribution';
-import { DiagnosticHistory } from '../diagnostics/components/DiagnosticHistory';
+import { DiagnosticEngineResult } from '../diagnostics/components/DiagnosticEngineResult';
 import { DiagnosticStatus, type DiagnosticViewState } from '../diagnostics/components/DiagnosticStatus';
-import { SelectedExecution } from '../diagnostics/components/SelectedExecution';
 import {
   cancelStudyDiagnostic,
   executeStudyDiagnostic,
@@ -267,25 +264,12 @@ export function StudyDiagnosticPage() {
     <p className="page-introduction">Múltiplas repetições quando a origem é gerável; uma execução individual quando a entrada já está fixa.</p>
     {study === null || scenario === null ? <DiagnosticStatus state={viewState ?? { kind: 'UNAVAILABLE', reason: 'Carregando estudo…' }} /> : <>
       <DiagnosticControls generated={generated} count={effectiveCount} onCountChange={setCount} onRun={() => void run()} disabled={runInProgress || controller.snapshot.status === 'STORAGE_FAILURE'} />
-      {viewState === null ? null : <DiagnosticStatus state={viewState} {...(cancelInFlight ? {} : { onCancel: () => void cancel() })} onRetry={(attemptId) => void retry(attemptId)} />}
-      <DiagnosticHistory executions={scenarioDiagnostics} />
+      {viewState === null || viewState.kind === 'SUCCEEDED' ? null : <DiagnosticStatus state={viewState} {...(cancelInFlight ? {} : { onCancel: () => void cancel() })} onRetry={(attemptId) => void retry(attemptId)} />}
       {envelope === null ? null : <>
-        <Link className="diagnostic-present-link" to={`/estudos/${encodeURIComponent(study.id)}/apresentacao?cenario=${encodeURIComponent(scenario.id)}&execucao=${encodeURIComponent(terminal!.id)}`}>
-          Apresentar esta execução
-        </Link>
-        <DiagnosticDistribution statistics={envelope.statistics} repetitions={envelope.repetitions} economics={envelope.axes.economic_robustness} />
-        <SelectedExecution envelope={envelope} iofRules={terminal!.premisesSnapshot.costs.iof_por_finalidade} replayHref={`/estudos/${study.id}/replay?executionId=${encodeURIComponent(terminal!.id)}`} />
-        <DiagnosticAxesView axes={envelope.axes} consequences={envelope.consequences} limitations={envelope.limitations} />
-        <section className="diagnostic-card" aria-labelledby="provenance-heading"><h2 id="provenance-heading">Proveniência</h2>
-          <dl className="diagnostic-identity"><div><dt>Job</dt><dd>{envelope.job_id}</dd></div><div><dt>Fingerprint do request</dt><dd>{envelope.request_fingerprint}</dd></div><div><dt>Versão do schema</dt><dd>{envelope.schema_version}</dd></div></dl>
-          <div className="table-scroll" role="region" tabIndex={0} aria-label="Tabela rolável — Origem dos campos do request"><table className="diagnostic-table"><caption>Origem dos campos do request</caption><thead><tr><th scope="col">Caminho</th><th scope="col">Tipo</th><th scope="col">Fonte</th><th scope="col">Registrado em</th></tr></thead><tbody>{Object.entries(envelope.provenance.request_paths).map(([path, origin]) => <tr key={path}><th scope="row">{path}</th><td>{origin.tipo}</td><td>{origin.fonte}</td><td>{origin.registrado_em_utc}</td></tr>)}</tbody></table></div>
-          <EvidenceList refs={envelope.provenance.evidence_refs} />
-        </section>
+        <Link className="button-link replay-cta" to={`/estudos/${study.id}/replay?executionId=${encodeURIComponent(terminal!.id)}`}>Abrir Replay · Fronteira Viva</Link>
+        <DiagnosticEngineResult envelope={envelope} />
       </>}
     </>}
   </article>;
 }
 
-function EvidenceList({ refs }: Readonly<{ refs: readonly string[] }>) {
-  return refs.length === 0 ? <p>Sem referências adicionais.</p> : <ul className="evidence-refs">{refs.map((item) => <li key={item}><code>{item}</code></li>)}</ul>;
-}

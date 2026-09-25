@@ -57,7 +57,7 @@ describe('ObservedComparisonTable', () => {
 });
 
 describe('StudyResultPage', () => {
-  it('separa resultado do motor, conciliação, identidade, origem e histórico', () => {
+  it('não mostra conciliação, resultado do motor nem custos na página de resultado', () => {
     const execution = {
       kind: 'PREVIEW',
       id: 'execution-1', scenarioId: 'scenario-1', scenarioRevision: 1,
@@ -95,13 +95,15 @@ describe('StudyResultPage', () => {
       }],
     } as unknown as StudyDocument;
 
-    render(<StudyResultPage study={study} execution={execution} onSelectExecution={() => undefined} />);
+    render(<StudyResultPage study={study} execution={execution} />);
 
     expect(screen.getByRole('heading', { name: 'Resultado do estudo' })).toBeVisible();
-    expect(screen.getByRole('heading', { name: 'Resultado do motor' })).toBeVisible();
-    expect(screen.getByRole('heading', { name: 'Observado × Motor' })).toBeVisible();
-    expect(screen.getAllByText('Caso observado · revisão 4')).toHaveLength(2);
-    expect(screen.getAllByText('motor-2 · contrato 1.0.0')).toHaveLength(2);
-    expect(screen.getByRole('list', { name: 'Histórico de execuções' })).toBeVisible();
+    expect(screen.queryByRole('heading', { name: 'Resultado do motor' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Decomposição de custos' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Observado × Motor' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Identidade do resultado' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Histórico' })).toBeNull();
+    expect(screen.queryByText(/Fingerprint/)).toBeNull();
+    expect(screen.queryByRole('list', { name: 'Histórico de execuções' })).toBeNull();
   });
 });
