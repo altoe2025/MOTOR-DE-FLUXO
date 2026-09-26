@@ -274,4 +274,29 @@ describe('buildCommunicationDocument', () => {
     await expect(buildCommunicationDocument({ ...input, scenarioId: input.study.scenarios[1]!.id })).rejects.toThrow();
     await expect(buildCommunicationDocument({ ...input, comparisonExecutionId: input.study.executions[3]!.id })).rejects.toThrow();
   });
+
+  it.each([
+    ['variação por alavanca', { derivedFromObservedCase: { caseId: 'case-fixture', caseRevision: 1 } }],
+    ['junção de casos de empresas', { sourceCases: [{ caseId: 'case-fixture', caseRevision: 1, companyId: 'empresa-a' },
+      { caseId: 'case-fixture-b', caseRevision: 1, companyId: 'empresa-b' }] }],
+  ])('publica %s derivada de caso observado como caso observado alterado', async (_name, origin) => {
+    const input = await observedInput();
+    const scenario = input.study.scenarios[0]!;
+    scenario.sourceSnapshot.source = { kind: 'AUTHORED', authoredPortfolioId: 'variacao-1',
+      definition: { kind: 'EXPLICIT_ORDERS', ...origin, orders: scenario.sourceSnapshot.orders, provenanceByOrder: {} } } as never;
+    await refreshSourceFingerprints(input);
+    const document = await buildCommunicationDocument(input);
+    expect(document.source).toEqual({ family: 'OBSERVED', synthetic: false,
+      label: 'Variação de caso observado — ordens alteradas; resultado simulado sob as premissas informadas' });
+    expect(await validateCommunicationDocument(document, input.study)).toMatchObject({ ok: true });
+  });
+
+  it('continua recusando carteira autoral sem caso observado de origem', async () => {
+    const input = await observedInput();
+    const scenario = input.study.scenarios[0]!;
+    scenario.sourceSnapshot.source = { kind: 'AUTHORED', authoredPortfolioId: 'livre',
+      definition: { kind: 'EXPLICIT_ORDERS', orders: scenario.sourceSnapshot.orders, provenanceByOrder: {} } } as never;
+    await refreshSourceFingerprints(input);
+    await expect(buildCommunicationDocument(input)).rejects.toThrow();
+  });
 });

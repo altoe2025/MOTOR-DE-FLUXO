@@ -37,6 +37,7 @@ import type { StudyControllerStatus } from '../study/studyController';
 import { Button } from '../ui/Button';
 import { InlineNotice } from '../ui/InlineNotice';
 import { StudyResultPage } from './StudyResultPage';
+import { observedVariationLabel } from '../study/observedVariation';
 
 function executionProvenance(study: StudyDocument, scenario: ScenarioDocument): PreviewRequestProvenance {
   const defaults: FieldProvenance = {
@@ -95,7 +96,7 @@ function sourceLabel(scenario: ScenarioDocument): string {
   if (scenario.sourceSnapshot.source.kind === 'OBSERVED_CASE') return 'Dados observados';
   if (isProfileMvpScenario(scenario)) return 'Simulação baseada em Perfil';
   if (scenario.sourceSnapshot.source.kind === 'SYNTHETIC') return 'Simulação sintética legada';
-  return 'Carteira autoral legada';
+  return observedVariationLabel(scenario) ?? 'Carteira autoral legada';
 }
 
 export function StudyPortfolioPage() {

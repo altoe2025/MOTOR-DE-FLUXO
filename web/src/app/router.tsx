@@ -13,7 +13,7 @@ const CompanyProfilesPage = lazy(async () => ({ default: (await import('../compa
 const ImportFlowPage = lazy(async () => ({ default: (await import('../importer/components/ImportFlowPage')).ImportFlowPage }));
 const CompanyStudiesPage = lazy(async () => ({ default: (await import('../companies/CompanyStudiesPage')).CompanyStudiesPage }));
 const PortfolioPage = lazy(async () => ({ default: (await import('../pages/PortfolioPage')).PortfolioPage }));
-const PreviewPage = lazy(async () => ({ default: (await import('../pages/PreviewPage')).PreviewPage }));
+const DiagnosticsHubPage = lazy(async () => ({ default: (await import('../pages/DiagnosticsHubPage')).DiagnosticsHubPage }));
 const StudiesPage = lazy(async () => ({ default: (await import('../pages/StudiesPage')).StudiesPage }));
 const StudyPortfolioPage = lazy(async () => ({ default: (await import('../pages/StudyPortfolioPage')).StudyPortfolioPage }));
 const StudyComparisonPage = lazy(async () => ({ default: (await import('../pages/StudyComparisonPage')).StudyComparisonPage }));
@@ -97,7 +97,7 @@ export function AppRoutes() {
         <Route path="/estudos/:studyId/diagnostico" element={<DiagnosticRoute />} />
         <Route path="/estudos/:studyId/replay" element={<ReplayRoute />} />
         <Route path="/estudos/:studyId/apresentacao" element={<Suspense fallback={<p role="status">Carregando apresentação…</p>}><PresentationRoute /></Suspense>} />
-        <Route path="/diagnostico" element={<PreviewPage />} />
+        <Route path="/diagnostico" element={<DiagnosticsHubPage />} />
         <Route path="/comparar" element={<StudyComparisonPage />} />
         <Route path="/quadro" element={<ComparisonBoardPage />} />
         <Route path="/replay" element={<Destination title="Replay" description="Uma repetição específica poderá ser inspecionada dia a dia." emptyTitle="Nenhum replay disponível" emptyDescription="O replay depende de uma execução reproduzível." />} />

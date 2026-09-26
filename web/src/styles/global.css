@@ -73,6 +73,10 @@ a { color: inherit; }
 .save-status { color: var(--muted); font-size: 0.875rem; margin: 0; }
 .session-loading { padding: var(--space-8); }
 .presentation-return { margin-bottom: var(--space-4); }
+.diagnostics-hub__study { margin-top: var(--space-6); }
+.diagnostics-hub__study h2 { font-size: 1.25rem; margin: 0 0 var(--space-3); }
+.diagnostics-hub__study th small { color: var(--muted); display: block; font-weight: 400; }
+.diagnostics-hub__actions { display: flex; flex-wrap: wrap; gap: var(--space-3); white-space: nowrap; }
 .presentation-return a, .diagnostic-present-link { align-items: center; color: var(--accent); display: inline-flex; font-weight: 650; min-height: 32px; }
 .presentation-page { color: var(--ink); margin: 0 auto; max-width: 980px; min-width: 0; }
 .presentation-page > section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); margin: var(--space-6) 0; padding: clamp(20px, 3vw, 36px); scroll-margin-top: 24px; }

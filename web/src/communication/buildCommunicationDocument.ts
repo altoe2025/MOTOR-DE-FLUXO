@@ -87,6 +87,13 @@ function sourceFamily(execution: DiagnosticExecutionRecord): CommunicationDocume
   if (snapshot.source.kind === 'OBSERVED_CASE') return {
     family: 'OBSERVED', label: 'Caso observado — resultado simulado sob as premissas informadas', synthetic: false,
   };
+  // Variações por alavanca e junções de casos só existem a partir de casos observados.
+  const definition = snapshot.source.kind === 'AUTHORED' ? snapshot.source.definition : undefined;
+  if (definition?.kind === 'EXPLICIT_ORDERS'
+    && (definition.derivedFromObservedCase !== undefined || (definition.sourceCases?.length ?? 0) > 0)) return {
+    family: 'OBSERVED', synthetic: false,
+    label: 'Variação de caso observado — ordens alteradas; resultado simulado sob as premissas informadas',
+  };
   const generation = snapshot.generationInputSnapshot;
   requireCondition(snapshot.source.kind === 'SYNTHETIC' && snapshot.source.recipe.exampleId === PROFILE_MVP_EXAMPLE_ID
     && generation !== undefined && generation.participants.length > 0

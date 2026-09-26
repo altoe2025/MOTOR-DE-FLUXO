@@ -84,15 +84,13 @@ describe('percurso de prévia', () => {
     await user.click(screen.getByRole('button', { name: 'Executar exemplo de referência' }));
     await user.click(screen.getByRole('link', { name: 'Diagnóstico' }));
 
-    expect(await screen.findByText('Prévia — uma execução')).toBeVisible();
+    expect(await screen.findByRole('heading', { name: 'Exemplo de referência' })).toBeVisible();
     expect(screen.getByTestId('economia-brl')).toHaveTextContent('R$ 1.026.000,00');
     expect(screen.getByTestId('netabilidade')).toHaveTextContent('58,82%');
     expect(screen.getByRole('group', { name: 'Autonetting — mesmo participante' })).toBeVisible();
     expect(screen.getByRole('group', { name: 'Netting multilateral — entre participantes' })).toBeVisible();
     expect(screen.getByRole('group', { name: 'Remetido — cruzou a fronteira' })).toBeVisible();
-    expect(screen.getByText('Exemplo sintético de validação')).toBeVisible();
     expect(screen.getByText(/não calibrados/i)).toBeVisible();
-    expect(screen.getByText(envelopeFixture.execution_fingerprint)).toBeVisible();
     expect(client.runPreview).toHaveBeenCalledOnce();
   });
 

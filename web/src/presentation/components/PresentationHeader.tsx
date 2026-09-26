@@ -9,7 +9,7 @@ export function PresentationHeader({ document, scenarioName }: Readonly<{
   document: CommunicationDocumentV1;
   scenarioName?: string | undefined;
 }>) {
-  const family = document.source.family === 'OBSERVED' ? 'Caso observado' : 'Simulação por Perfil';
+  const family = document.source.label.split(' — ')[0];
   return <header className="presentation-header" data-help-id="page.apresentacao">
     <p className="eyebrow">Apresentação</p>
     <h1>{document.study.name}</h1>
