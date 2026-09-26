@@ -39,8 +39,9 @@ function reducedMotion(): boolean {
 
 const triggerLabels = { WINDOW: 'janela', DEADLINE: 'prazo', HORIZON_END: 'fim do horizonte' } as const;
 
-export function ReplayStage({ document, state, sort, transitionMode, transitionKey }: Readonly<{
+export function ReplayStage({ document, state, sort, transitionMode, transitionKey, companyOf }: Readonly<{
   document: ReplayDocument;
+  companyOf?: (orderId: string) => string;
   state: ReplayState;
   sort: ReplaySort;
   transitionMode: ReplayTransitionMode;
@@ -89,17 +90,16 @@ export function ReplayStage({ document, state, sort, transitionMode, transitionK
       <div className="replay-territory replay-territory--cnr"><span>CNR</span><small>fronteira</small></div>
       <div className="replay-territory replay-territory--exterior"><span>Exterior</span><small>moeda estrangeira</small></div>
       <div className="replay-lane replay-lane--out" aria-label="Ordens OUT abertas">
-        {outOrders.length === 0 ? <p className="replay-lane__empty">Sem OUT aberto</p> : outOrders.map((order) => <ReplayOrderCard key={order.orderId} order={order} departing={departingIds.has(order.orderId)} />)}
+        {outOrders.length === 0 ? <p className="replay-lane__empty">Sem OUT aberto</p> : outOrders.map((order) => <ReplayOrderCard key={order.orderId} order={order} {...(companyOf === undefined ? {} : { company: companyOf(order.orderId) })} departing={departingIds.has(order.orderId)} />)}
       </div>
       <div className="replay-frontier">
         <span className="replay-frontier__day">D{state.day}</span>
         <span className="replay-frontier__phase">{state.phase === 'WARMUP' ? 'Aquecimento' : state.phase === 'MEASUREMENT' ? 'Medição' : 'Liquidação'}</span>
-        <div><small>Casado no dia</small><strong>{formatMoney(view.matchedContributionBrl)}</strong></div>
-        <div><small>Ainda aberto</small><strong>{formatMoney(view.openBrl)}</strong></div>
         {state.closing === null ? <span className="replay-frontier__status">Sem fechamento</span> : <span className="replay-frontier__status">Fechamento · {state.closing.triggers.map((trigger) => triggerLabels[trigger]).join(' + ')}</span>}
+        <div className="replay-frontier__open"><small>Ainda aberto</small><strong>{formatMoney(view.openBrl)}</strong></div>
       </div>
       <div className="replay-lane replay-lane--in" aria-label="Ordens IN abertas">
-        {inOrders.length === 0 ? <p className="replay-lane__empty">Sem IN aberto</p> : inOrders.map((order) => <ReplayOrderCard key={order.orderId} order={order} departing={departingIds.has(order.orderId)} />)}
+        {inOrders.length === 0 ? <p className="replay-lane__empty">Sem IN aberto</p> : inOrders.map((order) => <ReplayOrderCard key={order.orderId} order={order} {...(companyOf === undefined ? {} : { company: companyOf(order.orderId) })} departing={departingIds.has(order.orderId)} />)}
       </div>
       <ReplayConnections stageRef={stageRef} document={document} day={state.day} active={eventActive} transitionKey={transitionKey} />
     </div>

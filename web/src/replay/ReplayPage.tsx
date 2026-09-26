@@ -12,6 +12,7 @@ import { ReplayControls } from './components/ReplayControls';
 import { ReplayJournal } from './components/ReplayJournal';
 import { ReplayMetrics } from './components/ReplayMetrics';
 import { ReplayStage } from './components/ReplayStage';
+import { companyResolver } from '../levers/companies';
 import { replayStateAt } from './state';
 import { useReplayPlayback } from './useReplayPlayback';
 
@@ -212,7 +213,8 @@ function ReplayReady({ document, study, studyId, scenarioId, selected, initialDa
     <ReplayControls document={document} playback={playback} sort={sort} onSort={setSort} />
     <p className="replay-live" aria-live="polite">{directDay} · {phaseLabel}</p>
     <ReplayMetrics document={document} state={state} />
-    <ReplayStage document={document} state={state} sort={sort} transitionMode={playback.transitionMode} transitionKey={playback.transitionKey} />
+    <ReplayStage document={document} state={state} sort={sort} transitionMode={playback.transitionMode} transitionKey={playback.transitionKey}
+      companyOf={companyResolver(study.executions.find((item) => item.id === document.diagnostic_execution_id)?.sourceSnapshot?.source)} />
     <ReplayJournal document={document} day={playback.day} />
   </article>;
 }

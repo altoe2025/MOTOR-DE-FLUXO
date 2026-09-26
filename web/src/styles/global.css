@@ -326,10 +326,9 @@ a { color: inherit; }
 .replay-order--in .replay-order__topline strong { color: #345b86; }
 .replay-order__topline span { background: #e9eee9; border-radius: 999px; color: var(--muted); font-size: 0.67rem; padding: 2px 6px; }
 .replay-order p { margin: 0; overflow-wrap: anywhere; }
-.replay-order__id { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 0.76rem; font-weight: 700; margin-top: var(--space-2) !important; }
-.replay-order__client { color: var(--muted); font-size: 0.75rem; margin-top: 2px !important; }
+.replay-order__company { color: var(--muted); font-size: 0.78rem; font-weight: 600; margin-top: var(--space-1) !important; }
 .replay-order__value { font-family: var(--font-heading); font-size: 1.15rem; font-variant-numeric: tabular-nums; font-weight: 700; margin-top: var(--space-2) !important; }
-.replay-order__deadline { color: var(--muted); font-size: 0.72rem; margin-top: var(--space-1) !important; }
+.replay-order__deadline { color: #b3261e; font-size: 0.78rem; font-weight: 700; margin-top: var(--space-1) !important; }
 .replay-stage--animating .replay-order:not(.replay-order--departing) { animation: replay-card-arrive 500ms ease both; }
 .replay-order--departing { animation: replay-card-depart 1000ms ease 2600ms both; border-color: #8b403c; }
 .replay-connections { height: 100%; inset: 0; overflow: visible; pointer-events: none; position: absolute; width: 100%; z-index: 4; }
@@ -436,3 +435,4 @@ a { color: inherit; }
 .savings-origin { margin-top: var(--space-6); }
 .lever-combinations { border-top: 1px solid var(--border); margin-top: var(--space-4); padding-top: var(--space-4); }
 .lever-combinations h3 { margin: 0 0 var(--space-2); }
+.replay-frontier__open { margin-top: var(--space-4); text-align: center; }

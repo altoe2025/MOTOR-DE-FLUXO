@@ -24,7 +24,7 @@ describe('cena Fronteira Viva', () => {
     expect(screen.getByText('Brasil')).toBeInTheDocument();
     expect(screen.getByText('CNR')).toBeInTheDocument();
     expect(screen.getByText('Exterior')).toBeInTheDocument();
-    expect(screen.getByRole('article', { name: /OUT out-1/i })).toHaveTextContent('cliente-a');
+    expect(screen.getByRole('article', { name: /OUT out-1/i })).not.toHaveTextContent('cliente-a');
     expect(screen.getByRole('article', { name: /OUT out-1/i })).toHaveTextContent('R$ 60,00');
     expect(screen.getByRole('article', { name: /OUT out-1/i })).toHaveTextContent('Prazo D2');
     expect(screen.queryByRole('article', { name: /IN in-1/i })).not.toBeInTheDocument();
