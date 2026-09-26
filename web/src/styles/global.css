@@ -165,6 +165,15 @@ a { color: inherit; }
 .composition-participant { background: var(--canvas); border: 1px solid var(--border); border-radius: var(--radius); display: grid; gap: var(--space-3); margin-top: var(--space-3); padding: var(--space-4); }
 .composition-participant > h3, .composition-participant > p { margin: 0; overflow-wrap: anywhere; }
 .composition-participant > label { display: grid; gap: var(--space-1); }
+.composition-participant__header { align-items: baseline; display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.composition-participant__header h3 { margin: 0; }
+.composition-participant__header span { color: var(--muted); }
+.composition-participant__actions { align-items: center; display: flex; flex-wrap: wrap; gap: var(--space-3); justify-content: space-between; }
+.composition-participant .checkbox-field { gap: var(--space-2); }
+.composition-participant .checkbox-field input { height: 1.1rem; padding: 0; width: 1.1rem; }
+.technical-ids { color: var(--muted); font-size: 0.875rem; }
+.technical-ids > summary { cursor: pointer; }
+.technical-ids ul { margin-top: var(--space-2); }
 .evidence-boundary { background: var(--canvas); border-left: 4px solid var(--accent); display: grid; gap: var(--space-1); margin-bottom: var(--space-4); padding: var(--space-3) var(--space-4); }
 .evidence-boundary span { color: var(--muted); }
 .profile-selection, .profile-participant { border: 1px solid var(--border); margin: var(--space-4) 0; padding: var(--space-4); }
@@ -190,6 +199,8 @@ a { color: inherit; }
 .portfolio-composition-summary h3 { font-family: var(--font-heading); margin: 0 0 var(--space-2); }
 .portfolio-composition-summary ul { display: grid; gap: var(--space-2); list-style: none; padding: 0; }
 .portfolio-composition-summary li { display: flex; flex-wrap: wrap; gap: var(--space-2); overflow-wrap: anywhere; }
+.portfolio-composition-summary .composition-roster { column-gap: var(--space-5); grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); }
+.portfolio-composition-summary .technical-ids { margin-bottom: var(--space-3); }
 .portfolio-composition-summary li span { color: var(--muted); }
 .composition-guidance { background: var(--canvas); border-left: 4px solid var(--accent); padding: var(--space-3) var(--space-4); }
 .composition-guidance p { margin: var(--space-2) 0; }

@@ -96,7 +96,7 @@ test('dois Perfis geram uma simulação separada e uma hipótese de mix', async 
 
   const hypothesis = page.getByRole('region', { name: 'Criar hipótese de composição' });
   await hypothesis.getByLabel('Nome da hipótese').fill('Hipótese de mix');
-  await hypothesis.getByLabel(/Fração OUT — stage4-company-a/).fill('0.5');
+  await hypothesis.getByLabel(/Fração OUT.* — Empresa A/).fill('0.5');
   await hypothesis.getByRole('button', { name: 'Criar hipótese' }).click();
   await expect(page).toHaveURL(new RegExp(`/estudos/${createdStudy}/diagnostico\\?scenarioId=`));
 

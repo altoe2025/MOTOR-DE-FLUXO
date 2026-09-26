@@ -394,7 +394,7 @@ Os diagnósticos dele também serão apagados. Não dá para desfazer.`)) return
       <Button variant="secondary" onClick={() => void navigateAfterFlush(`/estudos/${study.id}/diagnostico?scenarioId=${item.id}`)}>Executar diagnóstico</Button>
       {item.id === study.baseScenarioId ? null : <Button variant="secondary" className="button--danger" aria-label={`Apagar cenário ${item.name}`} onClick={() => void deleteScenario(item)}>Apagar</Button>}
     </li>)}</ul>
-    <PortfolioCompositionSummary scenario={selectedBase} onEdit={() => {
+    <PortfolioCompositionSummary scenario={selectedBase} profiles={[...availableProfiles, ...attachedProfiles]} companies={companies} onEdit={() => {
       hypothesisAnchor.current?.focus();
       hypothesisAnchor.current?.scrollIntoView?.({ block: 'start', behavior: 'smooth' });
     }} />
@@ -403,7 +403,7 @@ Os diagnósticos dele também serão apagados. Não dá para desfazer.`)) return
   <LeverBuilder key={`${selectedBase.id}:${selectedBase.sourceSnapshot.sourceFingerprint}`} base={selectedBase} onCreate={createLeverVariation} />
   <div ref={hypothesisAnchor} id="composition-editor" tabIndex={-1} aria-label="Editor de hipóteses">
     <HypothesisBuilder key={selectedBase.id} baseScenario={selectedBase}
-      availableProfiles={availableProfiles} onCreate={createHypothesis} />
+      availableProfiles={availableProfiles} companies={companies} onCreate={createHypothesis} />
   </div>
   {displayedExecution === null ? null : <StudyResultPage study={study} execution={displayedExecution} />}</>;
 }

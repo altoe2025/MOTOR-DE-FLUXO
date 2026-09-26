@@ -45,17 +45,17 @@ test('cria duas hipóteses, muda composição, executa, compara e recarrega', as
   const studyId = await seedProfileStudy(page);
   const builder = page.getByRole('region', { name: 'Criar hipótese de composição' });
   await builder.getByLabel('Nome da hipótese').fill('Troca B por C');
-  await builder.getByLabel(/Volume mensal — stage4-company-a/).fill('800');
+  await builder.getByLabel(/Volume mensal.* — Empresa A/).fill('800');
   await builder.getByLabel('Adicionar Perfil').selectOption('stage4-profile-c');
-  await builder.getByRole('button', { name: 'Remover stage4-company-b', exact: true }).click();
+  await builder.getByRole('button', { name: 'Remover Empresa B', exact: true }).click();
   await builder.getByRole('button', { name: 'Criar hipótese' }).click();
   await expect(page).toHaveURL(new RegExp(`/estudos/${studyId}/diagnostico\\?scenarioId=`));
 
   await page.goto(`/carteira/${studyId}`);
   const second = page.getByRole('region', { name: 'Criar hipótese de composição' });
   await second.getByLabel('Nome da hipótese').fill('Finalidades alternativas');
-  await second.getByLabel(/Finalidade OUT — stage4-company-a/).fill('SERVICOS');
-  await second.getByLabel(/Finalidade IN — stage4-company-a/).fill('EXPORTACAO');
+  await second.getByLabel(/Finalidade OUT — Empresa A/).fill('SERVICOS');
+  await second.getByLabel(/Finalidade IN — Empresa A/).fill('EXPORTACAO');
   await second.getByRole('button', { name: 'Criar hipótese' }).click();
 
   const snapshot = await page.evaluate((id) => window.__MOTOR_E2E__!.stage4Snapshot(id), studyId);

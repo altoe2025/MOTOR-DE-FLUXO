@@ -57,8 +57,8 @@ describe('CompositionHypothesisBuilder', () => {
       availableProfiles={[profile('profile-a', 'empresa-a'), profile('profile-c', 'empresa-c')]}
       onCreate={onCreate} />);
 
-    await user.clear(screen.getByLabelText(/volume mensal — empresa-a/i));
-    await user.type(screen.getByLabelText(/volume mensal — empresa-a/i), '2500000');
+    await user.clear(screen.getByLabelText(/volume mensal.* — empresa-a/i));
+    await user.type(screen.getByLabelText(/volume mensal.* — empresa-a/i), '2500000');
     await user.selectOptions(screen.getByLabelText(/adicionar perfil/i), 'profile-c');
     expect(screen.getByText(/as ordens serão regeneradas/i)).toBeVisible();
     await user.click(screen.getByRole('button', { name: /criar hipótese/i }));
@@ -88,7 +88,7 @@ describe('CompositionHypothesisBuilder', () => {
     render(<CompositionHypothesisBuilder baseScenario={base()}
       availableProfiles={[profile('profile-a', 'empresa-a')]}
       onCreate={onCreate} />);
-    const volume = screen.getByLabelText(/volume mensal — empresa-a/i);
+    const volume = screen.getByLabelText(/volume mensal.* — empresa-a/i);
     await user.clear(volume); await user.type(volume, '2500000');
     await user.click(screen.getByRole('button', { name: /criar hipótese/i }));
     expect(await screen.findByRole('alert')).toHaveTextContent(/conflito/i);
