@@ -8,9 +8,9 @@ import type { CompanyRecord, FieldProvenance, ObservedCase } from '../cases/doma
 import { HypothesisBuilder } from '../hypotheses/components/HypothesisBuilder';
 import type { Levers } from '../levers/applyLevers';
 import { LeverBuilder } from '../levers/LeverBuilder';
-import { buildLeverScenario } from '../levers/leverScenario';
+import { NEUTRAL_LEVERS } from '../levers/applyLevers';
+import { buildLeverScenario, periodCovering } from '../levers/leverScenario';
 import { PortfolioCompositionSummary } from '../hypotheses/components/PortfolioCompositionSummary';
-import { ProfileScenarioBuilder } from '../hypotheses/components/ProfileScenarioBuilder';
 import {
   buildCompositionScenarioDraft,
   buildCompositionSourceSnapshot,
@@ -24,18 +24,14 @@ import {
   PROFILE_MVP_EXAMPLE_ID,
   type MvpHypothesisDraft,
 } from '../hypotheses/hypothesis';
-import {
-  buildProfileMvpPreparationRequest,
-  type ProfileMvpParticipantDraft,
-} from '../hypotheses/profileMvp';
 import type { OperationalProfileVersion } from '../profiles/domain';
 import { buildPreviewRequest, type PreviewRequestProvenance } from '../preparation/buildPreviewRequest';
 import { resolvePortfolioSource } from '../preparation/resolvePortfolioSource';
 import { StudyEditor } from '../study/components/StudyEditor';
 import type { PortfolioSourceDraft } from '../study/components/PortfolioSourceSelector';
-import { appendCompositionHypothesis, appendScenario, createProfileStudy, duplicateStudy, removeScenario, renameStudy, updateScenario } from '../study/domain';
+import { appendCompositionHypothesis, appendScenario, duplicateStudy, removeScenario, renameStudy, updateScenario } from '../study/domain';
 import { executeStudyScenario } from '../study/executionService';
-import type { DeepMutable, EffectiveInput, ExecutionRecord, PreviewExecutionRecord, ScenarioDocument, ScenarioDraft, StudyDocument } from '../study/model';
+import type { DeepMutable, EffectiveInput, ExecutionRecord, PreviewExecutionRecord, ScenarioDocument, StudyDocument } from '../study/model';
 import { requiredBuildSha } from '../study/sourceConfiguration';
 import type { StudyControllerStatus } from '../study/studyController';
 import { Button } from '../ui/Button';
@@ -57,14 +53,6 @@ function executionProvenance(study: StudyDocument, scenario: ScenarioDocument): 
   };
   return scenario.inputProvenance
     ?? { premises: { windowDays: defaults, costs }, period: { horizonDays: defaults } };
-}
-
-function periodHorizon(scenario: ScenarioDocument): number {
-  if (scenario.period.httpPeriod.modo === 'NATURAL') {
-    return scenario.period.httpPeriod.periodo_medicao_dias;
-  }
-  if (!('executableHorizonDays' in scenario.period)) throw new Error('Horizonte executável ausente.');
-  return scenario.period.executableHorizonDays;
 }
 
 function generationChanged(draft: MvpHypothesisDraft): boolean {
@@ -171,7 +159,8 @@ export function StudyPortfolioPage() {
               preparation: await api.preparePortfolio(source.preparation!),
             }, dependencies)
         : await resolvePortfolioSource(source, dependencies);
-      save(await updateScenario(study, scenario.id, { sourceSnapshot: snapshot }, new Date().toISOString()));
+      const horizonDays = snapshot.orders.length === 0 ? 1 : Math.max(...snapshot.orders.map((order) => order.dia_limite)) + 1;
+      save(await updateScenario(study, scenario.id, { sourceSnapshot: snapshot, period: periodCovering(scenario.period, horizonDays) }, new Date().toISOString()));
       setError(null);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Não foi possível preparar a origem.');
@@ -220,37 +209,6 @@ export function StudyPortfolioPage() {
       preparePortfolio: (input: PreparationRequest) => api.preparePortfolio!(input),
       now: () => new Date().toISOString(),
     };
-  };
-  const createProfileSimulation = async (
-    participants: readonly ProfileMvpParticipantDraft[],
-    profiles: readonly OperationalProfileVersion[],
-  ) => {
-    const before = JSON.stringify(study);
-    const recordedAt = new Date().toISOString();
-    const studyId = crypto.randomUUID();
-    const scenarioId = crypto.randomUUID();
-    const request = buildProfileMvpPreparationRequest({
-      identity: { studyId, scenarioId, scenarioRevision: 1 }, scenario,
-      participants, requestId: crypto.randomUUID(),
-      expectedBuildSha: requiredBuildSha(import.meta.env.VITE_MOTOR_BUILD_SHA, undefined),
-      recordedAt,
-    });
-    const snapshot = await resolvePortfolioSource({
-      kind: 'SYNTHETIC', exampleId: PROFILE_MVP_EXAMPLE_ID, preparation: request,
-    }, prepareDependencies());
-    const baseScenario: ScenarioDraft = {
-      id: scenarioId, revision: 1, name: 'Cenário base por Perfil', sourceSnapshot: snapshot,
-      premises: structuredClone(scenario.premises), period: structuredClone(scenario.period),
-      ...(scenario.inputProvenance === undefined ? {} : { inputProvenance: structuredClone(scenario.inputProvenance) }),
-    };
-    const created = await createProfileStudy({
-      id: studyId, ownerSub: study.ownerSub, name: `${study.name} — simulação por Perfil`,
-      baseScenario, profiles, now: recordedAt,
-    });
-    const saved = await controller.saveDetachedStudy(created, 0);
-    if (saved === null) throw new Error('A sessão mudou antes de salvar a simulação.');
-    if (JSON.stringify(study) !== before) throw new Error('O estudo observado foi alterado durante a preparação.');
-    navigate(`/carteira/${saved.id}`);
   };
   const createHypothesis = async (draft: MvpHypothesisDraft | CompositionHypothesisDraft) => {
     if (pendingHypothesisId !== null) {
@@ -338,6 +296,24 @@ export function StudyPortfolioPage() {
     if (saved === null || saved.id !== study.id) throw new Error('A sessão mudou antes de salvar a variação.');
     setStudy(saved);
   };
+  const createCombinations = async (subsets: readonly (readonly string[])[], companies: readonly string[]) => {
+    const recordedAt = new Date().toISOString();
+    let next = study;
+    for (const subset of subsets) {
+      const removed = companies.filter((company) => !subset.includes(company));
+      const draft = await buildLeverScenario({
+        base: selectedBase, id: crypto.randomUUID(), authoredPortfolioId: crypto.randomUUID(), recordedAt,
+        levers: removed.map((company) => ({ ...NEUTRAL_LEVERS, group: company, removeCompany: true })),
+        name: `${selectedBase.name} · só ${subset.join(' + ')}`,
+      });
+      next = await appendScenario(next, draft, recordedAt);
+      controller.edit(next);
+    }
+    setStudy(next);
+    const saved = await controller.flush();
+    if (saved === null || saved.id !== study.id) throw new Error('A sessão mudou antes de salvar as combinações.');
+    setStudy(saved);
+  };
   const deleteScenario = async (target: ScenarioDocument) => {
     if (!window.confirm(`Apagar o cenário "${target.name}"?
 
@@ -385,7 +361,6 @@ Os diagnósticos dele também serão apagados. Não dá para desfazer.`)) return
   }} />
   <section className="source-actions" aria-label="Execução do cenário"><Button disabled={executing} onClick={() => void execute()}>{executing ? 'Executando cenário…' : 'Executar cenário atual'}</Button></section>
   {error === null ? null : <InlineNotice tone="error">{error}</InlineNotice>}
-  <ProfileScenarioBuilder profiles={attachedProfiles} ownerSub={study.ownerSub} horizonDays={periodHorizon(scenario)} onPrepare={createProfileSimulation} />
   <section className="scenario-workspace" aria-labelledby="scenario-list-title">
     <h2 id="scenario-list-title">Cenários do estudo</h2>
     <ul className="scenario-list">{study.scenarios.map((item) => <li key={item.id}>
@@ -400,7 +375,7 @@ Os diagnósticos dele também serão apagados. Não dá para desfazer.`)) return
     }} />
     <Button variant="secondary" onClick={() => void navigateAfterFlush(`/comparar?studyId=${study.id}`)}>Comparar resultados</Button>
   </section>
-  <LeverBuilder key={`${selectedBase.id}:${selectedBase.sourceSnapshot.sourceFingerprint}`} base={selectedBase} onCreate={createLeverVariation} />
+  <LeverBuilder key={`${selectedBase.id}:${selectedBase.sourceSnapshot.sourceFingerprint}`} base={selectedBase} onCreate={createLeverVariation} onCreateCombinations={createCombinations} />
   <div ref={hypothesisAnchor} id="composition-editor" tabIndex={-1} aria-label="Editor de hipóteses">
     <HypothesisBuilder key={selectedBase.id} baseScenario={selectedBase}
       availableProfiles={availableProfiles} companies={companies} onCreate={createHypothesis} />

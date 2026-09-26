@@ -91,6 +91,32 @@
               },
               "required": ["caseId", "caseRevision"]
             },
+            "sourceCases": {
+              "type": "array",
+              "minItems": 2,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "caseId": { "$ref": "#/$defs/Identifier" },
+                  "caseRevision": { "type": "integer", "minimum": 1 },
+                  "companyId": { "$ref": "#/$defs/Identifier" }
+                },
+                "required": ["caseId", "caseRevision", "companyId"]
+              }
+            },
+            "companyByOrder": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "companyId": { "$ref": "#/$defs/Identifier" },
+                  "companyName": { "type": "string", "minLength": 1, "maxLength": 200 }
+                },
+                "required": ["companyId", "companyName"]
+              }
+            },
             "orders": { "type": "array", "items": { "$ref": "https://motor-de-fluxo.local/contracts/schemas.json#/$defs/OrdemEntrada" } },
             "provenanceByOrder": { "type": "object", "additionalProperties": { "$ref": "#/$defs/OrderFieldProvenance" } }
           },

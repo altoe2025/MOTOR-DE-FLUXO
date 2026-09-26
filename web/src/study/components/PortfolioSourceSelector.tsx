@@ -7,6 +7,7 @@ import { normalizePurposeCode } from '../../importer/normalization';
 import { Button } from '../../ui/Button';
 import { TextField } from '../../ui/TextField';
 import { authoredDefinitionFromObservedCase } from '../../preparation/resolvePortfolioSource';
+import { combineObservedCases } from '../../levers/companies';
 import type {
   AuthoredGroup,
   AuthoredParameters,
@@ -49,6 +50,42 @@ const EXAMPLES: readonly { id: string; label: string; parameters: Parameters }[]
 ];
 
 function uuid(): string { return crypto.randomUUID(); }
+
+function CaseCombiner({ cases, companies, initialIds, onApply }: Readonly<{
+  cases: readonly ObservedCase[];
+  companies: readonly CompanyRecord[];
+  initialIds: readonly string[];
+  onApply(definition: Extract<AuthoredPortfolioDefinition, { kind: 'EXPLICIT_ORDERS' }>): void;
+}>) {
+  const [chosen, setChosen] = useState<Set<string>>(() => new Set(initialIds));
+  const [error, setError] = useState<string | null>(null);
+  const name = (item: ObservedCase) => companies.find((company) => company.id === item.companyId)?.displayName ?? item.companyId;
+  const toggle = (id: string) => setChosen((current) => {
+    const next = new Set(current);
+    if (!next.delete(id)) next.add(id);
+    return next;
+  });
+  const selectedCases = cases.filter((item) => chosen.has(item.id));
+  const apply = () => {
+    try {
+      const combined = combineObservedCases(selectedCases, companies);
+      setError(null);
+      onApply(combined.definition);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Não foi possível juntar os casos.');
+    }
+  };
+  return <section className="source-panel">
+    <h2>Juntar casos de empresas</h2>
+    <p className="field-hint">Cada empresa entra com o caso importado dela, no mesmo calendário: o dia 0 é a data inicial mais antiga entre os casos escolhidos. Um caso por empresa.</p>
+    {cases.length === 0 ? <p>Nenhum caso confirmado. Importe as planilhas das empresas primeiro.</p> : <ul className="board-candidates">{cases.map((item) => <li key={item.id}>
+      <label className="checkbox-field"><input type="checkbox" checked={chosen.has(item.id)} onChange={() => toggle(item.id)} />
+        {' '}{name(item)} · {item.window.startDate}–{item.window.endDate} · {item.orders.length} {item.orders.length === 1 ? 'ordem' : 'ordens'}</label>
+    </li>)}</ul>}
+    {error === null ? null : <p role="alert" className="field-error">{error}</p>}
+    <div className="source-actions"><Button disabled={selectedCases.length < 2} onClick={apply}>Usar {selectedCases.length} casos juntos</Button></div>
+  </section>;
+}
 function expectedBuildSha(scenario: ScenarioDocument): string {
   const recipeSha = scenario.sourceSnapshot.source.kind === 'SYNTHETIC'
     ? scenario.sourceSnapshot.source.recipe.motorBuildSha
@@ -266,14 +303,16 @@ export type PortfolioSourceSelectorProps = Readonly<{
 }>;
 
 export function PortfolioSourceSelector({ value, study, scenario, observedCases, companies, selectedCaseId, onChange, onConvertObserved: notifyConvertObserved }: PortfolioSourceSelectorProps) {
-  const [draftKind, setDraftKind] = useState(value);
+  const multiCaseIds = scenario.sourceSnapshot.source.kind === 'AUTHORED' && scenario.sourceSnapshot.source.definition?.kind === 'EXPLICIT_ORDERS'
+    ? scenario.sourceSnapshot.source.definition.sourceCases?.map((item) => item.caseId) : undefined;
+  const [draftKind, setDraftKind] = useState<PortfolioSourceKind | 'MULTI_CASE'>(multiCaseIds === undefined ? value : 'MULTI_CASE');
   const [authoredDirty, setAuthoredDirty] = useState(false);
   const [caseId, setCaseId] = useState(selectedCaseId ?? '');
   const [convertedExplicit, setConvertedExplicit] = useState<Extract<AuthoredPortfolioDefinition, { kind: 'EXPLICIT_ORDERS' }> | undefined>();
   const [conversionError, setConversionError] = useState<string | null>(null);
   const confirmed = useMemo(() => observedCases.filter((item) => item.status === 'CONFIRMED'), [observedCases]);
   const selected = confirmed.find((item) => item.id === caseId);
-  const selectKind = (kind: PortfolioSourceKind) => {
+  const selectKind = (kind: PortfolioSourceKind | 'MULTI_CASE') => {
     if (kind !== draftKind && authoredDirty && !window.confirm('Trocar a origem descarta a autoria manual não aplicada. Continuar?')) return;
     setAuthoredDirty(false); setDraftKind(kind);
   };
@@ -309,5 +348,5 @@ export function PortfolioSourceSelector({ value, study, scenario, observedCases,
   const authoredPortfolioId = currentSource.kind === 'AUTHORED'
     ? currentSource.authoredPortfolioId
     : uuid();
-  return <fieldset className="source-selector"><legend>Origem da carteira</legend><div className="source-selector__choices" role="radiogroup" aria-label="Origem da carteira"><label><input type="radio" name="portfolio-source" checked={draftKind === 'SYNTHETIC'} onChange={() => selectKind('SYNTHETIC')} /> Exemplo sintético</label><label><input type="radio" name="portfolio-source" checked={draftKind === 'AUTHORED'} onChange={() => selectKind('AUTHORED')} /> Autoria manual</label><label><input type="radio" name="portfolio-source" checked={draftKind === 'OBSERVED_CASE'} onChange={() => selectKind('OBSERVED_CASE')} /> Caso observado</label></div>{draftKind === 'SYNTHETIC' ? <SyntheticForm study={study} scenario={scenario} {...(currentSource.kind === 'SYNTHETIC' ? { initialExampleId: currentSource.recipe.exampleId } : {})} onApply={onChange} /> : draftKind === 'AUTHORED' ? explicit === undefined ? <AuthoredForm study={study} scenario={scenario} {...(initialGroups === undefined ? {} : { initialGroups })} onApply={onChange} onDirty={setAuthoredDirty} /> : <ExplicitOrdersForm definition={explicit} authoredPortfolioId={authoredPortfolioId} onApply={onChange} /> : <section className="source-panel"><h2>Caso observado</h2>{conversionError ? <p role="alert" className="field-error">{conversionError}</p> : null}<label htmlFor="observed-case">Caso confirmado</label><select id="observed-case" value={caseId} onChange={(event) => setCaseId(event.currentTarget.value)}><option value="">Selecione um caso</option>{confirmed.map((item) => <option key={item.id} value={item.id}>{companies.find((company) => company.id === item.companyId)?.displayName ?? item.companyId} · {item.window.startDate}–{item.window.endDate}</option>)}</select>{selected ? <div className="observed-summary"><h3>{companies.find((company) => company.id === selected.companyId)?.displayName ?? selected.companyId}</h3><dl><div><dt>Janela</dt><dd>{selected.window.startDate} a {selected.window.endDate}</dd></div><div><dt>Ordens</dt><dd>{selected.orders.length} {selected.orders.length === 1 ? 'ordem' : 'ordens'}</dd></div><div><dt>Total</dt><dd>{brlTotal(selected)} BRL</dd></div><div><dt>Qualidade</dt><dd>{selected.quality.blockers.length === 0 ? 'Sem bloqueios' : `${selected.quality.blockers.length} bloqueio(s)`}; {selected.quality.warnings.length} aviso(s)</dd></div><div><dt>Proveniência</dt><dd>{[...new Set(selected.orders.flatMap((order) => order.provenance.map((item) => item.source)))].join(', ')}</dd></div></dl><p className="field-hint">A revisão {selected.revision} será copiada para um snapshot imutável. A fonte não será alterada.</p><div className="source-actions"><Button onClick={() => onChange({ kind: 'OBSERVED_CASE', caseId: selected.id, caseRevision: selected.revision })}>Usar caso confirmado</Button><Button variant="secondary" onClick={() => onConvertObserved(selected.id)}>Converter para autoria manual</Button></div></div> : null}</section>}</fieldset>;
+  return <fieldset className="source-selector"><legend>Origem da carteira</legend><div className="source-selector__choices" role="radiogroup" aria-label="Origem da carteira"><label><input type="radio" name="portfolio-source" checked={draftKind === 'SYNTHETIC'} onChange={() => selectKind('SYNTHETIC')} /> Exemplo sintético</label><label><input type="radio" name="portfolio-source" checked={draftKind === 'AUTHORED'} onChange={() => selectKind('AUTHORED')} /> Autoria manual</label><label><input type="radio" name="portfolio-source" checked={draftKind === 'OBSERVED_CASE'} onChange={() => selectKind('OBSERVED_CASE')} /> Caso observado</label><label><input type="radio" name="portfolio-source" checked={draftKind === 'MULTI_CASE'} onChange={() => selectKind('MULTI_CASE')} /> Juntar casos de empresas</label></div>{draftKind === 'MULTI_CASE' ? <CaseCombiner cases={confirmed} companies={companies} initialIds={multiCaseIds ?? []} onApply={(definition) => onChange({ kind: 'AUTHORED', authoredPortfolioId: uuid(), definition })} /> : draftKind === 'SYNTHETIC' ? <SyntheticForm study={study} scenario={scenario} {...(currentSource.kind === 'SYNTHETIC' ? { initialExampleId: currentSource.recipe.exampleId } : {})} onApply={onChange} /> : draftKind === 'AUTHORED' ? explicit === undefined ? <AuthoredForm study={study} scenario={scenario} {...(initialGroups === undefined ? {} : { initialGroups })} onApply={onChange} onDirty={setAuthoredDirty} /> : <ExplicitOrdersForm definition={explicit} authoredPortfolioId={authoredPortfolioId} onApply={onChange} /> : <section className="source-panel"><h2>Caso observado</h2>{conversionError ? <p role="alert" className="field-error">{conversionError}</p> : null}<label htmlFor="observed-case">Caso confirmado</label><select id="observed-case" value={caseId} onChange={(event) => setCaseId(event.currentTarget.value)}><option value="">Selecione um caso</option>{confirmed.map((item) => <option key={item.id} value={item.id}>{companies.find((company) => company.id === item.companyId)?.displayName ?? item.companyId} · {item.window.startDate}–{item.window.endDate}</option>)}</select>{selected ? <div className="observed-summary"><h3>{companies.find((company) => company.id === selected.companyId)?.displayName ?? selected.companyId}</h3><dl><div><dt>Janela</dt><dd>{selected.window.startDate} a {selected.window.endDate}</dd></div><div><dt>Ordens</dt><dd>{selected.orders.length} {selected.orders.length === 1 ? 'ordem' : 'ordens'}</dd></div><div><dt>Total</dt><dd>{brlTotal(selected)} BRL</dd></div><div><dt>Qualidade</dt><dd>{selected.quality.blockers.length === 0 ? 'Sem bloqueios' : `${selected.quality.blockers.length} bloqueio(s)`}; {selected.quality.warnings.length} aviso(s)</dd></div><div><dt>Proveniência</dt><dd>{[...new Set(selected.orders.flatMap((order) => order.provenance.map((item) => item.source)))].join(', ')}</dd></div></dl><p className="field-hint">A revisão {selected.revision} será copiada para um snapshot imutável. A fonte não será alterada.</p><div className="source-actions"><Button onClick={() => onChange({ kind: 'OBSERVED_CASE', caseId: selected.id, caseRevision: selected.revision })}>Usar caso confirmado</Button><Button variant="secondary" onClick={() => onConvertObserved(selected.id)}>Converter para autoria manual</Button></div></div> : null}</section>}</fieldset>;
 }

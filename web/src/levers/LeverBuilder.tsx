@@ -1,20 +1,22 @@
 import { useMemo, useState } from 'react';
 
-import { groupOf } from '../pages/comparisonBoardBreakdown';
 import { formatMoney } from '../presentation/format';
 import type { ScenarioDocument } from '../study/model';
 import { Button } from '../ui/Button';
 import { describeLevers, NEUTRAL_LEVERS, type Levers } from './applyLevers';
-import { leverBaseAvailable } from './leverScenario';
+import { companyResolver } from './companies';
+import { companySubsets, leverBaseAvailable } from './leverScenario';
 
 type DeadlineMode = Levers['deadline']['mode'];
 
-export function LeverBuilder({ base, onCreate }: Readonly<{
+export function LeverBuilder({ base, onCreate, onCreateCombinations }: Readonly<{
   base: ScenarioDocument;
   onCreate(levers: Levers): Promise<void>;
+  onCreateCombinations(subsets: readonly (readonly string[])[], companies: readonly string[]): Promise<void>;
 }>) {
   const orders = base.sourceSnapshot.orders;
-  const groups = useMemo(() => [...new Set(orders.map((order) => groupOf(order.id)))].sort(), [orders]);
+  const companyOf = useMemo(() => companyResolver(base.sourceSnapshot.source), [base.sourceSnapshot.source]);
+  const groups = useMemo(() => [...new Set(orders.map((order) => companyOf(order.id)))].sort(), [orders, companyOf]);
   const [chosenGroup, setGroup] = useState(groups[0] ?? '');
   const group = groups.includes(chosenGroup) ? chosenGroup : groups[0] ?? '';
   const [removeCompany, setRemoveCompany] = useState(false);
@@ -36,7 +38,7 @@ export function LeverBuilder({ base, onCreate }: Readonly<{
     </section>;
   }
 
-  const groupOrders = orders.filter((order) => groupOf(order.id) === group)
+  const groupOrders = orders.filter((order) => companyOf(order.id) === group)
     .sort((left, right) => left.dia_limite - right.dia_limite || left.id.localeCompare(right.id));
   const levers: Levers = {
     ...NEUTRAL_LEVERS, group, removeCompany, removedOrderIds: [...removed].filter((id) => groupOrders.some((order) => order.id === id)),
@@ -55,6 +57,18 @@ export function LeverBuilder({ base, onCreate }: Readonly<{
       reset();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Não foi possível criar a variação.');
+    } finally {
+      setBusy(false);
+    }
+  };
+  const subsets = groups.length >= 2 && groups.length <= 8 ? companySubsets(groups) : [];
+  const createCombinations = async () => {
+    if (!window.confirm(`Criar ${subsets.length} variações, uma para cada combinação de ${groups.join(', ')}?`)) return;
+    setBusy(true); setError(null);
+    try {
+      await onCreateCombinations(subsets, groups);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Não foi possível criar as combinações.');
     } finally {
       setBusy(false);
     }
@@ -102,6 +116,15 @@ export function LeverBuilder({ base, onCreate }: Readonly<{
         </table>
       </div> : null}
     </>}
+    {groups.length < 2 ? null : <div className="lever-combinations">
+      <h3>Composição</h3>
+      <p className="field-hint">
+        {subsets.length === 0
+          ? `São ${groups.length} empresas: combinações demais para gerar de uma vez (máximo 8).`
+          : `Cria ${subsets.length} variações: cada empresa sozinha e cada grupo de empresas. Depois, no diagnóstico, “Rodar todas” e compare pela economia.`}
+      </p>
+      <Button variant="secondary" disabled={busy || subsets.length === 0} onClick={() => void createCombinations()}>Gerar todas as combinações</Button>
+    </div>}
     {error === null ? null : <p role="alert" className="field-error">{error}</p>}
     <div className="source-actions">
       <span className="field-hint">Variação: {describeLevers(levers)}</span>

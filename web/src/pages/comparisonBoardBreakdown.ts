@@ -48,6 +48,7 @@ type Accumulator = {
 
 export function breakdownByCompany(
   envelope: PreviewEnvelope,
+  companyOf: (orderId: string) => string = groupOf,
 ): Breakdown {
   const { ordens: orders, custo: costs } = envelope.input_snapshot.cenario;
   const aggregate = envelope.result.agregado;
@@ -55,7 +56,7 @@ export function breakdownByCompany(
   const orderById = new Map(orders.map((order) => [order.id, order]));
   const groups = new Map<string, Accumulator>();
   const bucket = (orderId: string) => {
-    const key = groupOf(orderId);
+    const key = companyOf(orderId);
     let value = groups.get(key);
     if (value === undefined) {
       value = { volume: new Decimal(0), matchedOwn: new Decimal(0), matchedOthers: new Decimal(0),

@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 
 import { useStudyController } from '../app/providers';
 import { Button } from '../ui/Button';
+import { companyResolver } from '../levers/companies';
 import { breakdownByCompany, type Breakdown } from './comparisonBoardBreakdown';
 import type { CompanyRecord, ObservedCase } from '../cases/domain';
 import { formatFraction, formatMoney } from '../presentation/format';
@@ -89,7 +90,7 @@ export function buildRows(
       savings: aggregate.economia_periodo_brl,
       diagnosticExecutionId: execution.kind === 'DIAGNOSTIC' ? execution.id : null,
       finishedAt: execution.finishedAt ?? '',
-      breakdown: safeBreakdown(envelope),
+      breakdown: safeBreakdown(envelope, companyResolver(execution.sourceSnapshot?.source ?? scenario.sourceSnapshot.source)),
     }];
   }));
 }
@@ -270,7 +271,7 @@ export function ComparisonBoardPage() {
       <section className="board-breakdown" aria-labelledby="board-breakdown-title">
         <h2 id="board-breakdown-title">Economia por empresa</h2>
         <p className="field-hint">
-          A empresa de cada ordem é o prefixo do ID da operação antes do primeiro hífen (AP-…, X-…, Y-…). IOF, carry e espera são exatos por ordem; spread e custo fixo das remessas agregadas são repartidos pelo volume que cada empresa remeteu. Abaixo da economia: quanto do volume da empresa não cruzou a fronteira (casando com ela mesma + com as outras).
+          A empresa de cada ordem é a do cadastro quando o estudo junta casos de empresas; num caso único, é o prefixo do ID da operação antes do primeiro hífen (AP-…, X-…, Y-…). IOF, carry e espera são exatos por ordem; spread e custo fixo das remessas agregadas são repartidos pelo volume que cada empresa remeteu. Abaixo da economia: quanto do volume da empresa não cruzou a fronteira (casando com ela mesma + com as outras).
         </p>
         <div className="source-actions">
           {groups.map((group) => <label key={group}>Nome de {group}<input value={names[group] ?? ''} placeholder={group} onChange={(event) => rename(group, event.target.value)} /></label>)}

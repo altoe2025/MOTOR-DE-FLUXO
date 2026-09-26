@@ -5,6 +5,7 @@ import { breakdownByCompany, type Breakdown } from '../pages/comparisonBoardBrea
 import { formatFraction, formatMoney, formatSignedMoney } from '../presentation/format';
 import type { DiagnosticExecutionRecord, PreviewEnvelope, ScenarioDocument, StudyDocument } from '../study/model';
 import { Button } from '../ui/Button';
+import { companyResolver } from './companies';
 
 type Row = Readonly<{
   scenario: ScenarioDocument;
@@ -26,7 +27,7 @@ function rowFor(study: StudyDocument, scenario: ScenarioDocument): Row {
   let breakdown: Breakdown | null = null;
   if (execution !== null && envelope !== null) {
     try {
-      breakdown = breakdownByCompany(envelope);
+      breakdown = breakdownByCompany(envelope, companyResolver(execution.sourceSnapshot.source));
     } catch {
       breakdown = null;
     }
@@ -50,6 +51,10 @@ export function VariationComparison({ study, selectedScenarioId, running, progre
   const groups = [...new Set(rows.flatMap((row) => row.breakdown?.companies.map((item) => item.group) ?? []))].sort();
   const delta = (value: string | undefined, reference: string | undefined) =>
     value === undefined || reference === undefined ? null : new Decimal(value).minus(reference).toFixed();
+  const alone = (company: string) => rows.find((row) => row !== base && row.breakdown?.companies.length === 1
+    && row.breakdown.companies[0]!.group === company)?.breakdown?.companies[0];
+  const origin = (base.breakdown?.companies ?? []).map((item) => ({ item, solo: alone(item.group) }));
+  const hasSolo = origin.some((entry) => entry.solo !== undefined);
   const link = (scenario: ScenarioDocument) => `/estudos/${encodeURIComponent(study.id)}/diagnostico?scenarioId=${encodeURIComponent(scenario.id)}`;
 
   return <section className="variation-comparison" aria-labelledby="variation-comparison-title">
@@ -87,7 +92,7 @@ export function VariationComparison({ study, selectedScenarioId, running, progre
     </div>
     {groups.length === 0 ? null : <div className="table-scroll" role="region" tabIndex={0} aria-label="Economia por empresa nos cenários">
       <table className="company-table">
-        <caption>Economia por empresa (prefixo do ID da operação)</caption>
+        <caption>Economia por empresa</caption>
         <thead><tr><th scope="col">Cenário</th>{groups.map((group) => <th scope="col" key={group}>{group}</th>)}</tr></thead>
         <tbody>{rows.map((row) => <tr key={row.scenario.id}>
           <th scope="row">{row.scenario.name}
@@ -103,5 +108,28 @@ export function VariationComparison({ study, selectedScenarioId, running, progre
         </tr>)}</tbody>
       </table>
     </div>}
+    {origin.length < 2 ? null : <section className="savings-origin" aria-labelledby="savings-origin-title">
+      <h3 id="savings-origin-title">De onde vem a economia de cada empresa</h3>
+      {!hasSolo ? <p className="field-hint">Gere as combinações no estudo (elas incluem cada empresa sozinha) e rode todas para separar o que cada empresa faria sozinha do que a carteira acrescenta.</p> : <>
+        <p className="field-hint">“Sozinha” é a mesma empresa rodada sem as outras. O que ela casa sozinha se divide em mesma linha (o mesmo cliente com IN e OUT) e entre linhas da própria empresa. O ganho da carteira é o que só existe porque as outras empresas estão junto.</p>
+        <div className="table-scroll" role="region" tabIndex={0} aria-label="Origem da economia por empresa">
+          <table className="company-table">
+            <caption>Contra “{base.scenario.name}”</caption>
+            <thead><tr>
+              <th scope="col">Empresa</th><th scope="col">Casou sozinha · mesma linha</th><th scope="col">Casou sozinha · entre linhas da empresa</th>
+              <th scope="col">Economia sozinha</th><th scope="col">Economia na carteira</th><th scope="col">Ganho da carteira</th>
+            </tr></thead>
+            <tbody>{origin.map(({ item, solo }) => <tr key={item.group}>
+              <th scope="row">{item.group}</th>
+              <td>{solo === undefined ? '—' : formatMoney(solo.matchedOwn)}</td>
+              <td>{solo === undefined ? '—' : formatMoney(solo.matchedOthers)}</td>
+              <td>{solo === undefined ? '—' : formatMoney(solo.savings)}</td>
+              <td>{formatMoney(item.savings)}</td>
+              <td>{solo === undefined ? <small>rode “só {item.group}”</small> : formatSignedMoney(new Decimal(item.savings).minus(solo.savings).toFixed())}</td>
+            </tr>)}</tbody>
+          </table>
+        </div>
+      </>}
+    </section>}
   </section>;
 }

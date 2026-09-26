@@ -57,6 +57,7 @@ export function applyLevers(
   provenanceByOrder: Readonly<Record<string, OrderFieldProvenance>>,
   levers: Levers,
   recordedAt: string,
+  companyOf: (orderId: string) => string = groupOf,
 ): LeverResult {
   const volumeIn = positiveFactor(levers.volumeIn, 'Volume IN');
   const volumeOut = positiveFactor(levers.volumeOut, 'Volume OUT');
@@ -77,7 +78,7 @@ export function applyLevers(
   for (const order of orders) {
     const provenance = provenanceByOrder[order.id];
     if (provenance === undefined) throw new Error(`Proveniência ausente para ${order.id}.`);
-    if (groupOf(order.id) !== levers.group) {
+    if (companyOf(order.id) !== levers.group) {
       nextOrders.push(structuredClone(order) as CanonicalAuthoredOrder);
       nextProvenance[order.id] = structuredClone(provenance);
       continue;

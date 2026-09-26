@@ -429,3 +429,6 @@ a { color: inherit; }
 .variation-comparison tr[aria-current="true"] th, .variation-comparison tr[aria-current="true"] td { background: #eef5f2; }
 .scenario-list .button.button--danger { background: #fff; border-color: #b3261e; color: #b3261e; font-size: 0.8rem; min-height: 0; padding: 4px 10px; }
 .scenario-list .button.button--danger:hover:not(:disabled) { background: #fcebea; }
+.savings-origin { margin-top: var(--space-6); }
+.lever-combinations { border-top: 1px solid var(--border); margin-top: var(--space-4); padding-top: var(--space-4); }
+.lever-combinations h3 { margin: 0 0 var(--space-2); }
