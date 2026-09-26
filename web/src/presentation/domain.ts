@@ -1,11 +1,11 @@
 import type { CommunicationDocumentV1 } from '../communication/domain';
 import type { CommunicationMetric } from '../communication/domain';
-import { formatBps, formatFraction, formatMoney } from './format';
+import { formatBps, formatDecimal, formatFraction, formatMoney } from './format';
 
 export type PresentationSelection = Readonly<{ studyId: string } & Pick<CommunicationDocumentV1['selection'],
   'scenarioId' | 'diagnosticExecutionId' | 'comparisonExecutionId' | 'replayDay'>>;
 
-export type PresentationSectionId = 'resumo' | 'composicao' | 'comparacao' | 'replay' | 'premissas' | 'limitacoes';
+export type PresentationSectionId = 'resumo' | 'composicao';
 
 export const PRIMARY_EXECUTIVE_METRIC_CODES: ReadonlySet<string> = new Set([
   'BASELINE_BRL', 'NETTED_BRL', 'SAVINGS_BRL', 'NETABILITY', 'GROSS_BRL',
@@ -26,8 +26,11 @@ export function formatCommunicationMetric(metric: CommunicationMetric): string {
     case 'BRL': return formatMoney(metric.value);
     case 'FRACTION': return formatFraction(metric.value);
     case 'BPS': return formatBps(metric.value);
-    case 'DAYS': return `${metric.value.replace('.', ',')} ${metric.value === '1' ? 'dia' : 'dias'}`;
+    case 'DAYS': {
+      const days = formatDecimal(metric.value, 1).replace(/,0$/, '');
+      return `${days} ${days === '1' ? 'dia' : 'dias'}`;
+    }
     case 'COUNT': return metric.value;
-    case 'TEXT': return metric.value;
+    case 'TEXT': return /^-?\d+\.\d{5,}$/.test(metric.value) ? formatDecimal(metric.value, 4) : metric.value;
   }
 }

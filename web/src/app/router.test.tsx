@@ -164,11 +164,11 @@ function diagnosticSnapshot(request: DiagnosticRequest, status: JobSnapshot['sta
 describe('application routes', () => {
   it('abre deep link completo da apresentação e mantém a seleção no retorno', async () => {
     const input = await observedInput();
-    renderAppAt(`/estudos/${input.study.id}/apresentacao?cenario=${input.scenarioId}&execucao=${input.diagnosticExecutionId}#premissas`,
+    renderAppAt(`/estudos/${input.study.id}/apresentacao?cenario=${input.scenarioId}&execucao=${input.diagnosticExecutionId}#composicao`,
       client(session(input.study.ownerSub)), new RepositoryDouble([], [], [], [input.study]));
     expect(await screen.findByRole('heading', { level: 1, name: input.study.name }, { timeout: 5_000 })).toBeVisible();
     expect(screen.getAllByRole('main')).toHaveLength(1);
-    expect(screen.getByRole('region', { name: 'Premissas e proveniência' })).toHaveAttribute('id', 'premissas');
+    expect(screen.getByRole('region', { name: 'Composição e mecanismo' })).toHaveAttribute('id', 'composicao');
     expect(screen.getByRole('link', { name: 'Voltar ao diagnóstico' })).toHaveAttribute('href',
       `/estudos/${input.study.id}/diagnostico?scenarioId=${input.scenarioId}&executionId=${input.diagnosticExecutionId}`);
     expect(screen.getByRole('button', { name: 'Perguntar' })).toBeVisible();
@@ -191,10 +191,7 @@ describe('application routes', () => {
     renderAppAt(`/estudos/${input.study.id}/apresentacao?cenario=${hypothesis.scenarioId}&execucao=${hypothesis.id}&comparacao=${input.diagnosticExecutionId}`,
       client(session(input.study.ownerSub)), new RepositoryDouble([], [], [], [input.study]));
     expect(await screen.findByRole('heading', { level: 1, name: input.study.name }, { timeout: 5_000 })).toBeVisible();
-    expect(screen.getByRole('region', { name: 'Consequência econômica e comparação' }))
-      .not.toHaveTextContent('Nenhuma comparação selecionada');
-    expect(screen.getByRole('region', { name: 'Consequência econômica e comparação' }))
-      .toHaveTextContent('base');
+    expect(screen.getByRole('region', { name: 'Resumo executivo' })).toHaveTextContent('Economia simulada');
   }, 15_000);
 
   it('recusa comparação inválida na URL sem publicar resultado simples', async () => {

@@ -1,20 +1,16 @@
 import type { CommunicationDocumentV1 } from '../communication/domain';
-import { AssumptionsSection } from './components/AssumptionsSection';
-import { ComparisonSection } from './components/ComparisonSection';
 import { CompositionSection } from './components/CompositionSection';
 import { ExecutiveSummary } from './components/ExecutiveSummary';
-import { LimitationsSection } from './components/LimitationsSection';
 import { PresentationHeader } from './components/PresentationHeader';
-import { ReplayHighlightsSection } from './components/ReplayHighlightsSection';
 import { matchesPresentationSelection, type PresentationSelection } from './domain';
 import { PrintActions } from './PrintActions';
-import { PrintMetadata } from './PrintMetadata';
 
 export type PresentationPageState =
   | Readonly<{ kind: 'loading' }>
   | Readonly<{ kind: 'missing'; onRegenerate: () => void }>
   | Readonly<{ kind: 'error'; message: string; onRetry: () => void }>
-  | Readonly<{ kind: 'ready'; document: CommunicationDocumentV1; selection: PresentationSelection; scenarioName?: string }>;
+  | Readonly<{ kind: 'ready'; document: CommunicationDocumentV1; selection: PresentationSelection; scenarioName?: string;
+      participantNames?: Readonly<Record<string, string>> }>;
 
 export function PresentationPage({ state }: Readonly<{ state: PresentationPageState }>) {
   if (state.kind === 'loading') return <article className="presentation-page" aria-busy="true">
@@ -33,15 +29,9 @@ export function PresentationPage({ state }: Readonly<{ state: PresentationPageSt
   </article>;
   const { document } = state;
   return <article className="presentation-page">
-    <PresentationHeader document={document} />
+    <PresentationHeader document={document} scenarioName={state.scenarioName} />
     <PrintActions />
     <ExecutiveSummary document={document} />
-    <CompositionSection document={document} />
-    <ComparisonSection document={document} />
-    <ReplayHighlightsSection document={document} />
-    <AssumptionsSection document={document} />
-    <LimitationsSection document={document} />
-    <PrintMetadata document={document} scenarioName={state.scenarioName ?? document.selection.scenarioId}
-      buildSha={import.meta.env.VITE_MOTOR_BUILD_SHA ?? ''} />
+    <CompositionSection document={document} participantNames={state.participantNames ?? {}} />
   </article>;
 }

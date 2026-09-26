@@ -83,23 +83,31 @@ a { color: inherit; }
 .presentation-header { background: var(--nav); border-radius: var(--radius); color: var(--on-nav); padding: clamp(24px, 4vw, 44px); }
 .presentation-header .eyebrow { color: #c9d7d1; }
 .presentation-header > p { line-height: 1.45; }
-.presentation-header dl { display: grid; gap: var(--space-3); grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); margin: var(--space-6) 0; }
-.presentation-header dt { color: #c9d7d1; font-size: .82rem; }
-.presentation-header dd { font-size: .93rem; margin: var(--space-1) 0 0; overflow-wrap: anywhere; }
-.presentation-header nav ul { display: flex; flex-wrap: wrap; gap: var(--space-2); list-style: none; margin: 0; padding: 0; }
-.presentation-header nav a { border: 1px solid #889c93; border-radius: var(--radius); color: var(--on-nav); display: inline-flex; padding: var(--space-2) var(--space-3); text-decoration: none; }
-.presentation-header nav a:hover { background: #3c4843; }
+.presentation-header__meta { font-size: 1.05rem; font-weight: 650; margin: 0; }
+.presentation-header__note { color: #c9d7d1; font-size: .9rem; margin: var(--space-2) 0 0; }
 .presentation-metrics, .presentation-facts { display: grid; gap: var(--space-3); grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); margin: 0; }
 .presentation-metrics > div, .presentation-facts > div { background: var(--canvas); border-left: 3px solid var(--accent); min-width: 0; padding: var(--space-3); }
 .presentation-metrics dt, .presentation-facts dt { color: var(--muted); font-size: .85rem; font-weight: 650; }
 .presentation-metrics dd, .presentation-facts dd { font-variant-numeric: tabular-nums; line-height: 1.4; margin: var(--space-2) 0 0; overflow-wrap: anywhere; }
 .presentation-metrics dd { font-size: 1.18rem; font-weight: 700; }
-.presentation-evidence { color: var(--muted); display: block; font-size: .72rem; font-weight: 400; line-height: 1.4; margin-top: var(--space-2); overflow-wrap: anywhere; }
-.presentation-fact-explanation, .presentation-fact-raw { color: var(--muted); display: block; font-size: .72rem; font-weight: 400; line-height: 1.4; margin-top: var(--space-1); overflow-wrap: anywhere; }
-.presentation-page code { overflow-wrap: anywhere; }
-.presentation-page section > ul { line-height: 1.5; padding-left: var(--space-5); }
-.presentation-page section > ul li { margin: var(--space-2) 0; }
-@media (max-width: 760px) { .presentation-page > section { padding: var(--space-4); } .presentation-header { padding: var(--space-5); } }
+.presentation-lead { color: var(--muted); margin: 0 0 var(--space-4); }
+.presentation-table { border-collapse: collapse; margin-top: var(--space-5); width: 100%; }
+.presentation-table th, .presentation-table td { border-bottom: 1px solid var(--border); padding: var(--space-2) var(--space-3); text-align: left; }
+.presentation-table thead th { color: var(--muted); font-size: .8rem; font-weight: 650; }
+.presentation-table td { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.presentation-table thead th:not(:first-child) { text-align: right; }
+.presentation-table tbody th { font-weight: 650; }
+.presentation-mechanism { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fit, minmax(min(100%, 270px), 1fr)); }
+.presentation-mechanism__group { background: var(--canvas); border-radius: var(--radius); padding: var(--space-3) var(--space-4); }
+.presentation-mechanism__group h4 { font-size: .95rem; margin: 0 0 var(--space-2); }
+.presentation-mechanism__group dl { margin: 0; }
+.presentation-mechanism__group dl > div { border-bottom: 1px solid var(--border); display: flex; gap: var(--space-3); justify-content: space-between; padding: var(--space-1) 0; }
+.presentation-mechanism__group dl > div:last-child { border-bottom: 0; }
+.presentation-mechanism__group dt { color: var(--muted); font-size: .88rem; }
+.presentation-mechanism__group dd { font-variant-numeric: tabular-nums; font-weight: 650; margin: 0; text-align: right; white-space: nowrap; }
+.presentation-consequences { line-height: 1.5; padding-left: var(--space-5); }
+@media (max-width: 760px) { .presentation-page > section { padding: var(--space-4); } .presentation-header { padding: var(--space-5); }
+  .presentation-table { font-size: .85rem; } .presentation-table th, .presentation-table td { padding: var(--space-2) var(--space-1); } }
 .study-list { display: grid; gap: var(--space-3); list-style: none; margin: var(--space-6) 0; padding: 0; }
 .list-toolbar { display: flex; justify-content: flex-end; margin-top: var(--space-4); }
 .study-list__item { align-items: center; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); display: flex; flex-wrap: wrap; gap: var(--space-3); padding: var(--space-3); }

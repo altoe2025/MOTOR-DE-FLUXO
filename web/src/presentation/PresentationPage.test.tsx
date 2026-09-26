@@ -5,12 +5,11 @@ import { beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { buildCommunicationDocument } from '../communication/buildCommunicationDocument';
 import type { CommunicationDocumentV1 } from '../communication/domain';
-import { comparisonInput, observedInput } from '../communication/testFixtures';
+import { observedInput } from '../communication/testFixtures';
 import { PresentationPage } from './PresentationPage';
 import { matchesPresentationSelection, type PresentationSelection } from './domain';
 
 let document: CommunicationDocumentV1;
-let compared: CommunicationDocumentV1;
 
 function selection(value: CommunicationDocumentV1): PresentationSelection {
   return {
@@ -22,59 +21,48 @@ function selection(value: CommunicationDocumentV1): PresentationSelection {
   };
 }
 
+const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+
 beforeAll(async () => {
   document = await buildCommunicationDocument(await observedInput());
-  compared = await buildCommunicationDocument(await comparisonInput());
 });
 
-describe('núcleo não roteado do Painel A', () => {
-  it('monta as seis seções contínuas e preserva a origem observada', () => {
-    render(<PresentationPage state={{ kind: 'ready', document, selection: selection(document) }} />);
+describe('Painel A enxuto', () => {
+  it('mostra só o resumo executivo e a composição e mecanismo', () => {
+    render(<PresentationPage state={{ kind: 'ready', document, selection: selection(document), scenarioName: 'Cenário base' }} />);
     expect(screen.getByRole('heading', { level: 1, name: document.study.name })).toBeInTheDocument();
-    for (const name of ['Resumo executivo', 'Composição e mecanismo', 'Consequência econômica e comparação',
-      'Destaques do Replay', 'Premissas e proveniência', 'Limitações e versões']) {
-      expect(screen.getByRole('heading', { level: 2, name })).toBeInTheDocument();
-    }
-    expect(screen.getByText(document.source.label)).toBeInTheDocument();
-    expect(screen.getByText('Caso observado')).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Composição e mecanismo' }))
-      .toHaveTextContent('Caso observado');
-    expect(screen.getByRole('navigation', { name: 'Seções da apresentação' })).toHaveAttribute('aria-label', 'Seções da apresentação');
-    expect(screen.getByRole('link', { name: 'Premissas' })).toHaveAttribute('href', '#premissas');
-    expect(screen.getByText(/Nenhum quadro do Replay/)).toBeInTheDocument();
+    expect(screen.getAllByRole('heading', { level: 2 }).map((item) => item.textContent))
+      .toEqual(['Resumo executivo', 'Composição e mecanismo']);
+    expect(screen.getByText(/Caso observado · Cenário base/)).toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: 'Seções da apresentação' })).not.toBeInTheDocument();
   });
 
-  it('usa formatter canônico para decimal grande e negativo, explicita indisponibilidade e aponta à evidência original', () => {
+  it('não exibe IDs, códigos de fonte nem identificadores técnicos', () => {
+    const { container } = render(<PresentationPage state={{ kind: 'ready', document, selection: selection(document) }} />);
+    expect(container.textContent).not.toMatch(UUID);
+    expect(container.textContent).not.toMatch(/Fonte:|DIAGNOSTIC|STUDY ·|Valor publicado|processamento \(ms\)/);
+    expect(container.querySelector('code')).toBeNull();
+  });
+
+  it('usa nomes legíveis dos participantes', () => {
+    const [first] = document.composition.metrics.filter((item) => /^participant\.\d+\.volume$/.test(item.code));
+    const id = first!.label.replace(/^Volume /, '');
+    render(<PresentationPage state={{ kind: 'ready', document, selection: selection(document),
+      participantNames: { [id]: 'AstroPay' } }} />);
+    const table = within(screen.getByRole('region', { name: 'Composição e mecanismo' })).getByRole('table');
+    expect(within(table).getByRole('rowheader', { name: 'AstroPay' })).toBeInTheDocument();
+    expect(within(table).getAllByRole('columnheader').map((item) => item.textContent))
+      .toEqual(['Participante', 'Volume', 'Participação']);
+  });
+
+  it('usa formatter canônico e mantém a evidência nos atributos', () => {
     const original = document.executiveMetrics.find((item) => item.code === 'SAVINGS_BRL')!;
     const modified = { ...document, executiveMetrics: document.executiveMetrics.map((item) => item.code === 'SAVINGS_BRL'
       ? { ...item, value: '-12345678901234567890.125' } : item) };
     render(<PresentationPage state={{ kind: 'ready', document: modified, selection: selection(modified) }} />);
     const row = screen.getByText('Economia simulada').closest('[data-evidence-refs]');
-    expect(row?.querySelector('dd')?.firstChild?.textContent).toBe('R$ -12.345.678.901.234.567.890,13');
+    expect(row?.querySelector('dd')?.textContent).toBe('R$ -12.345.678.901.234.567.890,13');
     expect(row).toHaveAttribute('data-evidence-refs', original.evidenceRefs.join(' '));
-    expect(row).toHaveAttribute('data-source-ids', document.evidenceIndex[original.evidenceRefs[0]!]!.sourceId);
-    const robustness = screen.getByRole('region', { name: 'Consequência econômica e comparação' });
-    expect(within(robustness).getAllByText(/Não disponível/).length).toBeGreaterThan(0);
-    expect(within(robustness).getByText(/Distribuição indisponível/)).toBeInTheDocument();
-  });
-
-  it('renderiza comparação selecionada e seus deltas sem criar conclusão nova', () => {
-    render(<PresentationPage state={{ kind: 'ready', document: compared, selection: selection(compared) }} />);
-    const comparison = screen.getByRole('region', { name: 'Consequência econômica e comparação' });
-    expect(within(comparison).getByRole('heading', { level: 3, name: 'Comparação selecionada' })).toBeInTheDocument();
-    expect(within(comparison).getAllByTestId('presentation-metric').length).toBeGreaterThan(0);
-    expect(screen.getByText(compared.source.label)).toBeInTheDocument();
-  });
-
-  it('mostra apenas o quadro de Replay incluído no documento', () => {
-    const replay = { ...document, selection: { ...document.selection, replayDay: 3 }, replaySnapshot: {
-      day: 3, metrics: [{ ...document.executiveMetrics[0]!, label: 'Valor do quadro' }], facts: [],
-    } };
-    render(<PresentationPage state={{ kind: 'ready', document: replay, selection: selection(replay) }} />);
-    const section = screen.getByRole('region', { name: 'Destaques do Replay' });
-    expect(within(section).getByRole('heading', { level: 3, name: 'Dia 3' })).toBeInTheDocument();
-    expect(within(section).getByText('Valor do quadro')).toBeInTheDocument();
-    expect(within(section).queryByText(/Nenhum quadro/)).not.toBeInTheDocument();
   });
 
   it('mantém os cinco números principais quando o documento reordena métricas executivas', () => {
@@ -86,8 +74,6 @@ describe('núcleo não roteado do Painel A', () => {
       expect(within(summary).getByText(label)).toBeInTheDocument();
     }
     expect(within(summary).queryByText('Volume remetido')).not.toBeInTheDocument();
-    expect(within(screen.getByRole('region', { name: 'Consequência econômica e comparação' }))
-      .getByText('Volume remetido')).toBeInTheDocument();
   });
 
   it('recusa seleção divergente sem reaproveitar números de outro documento', () => {
@@ -105,68 +91,7 @@ describe('núcleo não roteado do Painel A', () => {
     render(<PresentationPage state={{ kind: 'ready', document: missing, selection: selection(missing) }} />);
     const row = screen.getByText('Economia simulada').closest('[data-evidence-refs]');
     expect(row).toHaveTextContent('Não disponível');
-    expect(row).toHaveTextContent('Referência de evidência ausente');
     expect(row).not.toHaveTextContent('R$');
-  });
-
-  it('mantém indisponibilidade e fonte no dd da métrica correspondente', () => {
-    const original = document.executiveMetrics.find((item) => item.code === 'SAVINGS_BRL')!;
-    const unavailable = {
-      ...document,
-      executiveMetrics: document.executiveMetrics.map((item) => item.code === original.code
-        ? { ...item, availability: 'UNAVAILABLE' as const, value: null }
-        : item),
-    };
-    render(<PresentationPage state={{ kind: 'ready', document: unavailable, selection: selection(unavailable) }} />);
-    const term = screen.getAllByText(original.label).find((element) => element.tagName === 'DT');
-    if (term === undefined) throw new Error(`Termo da métrica não encontrado: ${original.label}`);
-    const definition = term.nextElementSibling;
-    expect(definition?.tagName).toBe('DD');
-    expect(definition).toHaveTextContent('Não disponível');
-    expect(definition).toHaveTextContent(original.meaning);
-    expect(definition?.querySelector('.presentation-evidence')).toHaveTextContent('Fonte:');
-    expect(definition?.parentElement?.querySelectorAll('dd')).toHaveLength(1);
-  });
-
-  it('explicita limitação sem evidência sem publicar a afirmação sem fonte', () => {
-    const unsourced = { ...document, limitations: [...document.limitations, {
-      code: 'MISSING_TEST', severity: 'WARNING' as const, statement: 'Limitação sentinela',
-      evidenceRefs: ['DIAGNOSTIC:/ausente'],
-    }] };
-    render(<PresentationPage state={{ kind: 'ready', document: unsourced, selection: selection(unsourced) }} />);
-    const item = screen.getByRole('region', { name: 'Limitações e versões' })
-      .querySelector('[data-evidence-refs="DIAGNOSTIC:/ausente"]');
-    expect(item).toHaveTextContent('Referência de evidência ausente');
-    expect(item).not.toHaveTextContent('Limitação sentinela');
-  });
-
-  it('explica premissas e proveniência sem perder valor canônico ou IDs de fonte', () => {
-    const source = document.assumptions[0]!;
-    const costs = [
-      { ...source, code: 'COST.iof_out', label: 'iof_out', value: '0.035' },
-      { ...source, code: 'COST.carry_cnr', label: 'carry_cnr', value: '0.0004' },
-      { ...source, code: 'COST.spread_rail_bps', label: 'spread_rail_bps', value: '25' },
-    ];
-    const provenance = { ...source, code: 'SOURCE_PROVENANCE_0', label: 'SOURCE_PROVENANCE_0',
-      value: '{"kind":"SYNTHETIC","source":"receita-perfil","version":"1","recordedAt":"2026-09-23T12:00:00Z"}' };
-    const rendered = { ...document, assumptions: costs, provenance: [provenance], limitations: [{
-      code: 'COSTS_NOT_OBSERVED', severity: 'WARNING' as const,
-      statement: 'COST_PROVENANCE_IS_NOT_OBSERVED', evidenceRefs: source.evidenceRefs,
-    }] };
-    render(<PresentationPage state={{ kind: 'ready', document: rendered, selection: selection(rendered) }} />);
-    const assumptions = screen.getByRole('region', { name: 'Premissas e proveniência' });
-    expect(assumptions).toHaveTextContent('IOF de saída');
-    expect(assumptions).toHaveTextContent('3,50%');
-    expect(assumptions).toHaveTextContent('0.035');
-    expect(assumptions).toHaveTextContent('0,04%');
-    expect(assumptions).toHaveTextContent('25,00 bps');
-    expect(assumptions).toHaveTextContent('receita-perfil');
-    expect(assumptions).toHaveTextContent('Valor publicado');
-    const row = within(assumptions).getByText('IOF de saída').closest('[data-evidence-refs]');
-    expect(row).toHaveAttribute('data-evidence-refs', source.evidenceRefs.join(' '));
-    expect(row).toHaveAttribute('data-source-ids', document.evidenceIndex[source.evidenceRefs[0]!]!.sourceId);
-    expect(screen.getByRole('region', { name: 'Limitações e versões' }))
-      .toHaveTextContent('As premissas de custo não foram observadas na fonte');
   });
 
   it('mantém loading estável, oferece regeneração se ausente e limpa números em erro', () => {

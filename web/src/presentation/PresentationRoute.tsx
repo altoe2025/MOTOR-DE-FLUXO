@@ -9,21 +9,19 @@ import type { CommunicationDocumentV1 } from '../communication/domain';
 import { HELP_IDS } from '../help/helpIds';
 import { resolveReplayRequest } from '../replay/ReplayPage';
 import { PresentationPage } from './PresentationPage';
+import { presentationParticipantNames } from './participants';
 import { resolvePresentationSelection } from './selection';
 import type { PresentationSectionId } from './domain';
 
 type LoadState = Readonly<{ identity: string; kind: 'loading' }>
   | Readonly<{ identity: string; kind: 'invalid'; message: string }>
   | Readonly<{ identity: string; kind: 'error'; message: string }>
-  | Readonly<{ identity: string; kind: 'ready'; document: CommunicationDocumentV1; scenarioName: string }>;
+  | Readonly<{ identity: string; kind: 'ready'; document: CommunicationDocumentV1; scenarioName: string;
+      participantNames: Readonly<Record<string, string>> }>;
 
 const sectionHelp: Readonly<Record<PresentationSectionId, string>> = {
   resumo: HELP_IDS.PRESENTATION_PAGE,
   composicao: HELP_IDS.COMPOSITION,
-  comparacao: HELP_IDS.COMPARISON_PAGE,
-  replay: HELP_IDS.REPLAY,
-  premissas: HELP_IDS.PRESENTATION_PAGE,
-  limitacoes: HELP_IDS.PRESENTATION_PAGE,
 };
 
 export function PresentationRoute() {
@@ -77,8 +75,9 @@ export function PresentationRoute() {
         input = { ...input, replay };
       }
       const document = await buildCommunicationDocument(input);
+      const names = await presentationParticipantNames(study!, executionId!, controller).catch(() => ({}));
       if (!active) return;
-      setState({ identity, kind: 'ready', document,
+      setState({ identity, kind: 'ready', document, participantNames: names,
         scenarioName: study!.scenarios.find((item) => item.id === scenarioId)!.name });
       publishCommunication?.(input, document);
     }).catch(() => {
@@ -105,7 +104,8 @@ export function PresentationRoute() {
     <Link to={`/estudos/${studyId}/diagnostico?scenarioId=${encodeURIComponent(scenarioId!)}&executionId=${encodeURIComponent(executionId!)}`}>
       Voltar ao diagnóstico
     </Link>
-  </nav><PresentationPage state={{ kind: 'ready', document: state.document, scenarioName: state.scenarioName, selection: {
+  </nav><PresentationPage state={{ kind: 'ready', document: state.document, scenarioName: state.scenarioName,
+    participantNames: state.participantNames, selection: {
     studyId: studyId!, scenarioId: scenarioId!, diagnosticExecutionId: executionId!,
     comparisonExecutionId, replayDay,
   } }} /></>;

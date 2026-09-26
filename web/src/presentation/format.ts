@@ -34,6 +34,10 @@ export function formatBps(value: DecimalText | null): string {
   return value === null ? unavailable : `${localized(fixed(value, 2))} bps`;
 }
 
+export function formatDecimal(value: DecimalText, digits: number): string {
+  return localized(fixed(value, digits));
+}
+
 export function formatDays(value: number): string {
   if (!Number.isSafeInteger(value)) throw new Error('dias deve ser inteiro seguro');
   return `${value} ${value === 1 ? 'dia' : 'dias'}`;
