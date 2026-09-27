@@ -82,6 +82,14 @@ function validatePublishedReferences(envelope: DiagnosticEnvelope): void {
   requireCondition(new Set(provenanceRefs).size === provenanceRefs.length, 'Referência de proveniência duplicada.');
   for (const path of provenanceRefs) requireCondition(Object.hasOwn(envelope.provenance.request_paths, path), `Proveniência ausente: ${path}`);
 }
+// Ordens explícitas carregam todas as ordens na origem; citar a origem inteira estoura o
+// limite de texto do documento. Cita só a linhagem: os casos juntados ou o caso de partida.
+function compactSourcePath(source: DiagnosticExecutionRecord['sourceSnapshot']['source']): string {
+  if (source.kind !== 'AUTHORED' || source.definition?.kind !== 'EXPLICIT_ORDERS') return '';
+  if ((source.definition.sourceCases?.length ?? 0) > 0) return '/definition/sourceCases';
+  if (source.definition.derivedFromObservedCase !== undefined) return '/definition/derivedFromObservedCase';
+  return '/authoredPortfolioId';
+}
 function sourceFamily(execution: DiagnosticExecutionRecord): CommunicationDocumentV1['source'] {
   const snapshot = execution.sourceSnapshot;
   if (snapshot.source.kind === 'OBSERVED_CASE') return {
@@ -246,7 +254,7 @@ export async function buildCommunicationDocument(input: CommunicationInput): Pro
       metric('DIAGNOSTIC', `/axes/composition_dependency/participants/${index}/volume_brl`, `participant.${index}.volume`, `Volume ${participant.participant_id}`, 'BRL'),
       metric('DIAGNOSTIC', `/axes/composition_dependency/participants/${index}/share`, `participant.${index}.share`, `Participação ${participant.participant_id}`, 'FRACTION'),
     ]),
-  ], facts: [fact('STUDY', `${executionPath}/sourceSnapshot/source`, 'SOURCE', 'Origem da carteira')] };
+  ], facts: [fact('STUDY', `${executionPath}/sourceSnapshot/source${compactSourcePath(execution.sourceSnapshot.source)}`, 'SOURCE', 'Origem da carteira')] };
   const axisRows = {
     structural_potential: [['gross_out_brl', 'Bruto OUT', 'BRL'], ['gross_in_brl', 'Bruto IN', 'BRL'], ['imbalance_brl', 'Desequilíbrio', 'BRL'], ['ceiling_brl', 'Teto agregado', 'BRL']],
     policy_capture: [['matched_brl', 'Volume casado', 'BRL'], ['intra_client_brl', 'Intracliente', 'BRL'], ['inter_client_brl', 'Entre clientes', 'BRL'], ['uncaptured_potential_brl', 'Potencial não capturado', 'BRL'], ['captured_fraction', 'Fração capturada', 'FRACTION']],
