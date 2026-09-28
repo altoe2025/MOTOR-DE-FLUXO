@@ -18,6 +18,7 @@ import {
 } from '../diagnostics/diagnosticExecutionService';
 import { buildPreviewRequest, type PreviewRequestProvenance } from '../preparation/buildPreviewRequest';
 import type { DiagnosticExecutionRecord, ScenarioDocument, StudyDocument } from '../study/model';
+import { Button } from '../ui/Button';
 
 function requestProvenance(study: StudyDocument, scenario: ScenarioDocument): PreviewRequestProvenance {
   const fallback: FieldProvenance = {
@@ -105,6 +106,7 @@ export function StudyDiagnosticPage() {
   const [runInProgress, setRunInProgress] = useState(false);
   const [cancelInFlight, setCancelInFlight] = useState(false);
   const [runAllProgress, setRunAllProgress] = useState<string | null>(null);
+  const [comparisonOpen, setComparisonOpen] = useState(false);
   const cancelInFlightRef = useRef(false);
   const identityToken = useRef(0);
   const activeIdentity = useRef(screenIdentity);
@@ -314,7 +316,13 @@ export function StudyDiagnosticPage() {
       : `Cenário: ${scenario?.name ?? '…'}. Custo sem pool é cada ordem remetendo sozinha; custo com pool é o que sobra depois do netting.`}</p>
     {study === null || scenario === null ? <DiagnosticStatus state={viewState ?? { kind: 'UNAVAILABLE', reason: 'Carregando estudo…' }} /> : <>
       <DiagnosticControls generated={generated} count={effectiveCount} onCountChange={setCount} onRun={() => void run()} disabled={runInProgress || controller.snapshot.status === 'STORAGE_FAILURE'} />
-      <VariationComparison study={study} selectedScenarioId={scenario.id} running={runInProgress} progress={runAllProgress} onRunAll={() => void runAll()} />
+      {study.scenarios.length < 2 ? null : <Button variant="secondary" className="comparison-toggle"
+        aria-expanded={comparisonOpen} aria-controls="variation-comparison-panel" onClick={() => setComparisonOpen((open) => !open)}>
+        {comparisonOpen ? 'Ocultar quadros comparativos' : 'Abrir quadros comparativos'}
+      </Button>}
+      {comparisonOpen ? <div id="variation-comparison-panel">
+        <VariationComparison study={study} selectedScenarioId={scenario.id} running={runInProgress} progress={runAllProgress} onRunAll={() => void runAll()} />
+      </div> : null}
       {viewState === null || viewState.kind === 'SUCCEEDED' ? null : <DiagnosticStatus state={viewState} {...(cancelInFlight ? {} : { onCancel: () => void cancel() })} onRetry={(attemptId) => void retry(attemptId)} />}
       {envelope === null ? null : <>
         <Link className="button-link replay-cta" to={`/estudos/${study.id}/replay?executionId=${encodeURIComponent(terminal!.id)}`}>Abrir Replay · Fronteira Viva</Link>

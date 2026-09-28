@@ -35,6 +35,7 @@ a { color: inherit; }
 .button:hover:not(:disabled) { background: #174b45; }
 .button:disabled { cursor: not-allowed; opacity: 0.65; }
 .button--secondary { background: transparent; color: var(--ink); }
+.button--secondary:hover:not(:disabled) { color: white; }
 .field { display: grid; gap: var(--space-1); margin-bottom: var(--space-4); }
 .field label { font-weight: 650; }
 .field input { background: white; border: 1px solid var(--border); border-radius: var(--radius); color: var(--ink); padding: var(--space-2) var(--space-3); }
@@ -238,6 +239,7 @@ a { color: inherit; }
 .diagnostic-controls label { display: grid; font-weight: 650; gap: var(--space-1); }
 .diagnostic-controls select { background: white; border: 1px solid var(--border); border-radius: var(--radius); padding: var(--space-2); }
 .diagnostic-controls p { color: var(--muted); flex: 1 1 420px; line-height: 1.5; margin: 0; }
+.comparison-toggle { margin-top: var(--space-4); }
 .diagnostic-status { border-left: 4px solid var(--accent); }
 .diagnostic-status--error { border-left-color: var(--error); }
 .diagnostic-status progress { accent-color: var(--accent); display: block; margin: var(--space-3) 0; max-width: 100%; width: 420px; }
