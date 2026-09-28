@@ -1,5 +1,32 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react';
 
+import { IMPORT_COLUMNS, IMPORT_LIMIT_ROWS, IMPORT_MAX_FILE_MIB, IMPORT_SHEET_NAME } from '../layout';
+import { buildImportTemplate, IMPORT_TEMPLATE_FILENAME } from '../xlsxTemplate';
+
+const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
+function downloadTemplate() {
+  const bytes = buildImportTemplate();
+  const url = URL.createObjectURL(new Blob([bytes as Uint8Array<ArrayBuffer>], { type: XLSX_MIME }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = IMPORT_TEMPLATE_FILENAME;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+function TemplateInstructions() {
+  return <section className="import-instructions" aria-labelledby="import-instructions-title">
+    <h3 id="import-instructions-title">Como montar a planilha</h3>
+    <p className="field-hint">
+      Arquivo .xlsx de até {IMPORT_MAX_FILE_MIB} MiB, com uma única aba '{IMPORT_SHEET_NAME}', cabeçalhos na linha 1 exatamente nesta ordem e
+      até {IMPORT_LIMIT_ROWS.toLocaleString('pt-BR')} operações (uma por linha). Sem fórmulas, células mescladas ou macros.
+    </p>
+    <ol className="import-columns">{IMPORT_COLUMNS.map((column) => <li key={column.name}><code>{column.name}</code>{column.required ? '' : ' (opcional)'} — {column.format}</li>)}</ol>
+    <button className="button" type="button" onClick={downloadTemplate}>Baixar modelo (.xlsx)</button>
+  </section>;
+}
+
 export function UploadStep({ file, selectedCompanyId, companies, lockedCompanyName, positionIdentified, busy, onFile, onCompany, onCreateCompany, onPosition, onRead, onCancel }: {
   file: File | null;
   selectedCompanyId: string;
@@ -39,6 +66,7 @@ export function UploadStep({ file, selectedCompanyId, companies, lockedCompanyNa
         <button className="button" type="submit" disabled={busy}>Usar nova empresa neste Caso</button>
       </form>
     </> : <p>Empresa: <output aria-label="Empresa">{lockedCompanyName}</output></p>}
+    <TemplateInstructions />
     <label htmlFor="import-file">Planilha canônica XLSX</label>
     <input id="import-file" type="file" accept=".xlsx" onChange={handleFile} disabled={busy} />
     {file === null ? null : <p role="status">Arquivo selecionado: {file.name}</p>}

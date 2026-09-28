@@ -53,3 +53,12 @@ describe('normalizeOperation', () => {
     expect(() => normalizeOperation(tooLongRow)).toThrow('VALUE_OUT_OF_RANGE');
   });
 });
+
+describe('mensagens de linha dizem como corrigir', () => {
+  it('data, valor e direção trazem o formato esperado', () => {
+    expect(() => normalizeOperation({ ...validRow, data_conhecida: '2026/10/01' })).toThrow(/AAAA-MM-DD ou DD\/MM\/AAAA/);
+    expect(() => normalizeOperation({ ...validRow, valor_brl: 'R$ 10' })).toThrow(/Ex\.: 150000,00/);
+    expect(() => normalizeOperation({ ...validRow, direcao: 'SAIDA' })).toThrow(/OUT.*IN/);
+    expect(() => normalizeOperation({ ...validRow, cliente_nome: null })).toThrow(/Preencha a coluna cliente_nome/);
+  });
+});

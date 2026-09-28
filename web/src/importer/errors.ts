@@ -9,3 +9,8 @@ export class ImportValidationError extends Error {
     this.code = code;
   }
 }
+
+/** Texto de erro para a pessoa, sem o código técnico que abre a mensagem. */
+export function humanMessage(message: string): string {
+  return message.replace(/^[A-Z][A-Z_]+: /, '');
+}

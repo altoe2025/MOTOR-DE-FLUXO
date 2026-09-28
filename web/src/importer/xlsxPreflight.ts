@@ -2,20 +2,31 @@ import { strFromU8, Unzip, UnzipInflate } from 'fflate';
 import { Parser } from 'saxen';
 
 import type { ImportErrorCode } from './domain';
+import { columnLetter, IMPORT_HEADERS, IMPORT_LIMIT_ROWS, IMPORT_MAX_FILE_MIB, IMPORT_SHEET_NAME, REQUIRED_IMPORT_HEADERS } from './layout';
 
-const MAX_FILE_BYTES = 5 * 1024 * 1024;
+const MAX_FILE_BYTES = IMPORT_MAX_FILE_MIB * 1024 * 1024;
 const MAX_ENTRIES = 128;
 const MAX_UNCOMPRESSED_BYTES = 25 * 1024 * 1024;
 const OLE_SIGNATURE = new Uint8Array([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]);
-const REQUIRED_HEADERS = ['operacao_id', 'cliente_nome', 'classificacao_perfil', 'direcao', 'data_conhecida', 'data_limite', 'valor_brl'] as const;
-const OPTIONAL_HEADERS = ['finalidade_codigo'] as const;
-const MAX_WORKSHEET_ROW = 1001;
+const MAX_WORKSHEET_ROW = IMPORT_LIMIT_ROWS + 1;
+const USE_TEMPLATE = 'Baixe o modelo.';
 
 export type SerializedImportFileError = Readonly<{ code: ImportErrorCode; message: string }>;
 
 export class ImportFileError extends Error {
   readonly code: ImportErrorCode;
-  constructor(code: ImportErrorCode, message: string = code) { super(`${code}: ${message}`); this.name = 'ImportFileError'; this.code = code; }
+  /** Texto para a pessoa: o que está errado e como corrigir, sem o código. */
+  readonly detail: string;
+  constructor(code: ImportErrorCode, detail: string = code) { super(`${code}: ${detail}`); this.name = 'ImportFileError'; this.code = code; this.detail = detail; }
+}
+
+const MACRO_MESSAGE = 'A planilha tem macros ou objetos incorporados. Salve como .xlsx comum (sem macros) ou cole os dados no modelo.';
+const EXTERNAL_LINK_MESSAGE = 'A planilha tem links para outros arquivos. Quebre os links (Dados → Editar links) ou cole só os valores no modelo.';
+export const ROW_LIMIT_MESSAGE = `A planilha passa do limite de até ${IMPORT_LIMIT_ROWS.toLocaleString('pt-BR')} operações por arquivo. Divida em arquivos de até ${IMPORT_LIMIT_ROWS.toLocaleString('pt-BR')} linhas (sem contar o cabeçalho) e apague linhas vazias no fim.`;
+export const FILE_TOO_LARGE_MESSAGE = `O arquivo passa de ${IMPORT_MAX_FILE_MIB} MiB. Apague abas, imagens e formatação extras, ou cole só os dados no modelo.`;
+
+export function invalidXlsx(what: string): string {
+  return `O arquivo não é um .xlsx válido (${what}). Abra no Excel e salve de novo como Pasta de Trabalho do Excel (.xlsx), ou use o modelo.`;
 }
 
 function fail(code: ImportErrorCode, message: string): never { throw new ImportFileError(code, message); }
@@ -31,18 +42,18 @@ async function extractArchive(buffer: ArrayBuffer): Promise<Map<string, Uint8Arr
     const unzip = new Unzip((file) => {
       if (settled) { file.terminate(); return; }
       if (file.name.startsWith('/') || file.name.includes('\\') || file.name.split('/').includes('..') || file.name.includes('\0') || names.has(file.name)) {
-        file.terminate(); rejectOnce(new ImportFileError('INVALID_XLSX', 'nome de entrada ZIP inválido ou repetido')); return;
+        file.terminate(); rejectOnce(new ImportFileError('INVALID_XLSX', invalidXlsx('nome de entrada ZIP inválido ou repetido'))); return;
       }
       names.add(file.name);
-      if (/vbaProject\.bin|^xl\/embeddings\//i.test(file.name)) { file.terminate(); rejectOnce(new ImportFileError('MACRO_NOT_ALLOWED', 'macros e objetos OLE não são permitidos')); return; }
+      if (/vbaProject\.bin|^xl\/embeddings\//i.test(file.name)) { file.terminate(); rejectOnce(new ImportFileError('MACRO_NOT_ALLOWED', MACRO_MESSAGE)); return; }
       entryCount += 1;
       if (entryCount > MAX_ENTRIES) { file.terminate(); rejectOnce(new ImportFileError('ZIP_ENTRY_LIMIT_EXCEEDED', 'o XLSX excede 128 entradas ZIP')); return; }
-      if (file.originalSize !== undefined && totalBytes + file.originalSize > MAX_UNCOMPRESSED_BYTES) { file.terminate(); rejectOnce(new ImportFileError('UNCOMPRESSED_SIZE_LIMIT_EXCEEDED', 'o XLSX excede 25 MiB descompactados')); return; }
+      if (file.originalSize !== undefined && totalBytes + file.originalSize > MAX_UNCOMPRESSED_BYTES) { file.terminate(); rejectOnce(new ImportFileError('UNCOMPRESSED_SIZE_LIMIT_EXCEEDED', 'O arquivo fica grande demais ao abrir (mais de 25 MiB). Apague abas, imagens e formatação extras, ou cole só os dados no modelo.')); return; }
       pending += 1; const chunks: Uint8Array[] = []; let entryBytes = 0;
       file.ondata = (error, chunk, final) => {
-        if (error) { pending -= 1; rejectOnce(new ImportFileError('INVALID_XLSX', 'não foi possível descompactar o XLSX')); return; }
+        if (error) { pending -= 1; rejectOnce(new ImportFileError('INVALID_XLSX', invalidXlsx('não foi possível descompactar o XLSX'))); return; }
         entryBytes += chunk.length; totalBytes += chunk.length;
-        if (totalBytes > MAX_UNCOMPRESSED_BYTES) { file.terminate(); pending -= 1; rejectOnce(new ImportFileError('UNCOMPRESSED_SIZE_LIMIT_EXCEEDED', 'o XLSX excede 25 MiB descompactados')); return; }
+        if (totalBytes > MAX_UNCOMPRESSED_BYTES) { file.terminate(); pending -= 1; rejectOnce(new ImportFileError('UNCOMPRESSED_SIZE_LIMIT_EXCEEDED', 'O arquivo fica grande demais ao abrir (mais de 25 MiB). Apague abas, imagens e formatação extras, ou cole só os dados no modelo.')); return; }
         if (retain(file.name)) chunks.push(chunk);
         if (!final) return;
         if (retain(file.name)) { const content = new Uint8Array(entryBytes); let offset = 0; for (const part of chunks) { content.set(part, offset); offset += part.length; } entries.set(file.name, content); }
@@ -51,11 +62,11 @@ async function extractArchive(buffer: ArrayBuffer): Promise<Map<string, Uint8Arr
       file.start();
     });
     unzip.register(UnzipInflate);
-    try { unzip.push(new Uint8Array(buffer), true); finished = true; complete(); } catch { rejectOnce(new ImportFileError('INVALID_XLSX', 'estrutura ZIP inválida')); }
+    try { unzip.push(new Uint8Array(buffer), true); finished = true; complete(); } catch { rejectOnce(new ImportFileError('INVALID_XLSX', invalidXlsx('estrutura ZIP inválida'))); }
   });
 }
 
-function xml(entries: Map<string, Uint8Array>, name: string): string { const bytes = entries.get(name); return bytes === undefined ? fail('INVALID_XLSX', `entrada obrigatória ausente: ${name}`) : strFromU8(bytes); }
+function xml(entries: Map<string, Uint8Array>, name: string): string { const bytes = entries.get(name); return bytes === undefined ? fail('INVALID_XLSX', invalidXlsx(`entrada obrigatória ausente: ${name}`)) : strFromU8(bytes); }
 function local(name: string): string { return name.split(':').at(-1) ?? name; }
 function parseXml(xmlText: string, handlers: { open?: (name: string, attributes: Record<string, string>) => void; close?: (name: string) => void; text?: (value: string) => void }): void {
   const parser = new Parser(); let failure: Error | null = null;
@@ -63,29 +74,43 @@ function parseXml(xmlText: string, handlers: { open?: (name: string, attributes:
   parser.on('closeTag', (name) => handlers.close?.(local(name)));
   parser.on('text', (value, decode) => handlers.text?.(decode(value)));
   parser.on('error', (error) => { failure = error; }); parser.parse(xmlText);
-  if (failure !== null) fail('INVALID_XLSX', 'XML inválido no pacote XLSX');
+  if (failure !== null) fail('INVALID_XLSX', invalidXlsx('XML inválido no pacote XLSX'));
 }
-function rejectContentTypes(xmlText: string): void { parseXml(xmlText, { open(name, attributes) { if (name !== 'Override' && name !== 'Default') return; const content = (attributes.ContentType ?? '') + (attributes.PartName ?? ''); if (/vbaProject|macroEnabled|oleObject/i.test(content)) fail('MACRO_NOT_ALLOWED', 'macros e objetos OLE não são permitidos'); if (/externalLink/i.test(content)) fail('EXTERNAL_LINK_NOT_ALLOWED', 'links externos não são permitidos'); } }); }
-function rejectRelationships(xmlText: string): void { parseXml(xmlText, { open(name, attributes) { if (name === 'Relationship' && (attributes.TargetMode === 'External' || /externalLink/i.test(attributes.Type ?? ''))) fail('EXTERNAL_LINK_NOT_ALLOWED', 'links externos não são permitidos'); } }); }
+function rejectContentTypes(xmlText: string): void { parseXml(xmlText, { open(name, attributes) { if (name !== 'Override' && name !== 'Default') return; const content = (attributes.ContentType ?? '') + (attributes.PartName ?? ''); if (/vbaProject|macroEnabled|oleObject/i.test(content)) fail('MACRO_NOT_ALLOWED', MACRO_MESSAGE); if (/externalLink/i.test(content)) fail('EXTERNAL_LINK_NOT_ALLOWED', EXTERNAL_LINK_MESSAGE); } }); }
+function rejectRelationships(xmlText: string): void { parseXml(xmlText, { open(name, attributes) { if (name === 'Relationship' && (attributes.TargetMode === 'External' || /externalLink/i.test(attributes.Type ?? ''))) fail('EXTERNAL_LINK_NOT_ALLOWED', EXTERNAL_LINK_MESSAGE); } }); }
 type Sheet = { name: string; state: string | undefined; relationshipId: string };
-function singleSheet(xmlText: string): Sheet { const sheets: Sheet[] = []; parseXml(xmlText, { open(name, attributes) { if (name === 'externalReference') fail('EXTERNAL_LINK_NOT_ALLOWED', 'links externos não são permitidos'); if (name === 'sheet') sheets.push({ name: attributes.name ?? '', state: attributes.state, relationshipId: attributes['r:id'] ?? '' }); } }); if (sheets.length !== 1) return fail('SHEET_COUNT_INVALID', 'o arquivo deve conter exatamente uma aba'); const sheet = sheets[0]; if (sheet === undefined || sheet.name !== 'operacoes' || (sheet.state !== undefined && sheet.state !== 'visible')) return fail('SHEET_NAME_INVALID', 'a única aba visível deve se chamar operacoes'); return sheet; }
-function resolveSheet(xmlText: string, relationshipId: string): string { let target: string | undefined; parseXml(xmlText, { open(name, attributes) { if (name !== 'Relationship') return; if (/externalLink/i.test(attributes.Type ?? '') || attributes.TargetMode === 'External') fail('EXTERNAL_LINK_NOT_ALLOWED', 'links externos não são permitidos'); if (attributes.Id === relationshipId) target = attributes.Target; } }); if (target === undefined || target.includes('..')) return fail('INVALID_XLSX', 'relação da aba inválida'); const clean = target.replace(/^\//, ''); return clean.startsWith('xl/') ? clean : `xl/${clean}`; }
+function singleSheet(xmlText: string): Sheet { const sheets: Sheet[] = []; parseXml(xmlText, { open(name, attributes) { if (name === 'externalReference') fail('EXTERNAL_LINK_NOT_ALLOWED', EXTERNAL_LINK_MESSAGE); if (name === 'sheet') sheets.push({ name: attributes.name ?? '', state: attributes.state, relationshipId: attributes['r:id'] ?? '' }); } }); if (sheets.length !== 1) return fail('SHEET_COUNT_INVALID', `O arquivo deve ter uma única aba, chamada '${IMPORT_SHEET_NAME}'; achadas ${sheets.length}: ${sheets.map((item) => `'${item.name}'`).join(', ')}. Apague as outras abas ou cole os dados no modelo. ${USE_TEMPLATE}`); const sheet = sheets[0]; if (sheet === undefined || sheet.name !== IMPORT_SHEET_NAME) return fail('SHEET_NAME_INVALID', `A aba deve se chamar '${IMPORT_SHEET_NAME}' (achada: '${sheet?.name ?? ''}'). Renomeie a aba. ${USE_TEMPLATE}`); if (sheet.state !== undefined && sheet.state !== 'visible') return fail('SHEET_NAME_INVALID', `A aba '${IMPORT_SHEET_NAME}' está oculta. Reexiba a aba e salve de novo.`); return sheet; }
+function resolveSheet(xmlText: string, relationshipId: string): string { let target: string | undefined; parseXml(xmlText, { open(name, attributes) { if (name !== 'Relationship') return; if (/externalLink/i.test(attributes.Type ?? '') || attributes.TargetMode === 'External') fail('EXTERNAL_LINK_NOT_ALLOWED', EXTERNAL_LINK_MESSAGE); if (attributes.Id === relationshipId) target = attributes.Target; } }); if (target === undefined || target.includes('..')) return fail('INVALID_XLSX', invalidXlsx('relação da aba inválida')); const clean = target.replace(/^\//, ''); return clean.startsWith('xl/') ? clean : `xl/${clean}`; }
 function sharedStrings(xmlText: string | undefined): string[] { if (xmlText === undefined) return []; const values: string[] = []; let item = false; let text = false; let current = ''; parseXml(xmlText, { open(name) { if (name === 'si') { item = true; current = ''; } else if (item && name === 't') text = true; }, close(name) { if (name === 't') text = false; else if (name === 'si') { values.push(current); item = false; } }, text(value) { if (text) current += value; } }); return values; }
 function column(reference: string): number { const match = /^([A-Z]+)[0-9]+$/.exec(reference); if (match?.[1] === undefined) return -1; return [...match[1]].reduce((value, letter) => value * 26 + letter.charCodeAt(0) - 64, 0) - 1; }
 function rowFromCellReference(reference: string): number { const match = /^[A-Z]+([1-9]\d*)$/.exec(reference); return match?.[1] === undefined ? 0 : Number(match[1]); }
-function inspectWorksheet(xmlText: string, strings: string[]): void { const headers: Array<string | undefined> = []; let row = 0; let ref = ''; let type = ''; let readingValue = false; let inline = false; let value = ''; parseXml(xmlText, { open(name, attributes) { if (name === 'f') fail('FORMULA_NOT_ALLOWED', 'fórmulas não são permitidas'); if (name === 'mergeCell') fail('MERGED_CELLS_NOT_ALLOWED', 'células mescladas não são permitidas'); if (name === 'row') row = Number(attributes.r ?? 0); else if (name === 'c') { ref = attributes.r ?? ''; if (Math.max(row, rowFromCellReference(ref)) > MAX_WORKSHEET_ROW) fail('ROW_LIMIT_EXCEEDED', 'o XLSX excede 1.000 operações'); type = attributes.t ?? ''; value = ''; } else if (name === 'v') readingValue = true; else if (name === 't' && type === 'inlineStr') inline = true; }, close(name) { if (name === 'v') readingValue = false; else if (name === 't') inline = false; else if (name === 'c' && row === 1) { const index = column(ref); if (index >= 0) headers[index] = type === 's' ? strings[Number(value)] : value; } }, text(text) { if (readingValue || inline) value += text; } }); const expected = headers.length === REQUIRED_HEADERS.length ? REQUIRED_HEADERS : [...REQUIRED_HEADERS, ...OPTIONAL_HEADERS]; if (headers.length !== expected.length || headers.some((header, index) => header !== expected[index])) fail('HEADER_INVALID', 'headers fora da ordem canônica'); }
+function inspectWorksheet(xmlText: string, strings: string[]): void { const headers: Array<string | undefined> = []; let row = 0; let ref = ''; let type = ''; let readingValue = false; let inline = false; let value = ''; parseXml(xmlText, { open(name, attributes) { if (name === 'f') fail('FORMULA_NOT_ALLOWED', 'A planilha tem fórmulas. Copie as colunas e cole só os valores (Colar especial → Valores), depois salve de novo.'); if (name === 'mergeCell') fail('MERGED_CELLS_NOT_ALLOWED', 'A planilha tem células mescladas. Desfaça a mesclagem para que cada célula tenha um único valor.'); if (name === 'row') row = Number(attributes.r ?? 0); else if (name === 'c') { ref = attributes.r ?? ''; if (Math.max(row, rowFromCellReference(ref)) > MAX_WORKSHEET_ROW) fail('ROW_LIMIT_EXCEEDED', ROW_LIMIT_MESSAGE); type = attributes.t ?? ''; value = ''; } else if (name === 'v') readingValue = true; else if (name === 't' && type === 'inlineStr') inline = true; }, close(name) { if (name === 'v') readingValue = false; else if (name === 't') inline = false; else if (name === 'c' && row === 1) { const index = column(ref); if (index >= 0) headers[index] = type === 's' ? strings[Number(value)] : value; } }, text(text) { if (readingValue || inline) value += text; } }); const problem = headerProblem(headers); if (problem !== null) fail('HEADER_INVALID', problem); }
+
+/** Primeira divergência dos cabeçalhos contra o modelo, em texto para quem vai corrigir. */
+export function headerProblem(headers: readonly (string | undefined)[]): string | null {
+  const expected: readonly string[] = headers.length === REQUIRED_IMPORT_HEADERS.length ? REQUIRED_IMPORT_HEADERS : IMPORT_HEADERS;
+  for (let index = 0; index < Math.max(headers.length, expected.length); index += 1) {
+    const found = headers[index];
+    const position = `posição ${index + 1} (coluna ${columnLetter(index)})`;
+    if (index >= expected.length) return `Coluna a mais na ${position}: '${found ?? ''}'. O modelo tem ${IMPORT_HEADERS.length} colunas; remova as sobras. ${USE_TEMPLATE}`;
+    if (found === expected[index]) continue;
+    const seen = index >= headers.length ? '' : `; achado: ${found === undefined || found === '' ? 'célula vazia' : `'${found}'`}`;
+    return `Coluna '${expected[index]}' não encontrada na ${position}${seen}. Os cabeçalhos devem seguir exatamente o modelo. ${USE_TEMPLATE}`;
+  }
+  return null;
+}
 
 export async function preflightXlsx(buffer: ArrayBuffer): Promise<Readonly<{ sheetName: 'operacoes'; sheetPath: string }>> {
-  if (buffer.byteLength > MAX_FILE_BYTES) return fail('FILE_TOO_LARGE', 'o XLSX excede 5 MiB');
+  if (buffer.byteLength > MAX_FILE_BYTES) return fail('FILE_TOO_LARGE', FILE_TOO_LARGE_MESSAGE);
   const bytes = new Uint8Array(buffer);
-  if (hasPrefix(bytes, OLE_SIGNATURE)) return fail('ENCRYPTED_FILE_NOT_ALLOWED', 'arquivos OLE ou criptografados não são permitidos');
+  if (hasPrefix(bytes, OLE_SIGNATURE)) return fail('ENCRYPTED_FILE_NOT_ALLOWED', 'O arquivo está protegido por senha ou em formato antigo (.xls). Salve como Pasta de Trabalho do Excel (.xlsx), sem senha.');
   const entries = await extractArchive(buffer);
-  if ([...entries.keys()].some((name) => name.startsWith('xl/externalLinks/'))) return fail('EXTERNAL_LINK_NOT_ALLOWED', 'links externos não são permitidos');
+  if ([...entries.keys()].some((name) => name.startsWith('xl/externalLinks/'))) return fail('EXTERNAL_LINK_NOT_ALLOWED', EXTERNAL_LINK_MESSAGE);
   rejectContentTypes(xml(entries, '[Content_Types].xml'));
   for (const [name, content] of entries) if (name.endsWith('.rels')) rejectRelationships(strFromU8(content));
   const sheet = singleSheet(xml(entries, 'xl/workbook.xml'));
   const sheetPath = resolveSheet(xml(entries, 'xl/_rels/workbook.xml.rels'), sheet.relationshipId);
   const strings = entries.get('xl/sharedStrings.xml');
   inspectWorksheet(xml(entries, sheetPath), sharedStrings(strings === undefined ? undefined : strFromU8(strings)));
-  return { sheetName: 'operacoes', sheetPath };
+  return { sheetName: IMPORT_SHEET_NAME, sheetPath };
 }

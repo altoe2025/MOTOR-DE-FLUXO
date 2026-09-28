@@ -1,6 +1,7 @@
 import type { CompanyRecord, ObservedCase } from '../cases/domain';
 import { applyImportCommand, createImportReview, type ImportCommand, type ImportReview } from './eligibility';
 import type { ParsedImport } from './xlsxParser';
+import { ImportFileError } from './xlsxPreflight';
 
 export type ImportFlowStatus = 'SELECTING_SOURCE' | 'INSPECTING' | 'PARSING' | 'REVIEW_REQUIRED' | 'READY_TO_CONFIRM' | 'CONFIRMING' | 'CONFIRMED';
 export type ImportFlowSnapshot = Readonly<{
@@ -18,6 +19,7 @@ export type ImportFlowPorts = Readonly<{
 }>;
 
 function message(error: unknown): string {
+  if (error instanceof ImportFileError) return error.detail;
   return error instanceof Error ? error.message : 'Não foi possível concluir a importação.';
 }
 
