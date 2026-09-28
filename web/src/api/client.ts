@@ -2,6 +2,7 @@ import type { components } from './generated';
 import { ApiError, type ApiErrorField } from './errors';
 import { validateProductHelpCatalog, type ProductHelpCatalogV1 } from '../help/catalog';
 import { validateCommunicationDocument } from '../communication/validation';
+import { validateBoardChatDocument } from '../chat/boardContext';
 import {
   validatePreparationRequest,
   validatePreparationResponse,
@@ -193,14 +194,18 @@ export function createApiClient({
 
   return {
     async sendChatMessage(input, signal) {
+      const contextValid = input.context === null ? true : input.context.kind === 'STUDY'
+        ? (await validateCommunicationDocument(input.context.document)).ok
+          && input.routeContext.studyId === input.context.document.study.id
+          && input.routeContext.scenarioId === input.context.document.selection.scenarioId
+          && input.routeContext.diagnosticExecutionId === input.context.document.selection.diagnosticExecutionId
+          && input.routeContext.replayDay === input.context.document.selection.replayDay
+        : await validateBoardChatDocument(input.context.document)
+          && input.routeContext.routeId === 'board' && input.routeContext.studyId === null
+          && input.routeContext.scenarioId === null && input.routeContext.diagnosticExecutionId === null
+          && input.routeContext.replayDay === null;
       if (!validateChatRequestV1(input)
-        || (input.communication !== null && (
-          !(await validateCommunicationDocument(input.communication)).ok
-          || input.routeContext.studyId !== input.communication.study.id
-          || input.routeContext.scenarioId !== input.communication.selection.scenarioId
-          || input.routeContext.diagnosticExecutionId !== input.communication.selection.diagnosticExecutionId
-          || input.routeContext.replayDay !== input.communication.selection.replayDay
-        )) || new TextEncoder().encode(JSON.stringify(input)).byteLength > 1_048_576) {
+        || !contextValid || new TextEncoder().encode(JSON.stringify(input)).byteLength > 1_048_576) {
         throw new ApiError({ status: 0, code: 'ENTRADA_CLIENTE_INVALIDA', message: 'O contexto do chat não passou pela validação local.' });
       }
       const document = await request('/api/v1/chat', { method: 'POST',
@@ -208,7 +213,7 @@ export function createApiClient({
       if (!validateChatResponseV1(document)) throw invalidResponse(200);
       const response = document as ChatResponse;
       if (response.messageId !== input.messageId
-        || response.contextFingerprint !== (input.communication?.contextFingerprint ?? null)) throw invalidResponse(200);
+        || response.contextFingerprint !== (input.context?.document.contextFingerprint ?? null)) throw invalidResponse(200);
       return deepFreeze(document as ChatResponse);
     },
     async getReferenceExample(signal) {

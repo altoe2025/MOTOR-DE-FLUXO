@@ -12,7 +12,7 @@ from servidor.chat.scope import ScopeDecision, ScopeRequest
 from servidor.chat.service import AnswerRequest, ChatUnavailable
 from servidor.contracts.chat import ChatRequestV1
 from tests.web_api.test_auth import settings
-from tests.web_api.test_chat_contracts import payload
+from tests.web_api.test_chat_contracts import board_payload, payload
 from tests.web_api.test_chat_http import no_network  # noqa: F401
 
 
@@ -64,7 +64,7 @@ def exercise(responses, *, classify=False, source=None):
         try:
             if classify:
                 result = await provider.classify(ScopeRequest(
-                    message=chat.message, routeContext=chat.routeContext,
+                    message=chat.message, routeContext=chat.routeContext, history=chat.history,
                 ))
             else:
                 result = await provider.answer(AnswerRequest(
@@ -94,6 +94,10 @@ def test_classifier_uses_responses_stateless_structured_json_and_configured_budg
     assert data["text"]["format"]["type"] == "json_schema"
     assert data["text"]["format"]["strict"] is True
     assert data["text"]["format"]["schema"]["additionalProperties"] is False
+    assert data["text"]["format"]["schema"]["properties"]["classification"]["enum"] == [
+        "IN_SCOPE", "OUT_OF_SCOPE", "MIXED",
+    ]
+    assert json.loads(data["input"][0]["content"])["history"] == []
     assert not {"previous_response_id", "conversation", "messages", "response_format"} & data.keys()
     assert "fake-c4-key" not in request.content.decode()
     assert request.extensions["timeout"]["read"] == 0.5
@@ -115,6 +119,25 @@ def test_multiple_calls_use_call_id_and_preserve_reasoning_without_remote_state(
     assert second["store"] is False
     assert "previous_response_id" not in second
     assert second["include"] == ["reasoning.encrypted_content"]
+
+
+def test_board_question_reads_selected_rows_and_cites_board_evidence():
+    evidence_id = "BOARD:study-a:scenario-a:savingsBrl"
+    result, requests = exercise([
+        envelope(call("board", "consultar_quadro", {})),
+        envelope(message(answer(
+            answer="O cenário A economiza R$ 4,50.",
+            citations=[{"kind": "EVIDENCE", "id": evidence_id}],
+        ))),
+    ], source=board_payload())
+
+    assert result.answer == "O cenário A economiza R$ 4,50."
+    assert result.citations[0].id == evidence_id
+    tool_output = json.loads(json.loads(requests[1].content)["input"][-1]["output"])
+    assert [row["rowKey"] for row in tool_output["data"]] == ["study-a:scenario-a"]
+    assert set(tool_output["evidenceIndex"]) == {
+        citation["id"] for citation in tool_output["citations"]
+    }
 
 
 def test_exactly_four_calls_and_two_rounds_can_finish():
@@ -189,6 +212,7 @@ def test_question_history_and_document_text_never_become_privileged_instructions
     assert {tool["name"] for tool in body["tools"]} == {
         "consultar_interface", "consultar_metrica", "consultar_comparacao",
         "consultar_replay", "consultar_premissas", "consultar_limitacoes",
+        "consultar_quadro",
     }
 
 

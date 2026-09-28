@@ -14,6 +14,7 @@ describe('comparison board execution identity', () => {
     // selected_execution contains orders regenerated with the selected seed.
     execution.sourceSnapshot.orders = [{ ...actual[0]!, valor_brl: '999999999' }];
     const [row] = buildRows([study], [], []);
+    expect(row!.executionId).toBe(execution.id);
     expect(row!.orderCount).toBe(actual.length);
     expect(row!.inBrl).toBe(actual.filter((order) => order.direcao === 'IN')
       .reduce((sum, order) => sum.plus(order.valor_brl), new Decimal(0)).toFixed());
@@ -32,6 +33,7 @@ describe('comparison board execution identity', () => {
       createdAt: '2026-09-24T12:00:00Z', finishedAt: '2026-09-24T12:00:00Z',
     };
     const [row] = buildRows([{ ...study, executions: [...study.executions, preview] }], [], []);
+    expect(row!.executionId).toBe(preview.id);
     expect(row!.finishedAt).toBe(preview.finishedAt);
     expect(row!.diagnosticExecutionId).toBeNull();
   });

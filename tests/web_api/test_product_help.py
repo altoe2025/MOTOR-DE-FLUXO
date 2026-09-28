@@ -5,6 +5,8 @@ from __future__ import annotations
 import hashlib
 import importlib
 import json
+import re
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -26,10 +28,70 @@ REQUIRED_HELP_IDS = {
     "concept.replay",
     "page.diagnostico",
     "page.comparacao",
+    "page.quadro",
     "page.apresentacao",
     "page.relatorio",
     "page.chat",
 }
+
+INTERFACE_CONTROLS = [
+    ("control.importacao.ler", "Ler planilha", "/importar"),
+    ("control.importacao.confirmar", "Confirmar Caso Observado", "/importar"),
+    ("control.empresa.excluir", "Excluir", "/empresas"),
+    ("control.estudos.novo", "Novo estudo", "/estudos"),
+    ("control.carteira.executar", "Executar cenário atual", "/carteira/:id"),
+    ("control.carteira.referencia", "Executar exemplo de referência", "/carteira"),
+    ("control.composicao.editar", "Criar hipótese / alterar carteira", "/carteira/:id"),
+    ("control.alavancas.criar", "Criar variação", "/carteira/:id"),
+    ("control.diagnostico.rodar-todas", "Rodar todas", "/estudos/:studyId/diagnostico"),
+    ("control.comparacao.comparar", "Comparar", "/comparar"),
+    ("control.quadro.limpar", "Limpar quadro", "/quadro"),
+    ("control.replay.proximo-fechamento", "Próximo fechamento", "/estudos/:studyId/replay"),
+    ("control.apresentacao.pdf", "Salvar PDF", "/estudos/:studyId/apresentacao"),
+    ("control.chat.enviar", "Enviar", "/:route"),
+]
+
+
+@pytest.mark.parametrize("help_id,label,route", INTERFACE_CONTROLS)
+def test_controle_real_consultavel_sem_documento_financeiro(help_id, label, route):
+    from servidor.catalogs.product_help import load_product_help_catalog
+    from servidor.chat.tools import ReadOnlyTools
+    from servidor.contracts.chat import ChatCitation, ChatRequestV1
+    from tests.web_api.test_chat_contracts import payload
+
+    registry = ReadOnlyTools(ChatRequestV1.model_validate(payload(False)), load_product_help_catalog())
+    assert registry.study_document() is None
+    result = registry.execute("consultar_interface", json.dumps({"helpId": help_id}))
+
+    assert result["available"] is True
+    assert result["data"]["label"] == label
+    assert result["data"]["routePattern"] == route
+    assert result["data"]["elementKind"] == "CONTROL"
+    assert result["citations"] == [{"kind": "HELP", "id": help_id}]
+    registry.validate_references([ChatCitation(kind="HELP", id=help_id)], [], served_only=True)
+
+
+def test_ids_publicados_pelo_frontend_resolvem_no_catalogo_real(product_help_client):
+    frontend = Path(__file__).resolve().parents[2] / "web/src/help/helpIds.ts"
+    help_ids = re.findall(r"^\s+[A-Z_]+:\s*'([^']+)'", frontend.read_text(encoding="utf-8"), re.M)
+    items = product_help_client.get("/api/v1/catalogos/ajuda", headers=auth()).json()["items"]
+    published = {item["id"] for item in items}
+
+    assert len(help_ids) == len(set(help_ids))
+    assert set(help_ids) == published
+    assert {help_id for help_id, _, _ in INTERFACE_CONTROLS} <= set(help_ids)
+
+
+def test_condicoes_de_bloqueio_nao_exigem_simulacao_para_ajuda(product_help_client):
+    items = {item["id"]: item for item in product_help_client.get(
+        "/api/v1/catalogos/ajuda", headers=auth(),
+    ).json()["items"]}
+
+    assert "arquivo" in " ".join(items["control.importacao.ler"]["disabledWhen"]).lower()
+    assert "diagnóstico atual" in " ".join(items["control.diagnostico.rodar-todas"]["disabledWhen"])
+    assert items["control.apresentacao.pdf"]["disabledWhen"] == []
+    assert "impressão" in items["control.apresentacao.pdf"]["changes"]
+    assert "desfaz" in items["control.chat.cancelar-envio"]["doesNotChange"]
 
 
 @pytest.fixture

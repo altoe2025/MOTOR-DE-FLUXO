@@ -1,6 +1,7 @@
 """Local deterministic provider; controls live only in the test server."""
 
 import asyncio
+from decimal import Decimal
 
 from servidor.chat.scope import ScopeDecision, ScopeRequest
 from servidor.chat.service import AnswerRequest, ProviderAnswer
@@ -21,13 +22,19 @@ class ControlledChatProvider:
             await self.release.wait()
         if mode == "fail":
             raise RuntimeError("controlled provider unavailable")
-        classification = {"out": "OUT_OF_SCOPE", "mixed": "MIXED",
-                          "insufficient": "INSUFFICIENT_EVIDENCE"}.get(mode, "IN_SCOPE")
+        classification = {"out": "OUT_OF_SCOPE", "mixed": "MIXED"}.get(mode, "IN_SCOPE")
         return ScopeDecision(classification=classification)
 
     async def answer(self, request: AnswerRequest) -> ProviderAnswer:
         self.answered += 1
-        document = request.chat.communication
+        if self.mode == "insufficient":
+            return ProviderAnswer(
+                classification="INSUFFICIENT_EVIDENCE", answer="Sem evidência.",
+                citations=[], limitationCodes=["INSUFFICIENT_EVIDENCE"],
+            )
+        context = request.chat.context
+        document = (context.document if context is not None and context.kind == "STUDY"
+                    else None)
         citation = ChatCitation(kind="HELP", id=request.chat.routeContext.helpId or "page.importacao")
         answer = "A importação revisa uma planilha local."
         if document is not None:
@@ -43,6 +50,15 @@ class ControlledChatProvider:
             elif document.evidenceIndex:
                 citation = ChatCitation(kind="EVIDENCE", id=next(iter(document.evidenceIndex)))
                 answer = "A evidência selecionada sustenta este contexto."
+        elif context is not None and context.kind == "BOARD":
+            if not context.document.rows:
+                return ProviderAnswer(
+                    classification="INSUFFICIENT_EVIDENCE", answer="Sem linhas selecionadas.",
+                    citations=[], limitationCodes=["INSUFFICIENT_EVIDENCE"],
+                )
+            row = max(context.document.rows, key=lambda item: Decimal(item.savingsBrl))
+            citation = ChatCitation(kind="EVIDENCE", id=f"BOARD:{row.rowKey}:savingsBrl")
+            answer = f"{row.studyName} · {row.scenarioName}: economia de {row.savingsBrl}."
         if self.mode == "invalid-citation":
             citation = ChatCitation(kind="METRIC", id="absent-metric")
         return ProviderAnswer(answer=answer, citations=[citation], limitationCodes=[])

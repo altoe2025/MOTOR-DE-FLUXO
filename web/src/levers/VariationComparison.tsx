@@ -37,7 +37,7 @@ export function VariationComparison({ study, selectedScenarioId, running, progre
     </p> : null}
     <div className="source-actions">
       <span className="field-hint">{pending === 0 ? 'Todos os cenários têm diagnóstico atual.' : `${pending} cenário(s) sem diagnóstico atual.`} Netabilidade é a parte do volume que não cruzou a fronteira.</span>
-      <Button disabled={running || pending === 0} onClick={onRunAll}>{running ? progress ?? 'Rodando…' : 'Rodar todas'}</Button>
+      <Button data-chat-help-id="control.diagnostico.rodar-todas" disabled={running || pending === 0} onClick={onRunAll}>{running ? progress ?? 'Rodando…' : 'Rodar todas'}</Button>
     </div>
     <div className="table-scroll" role="region" tabIndex={0} aria-label="Comparação dos cenários">
       <table className="company-table">
