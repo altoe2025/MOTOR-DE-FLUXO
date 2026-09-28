@@ -26,7 +26,7 @@ export type DemoStudyPackageV1 = Readonly<{
     measurementDays: 30;
     windowDays: 7;
     monthlyOrderCapPerParticipant: 4;
-    selectedRepetitionCriterion: 'FIRST_PLANNED_REPETITION';
+    selectedRepetitionCriterion: 'MEDIAN_SAVINGS_REPETITION';
     repetitionSeedOffsetByMix: Readonly<Record<string, number>>;
     mixes: readonly DemoMixV1[];
   }>;

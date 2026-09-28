@@ -117,8 +117,11 @@ export async function validateDemoStudyPackage(value: unknown): Promise<DemoPack
       item.repetition_id === envelope.statistics.selected_repetition_id);
     const plannedRepetition = request.sampling.kind === 'GENERATED_INPUT'
       ? request.sampling.repetitions.find((item) =>
-        item.repetition_id === request.selected_repetition_id)
+        item.repetition_id === envelope.statistics.selected_repetition_id)
       : undefined;
+    const savings = envelope.axes.economic_robustness.savings_brl;
+    fail(savings.state === 'AVAILABLE' && selectedSummary !== undefined
+      && new Decimal(selectedSummary.savings_brl).eq(savings.value.p50), `SELECTED_IS_MEDIAN:${index}`);
     fail(replay.scenario_id === scenario.id
       && replay.scenario_id === request.scenario_id
       && replay.scenario_id === envelope.selected_execution.scenario_id

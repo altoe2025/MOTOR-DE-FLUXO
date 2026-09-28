@@ -35,7 +35,7 @@
         "measurementDays": { "const": 30 },
         "windowDays": { "const": 7 },
         "monthlyOrderCapPerParticipant": { "const": 4 },
-        "selectedRepetitionCriterion": { "const": "FIRST_PLANNED_REPETITION" },
+        "selectedRepetitionCriterion": { "const": "MEDIAN_SAVINGS_REPETITION" },
         "repetitionSeedOffsetByMix": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0, "maximum": 9 } },
         "mixes": { "type": "array", "minItems": 5, "maxItems": 5, "items": { "$ref": "#/$defs/Mix" } }
       },

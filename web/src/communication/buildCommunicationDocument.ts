@@ -50,7 +50,10 @@ function diagnostic(study: StudyDocument, id: string): DiagnosticExecutionRecord
   const selectedId = envelope.statistics.selected_repetition_id;
   const summary = envelope.repetitions.filter((item) => item.repetition_id === selectedId);
   requireCondition(selectedId === envelope.selected_execution.statistics.repetition_id
-    && selectedId === execution.requestSnapshot.selected_repetition_id
+    // Em entrada gerada o servidor detalha a repetição mediana; basta ela pertencer ao plano.
+    && (execution.requestSnapshot.sampling.kind === 'GENERATED_INPUT'
+      ? execution.requestSnapshot.sampling.repetitions.some((item) => item.repetition_id === selectedId)
+      : selectedId === execution.requestSnapshot.selected_repetition_id)
     && summary.length === 1
     && summary[0]!.execution_fingerprint === envelope.selected_execution.execution_fingerprint
     && new Set(envelope.repetitions.map((item) => item.repetition_id)).size === envelope.repetitions.length
