@@ -9,8 +9,9 @@ import { companySubsets, leverBaseAvailable } from './leverScenario';
 
 type DeadlineMode = Levers['deadline']['mode'];
 
-export function LeverBuilder({ base, onCreate, onCreateCombinations }: Readonly<{
+export function LeverBuilder({ base, progress, onCreate, onCreateCombinations }: Readonly<{
   base: ScenarioDocument;
+  progress?: string | null;
   onCreate(levers: Levers): Promise<void>;
   onCreateCombinations(subsets: readonly (readonly string[])[], companies: readonly string[]): Promise<void>;
 }>) {
@@ -35,6 +36,7 @@ export function LeverBuilder({ base, onCreate, onCreateCombinations }: Readonly<
     return <section className="lever-builder" aria-labelledby="lever-title">
       <h2 id="lever-title">Alavancas</h2>
       <p className="field-hint">Alavancas funcionam sobre cenários com ordens explícitas (caso importado ou variação). “{base.name}” é sintético.</p>
+      <p className="field-hint">Para comparar combinações de empresas, escolha “Juntar casos de empresas” no Passo 1, selecione de 2 a 8 empresas e clique em “Usar casos juntos”. Depois, “Gerar todas as combinações” aparecerá aqui.</p>
     </section>;
   }
 
@@ -124,6 +126,7 @@ export function LeverBuilder({ base, onCreate, onCreateCombinations }: Readonly<
           : `Cria ${subsets.length} variações: cada empresa sozinha e cada grupo de empresas. Depois, no diagnóstico, “Rodar todas” e compare pela economia.`}
       </p>
       <Button variant="secondary" disabled={busy || subsets.length === 0} onClick={() => void createCombinations()}>Gerar todas as combinações</Button>
+      {progress ? <p role="status">{progress}</p> : null}
     </div>}
     {error === null ? null : <p role="alert" className="field-error">{error}</p>}
     <div className="source-actions">

@@ -75,6 +75,13 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-28 — Criação de combinações em lote sem queda da página
+
+1. **Sintoma.** Gerar 254 combinações de oito empresas interrompia a página com `Maximum update depth exceeded`, deixando um lote parcial.
+2. **Causa.** Cada combinação clonava e validava todo o estudo, publicava uma atualização React e enfileirava outra revisão completa para salvar, sem ceder à interface durante a sequência.
+3. **O que foi feito.** `appendScenarios` materializa o lote em uma única revisão e validação do estudo; a página faz uma única edição/gravação, mostra progresso e cede à interface a cada oito preparações. A orientação para acessar combinações aparece quando a origem ainda é sintética. Teste no navegador local com oito empresas: 254 combinações, 255 cenários contando o original, estado “Alterações salvas” e nenhum alerta. Typecheck/lint passaram; testes do domínio cobrem lote de 254, histórico preservado e rejeição atômica de entradas inválidas. Configuração de SHA do motor corrigida apenas no ambiente local ignorado pelo Git.
+4. **O que isso invalida.** A criação não gera mais uma revisão por combinação nem preserva lotes parciais novos em caso de falha de preparação. Cenários anteriores não foram apagados. Nenhuma regra do motor ou publicação no Render mudou.
+
 ## 2026-09-28 — Escolher composição por economia e limite de espera
 
 1. **Sintoma.** A bancada mostrava combinações, mas exigia comparar manualmente a economia e a espera para escolher uma composição.

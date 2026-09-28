@@ -12,8 +12,8 @@ import { currentDiagnostic } from '../levers/savingsOrigin';
 import { resolvePortfolioSource } from '../preparation/resolvePortfolioSource';
 import { StudyEditor } from '../study/components/StudyEditor';
 import type { PortfolioSourceDraft } from '../study/components/PortfolioSourceSelector';
-import { appendScenario, duplicateStudy, removeScenario, renameScenario, renameStudy, updateScenario } from '../study/domain';
-import type { ScenarioDocument, StudyDocument } from '../study/model';
+import { appendScenario, appendScenarios, duplicateStudy, removeScenario, renameScenario, renameStudy, updateScenario } from '../study/domain';
+import type { ScenarioDocument, ScenarioDraft, StudyDocument } from '../study/model';
 import { combinationName, DEFAULT_STUDY_NAME, suggestStudyName, uniqueName, variationName } from '../study/naming';
 import { observedVariationLabel } from '../study/observedVariation';
 import type { StudyControllerStatus } from '../study/studyController';
@@ -81,6 +81,7 @@ export function StudyPortfolioPage() {
   const [companies, setCompanies] = useState<CompanyRecord[]>([]);
   const [status, setStatus] = useState<StudyControllerStatus>(controller.snapshot.status);
   const [selectedBaseId, setSelectedBaseId] = useState<string | null>(null);
+  const [combinationProgress, setCombinationProgress] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -101,9 +102,8 @@ export function StudyPortfolioPage() {
   if (scenario === undefined) throw new Error('Estudo sem cenário base.');
   const selectedBase = study.scenarios.find((item) => item.id === selectedBaseId) ?? scenario;
   const save = (next: StudyDocument) => { controller.edit(next); setStudy(next); };
-  // O controlador aceita uma edição por revisão: quem gera várias revisões enfileira cada uma.
-  const persist = async (next: StudyDocument, failure: string, queued = false) => {
-    if (!queued) controller.edit(next);
+  const persist = async (next: StudyDocument, failure: string) => {
+    controller.edit(next);
     setStudy(next);
     const saved = await controller.flush();
     if (saved === null || saved.id !== study.id) throw new Error(failure);
@@ -149,20 +149,33 @@ export function StudyPortfolioPage() {
   const createCombinations = async (subsets: readonly (readonly string[])[], groups: readonly string[]) => {
     const recordedAt = new Date().toISOString();
     const taken = takenNames();
-    let next = study;
-    for (const subset of subsets) {
-      const removed = groups.filter((company) => !subset.includes(company));
-      const name = uniqueName(combinationName(subset), taken);
-      taken.push(name);
-      const draft = await buildLeverScenario({
-        base: selectedBase, id: crypto.randomUUID(), authoredPortfolioId: crypto.randomUUID(), recordedAt,
-        levers: removed.map((company) => ({ ...NEUTRAL_LEVERS, group: company, removeCompany: true })),
-        name,
-      });
-      next = await appendScenario(next, draft, recordedAt);
-      controller.edit(next);
+    const drafts: ScenarioDraft[] = [];
+    setCombinationProgress(`Preparando 0 de ${subsets.length} combinações…`);
+    try {
+      for (const [index, subset] of subsets.entries()) {
+        const removed = groups.filter((company) => !subset.includes(company));
+        const name = uniqueName(combinationName(subset), taken);
+        taken.push(name);
+        const draft = await buildLeverScenario({
+          base: selectedBase, id: crypto.randomUUID(), authoredPortfolioId: crypto.randomUUID(), recordedAt,
+          levers: removed.map((company) => ({ ...NEUTRAL_LEVERS, group: company, removeCompany: true })),
+          name,
+        });
+        drafts.push(draft);
+        if ((index + 1) % 8 === 0 || index + 1 === subsets.length) {
+          setCombinationProgress(`Preparando ${index + 1} de ${subsets.length} combinações…`);
+          await new Promise<void>((resolve) => setTimeout(resolve, 0));
+        }
+      }
+      if (controller.snapshot.document?.id !== study.id || controller.snapshot.document.revision !== study.revision) {
+        throw new Error('O estudo mudou durante a criação. Tente gerar as combinações novamente.');
+      }
+      setCombinationProgress('Salvando as combinações…');
+      const next = await appendScenarios(study, drafts, recordedAt);
+      await persist(next, 'A sessão mudou antes de salvar as combinações.');
+    } finally {
+      setCombinationProgress(null);
     }
-    await persist(next, 'A sessão mudou antes de salvar as combinações.', true);
   };
   const rename = async (target: ScenarioDocument, name: string) => {
     try {
@@ -229,5 +242,5 @@ Os diagnósticos dele também serão apagados. Não dá para desfazer.`)) return
       onDelete={() => void deleteScenario(item)} />)}</ul>
   </section>
   <p className="eyebrow">Passo 4</p>
-  <LeverBuilder key={`${selectedBase.id}:${selectedBase.sourceSnapshot.sourceFingerprint}`} base={selectedBase} onCreate={createLeverVariation} onCreateCombinations={createCombinations} /></>;
+  <LeverBuilder key={`${selectedBase.id}:${selectedBase.sourceSnapshot.sourceFingerprint}`} base={selectedBase} progress={combinationProgress} onCreate={createLeverVariation} onCreateCombinations={createCombinations} /></>;
 }

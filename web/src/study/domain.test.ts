@@ -1,8 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   attachOperationalProfileEvidence,
   appendScenario,
+  appendScenarios,
   appendExecution,
   createProfileStudy,
   createStudy,
@@ -15,6 +16,7 @@ import { buildProfileMvpPreparationRequest } from '../hypotheses/profileMvp';
 import { PROFILE_MVP_EXAMPLE_ID } from '../hypotheses/hypothesis';
 import { calculateOperationalProfile } from '../profiles/calculateOperationalProfile';
 import { fingerprintPortfolioSource } from './fingerprints';
+import * as studyValidation from './validation';
 import {
   FIXTURE_NOW,
   FIXTURE_OWNER,
@@ -388,5 +390,55 @@ describe('evidência de Perfil Operacional no Study V3', () => {
     expect(next.scenarios[1]?.revision).toBe(1);
     expect(next.executions).toEqual(study.executions);
     expect(next.revision).toBe(study.revision + 1);
+  });
+});
+
+describe('appendScenarios', () => {
+  it('adds 254 combinations with one study revision and one whole-study validation', async () => {
+    const original = await studyWith();
+    const study = await appendExecution(original, executionFor(original), NEXT);
+    const before = structuredClone(study);
+    const drafts = Array.from({ length: 254 }, (_, index) => makeScenarioDraft({
+      id: crypto.randomUUID(), revision: 9, name: `Composição ${index + 1}`,
+    }));
+    const validation = vi.spyOn(studyValidation, 'assertValidStudy');
+    try {
+      const next = await appendScenarios(study, drafts, NEXT);
+      expect(validation).toHaveBeenCalledTimes(1);
+      expect(next.revision).toBe(study.revision + 1);
+      expect(next.scenarios).toHaveLength(255);
+      expect(next.scenarios.slice(1).map((scenario) => scenario.id)).toEqual(drafts.map((draft) => draft.id));
+      expect(next.scenarios.slice(1).every((scenario) => scenario.revision === 1)).toBe(true);
+      expect(next.scenarios[0]).toEqual(study.scenarios[0]);
+      expect(next.executions).toEqual(study.executions);
+      expect(study).toEqual(before);
+      expect(Object.isFrozen(next)).toBe(true);
+      drafts[0]!.sourceSnapshot.orders[0]!.valor_brl = '999';
+      expect(next.scenarios[1]!.sourceSnapshot.orders[0]!.valor_brl).not.toBe('999');
+    } finally {
+      validation.mockRestore();
+    }
+  });
+
+  it('rejects duplicate existing or batch IDs without modifying the study', async () => {
+    const study = await studyWith();
+    const before = structuredClone(study);
+    const draft = makeScenarioDraft({ id: crypto.randomUUID() });
+    await expect(appendScenarios(study, [draft, draft], NEXT)).rejects.toThrow('ID de cenário já existe');
+    await expect(appendScenarios(study, [makeScenarioDraft({ id: study.baseScenarioId })], NEXT)).rejects.toThrow('ID de cenário já existe');
+    expect(study).toEqual(before);
+  });
+
+  it('rejects the complete batch when a draft is invalid', async () => {
+    const study = await studyWith();
+    const before = structuredClone(study);
+    await expect(appendScenarios(study, [makeScenarioDraft({ id: crypto.randomUUID() }),
+      makeScenarioDraft({ id: crypto.randomUUID(), name: '' })], NEXT)).rejects.toThrow('Nome do estudo ou cenário inválido');
+    expect(study).toEqual(before);
+  });
+
+  it('does not create a new revision for an empty batch', async () => {
+    const study = await studyWith();
+    expect(await appendScenarios(study, [], NEXT)).toBe(study);
   });
 });

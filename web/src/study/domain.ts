@@ -185,6 +185,30 @@ export async function appendScenario(
   });
 }
 
+/** Add a composition batch as one edit, without retaining a full study per draft. */
+export async function appendScenarios(
+  study: StudyDocument,
+  drafts: readonly ScenarioDraft[],
+  now: string,
+): Promise<StudyDocument> {
+  if (drafts.length === 0) return study;
+  const updatedAt = checkedInstant(now);
+  const ids = new Set(study.scenarios.map((scenario) => scenario.id));
+  for (const draft of drafts) {
+    if (ids.has(draft.id)) throw new Error('ID de cenário já existe no estudo.');
+    ids.add(draft.id);
+  }
+  const scenarios: ScenarioDocument[] = [];
+  for (const draft of drafts) {
+    scenarios.push(await materializeScenario({ ...draft, revision: 1 }));
+  }
+  return finalize({
+    ...study,
+    scenarios: [...study.scenarios, ...scenarios],
+    revision: study.revision + 1,
+    updatedAt,
+  });
+}
 export async function appendCompositionHypothesis(
   study: StudyDocumentV3,
   input: Readonly<{
