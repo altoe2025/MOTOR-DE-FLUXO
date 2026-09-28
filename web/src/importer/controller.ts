@@ -1,7 +1,7 @@
 import type { CompanyRecord, ObservedCase } from '../cases/domain';
 import { applyImportCommand, createImportReview, type ImportCommand, type ImportReview } from './eligibility';
 import type { ParsedImport } from './xlsxParser';
-import { ImportFileError } from './xlsxPreflight';
+import { ImportFileError } from './errors';
 
 export type ImportFlowStatus = 'SELECTING_SOURCE' | 'INSPECTING' | 'PARSING' | 'REVIEW_REQUIRED' | 'READY_TO_CONFIRM' | 'CONFIRMING' | 'CONFIRMED';
 export type ImportFlowSnapshot = Readonly<{
