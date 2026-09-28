@@ -312,7 +312,7 @@ export function StudyDiagnosticPage() {
     <p className="eyebrow">Estudo {study?.name ?? ''}</p>
     <h1 ref={heading} tabIndex={-1}>{generated ? 'Diagnóstico robusto' : 'Diagnóstico'}</h1>
     <p className="page-introduction">{generated
-      ? 'A carteira é gerada; o diagnóstico roda várias repetições e mostra a repetição representativa.'
+      ? 'A carteira é gerada; o diagnóstico roda várias repetições, mostra a distribuição da economia e detalha a repetição mediana.'
       : `Cenário: ${scenario?.name ?? '…'}. Custo sem pool é cada ordem remetendo sozinha; custo com pool é o que sobra depois do netting.`}</p>
     {study === null || scenario === null ? <DiagnosticStatus state={viewState ?? { kind: 'UNAVAILABLE', reason: 'Carregando estudo…' }} /> : <>
       <DiagnosticControls generated={generated} count={effectiveCount} onCountChange={setCount} onRun={() => void run()} disabled={runInProgress || controller.snapshot.status === 'STORAGE_FAILURE'} />

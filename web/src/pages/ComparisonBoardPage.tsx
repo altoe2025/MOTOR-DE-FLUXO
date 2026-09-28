@@ -201,7 +201,7 @@ export function ComparisonBoardPage() {
     <p className="eyebrow">Estudos</p>
     <h1 ref={heading} tabIndex={-1}>Quadro comparativo</h1>
     <p className="page-introduction">
-      Escolha os estudos que entram no quadro. Vale a última execução concluída da revisão atual de cada cenário; com diagnóstico de várias repetições, os números são da repetição representativa.
+      Escolha os estudos que entram no quadro. Vale a última execução concluída da revisão atual de cada cenário; com diagnóstico de várias repetições, os números são da repetição mediana da economia.
     </p>
     {error ? <p role="alert" className="field-error">{error}</p> : null}
     {rows === null && error === null ? <p role="status">Carregando estudos…</p> : null}
