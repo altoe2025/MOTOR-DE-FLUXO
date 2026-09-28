@@ -37,7 +37,7 @@ Atualizada em 2026-09-28, durante a publicação da ajuda contextual do chat.
 
 | Branch | Situação | Dono |
 |---|---|---|
-| `codex/chat-interface-render` | Correções de contexto, ajuda de interface e respostas parciais; publicação no GitHub/Render autorizada pelo Gabriel em 2026-09-28, candidata em validação | Codex |
+| `codex/chat-interface-render` | PR #57 aberto (draft, base `feat/bancada-exploracao`); código `8d43695` publicado no Render com status Live em 2026-09-28; sem merge na `main` | Codex |
 | `codex/integracao-etapas-5-6` | Consolida `feat/bancada-exploracao` e `codex/finalidade-verificacao`, incluindo histórico de `origin/main`; publicação/CI em preparação, sem deploy | Codex |
 | `main` | Autonetting preferencial e integração final incorporados até o PR #37 (`c2ad175`); grade histórica não regenerada | os dois |
 | `netting/p1` | spike do P1, **NÃO MERGEAR** — dominado, e agora sabemos que a folga é zero em N ≥ 50. Só local, nunca foi pro GitHub | Felipe |
@@ -75,6 +75,13 @@ Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. 
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+## 2026-09-28 — Chat publicado no Render (MOT-95)
+
+1. **Sintoma.** Deploy anterior `3342059` continuava sem as melhorias recentes do chat.
+2. **Causa.** O deploy precisava usar explicitamente o commit da branch já enviada, não o último commit da `main`.
+3. **O que foi feito.** Push de `codex/chat-interface-render` e PR #57 (draft, base `feat/bancada-exploracao`). Deploy específico de `8d4369588f2e41afda4b64b5dd209e4ab112c671` no `motor-de-fluxo-piloto`, confirmado pelo Render como `Deploy succeeded | Live` (`dep-datbjo49v7es738370og`; 54,4 s). Health `ok`, página inicial HTTP 200 e asset `index-Cx3giTPZ` confirmados. OpenAPI publicado expõe `ChatRequestV1.context`, `BoardChatContextV1` e `RouteChatContext.uiControls`. Nenhuma variável, allowlist, credencial, configuração de serviço ou regra de simulação alterada. Este registro é posterior ao deploy e não requer republicação do código.
+4. **O que isso invalida.** A afirmação de que as melhorias ainda são apenas locais fica superada. A confirmação de publicação/contrato não equivale a teste universal da qualidade semântica do modelo real. `main` não foi alterada: um novo deploy de “latest commit” da `main` pode voltar a uma versão sem estas mudanças até a integração da branch.
 
 ## 2026-09-28 — Candidato de publicação do chat integrado à bancada (MOT-95)
 
