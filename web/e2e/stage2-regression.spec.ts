@@ -28,6 +28,10 @@ test('Stage 2 observed, authored, synthetic, migration, history and unique termi
   });
 
   await page.getByRole('button', { name: 'Novo estudo', exact: true }).click();
+
+  await page.getByRole('radio', { name: 'Carteira gerada (exemplo)' }).check();
+
+  await page.getByRole('button', { name: 'Criar com carteira gerada' }).click();
   await expect(page).toHaveURL(/\/carteira\/[0-9a-f-]+$/);
   const studyId = page.url().split('/').at(-1)!;
   await executeAndWait(page);

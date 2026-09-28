@@ -30,6 +30,8 @@ test('confirmed observed case becomes an immutable study snapshot and survives r
   }, { owner: OWNER, now: NOW });
   await page.reload();
   await page.getByRole('button', { name: 'Novo estudo' }).click();
+  await page.getByRole('radio', { name: 'Carteira gerada (exemplo)' }).check();
+  await page.getByRole('button', { name: 'Criar com carteira gerada' }).click();
   await expect(page).toHaveURL(/\/carteira\/[0-9a-f-]+$/);
   await page.getByRole('radio', { name: 'Caso observado' }).check();
   await page.getByLabel('Caso confirmado').selectOption('case-e2e');

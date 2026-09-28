@@ -126,6 +126,8 @@ test('Etapa 6: finalidade opcional executa XLSX e demo restaura com Estudo impor
   await expect(page.getByRole('heading', { name: 'Versão 1' })).toBeVisible();
   await page.goto('/estudos');
   await page.getByRole('button', { name: 'Novo estudo', exact: true }).click();
+  await page.getByRole('radio', { name: 'Carteira gerada (exemplo)' }).check();
+  await page.getByRole('button', { name: 'Criar com carteira gerada' }).click();
   await expect(page).toHaveURL(/\/carteira\/[0-9a-f-]+$/);
   const importedStudyId = page.url().split('/').at(-1)!;
   await page.getByRole('radio', { name: 'Caso observado', exact: true }).check();

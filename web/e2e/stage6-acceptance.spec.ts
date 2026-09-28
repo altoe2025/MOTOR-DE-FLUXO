@@ -68,6 +68,8 @@ test('Etapa 6: finalidade opcional percorre Caso observado, Diagnóstico, Replay
   await expect(page.getByRole('heading', { name: 'Versão 1' })).toBeVisible();
   await page.goto('/estudos');
   await page.getByRole('button', { name: 'Novo estudo', exact: true }).click();
+  await page.getByRole('radio', { name: 'Carteira gerada (exemplo)' }).check();
+  await page.getByRole('button', { name: 'Criar com carteira gerada' }).click();
   await expect(page).toHaveURL(/\/carteira\/[0-9a-f-]+$/);
   const studyId = page.url().split('/').at(-1)!;
   await page.getByRole('radio', { name: 'Caso observado', exact: true }).check();
@@ -132,6 +134,8 @@ test('Etapa 6: finalidade opcional percorre Caso observado, Diagnóstico, Replay
 test('estudo comum excluído sai da lista, restaura pela lixeira e reabre com a mesma identidade', async ({ page }) => {
   await page.goto('/estudos');
   await page.getByRole('button', { name: 'Novo estudo', exact: true }).click();
+  await page.getByRole('radio', { name: 'Carteira gerada (exemplo)' }).check();
+  await page.getByRole('button', { name: 'Criar com carteira gerada' }).click();
   await expect(page).toHaveURL(/\/carteira\/[0-9a-f-]+$/);
   const studyUrl = page.url();
   const studyId = studyUrl.split('/').at(-1)!;

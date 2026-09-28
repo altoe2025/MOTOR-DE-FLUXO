@@ -123,6 +123,8 @@ test('Caso observado: finalidade opcional preserva privacidade até prévia e di
   await expect(page.getByRole('heading', { name: 'Versão 1' })).toBeVisible();
   await page.goto('/estudos');
   await page.getByRole('button', { name: 'Novo estudo', exact: true }).click();
+  await page.getByRole('radio', { name: 'Carteira gerada (exemplo)' }).check();
+  await page.getByRole('button', { name: 'Criar com carteira gerada' }).click();
   await expect(page).toHaveURL(/\/carteira\/[0-9a-f-]+$/);
   const studyId = page.url().split('/').at(-1)!;
   await page.getByRole('radio', { name: 'Caso observado', exact: true }).check();
@@ -162,6 +164,8 @@ test('Caso observado: ancestralidade XLSX permite autoria com finalidade sem reg
   const imported = await readAndConfirm(page);
   await page.goto('/estudos');
   await page.getByRole('button', { name: 'Novo estudo', exact: true }).click();
+  await page.getByRole('radio', { name: 'Carteira gerada (exemplo)' }).check();
+  await page.getByRole('button', { name: 'Criar com carteira gerada' }).click();
   await expect(page).toHaveURL(/\/carteira\/[0-9a-f-]+$/);
   const studyId = page.url().split('/').at(-1)!;
   await page.getByRole('radio', { name: 'Caso observado', exact: true }).check();

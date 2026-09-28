@@ -106,6 +106,8 @@ test('XLSX sintético permanece local e o Caso alcança diagnóstico observado',
   await expect(page.getByRole('heading', { name: 'Versão 1' })).toBeVisible();
   await page.goto('/estudos');
   await page.getByRole('button', { name: 'Novo estudo', exact: true }).click();
+  await page.getByRole('radio', { name: 'Carteira gerada (exemplo)' }).check();
+  await page.getByRole('button', { name: 'Criar com carteira gerada' }).click();
   const studyId = page.url().split('/').at(-1)!;
   await page.getByRole('radio', { name: 'Caso observado', exact: true }).check();
   await page.getByLabel('Caso confirmado').selectOption(caseId);
