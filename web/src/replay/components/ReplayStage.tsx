@@ -39,9 +39,12 @@ function reducedMotion(): boolean {
 
 const triggerLabels = { WINDOW: 'janela', DEADLINE: 'prazo', HORIZON_END: 'fim do horizonte' } as const;
 
-export function ReplayStage({ document, state, sort, transitionMode, transitionKey, companyOf }: Readonly<{
+export function ReplayStage({ document, state, sort, transitionMode, transitionKey, companyOf, company = null, dateOf = null }: Readonly<{
   document: ReplayDocument;
   companyOf?: (orderId: string) => string;
+  /** Mostra só os cartões desta empresa; totais e linhas continuam da carteira toda. */
+  company?: string | null;
+  dateOf?: ((day: number) => string) | null;
   state: ReplayState;
   sort: ReplaySort;
   transitionMode: ReplayTransitionMode;
@@ -70,8 +73,9 @@ export function ReplayStage({ document, state, sort, transitionMode, transitionK
 
   const visible = useMemo(() => {
     const currentIds = new Set(state.openOrders.map((order) => order.orderId));
-    return [...state.openOrders, ...departing.filter((order) => !currentIds.has(order.orderId))];
-  }, [departing, state.openOrders]);
+    const all = [...state.openOrders, ...departing.filter((order) => !currentIds.has(order.orderId))];
+    return company === null || companyOf === undefined ? all : all.filter((order) => companyOf(order.orderId) === company);
+  }, [company, companyOf, departing, state.openOrders]);
   const outOrders = sortOpenOrders(visible.filter((order) => order.direction === 'OUT'), sort);
   const inOrders = sortOpenOrders(visible.filter((order) => order.direction === 'IN'), sort);
   const departingIds = new Set(departing.map((order) => order.orderId));
@@ -90,16 +94,16 @@ export function ReplayStage({ document, state, sort, transitionMode, transitionK
       <div className="replay-territory replay-territory--cnr"><span>CNR</span><small>fronteira</small></div>
       <div className="replay-territory replay-territory--exterior"><span>Exterior</span><small>moeda estrangeira</small></div>
       <div className="replay-lane replay-lane--out" aria-label="Ordens OUT abertas">
-        {outOrders.length === 0 ? <p className="replay-lane__empty">Sem OUT aberto</p> : outOrders.map((order) => <ReplayOrderCard key={order.orderId} order={order} {...(companyOf === undefined ? {} : { company: companyOf(order.orderId) })} departing={departingIds.has(order.orderId)} />)}
+        {outOrders.length === 0 ? <p className="replay-lane__empty">{company === null ? 'Sem OUT aberto' : `Sem OUT aberto de ${company}`}</p> : outOrders.map((order) => <ReplayOrderCard key={order.orderId} order={order} {...(companyOf === undefined ? {} : { company: companyOf(order.orderId) })} departing={departingIds.has(order.orderId)} dateOf={dateOf} />)}
       </div>
       <div className="replay-frontier">
-        <span className="replay-frontier__day">D{state.day}</span>
+        <span className="replay-frontier__day">D{state.day}{dateOf === null ? null : <small className="replay-frontier__date">{dateOf(state.day)}</small>}</span>
         <span className="replay-frontier__phase">{state.phase === 'WARMUP' ? 'Aquecimento' : state.phase === 'MEASUREMENT' ? 'Medição' : 'Liquidação'}</span>
         {state.closing === null ? <span className="replay-frontier__status">Sem fechamento</span> : <span className="replay-frontier__status">Fechamento · {state.closing.triggers.map((trigger) => triggerLabels[trigger]).join(' + ')}</span>}
         <div className="replay-frontier__open"><small>Ainda aberto</small><strong>{formatMoney(view.openBrl)}</strong></div>
       </div>
       <div className="replay-lane replay-lane--in" aria-label="Ordens IN abertas">
-        {inOrders.length === 0 ? <p className="replay-lane__empty">Sem IN aberto</p> : inOrders.map((order) => <ReplayOrderCard key={order.orderId} order={order} {...(companyOf === undefined ? {} : { company: companyOf(order.orderId) })} departing={departingIds.has(order.orderId)} />)}
+        {inOrders.length === 0 ? <p className="replay-lane__empty">{company === null ? 'Sem IN aberto' : `Sem IN aberto de ${company}`}</p> : inOrders.map((order) => <ReplayOrderCard key={order.orderId} order={order} {...(companyOf === undefined ? {} : { company: companyOf(order.orderId) })} departing={departingIds.has(order.orderId)} dateOf={dateOf} />)}
       </div>
       <ReplayConnections stageRef={stageRef} document={document} day={state.day} active={eventActive} transitionKey={transitionKey} />
     </div>
