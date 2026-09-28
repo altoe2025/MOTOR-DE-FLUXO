@@ -219,7 +219,7 @@ function ReplayReady({ document, study, studyId, scenarioId, selected, initialDa
         Apresentar dia {playback.day}
       </Link>
     </header>
-    <details className="replay-selection">
+    <details className="replay-selection" role="region" aria-label="Repetição exibida">
       <summary>Repetição {selected.repetitionId.slice(0, 8)} de {selected.total} · {selected.criterion}</summary>
       <p>Replay mostra uma repetição específica do cenário, com as seeds planejadas; a distribuição reúne todas as repetições.</p>
       <dl><div><dt>ID da repetição</dt><dd>{selected.repetitionId}</dd></div>

@@ -161,6 +161,7 @@ describe('ReplayPage', () => {
     }), expect.any(AbortSignal));
     expect(screen.getByText('Dia 0 de 2')).toBeInTheDocument();
     // Resumo em uma linha; o detalhe da repetição fica recolhido, mas acessível.
+    expect(screen.getByRole('region', { name: 'Repetição exibida' })).toHaveTextContent('00000000-0000-4000-8000-000000000703');
     const summary = screen.getByText(/Repetição 00000000 de 10 · Primeira repetição do plano/i);
     expect(summary).toBeVisible();
     fireEvent.click(summary);
