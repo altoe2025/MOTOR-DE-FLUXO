@@ -54,7 +54,7 @@ test('deep link e relatório A4 conservam a publicação e ocultam controles', a
       routeId: 'presentation', helpId, studyId: study.id, scenarioId: scenario.id,
       diagnosticExecutionId: diagnostic.id, replayDay: null,
     });
-    expect(request.communication).toEqual(publication);
+    expect(request.context).toEqual({ kind: 'STUDY', document: publication });
     const answer = await response.json() as ChatResponse;
     expect(answer.contextFingerprint).toBe(publication.contextFingerprint);
     await expect(chat.getByRole('list', { name: 'Mensagens da conversa' })).toContainText(answer.answer);

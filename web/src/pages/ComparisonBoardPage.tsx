@@ -5,15 +5,18 @@ import { Link } from 'react-router-dom';
 import { useStudyController } from '../app/providers';
 import { Button } from '../ui/Button';
 import { companyResolver } from '../levers/companies';
+import { useOptionalChat } from '../chat/ChatProvider';
+import { buildBoardChatContext } from '../chat/boardContext';
 import { breakdownByCompany, type Breakdown } from './comparisonBoardBreakdown';
 import type { CompanyRecord, ObservedCase } from '../cases/domain';
 import { formatFraction, formatMoney } from '../presentation/format';
 import type { ExecutionRecordV3, PreviewEnvelope, ScenarioDocument, StudyDocument } from '../study/model';
 
-type BoardRow = Readonly<{
+export type BoardRow = Readonly<{
   key: string;
   studyId: string;
   scenarioId: string;
+  executionId: string;
   studyName: string;
   scenarioName: string;
   origin: string;
@@ -77,6 +80,7 @@ export function buildRows(
       key: `${study.id}:${scenario.id}`,
       studyId: study.id,
       scenarioId: scenario.id,
+      executionId: execution.id,
       studyName: study.name,
       scenarioName: scenario.name,
       origin: originLabel(scenario, cases, companies),
@@ -150,6 +154,8 @@ function writeSelection(selection: ReadonlySet<string>) {
 
 export function ComparisonBoardPage() {
   const controller = useStudyController();
+  const chat = useOptionalChat();
+  const publishBoardContext = chat?.publishBoardContext;
   const heading = useRef<HTMLHeadingElement>(null);
   const [rows, setRows] = useState<BoardRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -194,8 +200,19 @@ export function ComparisonBoardPage() {
     () => sortRows((rows ?? []).filter((row) => selected.has(row.key)), sortKey),
     [rows, selected, sortKey],
   );
+  const selectedForChat = useMemo(() => (rows ?? []).filter((row) => selected.has(row.key))
+    .sort((left, right) => left.key.localeCompare(right.key)), [rows, selected]);
   const groups = useMemo(() => [...new Set(board.flatMap((row) =>
     row.breakdown?.companies.map((item) => item.group) ?? []))].sort(), [board]);
+
+  useEffect(() => {
+    let active = true;
+    publishBoardContext?.(null);
+    void buildBoardChatContext(selectedForChat).then((context) => {
+      if (active) publishBoardContext?.(context);
+    }).catch(() => { if (active) publishBoardContext?.(null); });
+    return () => { active = false; publishBoardContext?.(null); };
+  }, [publishBoardContext, selectedForChat]);
 
   return <article className="destination-page">
     <p className="eyebrow">Estudos</p>

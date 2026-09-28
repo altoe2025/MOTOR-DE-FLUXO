@@ -76,7 +76,7 @@ export function ChatPanel() {
         <div className="chat-body">
           <p className="chat-notice">Suas perguntas e o contexto da tela são enviados à OpenAI.</p>
           <ChatHistory conversation={chat.activeConversation} contextFingerprint={chat.contextFingerprint}
-            catalog={chat.catalog} communication={chat.communication} sentContext={chat.sentContext} routeContext={chat.routeContext}
+            catalog={chat.catalog} context={chat.context} sentContext={chat.sentContext} routeContext={chat.routeContext}
             onRetry={(id) => { void chat.send('', id).catch(() => undefined); }} />
         </div>
         <ChatComposer />

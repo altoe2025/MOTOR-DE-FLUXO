@@ -82,13 +82,28 @@ test.beforeEach(async ({ page, context }) => {
   await mode(page, 'ok');
 });
 
+test('pergunta de interface sem estudo envia controles conhecidos sem valores do formulário', async ({ page }) => {
+  await page.goto('/importar');
+  await expect(page.getByRole('button', { name: 'Ler planilha', exact: true })).toBeDisabled();
+  await open(page);
+  const result = await send(page, 'O que faz Ler planilha?');
+  expect(result.status).toBe(200);
+  expect(result.request.context).toBeNull();
+  expect(result.request.routeContext.uiControls).toContainEqual({
+    helpId: 'control.importacao.ler', enabledCount: 0, disabledCount: 1,
+  });
+  expect(result.request.routeContext.uiControls?.every((item) =>
+    Object.keys(item).sort().join(',') === 'disabledCount,enabledCount,helpId')).toBe(true);
+  expect(result.response.classification).toBe('IN_SCOPE');
+});
+
 test('presença global nas rotas implementadas; auth sem painel e deep links preservados', async ({ page }) => {
   const study = await demo(page); const execution = study.diagnostics[0]!;
   const company = '00000000-0000-4000-8000-000000000999';
   for (const path of ['/empresas', `/empresas/${company}`, `/empresas/${company}/casos`, `/empresas/${company}/perfis`,
     `/empresas/${company}/estudos`, `/empresas/${company}/importar`, '/importar', '/estudos', '/carteira', `/carteira/${study.id}`,
     '/diagnostico', `/estudos/${study.id}/diagnostico?scenarioId=${execution.scenarioId}&executionId=${execution.id}`,
-    `/comparar?studyId=${study.id}`, '/replay', `/estudos/${study.id}/replay?executionId=${execution.id}&day=31`, '/premissas']) {
+    `/comparar?studyId=${study.id}`, '/quadro', '/replay', `/estudos/${study.id}/replay?executionId=${execution.id}&day=31`, '/premissas']) {
     await page.goto(path);
     // Wait for lazy route content before testing focus restoration in that screen.
     if (path.includes('/diagnostico?')) await expect(page.getByRole('region', { name: 'Resultado do motor' })).toBeVisible();
@@ -107,10 +122,10 @@ test('presença global nas rotas implementadas; auth sem painel e deep links pre
 test('quatro classes, recusa server-side, histórico/reload e isolamento de conta', async ({ page }) => {
   await page.goto('/importar'); await open(page);
   const ui = await send(page, 'Como funciona a importação?');
-  expect(ui.status).toBe(200); expect(ui.request.communication).toBeNull();
+  expect(ui.status).toBe(200); expect(ui.request.context).toBeNull();
   expect(ui.response.classification).toBe('IN_SCOPE');
   await expect(messages(page)).toContainText(ui.response.answer);
-  await expect(panel(page).getByRole('link', { name: 'Importação' })).toBeVisible();
+  await expect(panel(page).getByRole('link', { name: 'Importar operações' })).toBeVisible();
   for (const [value, question, classification] of [['insufficient', 'Qual é a economia sem um estudo?', 'INSUFFICIENT_EVIDENCE'],
     ['out', 'Como está o clima?', 'OUT_OF_SCOPE'], ['mixed', 'Explique importar e o clima.', 'MIXED']]) {
     await mode(page, value!); const result = await send(page, question!);
@@ -129,12 +144,39 @@ test('quatro classes, recusa server-side, histórico/reload e isolamento de cont
   await page.reload(); await open(page); await expect(messages(page).locator('article')).toHaveCount(0);
 });
 
+test('Quadro envia só a seleção e o follow-up conserva o assunto no histórico', async ({ page }) => {
+  await demo(page);
+  await page.goto('/quadro');
+  await expect(page.getByRole('heading', { name: 'Quadro comparativo' })).toBeVisible();
+  const choices = page.locator('.board-candidates input[type="checkbox"]');
+  await expect.poll(() => choices.count()).toBeGreaterThanOrEqual(2);
+  await choices.nth(0).check(); await choices.nth(1).check();
+  await open(page);
+  const first = await send(page, 'Qual cenário tem maior economia entre os selecionados?');
+  expect(first.status).toBe(200); expect(first.request.context?.kind).toBe('BOARD');
+  if (first.request.context?.kind !== 'BOARD') throw new Error('BOARD context expected');
+  expect(first.request.context.document.rows).toHaveLength(2);
+  expect(first.response.classification).toBe('IN_SCOPE');
+  expect(first.response.citations[0]?.kind).toBe('EVIDENCE');
+  const source = panel(page).getByRole('navigation', { name: 'Fontes da resposta' }).getByRole('link').last();
+  await expect(source).toHaveAttribute('href', '/quadro');
+
+  const followUp = await send(page, 'E por quê?');
+  expect(followUp.response.classification).toBe('IN_SCOPE');
+  expect(followUp.request.history.map((item) => item.text)).toEqual(expect.arrayContaining([
+    'Qual cenário tem maior economia entre os selecionados?', first.response.answer,
+  ]));
+});
+
 test('contexto da execução, evidências reais, fingerprint e citação restauram execução após reload', async ({ page }) => {
   const study = await demo(page); const execution = study.diagnostics[0]!;
   await page.goto(`/estudos/${study.id}/diagnostico?scenarioId=${execution.scenarioId}&executionId=${execution.id}`);
   await open(page);
   const result = await send(page, 'Explique a economia selecionada.');
-  expect(result.status).toBe(200); const document = result.request.communication!;
+  expect(result.status).toBe(200); const sentContext = result.request.context;
+  expect(sentContext?.kind).toBe('STUDY');
+  if (sentContext?.kind !== 'STUDY') throw new Error('STUDY context expected');
+  const document = sentContext.document;
   const expectedDocument = await page.evaluate((input) => window.__MOTOR_E2E__!.projectDemoCommunication(input), {
     studyId: study.id, scenarioId: execution.scenarioId, diagnosticExecutionId: execution.id, replayDay: null,
   });
@@ -162,7 +204,8 @@ test('Replay preserva dia da citação e marca contexto anterior ao trocar sele�
   await expect(page.getByLabel('Selecionar dia')).toHaveValue('31'); await open(page);
   const result = await send(page, 'Explique o dia selecionado.');
   expect(result.status).toBe(200); expect(result.request.routeContext.replayDay).toBe(31);
-  expect(result.request.communication?.replaySnapshot?.day).toBe(31);
+  expect(result.request.context?.kind).toBe('STUDY');
+  expect(result.request.context?.kind === 'STUDY' ? result.request.context.document.replaySnapshot?.day : null).toBe(31);
   await expect(messages(page)).toContainText(result.response.answer);
   await page.getByLabel('Selecionar dia').fill('32');
   await expect(panel(page).getByText('Contexto anterior', { exact: true })).toBeVisible();
@@ -235,7 +278,7 @@ test('quotas de 100 mensagens e 20 conversas oferecem saída sem apagar históri
   const historySize = await panel(page).locator('.chat-body').evaluate((element) => ({ visible: element.clientHeight, content: element.scrollHeight }));
   expect(historySize.visible).toBeGreaterThan(0);
   expect(historySize.content).toBeGreaterThan(historySize.visible);
-  const citation = panel(page).getByRole('navigation', { name: 'Fontes da resposta' }).getByRole('link', { name: 'Importação' });
+  const citation = panel(page).getByRole('navigation', { name: 'Fontes da resposta' }).getByRole('link', { name: 'Importar operações' });
   await panel(page).getByRole('button', { name: 'Conversas', exact: true }).click();
   const conversation = panel(page).getByRole('navigation', { name: 'Conversas do chat' }).getByRole('button').first();
   await conversation.focus();
@@ -307,7 +350,7 @@ test('arquivo XLSX/raw, credenciais e dados não selecionados ficam fora de requ
   await page.getByRole('button', { name: 'Ler planilha' }).click();
   await expect(page.getByRole('heading', { name: 'Revisar operações' })).toBeVisible();
   await open(page); const result = await send(page, 'PERGUNTA_PRIVADA_C6: como importar?');
-  expect(result.status).toBe(200); expect(result.request.communication).toBeNull();
+  expect(result.status).toBe(200); expect(result.request.context).toBeNull();
   const payloads = bodies.join('\n');
   for (const value of ['ARQUIVO_PRIVADO_C6', 'EMPRESA_PRIVADA_C6', 'ownerSub', OWNER, 'mot21-controlled-e2e-token', bytes.toString('base64'), 'xl/worksheets', 'RAW_CLIENT_C6', 'RAW_PROFILE_C6', 'RAW_ORDER_C6', '987.65']) expect(payloads).not.toContain(value);
   for (const value of ['PERGUNTA_PRIVADA_C6', result.response.answer, 'ARQUIVO_PRIVADO_C6', OWNER, 'mot21-controlled-e2e-token', 'RAW_CLIENT_C6', 'RAW_PROFILE_C6', 'RAW_ORDER_C6', '987.65']) expect(logs.join('\n')).not.toContain(value);
@@ -347,7 +390,9 @@ test('contexto da comparação e citação restauram o par base/hipótese após 
   await open(page);
   const result = await send(page, 'Explique esta comparação.'); expect(result.status).toBe(200);
   expect(result.request.routeContext).not.toHaveProperty('comparisonExecutionId');
-  const doc = result.request.communication!;
+  const sentContext = result.request.context; expect(sentContext?.kind).toBe('STUDY');
+  if (sentContext?.kind !== 'STUDY') throw new Error('STUDY context expected');
+  const doc = sentContext.document;
   expect(doc.selection.comparisonExecutionId).toBe(base.id);
   expect(doc.selection.diagnosticExecutionId).toBe(hypothesis.id);
   expect(doc.executiveMetrics).toEqual([]); expect(doc.comparison?.metrics.length).toBeGreaterThan(0);

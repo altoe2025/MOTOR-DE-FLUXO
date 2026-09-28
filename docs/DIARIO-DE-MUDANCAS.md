@@ -33,10 +33,11 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-09-25, durante a consolidação das Etapas 5 e 6.
+Atualizada em 2026-09-28, durante a publicação da ajuda contextual do chat.
 
 | Branch | Situação | Dono |
 |---|---|---|
+| `codex/chat-interface-render` | Correções de contexto, ajuda de interface e respostas parciais; publicação no GitHub/Render autorizada pelo Gabriel em 2026-09-28, candidata em validação | Codex |
 | `codex/integracao-etapas-5-6` | Consolida `feat/bancada-exploracao` e `codex/finalidade-verificacao`, incluindo histórico de `origin/main`; publicação/CI em preparação, sem deploy | Codex |
 | `main` | Autonetting preferencial e integração final incorporados até o PR #37 (`c2ad175`); grade histórica não regenerada | os dois |
 | `netting/p1` | spike do P1, **NÃO MERGEAR** — dominado, e agora sabemos que a folga é zero em N ≥ 50. Só local, nunca foi pro GitHub | Felipe |
@@ -74,6 +75,20 @@ Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. 
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+## 2026-09-28 — Ajuda de interface e respostas parciais do ORKE AI (MOT-95)
+
+1. **Sintoma.** Perguntas sobre botões/campos não tinham fonte específica; respostas úteis eram substituídas por recusa genérica mesmo quando uma parte estava fundamentada.
+2. **Causa.** Catálogo de apenas 18 itens, sem observações dos controles renderizados; política server-side descartava toda resposta `INSUFFICIENT_EVIDENCE`.
+3. **O que foi feito.** Catálogo ampliado para 200 IDs com descrição baseada nos handlers, efeitos, bloqueios possíveis e recuperação. Snapshot por envio transmite exclusivamente IDs conhecidos e contagens de controles habilitados/desabilitados, sem valores ou texto arbitrário de formulário. Ferramenta de interface separa regras gerais de estado observado. Respostas parciais com citações validadas são preservadas; sem fontes, o fallback pede nome/tela do controle ou seleção de resultados. Histórico e contexto do Quadro do trabalho anterior foram preservados. MOT-92/94/95 consultadas no Linear, sem alteração das issues. Ver `docs/frontend/chat-interface-coverage.md` e `docs/testing.md` para cobertura e verificação.
+4. **O que isso invalida.** Ajuda de uso não exige documento financeiro; falta parcial de contexto não exige recusa de toda a pergunta. O catálogo não demonstra causa exata de bloqueio nem garante respostas universais do modelo. Motor e autenticação não foram alterados. Gabriel autorizou commit, push, PR e publicação no Render em 2026-09-28; o resultado publicado será registrado após confirmação do serviço. Esta correção segue o escopo da MOT-95 já consultada, sem criação ou reescrita de issue.
+
+## 2026-09-26 — Contexto conversacional e Quadro no ORKE AI (sem MOT/commit)
+
+1. **Sintoma.** Continuações curtas como “E por quê?” podiam perder o assunto, perguntas pertinentes podiam ser recusadas antes da leitura das fontes e o chat aberto em `/quadro` não recebia as linhas escolhidas pela pessoa.
+2. **Causa.** O classificador via só a pergunta e a rota, misturava pertinência temática com suficiência de evidência, e `/quadro` era rotulado como uma tela genérica de Estudos. O request aceitava apenas um documento de Estudo; não existia projeção ou ferramenta de leitura para a seleção do Quadro. O fallback estático também não aceitava o deep link `/quadro`.
+3. **O que foi feito.** No worktree isolado `chat-context-quality`, baseado no commit local `1bd7654` de `feat/bancada-exploracao`, o classificador passa a receber o histórico validado e decide somente `IN_SCOPE`, `OUT_OF_SCOPE` ou `MIXED`. A suficiência fica na resposta fundamentada. O request ganhou contexto discriminado `STUDY | BOARD`, fingerprint e evidências estritas; `consultar_quadro` lê somente as linhas marcadas. O cliente publica a seleção, valida respostas e resolve citações para `/quadro`; rotas desconhecidas usam `general`. Catálogo, OpenAPI, tipos, validadores, provider/E2E controlado e smoke real opt-in foram atualizados. Nenhuma regra ou métrica do motor mudou. Não houve commit, push, PR ou deploy porque não foi fornecido `MOT-N`.
+4. **O que isso invalida.** Requests de chat com o campo legado `communication`, a interpretação de `/quadro` como `studies` e testes que permitiam `INSUFFICIENT_EVIDENCE` no classificador ficam superados. Não se declara qualidade semântica universal do modelo: o provider real permanece teste manual opt-in. Números simulados, aceites do motor e conclusões de negócio não mudam.
 
 ## 2026-09-25 — Compatibilidade dos E2Es históricos e navegação com zoom (MOT-99)
 

@@ -1,18 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
 
 import type { ChatConversation } from '../domain';
-import type { CommunicationDocumentV1 } from '../../communication/domain';
 import type { ProductHelpCatalogV1 } from '../../help/catalog';
 import type { RouteChatContext } from '../routeContext';
 import { ChatCitation } from './ChatCitation';
+import type { ChatContext } from '../chatContext';
 
-export function ChatHistory({ conversation, contextFingerprint, catalog = null, communication = null,
+export function ChatHistory({ conversation, contextFingerprint, catalog = null, context = null,
   sentContext = null, routeContext, onRetry }: Readonly<{
   conversation: ChatConversation | null;
   contextFingerprint: string | null;
   catalog?: ProductHelpCatalogV1 | null;
-  communication?: CommunicationDocumentV1 | null;
-  sentContext?: CommunicationDocumentV1 | null;
+  context?: ChatContext | null;
+  sentContext?: ChatContext | null;
   routeContext?: RouteChatContext | null;
   onRetry?(assistantId: string): void;
 }>) {
@@ -46,7 +46,8 @@ export function ChatHistory({ conversation, contextFingerprint, catalog = null, 
           {item.status === 'SUCCEEDED' && item.citations.length > 0 && routeContext && <nav aria-label="Fontes da resposta"><ul>
             {item.citations.map((citation) => <li key={`${citation.kind}:${citation.id}`}>
               <ChatCitation citation={citation} fingerprint={item.contextFingerprint} catalog={catalog}
-                document={sentContext?.contextFingerprint === item.contextFingerprint ? sentContext : communication}
+                context={sentContext?.kind === 'STUDY' && sentContext.document.contextFingerprint === item.contextFingerprint
+                  ? sentContext : context}
                 route={routeContext} />
             </li>)}
           </ul></nav>}

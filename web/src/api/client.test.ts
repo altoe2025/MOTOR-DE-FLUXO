@@ -110,9 +110,9 @@ describe('typed API client', () => {
     const full = await buildCommunicationDocument(await observedInput());
     const fragment = await selectChatContext(full, { kind: 'METRIC', id: 'SAVINGS_BRL' });
     const fetch = vi.fn(async (_path: RequestInfo | URL, init?: RequestInit) => {
-      const body = JSON.parse(String(init?.body)) as { communication: typeof fragment };
-      expect(body.communication?.contextFingerprint).toBe(fragment?.contextFingerprint);
-      expect(body.communication?.executiveMetrics.map((metric) => metric.code)).toEqual(['SAVINGS_BRL']);
+      const body = JSON.parse(String(init?.body)) as { context: { kind: 'STUDY'; document: typeof fragment } };
+      expect(body.context.document?.contextFingerprint).toBe(fragment?.contextFingerprint);
+      expect(body.context.document?.executiveMetrics.map((metric) => metric.code)).toEqual(['SAVINGS_BRL']);
       return jsonResponse({ apiVersion: '1.0.0', messageId: 'reply-1', classification: 'IN_SCOPE',
         answer: 'Economia simulada', citations: [{ kind: 'METRIC', id: 'SAVINGS_BRL' }],
         contextFingerprint: fragment?.contextFingerprint, limitationCodes: [] });
@@ -122,7 +122,7 @@ describe('typed API client', () => {
       messageId: 'reply-1', message: 'Qual é a economia?',
       routeContext: { routeId: 'diagnostic', helpId: null, studyId: full.study.id,
         scenarioId: full.selection.scenarioId, diagnosticExecutionId: full.selection.diagnosticExecutionId,
-        replayDay: null }, communication: fragment as ChatRequest['communication'], history: [],
+        replayDay: null }, context: { kind: 'STUDY', document: fragment! } as ChatRequest['context'], history: [],
     })).resolves.toMatchObject({ answer: 'Economia simulada' });
   });
 
@@ -133,7 +133,7 @@ describe('typed API client', () => {
     const client = createApiClient({ getAccessToken: async () => 'token', fetch });
     const request = { apiVersion: '1.0.0' as const, conversationId: 'conversation-1', messageId: 'message-1',
       message: 'Pergunta', routeContext: { routeId: 'studies', helpId: null, studyId: null,
-        scenarioId: null, diagnosticExecutionId: null, replayDay: null }, communication: null, history: [] };
+        scenarioId: null, diagnosticExecutionId: null, replayDay: null }, context: null, history: [] };
     await expect(client.sendChatMessage({ ...request, message: '' })).rejects.toMatchObject({ code: 'ENTRADA_CLIENTE_INVALIDA' });
     expect(fetch).not.toHaveBeenCalled();
     await expect(client.sendChatMessage(request)).rejects.toMatchObject({ code: 'RESPOSTA_INVALIDA' });

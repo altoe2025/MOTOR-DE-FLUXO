@@ -200,18 +200,19 @@ test('cinco mixes demonstrativos reconciliam diagnóstico, Replay, chat, Painel 
   const sent = inScope.response.request().postDataJSON() as ChatRequest;
   expect(sent.routeContext).toMatchObject({ studyId: study.id, scenarioId: first.scenarioId,
     diagnosticExecutionId: first.id, replayDay: 31 });
-  expect(sent.communication).not.toBeNull();
-  if (sent.communication === null) throw new Error('Chat sem CommunicationDocumentV1.');
-  expect(sent.communication.study).toEqual(document.study);
-  expect(sent.communication.selection).toEqual(document.selection);
-  expect(sent.communication.source).toEqual(document.source);
-  expect(sent.communication.contextFingerprint).toBe(document.contextFingerprint);
+  expect(sent.context?.kind).toBe('STUDY');
+  if (sent.context?.kind !== 'STUDY') throw new Error('Chat sem contexto STUDY.');
+  const sentDocument = sent.context.document;
+  expect(sentDocument.study).toEqual(document.study);
+  expect(sentDocument.selection).toEqual(document.selection);
+  expect(sentDocument.source).toEqual(document.source);
+  expect(sentDocument.contextFingerprint).toBe(document.contextFingerprint);
   for (const field of ['executiveMetrics', 'composition', 'mechanism', 'economics',
     'robustness', 'comparison', 'replaySnapshot', 'limitations', 'evidenceIndex'] as const) {
-    expect(sent.communication[field]).toEqual(document[field]);
+    expect(sentDocument[field]).toEqual(document[field]);
   }
-  expect(sent.communication.executiveMetrics.find((metric) => metric.code === 'SAVINGS_BRL')?.value).toBe(first.savingsBrl);
-  expect(sent.communication.executiveMetrics.find((metric) => metric.code === 'NETABILITY')?.value).toBe(first.netability);
+  expect(sentDocument.executiveMetrics.find((metric) => metric.code === 'SAVINGS_BRL')?.value).toBe(first.savingsBrl);
+  expect(sentDocument.executiveMetrics.find((metric) => metric.code === 'NETABILITY')?.value).toBe(first.netability);
   const answer = await inScope.response.json() as { classification: string; contextFingerprint: string; answer: string };
   expect(answer.classification).toBe('IN_SCOPE');
   expect(answer.contextFingerprint).toBe(document.contextFingerprint);

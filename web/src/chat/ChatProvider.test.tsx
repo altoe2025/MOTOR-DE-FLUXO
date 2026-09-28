@@ -10,6 +10,11 @@ import { conversation, message } from './fixtures';
 import { ChatProvider, useChat } from './ChatProvider';
 import { ChatPanel } from './components/ChatPanel';
 import { DefinitionTooltip } from '../ui/DefinitionTooltip';
+import { buildBoardChatContext } from './boardContext';
+import type { BoardRow } from '../pages/ComparisonBoardPage';
+import type { ChatRequest, ChatResponse } from '../api/client';
+import { validateProductHelpCatalog } from '../help/catalog';
+import productHelp from '../../../servidor/catalogs/product_help.v1.json';
 
 let activeSignal: AbortSignal | null = null;
 function Controls() {
@@ -47,6 +52,57 @@ function setup(ownerSub = 'owner-a', records: ChatConversation[] = []) {
 }
 
 describe('session chat shell', () => {
+  it('marks BOARD answers as previous context and disables their references after changing selection on /quadro', async () => {
+    const row = { key: 's:c', studyId: 's', scenarioId: 'c', executionId: 'e', studyName: 'Estudo',
+      scenarioName: 'Cenário', origin: 'Sintético', windowDays: 7, orderCount: 2, inBrl: '10', outBrl: '20',
+      netability: '0.5', baselineTotal: '8', nettedTotal: '3', savings: '5',
+      diagnosticExecutionId: 'e', finishedAt: '2026-09-26T12:00:00Z', breakdown: null } satisfies BoardRow;
+    const board = await buildBoardChatContext([row]);
+    const nextBoard = await buildBoardChatContext([{ ...row, key: 's:c-b', scenarioId: 'c-b', scenarioName: 'Outra seleção' }]);
+    let current = conversation({ studyId: null });
+    const repository = {
+      deleteChatConversation: async () => undefined,
+      listChatConversations: async () => [current],
+      getChatConversation: async () => current,
+      saveChatConversation: async ({ document }: { document: ChatConversation }) => { current = document; return current; },
+    };
+    const sendChatMessage = vi.fn(async (request: ChatRequest): Promise<ChatResponse> => ({
+      apiVersion: '1.0.0', messageId: request.messageId, classification: 'IN_SCOPE', answer: 'Economia citada',
+      citations: [{ kind: 'EVIDENCE', id: 'BOARD:s:c:savingsBrl' }],
+      contextFingerprint: request.context?.document.contextFingerprint ?? null, limitationCodes: [],
+    }));
+    function BoardControls() {
+      const chat = useChat(); const navigate = useNavigate();
+      return <><button onClick={() => chat.publishBoardContext(board)}>Publicar quadro</button>
+        <button onClick={() => chat.publishBoardContext(nextBoard)}>Mudar seleção do quadro</button>
+        <button onClick={() => navigate('/estudos')}>Sair do quadro</button>
+        <output data-testid="context-kind">{chat.context?.kind ?? 'none'}</output></>;
+    }
+    const catalog = validateProductHelpCatalog({ ...productHelp, catalogVersion: 'a'.repeat(64) })!;
+    render(<MemoryRouter initialEntries={['/quadro']}><ChatProvider ownerSub="owner-a" repository={repository}
+      client={{ sendChatMessage }} catalog={catalog}><BoardControls /><ChatPanel /></ChatProvider></MemoryRouter>);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Publicar quadro' }));
+    expect(screen.getByTestId('context-kind')).toHaveTextContent('BOARD');
+    await user.click(screen.getByRole('button', { name: 'Perguntar' }));
+    await waitFor(() => expect(screen.getByLabelText('Sua pergunta')).toBeEnabled());
+    await user.type(screen.getByLabelText('Sua pergunta'), 'Qual tem maior economia?');
+    await user.click(screen.getByRole('button', { name: 'Enviar' }));
+    await waitFor(() => expect(sendChatMessage).toHaveBeenCalled());
+    expect(sendChatMessage.mock.calls[0]![0].context).toMatchObject({
+      kind: 'BOARD', document: { rows: [{ rowKey: 's:c' }] },
+    });
+    expect(await screen.findByText('Economia citada', { selector: 'p' })).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Estudo · Cenário — Economia' })).toHaveAttribute('href', '/quadro');
+    expect(screen.queryByText('Contexto anterior')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Mudar seleção do quadro' }));
+    expect(screen.getByText('Contexto anterior')).toBeVisible();
+    expect(screen.queryByRole('link', { name: 'Estudo · Cenário — Economia' })).not.toBeInTheDocument();
+    expect(screen.getByText('BOARD:s:c:savingsBrl (referência indisponível neste contexto)')).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Sair do quadro' }));
+    expect(screen.getByTestId('context-kind')).toHaveTextContent('none');
+  });
+
   it('preserves an older active PENDING conversation and its live request across routes in one Study', async () => {
     const user = userEvent.setup();
     const newer = conversation({ id: 'conversation-newer', studyId: 'study-a', title: 'Recente',

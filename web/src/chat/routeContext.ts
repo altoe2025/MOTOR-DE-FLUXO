@@ -1,3 +1,5 @@
+import type { UiControlState } from './uiContext';
+
 export type RouteChatContext = Readonly<{
   routeId: string;
   helpId: string | null;
@@ -6,6 +8,7 @@ export type RouteChatContext = Readonly<{
   diagnosticExecutionId: string | null;
   comparisonExecutionId?: string | null;
   replayDay: number | null;
+  uiControls?: readonly UiControlState[];
 }>;
 
 export function routeChatContext(pathAndSearch: string): RouteChatContext | null {
@@ -30,13 +33,13 @@ export function routeChatContext(pathAndSearch: string): RouteChatContext | null
   else if (root === 'comparar') { routeId = 'comparison'; studyId = url.searchParams.get('studyId'); }
   else if (root === 'replay') routeId = 'replay';
   else if (root === 'premissas') routeId = 'premises';
-  else if (root === 'quadro') routeId = 'studies';
+  else if (root === 'quadro') routeId = 'board';
   // Qualquer outra tela do app mantém o chat disponível, sem contexto específico.
-  if (routeId === null) routeId = 'studies';
+  if (routeId === null) routeId = 'general';
   const dayText = routeId === 'replay' ? url.searchParams.get('day')
     : routeId === 'presentation' ? url.searchParams.get('dia') : null;
   const day = dayText !== null && /^(0|[1-9]\d*)$/.test(dayText) ? Number(dayText) : null;
-  return { routeId, helpId: null, studyId,
+  return { routeId, helpId: routeId === 'board' ? 'page.quadro' : null, studyId,
     scenarioId: routeId === 'diagnostic' ? selectionId(url.searchParams.get('scenarioId'))
       : routeId === 'presentation' ? selectionId(url.searchParams.get('cenario')) : null,
     diagnosticExecutionId: routeId === 'replay' || routeId === 'diagnostic'

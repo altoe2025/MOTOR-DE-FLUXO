@@ -367,7 +367,7 @@ Os diagnósticos dele também serão apagados. Não dá para desfazer.`)) return
     <ul className="scenario-list">{study.scenarios.map((item) => <li key={item.id}>
       <label><input type="radio" name="hypothesis-base" checked={selectedBase.id === item.id} onChange={() => setSelectedBaseId(item.id)} /> <strong>{item.name}</strong></label>
       <span>{sourceLabel(item)}{item.id === study.baseScenarioId ? ' · base' : ' · hipótese'}</span>
-      <Button variant="secondary" onClick={() => void navigateAfterFlush(`/estudos/${study.id}/diagnostico?scenarioId=${item.id}`)}>Executar diagnóstico</Button>
+      <Button data-chat-help-id="control.carteira.diagnostico" variant="secondary" onClick={() => void navigateAfterFlush(`/estudos/${study.id}/diagnostico?scenarioId=${item.id}`)}>Executar diagnóstico</Button>
       {item.id === study.baseScenarioId ? null : <Button variant="secondary" className="button--danger" aria-label={`Apagar cenário ${item.name}`} onClick={() => void deleteScenario(item)}>Apagar</Button>}
     </li>)}</ul>
     <PortfolioCompositionSummary scenario={selectedBase} profiles={[...availableProfiles, ...attachedProfiles]} companies={companies} onEdit={() => {

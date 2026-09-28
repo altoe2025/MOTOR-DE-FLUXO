@@ -10,6 +10,6 @@ export function DiagnosticControls({ generated, count, onCountChange, onRun, dis
     {generated ? <label>Repetições<select value={count} disabled={disabled} onChange={(event) => onCountChange(Number(event.target.value) as 10 | 30 | 100)}>
       <option value={10}>10</option><option value={30}>30</option><option value={100}>100</option>
     </select></label> : <p>Esta é uma entrada fixa; por isso o diagnóstico contém uma execução individual e não uma distribuição amostral.</p>}
-    <button className="button" type="button" disabled={disabled} onClick={onRun}>{disabled ? 'Diagnóstico em andamento…' : 'Executar diagnóstico'}</button>
+    <button data-chat-help-id="control.diagnostico.executar" className="button" type="button" disabled={disabled} onClick={onRun}>{disabled ? 'Diagnóstico em andamento…' : 'Executar diagnóstico'}</button>
   </section>;
 }

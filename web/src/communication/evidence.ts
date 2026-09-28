@@ -10,25 +10,28 @@ function compareCodePoints(left: string, right: string): number {
 }
 
 /** Unicode code-point key order, matching Python json.dumps(sort_keys=True). */
-function canonicalCommunication(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map(canonicalCommunication).join(',')}]`;
+function canonicalContext(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalContext).join(',')}]`;
   if (value !== null && typeof value === 'object') {
     const entries = Object.entries(value).filter(([, child]) => child !== undefined)
       .sort(([left], [right]) => compareCodePoints(left, right));
-    return `{${entries.map(([key, child]) => `${JSON.stringify(key)}:${canonicalCommunication(child)}`).join(',')}}`;
+    return `{${entries.map(([key, child]) => `${JSON.stringify(key)}:${canonicalContext(child)}`).join(',')}}`;
   }
   const encoded = JSON.stringify(value);
   if (encoded === undefined) throw new Error('Valor não serializável para fingerprint.');
   return encoded;
 }
 
+export async function fingerprintContextDocument(document: object): Promise<string> {
+  const payload = Object.fromEntries(Object.entries(document)
+    .filter(([key]) => key !== 'generatedAt' && key !== 'contextFingerprint'));
+  const bytes = new TextEncoder().encode(canonicalContext(payload));
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
 export async function fingerprintCommunicationDocument(
   document: Omit<CommunicationDocumentV1, 'contextFingerprint'> | CommunicationDocumentV1,
 ): Promise<string> {
-  // generatedAt is metadata; all other content participates in context identity.
-  const payload = Object.fromEntries(Object.entries(document)
-    .filter(([key]) => key !== 'generatedAt' && key !== 'contextFingerprint'));
-  const bytes = new TextEncoder().encode(canonicalCommunication(payload));
-  const digest = await crypto.subtle.digest('SHA-256', bytes);
-  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+  return fingerprintContextDocument(document);
 }
