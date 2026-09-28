@@ -446,3 +446,6 @@ a { color: inherit; }
 @media (max-width: 720px) { .scenario-list li { grid-template-columns: 1fr; } }
 #variacoes .presentation-table th[scope="row"] { min-width: 11rem; }
 #variacoes .presentation-table td { white-space: nowrap; }
+/* Atalhos, Replay e cópia de segurança */
+.storage-notice { align-items: center; background: var(--surface-alt); border-radius: var(--radius); display: flex; flex-wrap: wrap; gap: var(--space-3); justify-content: space-between; margin: var(--space-4) 0; padding: var(--space-3) var(--space-4); }
+.storage-notice p { margin: 0; max-width: 60ch; }

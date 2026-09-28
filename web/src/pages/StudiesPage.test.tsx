@@ -10,11 +10,13 @@ import { createStudy } from '../study/domain';
 import { FIXTURE_NOW, FIXTURE_OWNER, makeScenarioDraft } from '../study/fixtures';
 import type { StudyDocument } from '../study/model';
 import { StudiesPage } from './StudiesPage';
+import { buildStudyExport } from '../study/studyTransfer';
 
 const controller = {
   listStudies: vi.fn<() => Promise<StudyDocument[]>>(),
   demoInstallationStatus: vi.fn<() => Promise<'INSTALLED' | 'REMOVED' | null>>(),
   restoreDemoStudy: vi.fn<() => Promise<StudyDocument | null>>(),
+  saveDetachedStudy: vi.fn<(study: StudyDocument, expectedRevision: number) => Promise<StudyDocument>>(),
   subscribe: () => () => undefined,
   snapshot: { document: null, status: 'IDLE', error: null as unknown },
 };
@@ -82,5 +84,40 @@ describe('StudiesPage demo recovery', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Carregar estudo demonstrativo' }));
     expect(controller.restoreDemoStudy).toHaveBeenCalledOnce();
     expect(await screen.findByRole('heading', { name: 'Demonstração aberta' })).toBeInTheDocument();
+  });
+});
+
+describe('StudiesPage cópia de segurança', () => {
+  beforeEach(() => {
+    controller.listStudies.mockResolvedValue([]);
+    controller.demoInstallationStatus.mockResolvedValue('INSTALLED');
+    controller.snapshot.error = null;
+    controller.snapshot.status = 'IDLE';
+    controller.saveDetachedStudy.mockReset();
+    controller.saveDetachedStudy.mockImplementation(async (value) => value);
+  });
+
+  it('avisa que o estudo fica salvo só neste navegador', async () => {
+    page();
+    expect(await screen.findByText('Salvo neste navegador.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Importar estudo' })).toBeInTheDocument();
+  });
+
+  it('importa um arquivo exportado e grava o estudo como revisão 1', async () => {
+    const exported = buildStudyExport({ ...(await study()), revision: 5 }, { now: FIXTURE_NOW, buildSha: null });
+    page();
+    await screen.findByText('Nenhum estudo salvo nesta conta.');
+    const file = new File([JSON.stringify(exported)], 'estudo.json', { type: 'application/json' });
+    await userEvent.upload(screen.getByLabelText('Arquivo do estudo para importar'), file);
+    expect(await screen.findByText(/Estudo “Demonstração” importado/)).toBeInTheDocument();
+    expect(controller.saveDetachedStudy).toHaveBeenCalledWith(expect.objectContaining({ id: 'demo', revision: 1 }), 0);
+  });
+
+  it('mostra erro claro para arquivo que não é estudo', async () => {
+    page();
+    await screen.findByText('Nenhum estudo salvo nesta conta.');
+    await userEvent.upload(screen.getByLabelText('Arquivo do estudo para importar'), new File(['{"x":1}'], 'x.json', { type: 'application/json' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('não é um estudo exportado');
+    expect(controller.saveDetachedStudy).not.toHaveBeenCalled();
   });
 });
