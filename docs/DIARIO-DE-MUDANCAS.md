@@ -75,6 +75,15 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-28 — Escolher composição por economia e limite de espera
+
+1. **Sintoma.** A bancada mostrava combinações, mas exigia comparar manualmente a economia e a espera para escolher uma composição.
+2. **Causa.** Faltava uma recomendação por critério explícito. O rateio visual de tarifa por volume do período também transferia custo entre empresas que remetiam em ciclos diferentes; a comparação com empresas isoladas aceitava operações alteradas.
+3. **O que foi feito.** Em `codex/carteira-criterios`, a comparação indica a maior economia entre composições executadas e comparáveis, com limite opcional de espera média ponderada, alternativas e diferença para a próxima elegível. Reutiliza cenários salvos, sem novo contrato de armazenamento ou mudança no motor. Só compara subconjuntos completos de empresas com as mesmas ordens, custos, calendário e versão do motor; resultados ausentes, obsoletos e regenerados ficam explicados fora da recomendação. Spread/tarifa visual são distribuídos por ciclo. O comparador de empresas isoladas usa a mesma verificação; diferença de volume casado passou a ser descrita como comparação contrafactual, não partição efetiva entre empresas.
+4. **O que isso invalida.** Ficam superados o rateio visual global de tarifas, a escolha de qualquer cenário com uma única empresa como comparador e a interpretação da diferença entre rodadas como casamento efetivo entre empresas. Nada muda nas regras ou nos totais do motor. Sensibilidade avançada, recuperação integral dos E2Es antigos e publicação no Render não fazem parte desta entrega.
+
+Validação: build de produção, typecheck e lint dos arquivos alterados passaram. Os testes focados da comparação passaram; a suíte unitária completa terminou com 1.109 testes aprovados e 5 falhas em dois arquivos de rotas/editor. Esses dois arquivos passaram isoladamente (70/70), com um worker, sem alterar timeouts ou expectativas. Os E2Es antigos não foram reexecutados.
+
 ## 2026-09-28 — Bancada: carteira de várias empresas, combinações e front mais claro
 
 1. **Sintoma.** Testar composição exigia montar uma planilha por combinação, com a empresa marcada só pelo prefixo do ID; o netting entre linhas da mesma empresa (ex.: AstroPay Foreign PIX × Multimoedas) aparecia como "entre clientes", misturado ao ganho que a carteira traz; a apresentação não abria para carteiras de casos juntos; a tela do estudo misturava caminhos antigos (prévia, hipótese, comparar) com o fluxo novo.

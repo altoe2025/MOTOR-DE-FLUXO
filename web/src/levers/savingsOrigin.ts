@@ -3,6 +3,7 @@ import Decimal from 'decimal.js';
 import { breakdownByCompany, type Breakdown, type CompanyBreakdown } from '../pages/comparisonBoardBreakdown';
 import type { DiagnosticExecutionRecord, PreviewEnvelope, ScenarioDocument, StudyDocument } from '../study/model';
 import { companyResolver } from './companies';
+import { compositionComparisonReason } from './portfolioRecommendation';
 
 export type ScenarioRow = Readonly<{
   scenario: ScenarioDocument;
@@ -41,14 +42,14 @@ export function scenarioRow(study: StudyDocument, scenario: ScenarioDocument): S
  */
 export function savingsOrigin(rows: readonly ScenarioRow[], reference: ScenarioRow): OriginEntry[] {
   const alone = (company: string) => rows.find((row) => row !== reference && row.breakdown?.companies.length === 1
-    && row.breakdown.companies[0]!.group === company)?.breakdown?.companies[0];
+    && row.breakdown.companies[0]!.group === company
+    && compositionComparisonReason(reference, row) === null)?.breakdown?.companies[0];
   return (reference.breakdown?.companies ?? []).map((item) => ({ item, solo: alone(item.group) }));
 }
 
 /**
- * Separa o volume casado entre clientes do cenário de referência: o que cada empresa já casa
- * entre as próprias linhas (medido rodando-a sozinha) e o restante, que só existe porque as
- * empresas estão juntas. Exige a rodada sozinha de todas as empresas.
+ * Compara o volume entre clientes da carteira com a soma das rodadas isoladas.
+ * A diferença é contrafactual: não identifica casamento entre empresas na execução.
  */
 export function interClientSplit(entries: readonly OriginEntry[]): Readonly<{
   total: string; sameCompany: string; betweenCompanies: string;

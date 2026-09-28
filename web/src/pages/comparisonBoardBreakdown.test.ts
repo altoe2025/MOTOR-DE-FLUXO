@@ -30,6 +30,26 @@ const envelope = {
 } as unknown as PreviewEnvelope;
 
 describe('breakdownByCompany', () => {
+  it('cobra a tarifa de cada ciclo de quem remeteu naquele ciclo', () => {
+    const input = {
+      input_snapshot: { cenario: { ordens: [
+        { ...orders[0], id: 'A-1', valor_brl: '10', dia_conhecida: 0 },
+        { ...orders[1], id: 'B-1', valor_brl: '90', dia_conhecida: 1 },
+      ], custo: { ...costs, iof_in: '0', iof_out: '0', carry_cnr: '0', spread_rail_bps: '0' } } },
+      result: { agregado: { ids_ordens_medidas: ['A-1', 'B-1'],
+        baseline_periodo: { total: '80' }, netado_periodo: { total: '80' },
+        execucao_completa: { ciclos: [
+          { alocacoes: [{ ordem_id: 'A-1', dia: 0, valor_brl: '10', tipo: 'REMETIDO' }] },
+          { alocacoes: [{ ordem_id: 'B-1', dia: 1, valor_brl: '90', tipo: 'REMETIDO' }] },
+        ] },
+      } },
+    } as unknown as PreviewEnvelope;
+    const result = breakdownByCompany(input);
+    expect(result.reconciled).toBe(true);
+    expect(result.companies.map((company) => company.netted)).toEqual(['40', '40']);
+    expect(result.companies.map((company) => company.savings)).toEqual(['0', '0']);
+  });
+
   it('agrupa pelo prefixo do ID da operação', () => {
     expect(groupOf('AP-20260102-FOREIGNPIX-IN')).toBe('AP');
     expect(groupOf('x-out-01')).toBe('X');

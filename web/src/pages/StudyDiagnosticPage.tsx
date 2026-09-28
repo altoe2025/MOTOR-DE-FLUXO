@@ -320,6 +320,7 @@ export function StudyDiagnosticPage() {
         aria-expanded={comparisonOpen} aria-controls="variation-comparison-panel" onClick={() => setComparisonOpen((open) => !open)}>
         {comparisonOpen ? 'Ocultar quadros comparativos' : 'Abrir quadros comparativos'}
       </Button>}
+      {study.scenarios.length > 1 ? <p className="field-hint">Nos quadros comparativos, escolha a carteira com maior economia dentro do seu limite de espera.</p> : null}
       {comparisonOpen ? <div id="variation-comparison-panel">
         <VariationComparison study={study} selectedScenarioId={scenario.id} running={runInProgress} progress={runAllProgress} onRunAll={() => void runAll()} />
       </div> : null}

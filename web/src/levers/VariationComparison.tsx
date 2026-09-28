@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { formatFraction, formatMoney, formatSignedMoney } from '../presentation/format';
 import type { ScenarioDocument, StudyDocument } from '../study/model';
 import { Button } from '../ui/Button';
+import { PortfolioRecommendation } from './PortfolioRecommendationPanel';
 import { interClientSplit, savingsOrigin, scenarioRow } from './savingsOrigin';
 
 export { currentDiagnostic } from './savingsOrigin';
@@ -15,7 +16,7 @@ export function VariationComparison({ study, selectedScenarioId, running, progre
   progress: string | null;
   onRunAll(): void;
 }>) {
-  if (study.scenarios.length < 2) return null;
+  if (study.scenarios.length < 2) return <PortfolioRecommendation study={study} />;
   const rows = study.scenarios.map((scenario) => scenarioRow(study, scenario));
   const base = rows.find((row) => row.scenario.id === study.baseScenarioId) ?? rows[0]!;
   const mixedSampling = base.execution?.requestSnapshot.sampling.kind === 'GENERATED_INPUT'
@@ -30,6 +31,7 @@ export function VariationComparison({ study, selectedScenarioId, running, progre
   const link = (scenario: ScenarioDocument) => `/estudos/${encodeURIComponent(study.id)}/diagnostico?scenarioId=${encodeURIComponent(scenario.id)}`;
 
   return <section className="variation-comparison" aria-labelledby="variation-comparison-title">
+    <PortfolioRecommendation study={study} />
     <h2 id="variation-comparison-title">Original × variações</h2>
     {mixedSampling ? <p role="note" className="field-hint">
       O original foi regenerado e há variações com ordens fixas. As carteiras podem diferir;
@@ -83,7 +85,7 @@ export function VariationComparison({ study, selectedScenarioId, running, progre
     {origin.length < 2 ? null : <section className="savings-origin" aria-labelledby="savings-origin-title">
       <h3 id="savings-origin-title">De onde vem a economia de cada empresa</h3>
       {!hasSolo ? <p className="field-hint">Gere as combinações no estudo (elas incluem cada empresa sozinha) e rode todas para separar o que cada empresa faria sozinha do que a carteira acrescenta.</p> : <>
-        <p className="field-hint">“Sozinha” é a mesma empresa rodada sem as outras. O que ela casa sozinha se divide em mesma linha (o mesmo cliente com IN e OUT) e entre linhas da própria empresa. O ganho da carteira é o que só existe porque as outras empresas estão junto.</p>
+        <p className="field-hint">“Sozinha” usa as mesmas operações e premissas, sem as outras empresas. A diferença mostra como a economia atribuída à empresa muda na carteira; não é a contribuição total dela para o conjunto.</p>
         <div className="table-scroll" role="region" tabIndex={0} aria-label="Origem da economia por empresa">
           <table className="company-table">
             <caption>Contra “{base.scenario.name}”</caption>
@@ -102,8 +104,8 @@ export function VariationComparison({ study, selectedScenarioId, running, progre
           </table>
         </div>
         {split === null ? null : <p className="field-hint">
-          Casamento entre clientes no original: {formatMoney(split.total)}, sendo {formatMoney(split.sameCompany)} entre linhas da mesma empresa
-          (o que cada uma casa sozinha) e {formatMoney(split.betweenCompanies)} entre empresas diferentes.
+          Volume casado entre clientes na carteira: {formatMoney(split.total)}. Nas rodadas isoladas, a soma é {formatMoney(split.sameCompany)}.
+          Diferença: {formatSignedMoney(split.betweenCompanies)}. Essa comparação não identifica quanto casou entre empresas na carteira.
         </p>}
       </>}
     </section>}

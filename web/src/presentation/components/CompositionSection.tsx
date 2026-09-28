@@ -98,12 +98,12 @@ export function CompositionSection({ document, participantNames, participantComp
           </div>;
           if (!inter || split === null) return [item];
           return [item,
-            <div key={`${metric.code}:same`}><dt>… entre linhas da mesma empresa</dt><dd>{formatMoney(split.sameCompany)}</dd></div>,
-            <div key={`${metric.code}:between`}><dt>… entre empresas diferentes</dt><dd>{formatMoney(split.betweenCompanies)}</dd></div>];
+            <div key={`${metric.code}:same`}><dt>Soma das rodadas isoladas · entre clientes</dt><dd>{formatMoney(split.sameCompany)}</dd></div>,
+            <div key={`${metric.code}:between`}><dt>Diferença da carteira para as rodadas isoladas</dt><dd>{formatMoney(split.betweenCompanies)}</dd></div>];
         })}</dl>
       </div>;
     })}</div>
-    {split === null ? null : <p className="presentation-lead">A separação entre linhas da mesma empresa e entre empresas usa as rodadas de cada empresa sozinha (combinações do estudo): o que ela casa sozinha entre as próprias linhas; o resto só existe com as empresas juntas.</p>}
+    {split === null ? null : <p className="presentation-lead">A comparação usa as mesmas operações e premissas nas rodadas isoladas. A diferença não identifica quanto casou entre empresas na execução da carteira.</p>}
     {consequences.length === 0 ? null : <>
       <h3>O que isso significa</h3>
       <ul className="presentation-consequences">{consequences.map((fact) => <li key={fact.code}
