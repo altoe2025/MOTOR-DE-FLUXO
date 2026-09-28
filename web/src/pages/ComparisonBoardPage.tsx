@@ -250,7 +250,7 @@ export function ComparisonBoardPage() {
       </div>
       <div className="table-scroll">
         <table className="company-table">
-          <caption>{board.length} {board.length === 1 ? 'cenário' : 'cenários'} no quadro</caption>
+          <caption>{board.length} {board.length === 1 ? 'cenário' : 'cenários'} no quadro. Netabilidade: parte do volume que não cruzou a fronteira; custo sem pool: cada ordem remetendo sozinha.</caption>
           <thead><tr>
             <th scope="col">Estudo · cenário</th>
             <th scope="col">Origem</th>
@@ -258,7 +258,7 @@ export function ComparisonBoardPage() {
             <th scope="col">Ordens</th>
             <th scope="col">IN</th>
             <th scope="col">OUT</th>
-            <th scope="col">Netabilidade</th>
+            <th scope="col" title="Parte do volume que não cruzou a fronteira">Netabilidade</th>
             <th scope="col">Custo sem pool</th>
             <th scope="col">Custo com pool</th>
             <th scope="col">Economia</th>

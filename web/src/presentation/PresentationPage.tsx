@@ -2,15 +2,18 @@ import type { CommunicationDocumentV1 } from '../communication/domain';
 import { CompositionSection } from './components/CompositionSection';
 import { ExecutiveSummary } from './components/ExecutiveSummary';
 import { PresentationHeader } from './components/PresentationHeader';
+import { VariationsSection } from './components/VariationsSection';
 import { matchesPresentationSelection, type PresentationSelection } from './domain';
 import { PrintActions } from './PrintActions';
+import type { PresentationStory } from './story';
 
 export type PresentationPageState =
   | Readonly<{ kind: 'loading' }>
   | Readonly<{ kind: 'missing'; onRegenerate: () => void }>
   | Readonly<{ kind: 'error'; message: string; onRetry: () => void }>
   | Readonly<{ kind: 'ready'; document: CommunicationDocumentV1; selection: PresentationSelection; scenarioName?: string;
-      participantNames?: Readonly<Record<string, string>> }>;
+      participantNames?: Readonly<Record<string, string>>; participantCompanies?: Readonly<Record<string, string>>;
+      story?: PresentationStory | null }>;
 
 export function PresentationPage({ state }: Readonly<{ state: PresentationPageState }>) {
   if (state.kind === 'loading') return <article className="presentation-page" aria-busy="true">
@@ -32,6 +35,8 @@ export function PresentationPage({ state }: Readonly<{ state: PresentationPageSt
     <PresentationHeader document={document} scenarioName={state.scenarioName} />
     <PrintActions />
     <ExecutiveSummary document={document} />
-    <CompositionSection document={document} participantNames={state.participantNames ?? {}} />
+    <CompositionSection document={document} participantNames={state.participantNames ?? {}}
+      participantCompanies={state.participantCompanies ?? {}} story={state.story ?? null} />
+    <VariationsSection document={document} story={state.story ?? null} />
   </article>;
 }

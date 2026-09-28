@@ -1,4 +1,7 @@
 import type { CommunicationDocumentV1, CommunicationMetric } from '../../communication/domain';
+import { sumMetrics } from '../derived';
+import { formatFraction, formatMoney } from '../format';
+import type { PresentationStory } from '../story';
 import { evidenceAttributes, hasEvidence, MetricList, metricText } from './DocumentItems';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -37,14 +40,23 @@ function participantRows(metrics: readonly CommunicationMetric[]): ParticipantRo
   });
 }
 
-export function CompositionSection({ document, participantNames }: Readonly<{
+export function CompositionSection({ document, participantNames, participantCompanies = {}, story = null }: Readonly<{
   document: CommunicationDocumentV1;
   participantNames: Readonly<Record<string, string>>;
+  participantCompanies?: Readonly<Record<string, string>>;
+  story?: PresentationStory | null;
 }>) {
   const rows = participantRows(document.composition.metrics);
-  const named = rows.map((row, index) => ({ ...row, name: participantNames[row.id]
+  const named = rows.map((row, index) => ({ ...row, company: participantCompanies[row.id], name: participantNames[row.id]
     ?? (UUID.test(row.id) ? `Participante ${index + 1}` : row.id) }))
     .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { numeric: true }));
+  const companies = [...new Set(named.map((row) => row.company).filter((item): item is string => item !== undefined))]
+    .sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }));
+  const allKnown = named.length > 0 && named.every((row) => row.company !== undefined);
+  const grouped = companies.length >= 2 && allKnown;
+  const interLabel = companies.length === 1 && allKnown ? 'Entre linhas da mesma empresa'
+    : companies.length >= 2 ? 'Entre clientes (linhas e empresas)' : undefined;
+  const split = story?.presentedIsBase ? story.split : null;
   const headline = document.composition.metrics.filter((metric) => metric.code in COMPOSITION_LABELS);
   const consequences = document.mechanism.facts
     .filter((fact) => hasEvidence(document, fact.evidenceRefs) && CONSEQUENCE_TEXT[fact.value] !== undefined);
@@ -55,11 +67,22 @@ export function CompositionSection({ document, participantNames }: Readonly<{
     {rows.length === 0 ? null : <div className="table-scroll"><table className="presentation-table">
       <caption className="visually-hidden">Participantes da carteira</caption>
       <thead><tr><th scope="col">Participante</th><th scope="col">Volume</th><th scope="col">Participação</th></tr></thead>
-      <tbody>{named.map((row) => <tr key={row.volume.code} {...evidenceAttributes(document, row.volume.evidenceRefs)}>
-        <th scope="row">{row.name}</th>
-        <td>{metricText(document, row.volume)}</td>
-        <td>{row.share === undefined ? 'Não disponível' : metricText(document, row.share)}</td>
-      </tr>)}</tbody>
+      <tbody>{(grouped ? companies : [null]).flatMap((company) => {
+        const members = company === null ? named : named.filter((row) => row.company === company);
+        const lines = members.map((row) => <tr key={row.volume.code} {...evidenceAttributes(document, row.volume.evidenceRefs)}>
+          <th scope="row">{row.name}</th>
+          <td>{metricText(document, row.volume)}</td>
+          <td>{row.share === undefined ? 'Não disponível' : metricText(document, row.share)}</td>
+        </tr>);
+        if (company === null || members.length < 2) return lines;
+        const volume = sumMetrics(members.map((row) => row.volume));
+        const share = sumMetrics(members.map((row) => row.share));
+        return [...lines, <tr key={`total:${company}`} className="presentation-table__subtotal">
+          <th scope="row">{company} · total</th>
+          <td>{volume === null ? 'Não disponível' : formatMoney(volume)}</td>
+          <td>{share === null ? 'Não disponível' : formatFraction(share)}</td>
+        </tr>];
+      })}</tbody>
     </table></div>}
     <h3>Mecanismo</h3>
     <div className="presentation-mechanism">{MECHANISM_GROUPS.map(({ axis, title }) => {
@@ -68,11 +91,19 @@ export function CompositionSection({ document, participantNames }: Readonly<{
       if (metrics.length === 0) return null;
       return <div key={axis} className="presentation-mechanism__group">
         <h4>{title}</h4>
-        <dl>{metrics.map((metric) => <div key={metric.code} {...evidenceAttributes(document, metric.evidenceRefs)}>
-          <dt>{metric.label}</dt><dd>{metricText(document, metric)}</dd>
-        </div>)}</dl>
+        <dl>{metrics.flatMap((metric) => {
+          const inter = metric.code === 'policy_capture.inter_client_brl';
+          const item = <div key={metric.code} {...evidenceAttributes(document, metric.evidenceRefs)}>
+            <dt>{inter && interLabel !== undefined ? interLabel : metric.label}</dt><dd>{metricText(document, metric)}</dd>
+          </div>;
+          if (!inter || split === null) return [item];
+          return [item,
+            <div key={`${metric.code}:same`}><dt>… entre linhas da mesma empresa</dt><dd>{formatMoney(split.sameCompany)}</dd></div>,
+            <div key={`${metric.code}:between`}><dt>… entre empresas diferentes</dt><dd>{formatMoney(split.betweenCompanies)}</dd></div>];
+        })}</dl>
       </div>;
     })}</div>
+    {split === null ? null : <p className="presentation-lead">A separação entre linhas da mesma empresa e entre empresas usa as rodadas de cada empresa sozinha (combinações do estudo): o que ela casa sozinha entre as próprias linhas; o resto só existe com as empresas juntas.</p>}
     {consequences.length === 0 ? null : <>
       <h3>O que isso significa</h3>
       <ul className="presentation-consequences">{consequences.map((fact) => <li key={fact.code}

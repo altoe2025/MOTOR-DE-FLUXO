@@ -69,7 +69,7 @@ describe('Painel A enxuto', () => {
     const reordered = { ...document, executiveMetrics: [...document.executiveMetrics].reverse() };
     render(<PresentationPage state={{ kind: 'ready', document: reordered, selection: selection(reordered) }} />);
     const summary = screen.getByRole('region', { name: 'Resumo executivo' });
-    for (const label of ['Custo baseline', 'Custo netado', 'Economia simulada',
+    for (const label of ['Custo sem pool', 'Custo com pool', 'Economia simulada',
       'Taxa de netabilidade', 'Volume bruto medido']) {
       expect(within(summary).getByText(label)).toBeInTheDocument();
     }

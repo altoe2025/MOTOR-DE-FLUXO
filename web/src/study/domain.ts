@@ -320,6 +320,27 @@ export async function updateScenario(
   });
 }
 
+/**
+ * Troca só o nome do cenário. O nome não entra na identidade da entrada, então a revisão do
+ * cenário e os diagnósticos atuais continuam válidos (updateScenario invalidaria todos).
+ */
+export async function renameScenario(
+  study: StudyDocument,
+  scenarioId: string,
+  name: string,
+  now: string,
+): Promise<StudyDocument> {
+  if (!study.scenarios.some((scenario) => scenario.id === scenarioId)) throw new Error('Cenário não encontrado.');
+  const checked = checkedName(name);
+  return finalize({
+    ...clone(study),
+    scenarios: study.scenarios.map((scenario) => scenario.id === scenarioId
+      ? { ...clone(scenario), name: checked } : clone(scenario)),
+    revision: study.revision + 1,
+    updatedAt: checkedInstant(now),
+  });
+}
+
 export async function appendExecution(
   study: StudyDocument,
   execution: ExecutionRecord,

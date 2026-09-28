@@ -1,39 +1,12 @@
 import Decimal from 'decimal.js';
 import { Link } from 'react-router-dom';
 
-import { breakdownByCompany, type Breakdown } from '../pages/comparisonBoardBreakdown';
 import { formatFraction, formatMoney, formatSignedMoney } from '../presentation/format';
-import type { DiagnosticExecutionRecord, PreviewEnvelope, ScenarioDocument, StudyDocument } from '../study/model';
+import type { ScenarioDocument, StudyDocument } from '../study/model';
 import { Button } from '../ui/Button';
-import { companyResolver } from './companies';
+import { interClientSplit, savingsOrigin, scenarioRow } from './savingsOrigin';
 
-type Row = Readonly<{
-  scenario: ScenarioDocument;
-  execution: DiagnosticExecutionRecord | null;
-  envelope: PreviewEnvelope | null;
-  breakdown: Breakdown | null;
-}>;
-
-export function currentDiagnostic(study: StudyDocument, scenario: ScenarioDocument): DiagnosticExecutionRecord | null {
-  return [...study.executions].reverse().find((item): item is DiagnosticExecutionRecord =>
-    item.kind === 'DIAGNOSTIC' && item.scenarioId === scenario.id && item.status === 'SUCCEEDED'
-    && item.envelope !== null && item.scenarioRevision === scenario.revision
-    && item.inputFingerprint === scenario.inputFingerprint) ?? null;
-}
-
-function rowFor(study: StudyDocument, scenario: ScenarioDocument): Row {
-  const execution = currentDiagnostic(study, scenario);
-  const envelope = (execution?.envelope?.selected_execution ?? null) as PreviewEnvelope | null;
-  let breakdown: Breakdown | null = null;
-  if (execution !== null && envelope !== null) {
-    try {
-      breakdown = breakdownByCompany(envelope, companyResolver(execution.sourceSnapshot.source));
-    } catch {
-      breakdown = null;
-    }
-  }
-  return { scenario, execution, envelope, breakdown };
-}
+export { currentDiagnostic } from './savingsOrigin';
 
 export function VariationComparison({ study, selectedScenarioId, running, progress, onRunAll }: Readonly<{
   study: StudyDocument;
@@ -43,7 +16,7 @@ export function VariationComparison({ study, selectedScenarioId, running, progre
   onRunAll(): void;
 }>) {
   if (study.scenarios.length < 2) return null;
-  const rows = study.scenarios.map((scenario) => rowFor(study, scenario));
+  const rows = study.scenarios.map((scenario) => scenarioRow(study, scenario));
   const base = rows.find((row) => row.scenario.id === study.baseScenarioId) ?? rows[0]!;
   const mixedSampling = base.execution?.requestSnapshot.sampling.kind === 'GENERATED_INPUT'
     && rows.some((row) => row !== base && row.execution?.requestSnapshot.sampling.kind === 'FIXED_INPUT');
@@ -51,9 +24,8 @@ export function VariationComparison({ study, selectedScenarioId, running, progre
   const groups = [...new Set(rows.flatMap((row) => row.breakdown?.companies.map((item) => item.group) ?? []))].sort();
   const delta = (value: string | undefined, reference: string | undefined) =>
     value === undefined || reference === undefined ? null : new Decimal(value).minus(reference).toFixed();
-  const alone = (company: string) => rows.find((row) => row !== base && row.breakdown?.companies.length === 1
-    && row.breakdown.companies[0]!.group === company)?.breakdown?.companies[0];
-  const origin = (base.breakdown?.companies ?? []).map((item) => ({ item, solo: alone(item.group) }));
+  const origin = savingsOrigin(rows, base);
+  const split = interClientSplit(origin);
   const hasSolo = origin.some((entry) => entry.solo !== undefined);
   const link = (scenario: ScenarioDocument) => `/estudos/${encodeURIComponent(study.id)}/diagnostico?scenarioId=${encodeURIComponent(scenario.id)}`;
 
@@ -64,14 +36,14 @@ export function VariationComparison({ study, selectedScenarioId, running, progre
       a diferença de economia não isola o efeito da alavanca.
     </p> : null}
     <div className="source-actions">
-      <span className="field-hint">{pending === 0 ? 'Todos os cenários têm diagnóstico atual.' : `${pending} cenário(s) sem diagnóstico atual.`}</span>
+      <span className="field-hint">{pending === 0 ? 'Todos os cenários têm diagnóstico atual.' : `${pending} cenário(s) sem diagnóstico atual.`} Netabilidade é a parte do volume que não cruzou a fronteira.</span>
       <Button data-chat-help-id="control.diagnostico.rodar-todas" disabled={running || pending === 0} onClick={onRunAll}>{running ? progress ?? 'Rodando…' : 'Rodar todas'}</Button>
     </div>
     <div className="table-scroll" role="region" tabIndex={0} aria-label="Comparação dos cenários">
       <table className="company-table">
         <caption>Diferença sempre contra “{base.scenario.name}”</caption>
         <thead><tr>
-          <th scope="col">Cenário</th><th scope="col">Ordens</th><th scope="col">Netabilidade</th>
+          <th scope="col">Cenário</th><th scope="col">Ordens</th><th scope="col" title="Parte do volume que não cruzou a fronteira">Netabilidade</th>
           <th scope="col">Custo sem pool</th><th scope="col">Custo com pool</th><th scope="col">Economia</th><th scope="col">Δ economia</th>
         </tr></thead>
         <tbody>{rows.map((row) => {
@@ -129,6 +101,10 @@ export function VariationComparison({ study, selectedScenarioId, running, progre
             </tr>)}</tbody>
           </table>
         </div>
+        {split === null ? null : <p className="field-hint">
+          Casamento entre clientes no original: {formatMoney(split.total)}, sendo {formatMoney(split.sameCompany)} entre linhas da mesma empresa
+          (o que cada uma casa sozinha) e {formatMoney(split.betweenCompanies)} entre empresas diferentes.
+        </p>}
       </>}
     </section>}
   </section>;

@@ -23,7 +23,7 @@ describe('contrato de apresentação', () => {
   });
 
   it('mantém os componentes sem conversão, agregação ou aritmética financeira', () => {
-    const files = ['DocumentItems', 'PresentationHeader', 'ExecutiveSummary', 'CompositionSection'];
+    const files = ['DocumentItems', 'PresentationHeader', 'ExecutiveSummary', 'CompositionSection', 'VariationsSection'];
     for (const file of files) {
       const source = readFileSync(new URL(`./components/${file}.tsx`, import.meta.url), 'utf8');
       expect(source, file).not.toMatch(/\bNumber\s*\(|\bparseFloat\s*\(|\.reduce\s*\(|\.plus\s*\(|\.minus\s*\(|\.times\s*\(|\.div\s*\(/);

@@ -276,18 +276,19 @@ describe('buildCommunicationDocument', () => {
   });
 
   it.each([
-    ['variação por alavanca', { derivedFromObservedCase: { caseId: 'case-fixture', caseRevision: 1 } }],
+    ['variação por alavanca', { derivedFromObservedCase: { caseId: 'case-fixture', caseRevision: 1 } },
+      'Variação de caso observado — ordens alteradas; resultado simulado sob as premissas informadas'],
     ['junção de casos de empresas', { sourceCases: [{ caseId: 'case-fixture', caseRevision: 1, companyId: 'empresa-a' },
-      { caseId: 'case-fixture-b', caseRevision: 1, companyId: 'empresa-b' }] }],
-  ])('publica %s derivada de caso observado como caso observado alterado', async (_name, origin) => {
+      { caseId: 'case-fixture-b', caseRevision: 1, companyId: 'empresa-b' }] },
+    'Carteira com 2 empresas (casos observados juntados) — resultado simulado sob as premissas informadas'],
+  ])('publica %s derivada de caso observado como caso observado', async (_name, origin, label) => {
     const input = await observedInput();
     const scenario = input.study.scenarios[0]!;
     scenario.sourceSnapshot.source = { kind: 'AUTHORED', authoredPortfolioId: 'variacao-1',
       definition: { kind: 'EXPLICIT_ORDERS', ...origin, orders: scenario.sourceSnapshot.orders, provenanceByOrder: {} } } as never;
     await refreshSourceFingerprints(input);
     const document = await buildCommunicationDocument(input);
-    expect(document.source).toEqual({ family: 'OBSERVED', synthetic: false,
-      label: 'Variação de caso observado — ordens alteradas; resultado simulado sob as premissas informadas' });
+    expect(document.source).toEqual({ family: 'OBSERVED', synthetic: false, label });
     expect(await validateCommunicationDocument(document, input.study)).toMatchObject({ ok: true });
   });
 

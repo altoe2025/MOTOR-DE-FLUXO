@@ -3,10 +3,8 @@ import { Link } from 'react-router-dom';
 
 import { useStudyController } from '../app/providers';
 import { currentDiagnostic } from '../levers/VariationComparison';
-import { usePreview } from '../preview/PreviewProvider';
 import { formatFraction, formatMoney } from '../presentation/format';
 import type { StudyDocument } from '../study/model';
-import { ComparisonSummary } from '../ui/ComparisonSummary';
 import { EmptyState } from '../ui/EmptyState';
 import { InlineNotice } from '../ui/InlineNotice';
 
@@ -22,7 +20,7 @@ function StudyDiagnostics({ study }: Readonly<{ study: StudyDocument }>) {
     <div className="table-scroll" role="region" tabIndex={0} aria-label={`Cenários de ${study.name}`}>
       <table className="company-table">
         <thead><tr>
-          <th scope="col">Cenário</th><th scope="col">Netabilidade</th><th scope="col">Economia</th>
+          <th scope="col">Cenário</th><th scope="col" title="Parte do volume que não cruzou a fronteira">Netabilidade</th><th scope="col">Economia</th>
           <th scope="col">Diagnóstico</th><th scope="col"><span className="visually-hidden">Ações</span></th>
         </tr></thead>
         <tbody>{study.scenarios.map((scenario) => {
@@ -49,7 +47,6 @@ function StudyDiagnostics({ study }: Readonly<{ study: StudyDocument }>) {
 
 export function DiagnosticsHubPage() {
   const controller = useStudyController();
-  const { envelope } = usePreview();
   const heading = useRef<HTMLHeadingElement>(null);
   const [studies, setStudies] = useState<StudyDocument[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -62,16 +59,11 @@ export function DiagnosticsHubPage() {
   }, [controller]);
   return <article className="destination-page diagnostics-hub">
     <h1 ref={heading} tabIndex={-1}>Diagnóstico</h1>
-    <p className="page-introduction">Todos os cenários dos seus estudos, com o diagnóstico mais recente de cada um.</p>
+    <p className="page-introduction">Todos os cenários dos seus estudos, com o diagnóstico mais recente de cada um. Escolha um cenário para abrir ou executar o diagnóstico. Netabilidade é a parte do volume que não cruzou a fronteira.</p>
     {error === null ? null : <InlineNotice tone="error">{error}</InlineNotice>}
     {studies === null && error === null ? <p role="status">Carregando estudos…</p> : null}
     {studies !== null && studies.length === 0
       ? <EmptyState title="Nenhum estudo ainda">Crie um estudo em Estudos para executar o primeiro diagnóstico.</EmptyState> : null}
     {studies?.map((study) => <StudyDiagnostics key={study.id} study={study} />)}
-    {envelope === null ? null : <section className="diagnostics-hub__study" aria-labelledby="hub-reference">
-      <h2 id="hub-reference">Exemplo de referência</h2>
-      <InlineNotice>Valores não calibrados: os fluxos e custos deste exemplo são sintéticos.</InlineNotice>
-      <ComparisonSummary envelope={envelope} />
-    </section>}
   </article>;
 }
