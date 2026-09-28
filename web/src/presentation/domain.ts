@@ -5,7 +5,7 @@ import { formatBps, formatDecimal, formatFraction, formatMoney } from './format'
 export type PresentationSelection = Readonly<{ studyId: string } & Pick<CommunicationDocumentV1['selection'],
   'scenarioId' | 'diagnosticExecutionId' | 'comparisonExecutionId' | 'replayDay'>>;
 
-export type PresentationSectionId = 'resumo' | 'composicao';
+export type PresentationSectionId = 'resumo' | 'composicao' | 'variacoes';
 
 export const PRIMARY_EXECUTIVE_METRIC_CODES: ReadonlySet<string> = new Set([
   'BASELINE_BRL', 'NETTED_BRL', 'SAVINGS_BRL', 'NETABILITY', 'GROSS_BRL',

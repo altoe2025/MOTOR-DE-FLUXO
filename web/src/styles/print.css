@@ -22,7 +22,7 @@
   .presentation-header dl { display: grid; gap: 2mm 5mm; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 4mm 0 0; }
   .presentation-header dd { font-size: 8pt; }
   .presentation-page > section { background: #fff !important; border: 0; border-radius: 0; box-shadow: none; margin: 5mm 0 0; padding: 0; }
-  .presentation-page #composicao, .presentation-page #comparacao { break-before: page; page-break-before: always; }
+  .presentation-page #composicao, .presentation-page #comparacao, .presentation-page #variacoes { break-before: page; page-break-before: always; }
   .presentation-page h2 { border-color: #236658; font-size: 16pt; margin: 0 0 3mm; padding: 0 0 2mm; }
   .presentation-page h3 { color: #205b50; font-size: 11pt; margin: 4mm 0 2mm; }
   .presentation-page h2, .presentation-page h3 { break-after: avoid; page-break-after: avoid; }
@@ -36,6 +36,8 @@
   .presentation-page table { border-collapse: collapse; width: 100%; }
   .presentation-page thead { display: table-header-group; }
   .presentation-page tr { break-inside: avoid; }
+  .presentation-page #variacoes table { font-size: 7.5pt; }
+  .presentation-page #variacoes th[scope="row"] { min-width: 0; }
   .print-metadata { border-top: 1px solid #829b90; break-inside: avoid; display: block; font-size: 8pt; margin-top: 6mm; padding-top: 3mm; }
   .print-metadata h2 { font-size: 11pt; }
   .print-metadata dl { display: grid; gap: 1mm 4mm; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0; }

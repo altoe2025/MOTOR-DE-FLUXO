@@ -308,8 +308,10 @@ export function StudyDiagnosticPage() {
   }, [publishCommunication, study, scenario, terminal]);
   return <article className="diagnostic-page">
     <p className="eyebrow">Estudo {study?.name ?? ''}</p>
-    <h1 ref={heading} tabIndex={-1}>Diagnóstico robusto</h1>
-    <p className="page-introduction">Múltiplas repetições quando a origem é gerável; uma execução individual quando a entrada já está fixa.</p>
+    <h1 ref={heading} tabIndex={-1}>{generated ? 'Diagnóstico robusto' : 'Diagnóstico'}</h1>
+    <p className="page-introduction">{generated
+      ? 'A carteira é gerada; o diagnóstico roda várias repetições e mostra a repetição representativa.'
+      : `Cenário: ${scenario?.name ?? '…'}. Custo sem pool é cada ordem remetendo sozinha; custo com pool é o que sobra depois do netting.`}</p>
     {study === null || scenario === null ? <DiagnosticStatus state={viewState ?? { kind: 'UNAVAILABLE', reason: 'Carregando estudo…' }} /> : <>
       <DiagnosticControls generated={generated} count={effectiveCount} onCountChange={setCount} onRun={() => void run()} disabled={runInProgress || controller.snapshot.status === 'STORAGE_FAILURE'} />
       <VariationComparison study={study} selectedScenarioId={scenario.id} running={runInProgress} progress={runAllProgress} onRunAll={() => void runAll()} />

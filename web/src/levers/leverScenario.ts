@@ -81,7 +81,7 @@ export async function buildLeverScenario(input: Readonly<{
   return {
     id: input.id,
     revision: 1,
-    name: (input.name ?? `${base.name} · ${steps.map(describeLevers).join(' · ')}`).slice(0, 200),
+    name: (input.name ?? `${base.name} · ${steps.map(describeLevers).join(' · ')}`).slice(0, 120).trimEnd(),
     sourceSnapshot,
     premises: structuredClone(base.premises),
     period: periodCovering(base.period, horizonDays),

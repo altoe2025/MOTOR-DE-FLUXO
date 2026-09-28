@@ -97,8 +97,14 @@ function sourceFamily(execution: DiagnosticExecutionRecord): CommunicationDocume
   };
   // Variações por alavanca e junções de casos só existem a partir de casos observados.
   const definition = snapshot.source.kind === 'AUTHORED' ? snapshot.source.definition : undefined;
-  if (definition?.kind === 'EXPLICIT_ORDERS'
-    && (definition.derivedFromObservedCase !== undefined || (definition.sourceCases?.length ?? 0) > 0)) return {
+  if (definition?.kind === 'EXPLICIT_ORDERS' && (definition.sourceCases?.length ?? 0) > 0) {
+    const present = new Set(snapshot.orders.map((order) => definition.companyByOrder?.[order.id]?.companyId)
+      .filter((id): id is string => id !== undefined));
+    const count = present.size > 0 ? present.size : new Set(definition.sourceCases!.map((item) => item.companyId)).size;
+    return { family: 'OBSERVED', synthetic: false,
+      label: `Carteira com ${count} ${count === 1 ? 'empresa' : 'empresas'} (casos observados juntados) — resultado simulado sob as premissas informadas` };
+  }
+  if (definition?.kind === 'EXPLICIT_ORDERS' && definition.derivedFromObservedCase !== undefined) return {
     family: 'OBSERVED', synthetic: false,
     label: 'Variação de caso observado — ordens alteradas; resultado simulado sob as premissas informadas',
   };
@@ -240,10 +246,13 @@ export async function buildCommunicationDocument(input: CommunicationInput): Pro
   }
   const aggregatePath = '/selected_execution/result/agregado';
   const executiveMetrics = [
-    metric('DIAGNOSTIC', `${aggregatePath}/baseline_periodo/total`, 'BASELINE_BRL', 'Custo baseline', 'BRL'),
-    metric('DIAGNOSTIC', `${aggregatePath}/netado_periodo/total`, 'NETTED_BRL', 'Custo netado', 'BRL'),
+    metric('DIAGNOSTIC', `${aggregatePath}/baseline_periodo/total`, 'BASELINE_BRL', 'Custo sem pool', 'BRL',
+      'Cada ordem remetendo sozinha'),
+    metric('DIAGNOSTIC', `${aggregatePath}/netado_periodo/total`, 'NETTED_BRL', 'Custo com pool', 'BRL',
+      'Depois do netting; só o excedente cruza a fronteira'),
     metric('DIAGNOSTIC', `${aggregatePath}/economia_periodo_brl`, 'SAVINGS_BRL', 'Economia simulada', 'BRL'),
-    metric('DIAGNOSTIC', `${aggregatePath}/taxa_netabilidade_periodo`, 'NETABILITY', 'Taxa de netabilidade', 'FRACTION'),
+    metric('DIAGNOSTIC', `${aggregatePath}/taxa_netabilidade_periodo`, 'NETABILITY', 'Taxa de netabilidade', 'FRACTION',
+      'Parte do volume que não cruzou a fronteira'),
     metric('DIAGNOSTIC', `${aggregatePath}/volume_bruto_periodo_brl`, 'GROSS_BRL', 'Volume bruto medido', 'BRL'),
     metric('DIAGNOSTIC', `${aggregatePath}/volume_remetido_periodo_brl`, 'REMITTED_BRL', 'Volume remetido', 'BRL'),
   ];
@@ -265,13 +274,41 @@ export async function buildCommunicationDocument(input: CommunicationInput): Pro
   const mechanism: CommunicationSection = { title: 'Mecanismo', metrics: Object.entries(axisRows).flatMap(([axis, rows]) =>
     rows.map(([name, label, unit]) => axisMetric(axis as keyof DiagnosticEnvelope['axes'], name, label, unit))),
   facts: envelope.consequences.map((item, index) => fact('DIAGNOSTIC', `/consequences/${index}/statement_code`, item.rule_id)) };
+  // Original × variações: totais de cada cenário com diagnóstico atual, citados por ponteiro
+  // direto no Estudo (valores escalares; nunca o envelope inteiro).
+  const variations = { metrics: [] as CommunicationMetric[], facts: [] as CommunicationFact[] };
+  const currentRows = input.study.scenarios.flatMap((scenario, scenarioIndex) => {
+    let executionIndex = -1;
+    input.study.executions.forEach((item, index) => {
+      if (item.kind === 'DIAGNOSTIC' && item.status === 'SUCCEEDED' && item.envelope !== null
+        && item.scenarioId === scenario.id && item.scenarioRevision === scenario.revision
+        && item.inputFingerprint === scenario.inputFingerprint) executionIndex = index;
+    });
+    return executionIndex < 0 ? [] : [{ scenario, scenarioIndex, executionIndex }];
+  });
+  if (currentRows.length >= 2) {
+    variations.facts.push(fact('STUDY', '/baseScenarioId', 'VARIATION_BASE', 'Cenário original'));
+    for (const [position, row] of currentRows.entries()) {
+      const code = `variation.${position}`;
+      const resultPath = `/executions/${row.executionIndex}/envelope/selected_execution/result/agregado`;
+      variations.facts.push(fact('STUDY', `/scenarios/${row.scenarioIndex}/id`, `${code}.scenario`, 'Identificador do cenário'),
+        fact('STUDY', `/scenarios/${row.scenarioIndex}/name`, `${code}.name`, 'Cenário'));
+      for (const [path, name, label, unit] of [
+        ['economia_periodo_brl', 'savings', 'economia', 'BRL'],
+        ['taxa_netabilidade_periodo', 'netability', 'netabilidade', 'FRACTION'],
+        ['baseline_periodo/total', 'baseline', 'custo sem pool', 'BRL'],
+        ['netado_periodo/total', 'netted', 'custo com pool', 'BRL'],
+      ] as const) variations.metrics.push(metric('STUDY', `${resultPath}/${path}`, `${code}.${name}`, `${row.scenario.name}: ${label}`, unit));
+    }
+  }
   const economics: CommunicationSection = { title: 'Economia', metrics: [
     ...['baseline_periodo', 'netado_periodo'].flatMap((side) => ['iof', 'carry', 'spread', 'espera', 'fixo', 'total'].map((component) =>
       metric('DIAGNOSTIC', `${aggregatePath}/${side}/${component}`, `${side}.${component}`, `${side}: ${component}`, 'BRL'))),
     ...envelope.selected_execution.result.agregado.mecanismos.flatMap((item, index) =>
       ['volume_brl', 'baseline_atribuido_brl', 'custo_netado_brl', 'economia_brl'].map((component) =>
         metric('DIAGNOSTIC', `${aggregatePath}/mecanismos/${index}/${component}`, `${item.destino}.${component}`, `${item.destino}: ${component}`, 'BRL'))),
-  ], facts: [] };
+    ...variations.metrics,
+  ], facts: variations.facts };
   const robustness: CommunicationSection = { title: 'Robustez', metrics: Object.entries(envelope.axes.economic_robustness).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0).flatMap(([name, published]) => {
     const path = `/axes/economic_robustness/${name}`;
     const unit = name === 'netability_fraction' ? 'FRACTION' : 'BRL';

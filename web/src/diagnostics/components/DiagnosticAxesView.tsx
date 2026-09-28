@@ -137,6 +137,6 @@ function BreakdownTable({ rows, title }: Readonly<{ rows: DiagnosticEnvelope['ax
 }
 
 function DistributionAxisTable({ economics }: Readonly<{ economics: DiagnosticEnvelope['axes']['economic_robustness'] }>) {
-  const rows = [['Baseline', economics.baseline_brl, 'BRL'], ['Custo netado', economics.netted_brl, 'BRL'], ['Economia', economics.savings_brl, 'BRL'], ['Netabilidade', economics.netability_fraction, 'FRACTION']] as const;
+  const rows = [['Custo sem pool', economics.baseline_brl, 'BRL'], ['Custo com pool', economics.netted_brl, 'BRL'], ['Economia', economics.savings_brl, 'BRL'], ['Netabilidade', economics.netability_fraction, 'FRACTION']] as const;
   return <div className="table-scroll" role="region" tabIndex={0} aria-label="Tabela rolável — Resumo da distribuição econômica"><table className="diagnostic-table"><caption>Resumo da distribuição econômica</caption><thead><tr><th scope="col">Métrica</th><th scope="col">Mínimo</th><th scope="col">P50</th><th scope="col">Máximo</th><th scope="col">Evidência</th></tr></thead><tbody>{rows.map(([label, metric, unit]) => <tr key={label}><th scope="row">{label}</th>{metric.state === 'AVAILABLE' ? <><td>{formatMetric(metric.value.minimum, unit)}</td><td>{formatMetric(metric.value.p50, unit)}</td><td>{formatMetric(metric.value.maximum, unit)}</td><td>{metric.evidence.join(', ')}</td></> : <td colSpan={4}>{metric.state}: {metric.reason}</td>}</tr>)}</tbody></table></div>;
 }

@@ -9,7 +9,8 @@ import type { CommunicationDocumentV1 } from '../communication/domain';
 import { HELP_IDS } from '../help/helpIds';
 import { resolveReplayRequest } from '../replay/ReplayPage';
 import { PresentationPage } from './PresentationPage';
-import { presentationParticipantNames } from './participants';
+import { presentationParticipants, type PresentationParticipants } from './participants';
+import { buildPresentationStory, type PresentationStory } from './story';
 import { resolvePresentationSelection } from './selection';
 import type { PresentationSectionId } from './domain';
 
@@ -17,11 +18,12 @@ type LoadState = Readonly<{ identity: string; kind: 'loading' }>
   | Readonly<{ identity: string; kind: 'invalid'; message: string }>
   | Readonly<{ identity: string; kind: 'error'; message: string }>
   | Readonly<{ identity: string; kind: 'ready'; document: CommunicationDocumentV1; scenarioName: string;
-      participantNames: Readonly<Record<string, string>> }>;
+      participants: PresentationParticipants; story: PresentationStory | null }>;
 
 const sectionHelp: Readonly<Record<PresentationSectionId, string>> = {
   resumo: HELP_IDS.PRESENTATION_PAGE,
   composicao: HELP_IDS.COMPOSITION,
+  variacoes: HELP_IDS.PRESENTATION_PAGE,
 };
 
 export function PresentationRoute() {
@@ -75,9 +77,12 @@ export function PresentationRoute() {
         input = { ...input, replay };
       }
       const document = await buildCommunicationDocument(input);
-      const names = await presentationParticipantNames(study!, executionId!, controller).catch(() => ({}));
+      const participants = await presentationParticipants(study!, executionId!, controller)
+        .catch((): PresentationParticipants => ({ names: {}, companies: {} }));
+      let story: PresentationStory | null = null;
+      try { story = buildPresentationStory(study!, scenarioId!); } catch { story = null; }
       if (!active) return;
-      setState({ identity, kind: 'ready', document, participantNames: names,
+      setState({ identity, kind: 'ready', document, participants, story,
         scenarioName: study!.scenarios.find((item) => item.id === scenarioId)!.name });
       publishCommunication?.(input, document);
     }).catch(() => {
@@ -105,7 +110,8 @@ export function PresentationRoute() {
       Voltar ao diagnóstico
     </Link>
   </nav><PresentationPage state={{ kind: 'ready', document: state.document, scenarioName: state.scenarioName,
-    participantNames: state.participantNames, selection: {
+    participantNames: state.participants.names, participantCompanies: state.participants.companies,
+    story: state.story, selection: {
     studyId: studyId!, scenarioId: scenarioId!, diagnosticExecutionId: executionId!,
     comparisonExecutionId, replayDay,
   } }} /></>;
