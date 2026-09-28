@@ -394,6 +394,7 @@ a { color: inherit; }
 .import-conflict-versions dt { color: var(--muted); font-size: 0.8125rem; }
 .import-conflict-versions dd { font-weight: 600; margin: 0; overflow-wrap: anywhere; }
 .board-candidates { list-style: none; margin: var(--space-3) 0 0; padding: 0; display: grid; gap: var(--space-2); }
+.board-candidates li { align-items: center; display: flex; gap: var(--space-3); justify-content: space-between; }
 .board-breakdown { margin-top: var(--space-8, 48px); }
 .company-table td small, .company-table th small { color: var(--muted); display: block; font-size: 0.8rem; font-weight: 400; }
 .company-list__item { align-items: center; display: flex; gap: var(--space-3); justify-content: space-between; }

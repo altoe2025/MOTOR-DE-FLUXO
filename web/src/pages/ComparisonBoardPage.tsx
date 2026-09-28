@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import { useStudyController } from '../app/providers';
 import { Button } from '../ui/Button';
 import { companyResolver } from '../levers/companies';
+import { moveStudyToTrash } from '../study/domain';
 import { breakdownByCompany, type Breakdown } from './comparisonBoardBreakdown';
 import type { CompanyRecord, ObservedCase } from '../cases/domain';
 import { formatFraction, formatMoney } from '../presentation/format';
@@ -164,6 +165,8 @@ export function ComparisonBoardPage() {
   });
   const label = (group: string) => names[group]?.trim() || group;
 
+  const [reload, setReload] = useState(0);
+
   useEffect(() => heading.current?.focus(), []);
   useEffect(() => {
     let active = true;
@@ -175,7 +178,7 @@ export function ComparisonBoardPage() {
         if (active) setError(reason instanceof Error ? reason.message : 'Não foi possível carregar os estudos.');
       });
     return () => { active = false; };
-  }, [controller]);
+  }, [controller, reload]);
 
   const updateSelection = (change: (current: Set<string>) => void) => setSelected((current) => {
     const next = new Set(current);
@@ -184,6 +187,20 @@ export function ComparisonBoardPage() {
     return next;
   });
   const toggle = (key: string) => updateSelection((next) => { if (!next.delete(key)) next.add(key); });
+  const removeStudy = async (row: BoardRow) => {
+    if (!window.confirm(`Apagar o estudo “${row.studyName}”? Todos os cenários dele saem do quadro; dá para restaurar pela lixeira em Estudos.`)) return;
+    try {
+      const loaded = await controller.loadStudy(row.studyId);
+      if (loaded === null) throw new Error('Estudo não encontrado.');
+      controller.edit(await moveStudyToTrash(loaded, new Date().toISOString()));
+      await controller.flush();
+      updateSelection((next) => (rows ?? []).forEach((item) => { if (item.studyId === row.studyId) next.delete(item.key); }));
+      setError(null);
+      setReload((value) => value + 1);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Não foi possível apagar o estudo.');
+    }
+  };
 
   const candidates = useMemo(() => {
     const term = filter.trim().toLowerCase();
@@ -219,6 +236,7 @@ export function ComparisonBoardPage() {
           <input type="checkbox" checked={selected.has(row.key)} onChange={() => toggle(row.key)} />
           {' '}{row.studyName} · {row.scenarioName} — {row.origin}
         </label>
+        <Button variant="secondary" onClick={() => void removeStudy(row)} aria-label={`Apagar o estudo ${row.studyName}`}>Apagar estudo</Button>
       </li>)}</ul>
     </fieldset> : null}
 
@@ -263,7 +281,10 @@ export function ComparisonBoardPage() {
             <td>{formatMoney(row.baselineTotal)}</td>
             <td>{formatMoney(row.nettedTotal)}</td>
             <td>{formatMoney(row.savings)}</td>
-            <td><Button variant="secondary" onClick={() => toggle(row.key)} aria-label={`Remover ${row.studyName} · ${row.scenarioName} do quadro`}>Remover</Button></td>
+            <td>
+              <Button variant="secondary" onClick={() => toggle(row.key)} aria-label={`Remover ${row.studyName} · ${row.scenarioName} do quadro`}>Remover</Button>
+              <Button variant="secondary" onClick={() => void removeStudy(row)} aria-label={`Apagar o estudo ${row.studyName}`}>Apagar estudo</Button>
+            </td>
           </tr>)}</tbody>
         </table>
       </div>
