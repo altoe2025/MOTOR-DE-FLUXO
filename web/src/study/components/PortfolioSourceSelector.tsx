@@ -15,6 +15,7 @@ import type {
   ScenarioDocument,
   StudyDocument,
 } from '../model';
+import { parseBrlInput, parseDecimalInput } from '../numberInput';
 import { requiredBuildSha } from '../sourceConfiguration';
 
 export type PortfolioSourceKind = 'SYNTHETIC' | 'AUTHORED' | 'OBSERVED_CASE';
@@ -100,12 +101,34 @@ function group(): Group {
 }
 
 function decimal(text: string, label: string, allowZero = false): Decimal {
-  if (!/^\d+(?:\.\d+)?$/.test(text)) throw new Error(`${label}: Use ponto como separador decimal.`);
+  if (!/^\d+(?:\.\d+)?$/.test(text)) throw new Error(`${label}: informe um número. Ex.: 12 ou 1,5.`);
   const value = new Decimal(text);
   if (!value.isFinite() || (allowZero ? value.isNegative() : !value.isPositive())) {
     throw new Error(`${label}: informe um número ${allowZero ? 'não negativo' : 'maior que zero'}.`);
   }
   return value;
+}
+
+/** Troca vírgula brasileira por ponto em frequência e ticket; o estudo guarda com ponto. */
+function normalizeParameters(values: Parameters, owner: string): Parameters {
+  const frequency = parseDecimalInput(values.frequency, '12 ou 1,5');
+  if (!frequency.ok) throw new Error(`Frequência mensal ${owner}: ${frequency.error}`);
+  const ticket = parseBrlInput(values.ticket);
+  if (!ticket.ok) throw new Error(`Ticket mediano ${owner}: ${ticket.error}`);
+  const deadline = values.deadline.trim();
+  if (!/^\d+$/.test(deadline)) throw new Error(`Prazo ${owner}: informe um número inteiro de dias. Ex.: 7.`);
+  return { ...values, frequency: frequency.value, ticket: ticket.value, deadline };
+}
+
+function normalizeGroups(groups: readonly Group[]): Group[] {
+  return groups.map((item) => ({
+    ...item,
+    parameters: normalizeParameters(item.parameters, `do grupo ${item.name}`),
+    participants: item.participants.map((member) => ({
+      ...member,
+      parameters: member.override ? normalizeParameters(member.parameters, `de ${member.name}`) : { ...member.parameters },
+    })),
+  }));
 }
 
 function directionFraction(direction: Direction): string {
@@ -118,7 +141,7 @@ function request(study: StudyDocument, scenario: ScenarioDocument, groups: reado
   const participants = groups.flatMap((item) => item.participants.map((member) => {
     const values = member.override ? member.parameters : item.parameters;
     const frequency = decimal(values.frequency, 'Frequência mensal');
-    const ticket = decimal(values.ticket, 'Ticket médio');
+    const ticket = decimal(values.ticket, 'Ticket mediano');
     const deadline = decimal(values.deadline, 'Prazo', true);
     if (!deadline.isInteger()) throw new Error('Prazo: informe um número inteiro de dias.');
     return {
@@ -176,8 +199,8 @@ function ParameterFields({ prefix, values, onChange }: { prefix: 'grupo' | 'part
   const title = prefix === 'grupo' ? 'do grupo' : 'do participante';
   const set = <K extends keyof Parameters>(key: K, value: Parameters[K]) => onChange({ ...values, [key]: value });
   return <div className="parameter-grid">
-    <TextField id={`${prefix}-frequency`} label={`Frequência mensal ${title}`} value={values.frequency} inputMode="decimal" onChange={(event) => set('frequency', event.currentTarget.value)} />
-    <TextField id={`${prefix}-ticket`} label={`Ticket médio ${title}`} value={values.ticket} inputMode="decimal" onChange={(event) => set('ticket', event.currentTarget.value)} />
+    <TextField id={`${prefix}-frequency`} label={`Frequência mensal ${title}`} hint="Operações por mês. Ex.: 10" value={values.frequency} inputMode="decimal" onChange={(event) => set('frequency', event.currentTarget.value)} />
+    <TextField id={`${prefix}-ticket`} label={`Ticket mediano ${title}`} hint="Em R$; mediana por operação. Ex.: 100.000,00" value={values.ticket} inputMode="decimal" onChange={(event) => set('ticket', event.currentTarget.value)} />
     <label>Direção {title}<select value={values.direction} onChange={(event) => set('direction', event.currentTarget.value as Direction)}><option value="MIXED">Mista</option><option value="OUT">OUT</option><option value="IN">IN</option></select></label>
     <TextField id={`${prefix}-deadline`} label={`Prazo em dias ${title}`} value={values.deadline} inputMode="numeric" onChange={(event) => set('deadline', event.currentTarget.value)} />
     <TextField id={`${prefix}-purpose`} label={`Finalidade ${title}`} value={values.purpose} onChange={(event) => set('purpose', event.currentTarget.value)} />
@@ -193,12 +216,13 @@ function AuthoredForm({ study, scenario, initialGroups, onApply, onDirty }: { st
   const changeGroup = (index: number, next: Group) => { setGroups((current) => current.map((item, position) => position === index ? next : item)); onDirty(true); };
   const submit = () => {
     try {
-      const preparation = request(study, scenario, groups, 'ESTIMATIVA_USUARIO');
+      const normalized = normalizeGroups(groups);
+      const preparation = request(study, scenario, normalized, 'ESTIMATIVA_USUARIO');
       setError(null); onDirty(false);
       onApply({
         kind: 'AUTHORED',
         authoredPortfolioId: uuid(),
-        definition: { kind: 'PARAMETRIC', groups: structuredClone(groups) },
+        definition: { kind: 'PARAMETRIC', groups: normalized },
         preparation,
       });
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Autoria manual inválida.'); }
@@ -229,7 +253,11 @@ function ExplicitOrdersForm({
   };
   const submit = () => {
     try {
-      const normalizedOrders = orders.map((order) => ({ ...order, finalidade: normalizePurposeCode(order.finalidade) }));
+      const normalizedOrders = orders.map((order) => {
+        const value = parseBrlInput(order.valor_brl);
+        if (!value.ok) throw new Error(`Valor BRL da operação ${order.id}: ${value.error}`);
+        return { ...order, valor_brl: value.value, finalidade: normalizePurposeCode(order.finalidade) };
+      });
       const actionId = uuid();
       const recordedAt = new Date().toISOString();
       const corrected = (): FieldProvenance => ({

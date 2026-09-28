@@ -96,8 +96,8 @@ describe('StudyEditor', () => {
     await user.click(screen.getByLabelText('Autoria manual'));
     await user.clear(screen.getByLabelText('Frequência mensal do grupo'));
     await user.type(screen.getByLabelText('Frequência mensal do grupo'), '12');
-    await user.clear(screen.getByLabelText('Ticket médio do grupo'));
-    await user.type(screen.getByLabelText('Ticket médio do grupo'), '1500.50');
+    await user.clear(screen.getByLabelText('Ticket mediano do grupo'));
+    await user.type(screen.getByLabelText('Ticket mediano do grupo'), '1500.50');
     await user.click(screen.getByLabelText('Sobrescrever parâmetros do participante'));
     await user.clear(screen.getByLabelText('Frequência mensal do participante'));
     await user.type(screen.getByLabelText('Frequência mensal do participante'), '3');
@@ -113,11 +113,55 @@ describe('StudyEditor', () => {
   it('valida Decimal localmente antes da rede', async () => {
     const { onSourceChange } = await subject(); const user = userEvent.setup();
     await user.click(screen.getByLabelText('Autoria manual'));
-    await user.clear(screen.getByLabelText('Ticket médio do grupo'));
-    await user.type(screen.getByLabelText('Ticket médio do grupo'), '1,5');
+    await user.clear(screen.getByLabelText('Ticket mediano do grupo'));
+    await user.type(screen.getByLabelText('Ticket mediano do grupo'), 'mil');
     await user.click(screen.getByRole('button', { name: 'Preparar carteira manual' }));
-    expect(screen.getByRole('alert')).toHaveTextContent('Use ponto como separador decimal');
+    expect(screen.getByRole('alert')).toHaveTextContent('Ticket mediano');
+    expect(screen.getByRole('alert')).toHaveTextContent('Ex.: 40,00');
     expect(onSourceChange).not.toHaveBeenCalled();
+  });
+
+  it('aceita vírgula brasileira no ticket e envia com ponto', async () => {
+    const { onSourceChange } = await subject(); const user = userEvent.setup();
+    await user.click(screen.getByLabelText('Autoria manual'));
+    await user.clear(screen.getByLabelText('Ticket mediano do grupo'));
+    await user.type(screen.getByLabelText('Ticket mediano do grupo'), '1.500,50');
+    await user.click(screen.getByRole('button', { name: 'Preparar carteira manual' }));
+    expect(onSourceChange).toHaveBeenCalledWith(expect.objectContaining({
+      preparation: expect.objectContaining({ input: expect.objectContaining({ participants: [expect.objectContaining({
+        ticket_median_brl: '1500.5',
+      })] }) }),
+      definition: expect.objectContaining({ groups: [expect.objectContaining({ parameters: expect.objectContaining({ ticket: '1500.50' }) })] }),
+    }));
+  });
+
+  it('mostra premissas em % e R$, converte para fração e preserva o que não mudou', async () => {
+    const onScenarioChange = vi.fn();
+    await subject({ onScenarioChange }); const user = userEvent.setup();
+    expect(screen.getByLabelText('IOF OUT')).toHaveValue('3,5');
+    expect(screen.getByLabelText('Carry CNR')).toHaveValue('0,04');
+    await user.clear(screen.getByLabelText('IOF OUT'));
+    await user.type(screen.getByLabelText('IOF OUT'), '3,8');
+    await user.clear(screen.getByLabelText('Custo fixo por remessa'));
+    await user.type(screen.getByLabelText('Custo fixo por remessa'), 'R$ 55,00');
+    await user.click(screen.getByRole('button', { name: 'Salvar premissas e período' }));
+    expect(onScenarioChange).toHaveBeenCalledWith(expect.objectContaining({
+      premises: expect.objectContaining({ costs: expect.objectContaining({
+        iof_out: '0.038', iof_in: '0.0038', carry_cnr: '0.0004', custo_fixo_remessa: '55.00', ptax: '5.40',
+      }) }),
+    }));
+  });
+
+  it('mostra o erro de premissa junto ao campo, com exemplo', async () => {
+    const onScenarioChange = vi.fn();
+    await subject({ onScenarioChange }); const user = userEvent.setup();
+    await user.clear(screen.getByLabelText('Carry CNR'));
+    await user.type(screen.getByLabelText('Carry CNR'), '0;04');
+    await user.click(screen.getByRole('button', { name: 'Salvar premissas e período' }));
+    const field = screen.getByLabelText('Carry CNR');
+    expect(field).toHaveAttribute('aria-invalid', 'true');
+    expect(field).toHaveAccessibleDescription(/Ex\.: 3,5/);
+    expect(onScenarioChange).not.toHaveBeenCalled();
   });
 
   it('reidrata autoria persistida e salva premissas e período sem perder texto decimal', async () => {
@@ -149,15 +193,15 @@ describe('StudyEditor', () => {
     const user = userEvent.setup();
 
     expect(screen.getByLabelText('Nome do grupo')).toHaveValue('Grupo persistido');
-    expect(screen.getByLabelText('Ticket médio do grupo')).toHaveValue('1500.50');
+    expect(screen.getByLabelText('Ticket mediano do grupo')).toHaveValue('1500.50');
     await user.clear(screen.getByLabelText('PTAX'));
-    await user.type(screen.getByLabelText('PTAX'), '5.4000');
+    await user.type(screen.getByLabelText('PTAX'), '5,4500');
     await user.clear(screen.getByLabelText('Período de medição em dias'));
     await user.type(screen.getByLabelText('Período de medição em dias'), '45');
     await user.click(screen.getByRole('button', { name: 'Salvar premissas e período' }));
 
     expect(onScenarioChange).toHaveBeenCalledWith(expect.objectContaining({
-      premises: expect.objectContaining({ costs: expect.objectContaining({ ptax: '5.4000' }) }),
+      premises: expect.objectContaining({ costs: expect.objectContaining({ ptax: '5.4500' }) }),
       period: { httpPeriod: { modo: 'NATURAL', dias_aquecimento: 0, periodo_medicao_dias: 45 } },
     }));
   });

@@ -1,3 +1,4 @@
+import Decimal from 'decimal.js';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 
 import type { CompanyRecord, ObservedCase } from '../../cases/domain';
@@ -10,6 +11,9 @@ import type {
   ScenarioUpdate,
   StudyDocument,
 } from '../model';
+import {
+  fractionToPercentText, parseBrlInput, parseDecimalInput, parsePercentInput, plainToBrText, type ParsedInput,
+} from '../numberInput';
 import { PortfolioSourceSelector, type PortfolioSourceDraft, type PortfolioSourceKind } from './PortfolioSourceSelector';
 
 export type StudyEditorProps = Readonly<{
@@ -19,6 +23,29 @@ export type StudyEditorProps = Readonly<{
   onConvertObserved(caseId: string): Promise<void> | void;
   onScenarioChange(update: ScenarioUpdate): Promise<void> | void;
 }>;
+
+type CostKey = Exclude<keyof PremisesDocument['costs'], 'iof_por_finalidade'>;
+type CostField = Readonly<{ key: CostKey; label: string; hint: string; parse(text: string): ParsedInput; show(stored: string): string }>;
+
+const percent = { parse: parsePercentInput, show: fractionToPercentText };
+const plain = { parse: (text: string) => parseDecimalInput(text), show: plainToBrText };
+const COST_FIELDS: readonly CostField[] = [
+  { key: 'iof_out', label: 'IOF OUT', hint: 'Em % do valor remetido. Ex.: 3,5', ...percent },
+  { key: 'iof_in', label: 'IOF IN', hint: 'Em % do valor remetido. Ex.: 0,38', ...percent },
+  { key: 'carry_cnr', label: 'Carry CNR', hint: 'Em % do valor casado. Ex.: 0,04', ...percent },
+  { key: 'custo_fixo_remessa', label: 'Custo fixo por remessa', hint: 'Em R$ por remessa. Ex.: 40,00', parse: parseBrlInput, show: plainToBrText },
+  { key: 'custo_oportunidade_aa', label: 'Custo de oportunidade anual', hint: 'Em % ao ano. Ex.: 10,5 (0 desliga a espera)', ...percent },
+  { key: 'spread_rail_bps', label: 'Spread do rail em bps', hint: 'Em pontos-base (1 bp = 0,01%). Ex.: 25', ...plain },
+  { key: 'ptax', label: 'PTAX', hint: 'Em R$ por US$. Ex.: 5,40', ...plain },
+];
+
+function costTexts(premises: PremisesDocument): Record<CostKey, string> {
+  return Object.fromEntries(COST_FIELDS.map((field) => [field.key, field.show(premises.costs[field.key])])) as Record<CostKey, string>;
+}
+
+function sameNumber(left: string, right: string): boolean {
+  try { return new Decimal(left).eq(right); } catch { return false; }
+}
 
 function ScenarioSettings({
   premises,
@@ -35,44 +62,39 @@ function ScenarioSettings({
   const [draftPeriod, setDraftPeriod] = useState<DeepMutable<PeriodDocument>>(
     () => structuredClone(period) as DeepMutable<PeriodDocument>,
   );
+  const [texts, setTexts] = useState(() => costTexts(premises));
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<CostKey, string>>>({});
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     setDraftPremises(structuredClone(premises) as DeepMutable<PremisesDocument>);
     setDraftPeriod(structuredClone(period) as DeepMutable<PeriodDocument>);
+    setTexts(costTexts(premises));
+    setFieldErrors({});
   }, [period, premises]);
-  const setCost = (key: Exclude<keyof PremisesDocument['costs'], 'iof_por_finalidade'>, value: string) => {
-    setDraftPremises((current) => ({
-      ...current,
-      costs: { ...current.costs, [key]: value },
-    }));
-  };
   const submit = () => {
-    try {
-      for (const [key, value] of Object.entries(draftPremises.costs)) {
-        if (key !== 'iof_por_finalidade' && !/^\d+(?:\.\d+)?$/.test(value as string)) {
-          throw new Error('Use ponto como separador decimal nas premissas.');
-        }
-      }
-      if (!Number.isSafeInteger(draftPremises.windowDays) || draftPremises.windowDays < 1) {
-        throw new Error('Janela deve ser um número inteiro positivo.');
-      }
-      setError(null);
-      void onSave({ premises: draftPremises, period: draftPeriod });
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Premissas inválidas.');
+    const costs = { ...draftPremises.costs };
+    const errors: Partial<Record<CostKey, string>> = {};
+    for (const field of COST_FIELDS) {
+      const parsed = field.parse(texts[field.key]);
+      if (!parsed.ok) { errors[field.key] = parsed.error; continue; }
+      // Mesmo número que já estava salvo: mantém o texto salvo para não mudar a impressão digital do cenário.
+      const stored = premises.costs[field.key];
+      costs[field.key] = sameNumber(parsed.value, stored) ? stored : parsed.value;
     }
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) { setError('Corrija os campos marcados abaixo.'); return; }
+    if (!Number.isSafeInteger(draftPremises.windowDays) || draftPremises.windowDays < 1) {
+      setError('Janela deve ser um número inteiro positivo de dias. Ex.: 7.');
+      return;
+    }
+    setError(null);
+    void onSave({ premises: { ...draftPremises, costs }, period: draftPeriod });
   };
-  const costFields: ReadonlyArray<[Exclude<keyof PremisesDocument['costs'], 'iof_por_finalidade'>, string]> = [
-    ['iof_out', 'IOF OUT'], ['iof_in', 'IOF IN'], ['carry_cnr', 'Carry CNR'],
-    ['custo_fixo_remessa', 'Custo fixo por remessa'],
-    ['custo_oportunidade_aa', 'Custo de oportunidade anual'],
-    ['spread_rail_bps', 'Spread do rail em bps'], ['ptax', 'PTAX'],
-  ];
   return <section className="source-panel" aria-labelledby="scenario-settings-title">
     <h2 id="scenario-settings-title">Premissas e período</h2>
     {error ? <p role="alert" className="field-error">{error}</p> : null}
     <div className="parameter-grid">
-      {costFields.map(([key, label]) => <TextField key={key} id={`premise-${key}`} label={label} inputMode="decimal" value={draftPremises.costs[key]} onChange={(event) => setCost(key, event.currentTarget.value)} />)}
+      {COST_FIELDS.map((field) => <TextField key={field.key} id={`premise-${field.key}`} label={field.label} hint={field.hint} inputMode="decimal" value={texts[field.key]} {...(fieldErrors[field.key] === undefined ? {} : { error: fieldErrors[field.key] })} onChange={(event) => { const value = event.currentTarget.value; setTexts((current) => ({ ...current, [field.key]: value })); }} />)}
       <TextField id="premise-window-days" label="Janela em dias" inputMode="numeric" value={String(draftPremises.windowDays)} onChange={(event) => setDraftPremises((current) => ({ ...current, windowDays: Number(event.currentTarget.value) }))} />
       {draftPeriod.httpPeriod.modo === 'NATURAL' ? <>
         <TextField id="period-warmup-days" label="Aquecimento em dias" inputMode="numeric" value={String(draftPeriod.httpPeriod.dias_aquecimento)} onChange={(event) => setDraftPeriod({ httpPeriod: { modo: 'NATURAL', dias_aquecimento: Number(event.currentTarget.value), periodo_medicao_dias: draftPeriod.httpPeriod.modo === 'NATURAL' ? draftPeriod.httpPeriod.periodo_medicao_dias : 0 } })} />
