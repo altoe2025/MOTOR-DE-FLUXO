@@ -109,7 +109,10 @@ test('presença global nas rotas implementadas; auth sem painel e deep links pre
     if (path.includes('/diagnostico?')) await expect(page.getByRole('region', { name: 'Resultado do motor' })).toBeVisible();
     if (path.includes('/replay?')) await expect(page.getByRole('heading', { name: 'Fronteira Viva', exact: true })).toBeVisible();
     await open(page);
-    expect(new URL(page.url()).pathname).toBe(path.split('?')[0]);
+    const requestedPath = path.split('?')[0]!;
+    const expectedPath = requestedPath === '/comparar' ? '/quadro'
+      : ['/carteira', '/replay', '/premissas'].includes(requestedPath) ? '/estudos' : requestedPath;
+    expect(new URL(page.url()).pathname).toBe(expectedPath);
     await expect(panel(page)).toHaveAttribute('aria-modal', 'false');
     await panel(page).getByRole('button', { name: 'Fechar chat' }).click();
     await expect(page.getByRole('button', { name: 'Perguntar', exact: true })).toBeFocused();
@@ -358,66 +361,23 @@ test('arquivo XLSX/raw, credenciais e dados não selecionados ficam fora de requ
   writeFileSync(testInfo.outputPath('privacy-canaries.json'), JSON.stringify({ question: 'PERGUNTA_PRIVADA_C6', answer: result.response.answer, owner: OWNER, bearer: 'mot21-controlled-e2e-token', file: 'ARQUIVO_PRIVADO_C6', 'raw-client': 'RAW_CLIENT_C6', 'raw-profile': 'RAW_PROFILE_C6', 'financial-value': '987.65' }));
 });
 
-test('contexto da comparação e citação restauram o par base/hipótese após reload', async ({ page }) => {
-  test.setTimeout(180_000);
-  const study = await demo(page); const base = study.diagnostics.find((item) => item.scenarioId === study.scenarios[0]!.id)!;
-  await page.goto(`/carteira/${study.id}`);
-  const builder = page.getByRole('region', { name: 'Criar hipótese de composição' });
-  await builder.getByLabel('Nome da hipótese').fill('Janela comparável C6');
-  await builder.getByLabel('Janela em dias').fill('8');
-  await builder.getByRole('button', { name: 'Criar hipótese', exact: true }).click();
-  await expect(page).toHaveURL(new RegExp(`/estudos/${study.id}/diagnostico\\?scenarioId=`));
-  const scenarioId = new URL(page.url()).searchParams.get('scenarioId')!;
-  const before = await (await page.request.get('/__e2e__/diagnostics/state')).json() as { submitted: number };
-  await page.evaluate(() => {
-    const original = crypto.randomUUID.bind(crypto); let first = true;
-    Object.defineProperty(crypto, 'randomUUID', { configurable: true, value: () => {
-      if (first) { first = false; return '00000000-0000-4000-8000-000000000111'; }
-      return original();
-    } });
-  });
-  await page.getByRole('button', { name: 'Executar diagnóstico', exact: true }).click();
-  for (let index = 0; index < 10; index += 1) {
-    await expect.poll(async () => (await page.request.get('/__e2e__/diagnostics/state', { maxRetries: 1 })).json()).toMatchObject({ pending: 1, submitted: before.submitted + index + 1 });
-    expect((await page.request.post('/__e2e__/diagnostics/release', { data: { fail: false } })).ok()).toBe(true);
-  }
-  await expect(page.getByRole('heading', { name: 'Resultado do motor' })).toBeVisible();
-  const after = await page.evaluate(() => (window.__MOTOR_E2E__ as unknown as Bridge).demoAcceptanceSnapshot());
-  const hypothesis = after.studies[0]!.diagnostics.find((item) => item.scenarioId === scenarioId)!;
-  expect(hypothesis).toBeDefined();
-  const path = `/comparar?studyId=${study.id}&baseExecutionId=${base.id}&hypothesisExecutionId=${hypothesis.id}`;
-  await page.goto(path); await expect(page.getByRole('heading', { name: '4. Exposição residual' })).toBeVisible();
+test('citação do Quadro fica histórica após trocar a seleção, inclusive após reload', async ({ page }) => {
+  await demo(page);
+  await page.goto('/quadro');
+  const choices = page.locator('.board-candidates input[type="checkbox"]');
+  await expect.poll(() => choices.count()).toBeGreaterThanOrEqual(2);
+  await choices.nth(0).check(); await choices.nth(1).check();
   await open(page);
-  const result = await send(page, 'Explique esta comparação.'); expect(result.status).toBe(200);
-  expect(result.request.routeContext).not.toHaveProperty('comparisonExecutionId');
-  const sentContext = result.request.context; expect(sentContext?.kind).toBe('STUDY');
-  if (sentContext?.kind !== 'STUDY') throw new Error('STUDY context expected');
-  const doc = sentContext.document;
-  expect(doc.selection.comparisonExecutionId).toBe(base.id);
-  expect(doc.selection.diagnosticExecutionId).toBe(hypothesis.id);
-  expect(doc.executiveMetrics).toEqual([]); expect(doc.comparison?.metrics.length).toBeGreaterThan(0);
-  expect(result.response.contextFingerprint).toBe(doc.contextFingerprint);
-  const metric = [...doc.executiveMetrics, ...doc.comparison!.metrics].find((item) => item.code === result.response.citations[0]!.id)!;
-  expect(result.response.answer).toContain(metric.value!);
-  for (const ref of metric.evidenceRefs) expect(doc.evidenceIndex[ref]).toBeDefined();
-  await expect(messages(page)).toContainText(result.response.answer);
+  const result = await send(page, 'Explique os resultados selecionados.');
+  expect(result.status).toBe(200);
+  expect(result.request.context?.kind).toBe('BOARD');
+  const sources = panel(page).getByRole('navigation', { name: 'Fontes da resposta' });
+  await expect(sources.getByRole('link')).toHaveAttribute('href', '/quadro');
+  await choices.nth(1).uncheck();
+  await expect(sources.getByRole('link')).toHaveCount(0);
   await page.reload(); await open(page);
-  const citation = panel(page).getByRole('navigation', { name: 'Fontes da resposta' }).getByRole('link');
-  await expect(citation).toHaveAttribute('href', path);
-  await citation.click();
-  // Navigation reloads the comparison and then publishes its chat document.
-  // The citation becomes a link again only when that document is available.
-  await expect(page.getByLabel('Execução base')).toHaveValue(base.id);
-  await expect(page.getByLabel('Execução da hipótese')).toHaveValue(hypothesis.id);
-  await expect(page.getByRole('heading', { name: '4. Exposição residual' })).toBeVisible();
-  await expect(citation).toHaveAttribute('href', path);
-  await send(page, 'Explique novamente esta comparação.');
-  const currentCitation = panel(page).getByRole('navigation', { name: 'Fontes da resposta' }).last().getByRole('link');
-  await page.getByLabel('Execução da hipótese').selectOption(study.diagnostics[1]!.id);
-  await currentCitation.click();
-  await expect(page.getByLabel('Execução base')).toHaveValue(base.id);
-  await expect(page.getByLabel('Execução da hipótese')).toHaveValue(hypothesis.id);
-  await expect(page.getByRole('heading', { name: '4. Exposição residual' })).toBeVisible();
+  await expect(messages(page)).toContainText(result.response.answer);
+  await expect(panel(page).getByRole('navigation', { name: 'Fontes da resposta' }).getByRole('link')).toHaveCount(0);
 });
 
 test('reload de PENDING recupera FAILED e retry sem duplicação', async ({ page }) => {

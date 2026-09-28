@@ -76,6 +76,13 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-28 — Candidato de publicação do chat integrado à bancada (MOT-95)
+
+1. **Sintoma.** O deploy manual da `main` em `3342059` não incluía as correções locais do chat.
+2. **Causa.** A branch do chat ainda não havia sido enviada; o front mais recente também mudou os redirecionamentos e removeu o comparador antigo.
+3. **O que foi feito.** `codex/chat-interface-render` reúne as correções do chat, `origin/feat/bancada-exploracao` (`de35df0`) e o ajuste visual `21c4478`, preservando a `main` existente. Catálogo distingue o comparador legado e a navegação atual do diagnóstico. Os E2Es de chat acompanham os redirecionamentos e a invalidação das citações do Quadro após mudança de seleção/reload. Verificação final: Python 1.237 passed/3 skipped; front 1.082 passed; types/lint verdes; 17 E2Es de chat verdes. Push/PR e deploy do commit específico autorizados pelo Gabriel; resultado do Render será confirmado separadamente. Nenhuma configuração, credencial, usuário autorizado ou regra do motor alterada.
+4. **O que isso invalida.** Deploy de `3342059` não prova disponibilidade das melhorias do chat. O teste do comparador base/hipótese removido é substituído pelo fluxo real do Quadro. As demais specs históricas do front mencionadas abaixo continuam fora desta validação; não se declara a suíte integral de navegador verde nem qualidade universal do provider real.
+
 ## 2026-09-28 — Ajuda de interface e respostas parciais do ORKE AI (MOT-95)
 
 1. **Sintoma.** Perguntas sobre botões/campos não tinham fonte específica; respostas úteis eram substituídas por recusa genérica mesmo quando uma parte estava fundamentada.
