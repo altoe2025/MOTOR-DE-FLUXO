@@ -56,6 +56,7 @@ async function materializeScenario(draft: ScenarioDraft): Promise<ScenarioDocume
     ...(candidate.inputProvenance === undefined
       ? {}
       : { inputProvenance: candidate.inputProvenance }),
+    ...(candidate.derivation === undefined ? {} : { derivation: candidate.derivation }),
     inputFingerprint: await fingerprintScenarioInput(candidate),
   };
   return deepFreeze(scenario);
@@ -271,11 +272,15 @@ export async function duplicateStudy(
   const duplicatedAt = checkedInstant(now);
   const id = ids();
   const scenarioIds = new Map(study.scenarios.map((scenario) => [scenario.id, ids()]));
-  const scenarios = study.scenarios.map((scenario) => ({
-    ...clone(scenario),
-    id: scenarioIds.get(scenario.id)!,
-    revision: 1,
-  }));
+  const scenarios = study.scenarios.map((scenario) => {
+    const { derivation, ...rest } = clone(scenario);
+    const copy = { ...rest, id: scenarioIds.get(scenario.id)!, revision: 1 };
+    // O vínculo acompanha a base copiada; se a base não está no estudo, o vínculo cai.
+    const baseId = derivation === undefined ? undefined : scenarioIds.get(derivation.baseScenarioId);
+    return derivation === undefined || baseId === undefined
+      ? copy
+      : { ...copy, derivation: { ...derivation, baseScenarioId: baseId } };
+  });
   return finalize({
     ...clone(study),
     id,

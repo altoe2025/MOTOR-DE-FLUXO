@@ -1,6 +1,7 @@
 import { resolvePortfolioSource } from '../preparation/resolvePortfolioSource';
 import type {
-  AuthoredPortfolioDefinition, CanonicalAuthoredOrder, OrderFieldProvenance, PeriodDocument, ScenarioDocument, ScenarioDraft,
+  AuthoredPortfolioDefinition, CanonicalAuthoredOrder, OrderFieldProvenance, PeriodDocument, ScenarioDerivation, ScenarioDocument,
+  ScenarioDraft,
 } from '../study/model';
 import { applyLevers, describeLevers, type Levers } from './applyLevers';
 import { companyResolver } from './companies';
@@ -42,6 +43,8 @@ export async function buildLeverScenario(input: Readonly<{
   authoredPortfolioId: string;
   recordedAt: string;
   name?: string;
+  /** Só para variações de composição geradas da base sem outra alteração. */
+  derivation?: ScenarioDerivation;
 }>): Promise<ScenarioDraft> {
   const { base, recordedAt } = input;
   if (!leverBaseAvailable(base)) throw new Error('Este cenário não tem ordens explícitas para aplicar alavancas.');
@@ -86,7 +89,27 @@ export async function buildLeverScenario(input: Readonly<{
     premises: structuredClone(base.premises),
     period: periodCovering(base.period, horizonDays),
     ...(base.inputProvenance === undefined ? {} : { inputProvenance: structuredClone(base.inputProvenance) }),
+    ...(input.derivation === undefined ? {} : { derivation: structuredClone(input.derivation) }),
   };
+}
+
+export type CombinationPreset = 'ALONE' | 'LEAVE_ONE_OUT';
+
+/**
+ * Presets de composição: cada empresa sozinha, ou a carteira sem cada uma delas. Com duas
+ * empresas "retirar uma" coincide com "sozinha" e não gera nada a mais.
+ */
+export function combinationPreset(preset: CombinationPreset, companies: readonly string[]): string[][] {
+  if (preset === 'ALONE') return companies.map((company) => [company]);
+  if (companies.length < 3) return [];
+  return companies.map((removed) => companies.filter((company) => company !== removed));
+}
+
+/** Tipo do vínculo de uma variação que mantém `subset` das `companies` da base. */
+export function derivationKind(subset: readonly string[], companies: readonly string[]): ScenarioDerivation['kind'] {
+  if (subset.length === 1) return 'COMPANY_ALONE';
+  if (subset.length === companies.length - 1) return 'LEAVE_ONE_OUT';
+  return 'SUBSET';
 }
 
 /** Todas as carteiras formadas por um subconjunto não vazio e próprio das empresas. */

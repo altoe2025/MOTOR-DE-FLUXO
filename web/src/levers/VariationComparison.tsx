@@ -82,7 +82,7 @@ export function VariationComparison({ study, selectedScenarioId, running, progre
     </div>}
     {origin.length < 2 ? null : <section className="savings-origin" aria-labelledby="savings-origin-title">
       <h3 id="savings-origin-title">De onde vem a economia de cada empresa</h3>
-      {!hasSolo ? <p className="field-hint">Gere as combinações no estudo (elas incluem cada empresa sozinha) e rode todas para separar o que cada empresa faria sozinha do que a carteira acrescenta.</p> : <>
+      {!hasSolo ? <p className="field-hint">No estudo, use “Cada empresa sozinha” a partir do original e rode todas para separar o que cada empresa faria sozinha do que a carteira acrescenta. Só contam variações geradas do original sem outra alteração; variações com alavanca (ex.: volume ×2) não entram.</p> : <>
         <p className="field-hint">“Sozinha” é a mesma empresa rodada sem as outras. O que ela casa sozinha se divide em mesma linha (o mesmo cliente com IN e OUT) e entre linhas da própria empresa. O ganho da carteira é o que só existe porque as outras empresas estão junto.</p>
         <div className="table-scroll" role="region" tabIndex={0} aria-label="Origem da economia por empresa">
           <table className="company-table">

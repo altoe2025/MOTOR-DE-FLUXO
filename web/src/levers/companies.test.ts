@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { CompanyRecord, ObservedCase } from '../cases/domain';
 import { makeObservedCase } from '../study/fixtures';
 import { combineObservedCases, companyResolver } from './companies';
-import { companySubsets } from './leverScenario';
+import { combinationPreset, companySubsets, derivationKind } from './leverScenario';
 
 const company = (id: string, displayName: string) => ({ id, displayName } as CompanyRecord);
 const companies = [company('c-astro', 'AstroPay'), company('c-y', 'Empresa Y')];
@@ -39,5 +39,31 @@ describe('combineObservedCases', () => {
 describe('companySubsets', () => {
   it('lista cada empresa sozinha e cada grupo, sem o vazio e sem o completo', () => {
     expect(companySubsets(['AP', 'X', 'Y'])).toEqual([['AP'], ['X'], ['Y'], ['AP', 'X'], ['AP', 'Y'], ['X', 'Y']]);
+  });
+
+  it('com 8 empresas gera 254 variações — por isso fica como opção avançada', () => {
+    expect(companySubsets(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'])).toHaveLength(254);
+  });
+});
+
+describe('presets de composição', () => {
+  const companies = ['A', 'B', 'C', 'D'];
+
+  it('"Cada empresa sozinha" gera uma variação por empresa', () => {
+    expect(combinationPreset('ALONE', companies)).toEqual([['A'], ['B'], ['C'], ['D']]);
+  });
+
+  it('"Retirar uma por vez" gera uma variação sem cada empresa', () => {
+    expect(combinationPreset('LEAVE_ONE_OUT', companies)).toEqual([['B', 'C', 'D'], ['A', 'C', 'D'], ['A', 'B', 'D'], ['A', 'B', 'C']]);
+  });
+
+  it('com duas empresas "retirar uma" é igual a "sozinha" e não duplica', () => {
+    expect(combinationPreset('LEAVE_ONE_OUT', ['A', 'B'])).toEqual([]);
+  });
+
+  it('classifica o vínculo pelo tamanho do subconjunto', () => {
+    expect(derivationKind(['A'], companies)).toBe('COMPANY_ALONE');
+    expect(derivationKind(['A', 'B', 'C'], companies)).toBe('LEAVE_ONE_OUT');
+    expect(derivationKind(['A', 'B'], companies)).toBe('SUBSET');
   });
 });

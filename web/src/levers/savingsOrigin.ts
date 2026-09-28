@@ -35,13 +35,33 @@ export function scenarioRow(study: StudyDocument, scenario: ScenarioDocument): S
   return { scenario, execution, envelope, breakdown };
 }
 
+function sameJson(left: unknown, right: unknown): boolean {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
 /**
- * Para cada empresa do cenário de referência, a mesma empresa rodada sozinha (a variação
- * cujo único grupo é ela), quando existir.
+ * Variação "empresa sozinha" gerada a partir da referência exata: mesma base e versão das
+ * ordens, mesmas premissas e período, sem nenhuma outra alteração. Uma variação de alavanca
+ * com uma só empresa (ex.: "A volume ×2") não conta.
+ */
+function isAloneOf(row: ScenarioRow, reference: ScenarioRow, company: string): boolean {
+  const derivation = row.scenario.derivation;
+  return derivation?.kind === 'COMPANY_ALONE'
+    && derivation.baseScenarioId === reference.scenario.id
+    && derivation.baseSourceFingerprint === reference.scenario.sourceSnapshot.sourceFingerprint
+    && derivation.companies.length === 1 && derivation.companies[0] === company
+    && sameJson(row.scenario.premises, reference.scenario.premises)
+    && sameJson(row.scenario.period, reference.scenario.period)
+    && row.breakdown?.companies.length === 1 && row.breakdown.companies[0]!.group === company;
+}
+
+/**
+ * Para cada empresa do cenário de referência, a mesma empresa rodada sozinha a partir da mesma
+ * base, quando existir. Sem equivalente exato, não atribui.
  */
 export function savingsOrigin(rows: readonly ScenarioRow[], reference: ScenarioRow): OriginEntry[] {
-  const alone = (company: string) => rows.find((row) => row !== reference && row.breakdown?.companies.length === 1
-    && row.breakdown.companies[0]!.group === company)?.breakdown?.companies[0];
+  const alone = (company: string) => rows.find((row) => row !== reference && isAloneOf(row, reference, company))
+    ?.breakdown?.companies[0];
   return (reference.breakdown?.companies ?? []).map((item) => ({ item, solo: alone(item.group) }));
 }
 
