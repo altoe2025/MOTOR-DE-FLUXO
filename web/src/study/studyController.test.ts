@@ -224,6 +224,27 @@ describe('StudyController', () => {
     subject.close();
   });
 
+  it('remove a demonstração automática herdada ao abrir a sessão', async () => {
+    const repository = new RepositoryDouble(FIXTURE_OWNER);
+    const removeLegacyAutomaticDemo = vi.fn(async () => true);
+    const compatibleRepository = Object.assign(repository, {
+      getDemoInstallationStatus: async () => 'INSTALLED' as const,
+      removeLegacyAutomaticDemo,
+    });
+    const loadPackage = vi.fn(async () => generatedDemo as unknown as DemoStudyPackageV1);
+    const subject = new StudyController({
+      repositoryFactory: () => compatibleRepository,
+      demoPackageLoader: loadPackage,
+    });
+
+    await subject.switchSession(FIXTURE_OWNER);
+
+    expect(loadPackage).toHaveBeenCalledOnce();
+    expect(removeLegacyAutomaticDemo).toHaveBeenCalledWith(generatedDemo);
+    expect(subject.snapshot).toMatchObject({ ownerSub: FIXTURE_OWNER, status: 'IDLE', document: null });
+    subject.close();
+  });
+
   it('mantém falha de instalação visível e permite recuperação explícita', async () => {
     const repository = new RepositoryDouble(FIXTURE_OWNER);
     const failure = new Error('QuotaExceededError');

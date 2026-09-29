@@ -220,6 +220,53 @@ describe('atomic demo installation', { timeout: 30000 }, () => {
     expect(await repo.listOperationalProfileVersions()).toEqual(expect.arrayContaining(profiles));
   });
 
+  it('removes a legacy automatic demo without touching user-created records', async () => {
+    const repo = repository();
+    const installed = await repo.installDemoStudy(input('legacy-auto'));
+    const userStudy = await createStudy({
+      id: crypto.randomUUID(), ownerSub: 'demo-owner', name: 'Trabalho do usuário',
+      baseScenario: makeScenarioDraft(), now: FIXTURE_NOW,
+    });
+    await repo.saveStudy({ document: userStudy, expectedRevision: 0, operationId: 'user-study' });
+
+    await expect(repo.removeLegacyAutomaticDemo(structuredClone(demo) as unknown as DemoStudyPackageV1))
+      .resolves.toBe(true);
+
+    expect(await repo.getStudy(installed.id)).toBeNull();
+    expect(await repo.getStudy(userStudy.id)).toEqual(userStudy);
+    expect(await repo.listCompanies()).toEqual([]);
+    expect(await repo.listObservedCases()).toEqual([]);
+    expect(await repo.listOperationalProfileVersions()).toEqual([]);
+    expect(await repo.getDemoInstallationStatus()).toBe('REMOVED');
+  });
+
+  it('keeps a demo that was loaded explicitly', async () => {
+    const repo = repository();
+    const installed = await repo.installDemoStudy(input('explicit', 'EXPLICIT_RESTORE'));
+
+    await expect(repo.removeLegacyAutomaticDemo(structuredClone(demo) as unknown as DemoStudyPackageV1))
+      .resolves.toBe(false);
+
+    expect(await repo.getStudy(installed.id)).toEqual(installed);
+    expect(await repo.listCompanies()).toHaveLength(12);
+  });
+
+  it('removes synthetic records left behind after the legacy demo study was purged', async () => {
+    const repo = repository();
+    const installed = await repo.installDemoStudy(input('legacy-then-purged'));
+    await repo.purgeStudy(installed.id);
+    expect(await repo.getDemoInstallationStatus()).toBe('REMOVED');
+    expect(await repo.listCompanies()).toHaveLength(12);
+
+    await expect(repo.removeLegacyAutomaticDemo(structuredClone(demo) as unknown as DemoStudyPackageV1))
+      .resolves.toBe(true);
+
+    expect(await repo.listCompanies()).toEqual([]);
+    expect(await repo.listObservedCases()).toEqual([]);
+    expect(await repo.listOperationalProfileVersions()).toEqual([]);
+    expect(await repo.needsLegacyDemoCleanup()).toBe(false);
+  });
+
   it('rejects a corrupt installed demo before restore writes anything', async () => {
     const repo = repository();
     const installed = await repo.installDemoStudy(input());

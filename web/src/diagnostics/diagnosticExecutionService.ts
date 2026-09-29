@@ -133,7 +133,24 @@ export async function executeStudyDiagnostic(
         }
         reservedStudy = stored;
       }
-      const submitted = await options.api.submitDiagnostic(request, signal);
+      let submitted: JobSnapshot;
+      try {
+        submitted = await options.api.submitDiagnostic(request, signal);
+      } catch (error) {
+        const failure = error instanceof ApiError
+          ? { code: error.code, message: error.message }
+          : { code: 'DIAGNOSTIC_SUBMISSION_FAILED', message: 'O servidor não recebeu o diagnóstico.' };
+        return persistTerminal(
+          options.authority,
+          ownerSub,
+          epoch,
+          reservedStudy,
+          reservation,
+          terminalRecord(reservation, nextId(), 'FAILED', now(), null, failure),
+          signal,
+          options.persistence === 'TERMINAL_ONLY',
+        );
+      }
       if (!sessionIsCurrent(options.authority, ownerSub, epoch, signal)) {
         return interrupted(reservation, null);
       }

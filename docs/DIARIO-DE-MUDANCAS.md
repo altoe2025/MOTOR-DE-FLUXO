@@ -37,7 +37,7 @@ Atualizada em 2026-09-29, durante a preparação da atualização da bancada.
 
 | Branch | Situação | Dono |
 |---|---|---|
-| `codex/replay-production-fix` | Candidato de produção com Replay compatível, perfil, conta nova vazia, composição simplificada e baselines Windows revistas; deploy manual autorizado para o commit desta integração | Codex |
+| `codex/replay-production-fix` | Produção em correção: limpa resíduos do demo automático antigo e preserva a falha real de diagnóstico; novo deploy autorizado | Codex |
 | `codex/frontend-performance-fixes` | Integra as correções de travamento e `feat/estudo-vs-combinacao` sobre o release `829d224`; publicação no Render em preparação | Codex |
 | `codex/carteira-criterios` | Integra estudo separado de combinações, últimas melhorias de `feat/bancada-exploracao` e chat já publicado do PR #57; deploy aguardando comando do Gabriel | Codex |
 | `codex/chat-interface-render` | PR #57 aberto (draft, base `feat/bancada-exploracao`); código `8d43695` publicado no Render com status Live em 2026-09-28; sem merge na `main` | Codex |
@@ -78,6 +78,13 @@ Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. 
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+## 2026-09-29 — Resíduos do demo antigo e falha opaca do diagnóstico corrigidos (MOT-99)
+
+- **Sintoma:** contas que já tinham recebido o demo automático ainda viam “Empresa sintética 10/11/12” ao criar carteira; falhas antes de o job diagnóstico ser aceito apareciam como tentativa “não persistida”, escondendo inclusive recusa de autorização.
+- **Causa:** retirar a instalação automática não migrou as empresas, casos e perfis já gravados no IndexedDB; o `submitDiagnostic` ficava fora do fechamento terminal local e a página substituía qualquer exceção por uma mensagem genérica.
+- **O que foi feito:** em `codex/replay-production-fix`, o login reconhece pelo marcador/operação e remove uma única vez apenas o pacote demo legado, inclusive resíduos de um estudo demo já purgado, preservando registros e estudos do usuário; instalações explícitas continuam disponíveis. Recusas no envio agora viram tentativa terminal persistida e `ACESSO_NAO_PERMITIDO` informa que a conta ainda não está autorizada no servidor.
+- **O que isso invalida:** invalida a expectativa de que apenas remover o auto-install deixaria navegadores que já abriram versões antigas sem dados sintéticos; não altera resultados do motor, estudos reais nem a política de allowlist do piloto.
 
 ## 2026-09-29 — Perfil, primeiro acesso vazio e composição simplificada integrados (MOT-99)
 

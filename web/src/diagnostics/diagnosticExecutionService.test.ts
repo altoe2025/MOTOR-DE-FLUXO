@@ -216,6 +216,39 @@ describe('executeStudyDiagnostic', () => {
     expect(authority.edits[1]!.executions.map((item) => item.status)).toEqual(['QUEUED', 'FAILED']);
   });
 
+  it('persiste a falha concreta quando o servidor recusa o envio', async () => {
+    const { study, request } = await studyFixture();
+    const authority = new AuthorityDouble(study);
+
+    const result = await executeStudyDiagnostic({
+      authority,
+      scenarioId: SCENARIO_ID,
+      buildRequest: async () => request,
+      api: {
+        submitDiagnostic: vi.fn().mockRejectedValue(new ApiError({
+          status: 403,
+          code: 'ACESSO_NAO_PERMITIDO',
+          message: 'Usuário fora da allowlist.',
+        })),
+        getDiagnosticJob: vi.fn(),
+        getDiagnosticResult: vi.fn(),
+      },
+      nextId: vi.fn(idFactory(ATTEMPT_ID, RESERVATION_ID, TERMINAL_ID)),
+      now: () => NOW,
+    });
+
+    expect(result).toMatchObject({
+      status: 'FAILED',
+      attemptId: ATTEMPT_ID,
+      error: { code: 'ACESSO_NAO_PERMITIDO', message: 'Usuário fora da allowlist.' },
+    });
+    expect(authority.edits).toHaveLength(2);
+    expect(authority.edits.at(-1)?.executions.at(-1)).toMatchObject({
+      status: 'FAILED',
+      error: { code: 'ACESSO_NAO_PERMITIDO' },
+    });
+  });
+
   it('adia a reserva no lote e persiste a tentativa completa em uma única gravação terminal', async () => {
     const { study, request } = await studyFixture();
     const authority = new AuthorityDouble(study);

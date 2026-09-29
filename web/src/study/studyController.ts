@@ -1,5 +1,5 @@
 import type { ApplicationRepository } from '../storage/applicationRepository';
-import { installDemoStudy, type DemoPackageLoader } from '../demo/installDemoStudy';
+import { installDemoStudy, removeLegacyAutomaticDemo, type DemoPackageLoader } from '../demo/installDemoStudy';
 import { RevisionConflictError } from '../storage/errors';
 import type { CompanyRecord, ObservedCase } from '../cases/domain';
 import type { ImportReview } from '../importer/eligibility';
@@ -215,6 +215,12 @@ export class StudyController {
     this.#repository = repository;
     this.#channel = channel;
     channel?.addEventListener('message', this.#onChannelMessage);
+    await this.runForCurrentSession(({ signal }) => removeLegacyAutomaticDemo({
+      repository,
+      ...(this.#demoPackageLoader === undefined ? {} : { loadPackage: this.#demoPackageLoader }),
+      signal,
+    }));
+    if (!this.#isCurrent(repository, epoch)) return this.#snapshot.sessionEpoch;
     // Conta nova começa vazia: a demonstração só entra por restoreDemoStudy().
     return this.#snapshot.sessionEpoch;
   }

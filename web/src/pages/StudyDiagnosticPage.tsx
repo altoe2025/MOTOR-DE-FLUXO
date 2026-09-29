@@ -51,6 +51,13 @@ function transientState(snapshot: JobSnapshot): DiagnosticViewState {
   };
 }
 
+export function diagnosticFailureMessage(error: Readonly<{ code: string; message: string }> | null): string {
+  if (error?.code === 'ACESSO_NAO_PERMITIDO') {
+    return 'Esta conta entrou, mas ainda não está autorizada a executar diagnósticos no servidor.';
+  }
+  return error?.message ?? 'Não foi possível concluir o diagnóstico.';
+}
+
 function persistedState(execution: DiagnosticExecutionRecord | null): DiagnosticViewState | null {
   if (execution === null) return null;
   if (execution.status === 'QUEUED') {
@@ -186,7 +193,11 @@ export function StudyDiagnosticPage() {
     if (!mounted.current || activeIdentity.current !== screenIdentity) return;
     const current = controller.snapshot.document;
     if (current !== null) setStudy(current);
-    if (attempt.status === 'FAILED') setViewState({ kind: 'FAILED', attemptId: attempt.attemptId, publicMessage: 'Não foi possível concluir o diagnóstico. A tentativa anterior foi preservada no histórico.' });
+    if (attempt.status === 'FAILED') {
+      const publicMessage = diagnosticFailureMessage(attempt.error);
+      setViewState({ kind: 'FAILED', attemptId: attempt.attemptId,
+        publicMessage: `${publicMessage} A tentativa foi preservada no histórico.` });
+    }
     else setViewState({ kind: attempt.status, attemptId: attempt.attemptId });
   }, [controller, screenIdentity]);
 

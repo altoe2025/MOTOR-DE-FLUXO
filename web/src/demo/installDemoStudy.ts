@@ -8,6 +8,21 @@ export type DemoPackageLoader = () => Promise<DemoStudyPackageV1>;
 const loadBundledPackage: DemoPackageLoader = async () =>
   (await import('./generated/demo-study.v1.json')).default as unknown as DemoStudyPackageV1;
 
+export async function removeLegacyAutomaticDemo(input: Readonly<{
+  repository: Pick<ApplicationRepository,
+    'getDemoInstallationStatus' | 'needsLegacyDemoCleanup' | 'removeLegacyAutomaticDemo'>;
+  loadPackage?: DemoPackageLoader;
+  signal?: AbortSignal;
+}>): Promise<boolean> {
+  if (input.signal?.aborted || input.repository.removeLegacyAutomaticDemo === undefined) return false;
+  if (input.repository.needsLegacyDemoCleanup !== undefined
+    && !await input.repository.needsLegacyDemoCleanup()) return false;
+  if (await input.repository.getDemoInstallationStatus() === null || input.signal?.aborted) return false;
+  const packageValue = await (input.loadPackage ?? loadBundledPackage)();
+  if (input.signal?.aborted) return false;
+  return input.repository.removeLegacyAutomaticDemo(packageValue);
+}
+
 /** The transaction rechecks eligibility: this early query only avoids loading an unnecessary bundle. */
 export async function installDemoStudy(input: Readonly<{
   repository: Pick<ApplicationRepository, 'listStudies' | 'installDemoStudy'>;
