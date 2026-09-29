@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 import { Button } from '../../ui/Button';
 import type { StudyDocument } from '../model';
+import { describeSource } from '../sourceSummary';
 
 export type StudyListProps = Readonly<{
   studies: readonly StudyDocument[]; selectedId: string | null; onCreate(): void;
@@ -11,10 +12,8 @@ export type StudyListProps = Readonly<{
 }>;
 
 function sourceLabel(study: StudyDocument): string {
-  const source = study.scenarios.find((item) => item.id === study.baseScenarioId)?.sourceSnapshot.source;
-  if (source?.kind === 'OBSERVED_CASE') return 'Caso observado';
-  if (source?.kind === 'AUTHORED') return 'Carteira manual';
-  return 'Exemplo sintético';
+  const scenario = study.scenarios.find((item) => item.id === study.baseScenarioId);
+  return scenario === undefined ? 'Sem origem' : describeSource(scenario, [], []).label;
 }
 
 export function StudyList({ studies, selectedId, onCreate, onOpen, onRename, onDuplicate, onRestore, onDelete, onExport }: StudyListProps) {

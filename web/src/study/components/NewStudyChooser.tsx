@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import type { CompanyRecord, ObservedCase } from '../../cases/domain';
 import { Button } from '../../ui/Button';
 import { formatPeriod } from '../naming';
+import { SOURCE_LABELS } from '../sourceSummary';
 
 type Origin = 'IMPORTED' | 'COMPANIES' | 'SYNTHETIC';
 
@@ -35,9 +36,9 @@ export function NewStudyChooser({ cases, companies, busy, onCreateFromCases, onC
   return <section className="source-panel new-study-chooser" aria-labelledby="new-study-title">
     <h2 id="new-study-title">Novo estudo: de onde vêm os dados?</h2>
     <div className="source-selector__choices" role="radiogroup" aria-label="Origem do novo estudo">
-      <label><input type="radio" name="new-study-origin" checked={origin === 'IMPORTED'} onChange={() => setOrigin('IMPORTED')} /> Dados importados de uma empresa</label>
-      <label><input type="radio" name="new-study-origin" checked={origin === 'COMPANIES'} onChange={() => setOrigin('COMPANIES')} /> Carteira de várias empresas</label>
-      <label><input type="radio" name="new-study-origin" checked={origin === 'SYNTHETIC'} onChange={() => setOrigin('SYNTHETIC')} /> Carteira gerada (exemplo)</label>
+      <label><input type="radio" name="new-study-origin" checked={origin === 'IMPORTED'} onChange={() => setOrigin('IMPORTED')} /> {SOURCE_LABELS.IMPORTED}</label>
+      <label><input type="radio" name="new-study-origin" checked={origin === 'COMPANIES'} onChange={() => setOrigin('COMPANIES')} /> {SOURCE_LABELS.COMPANIES}</label>
+      <label><input type="radio" name="new-study-origin" checked={origin === 'SYNTHETIC'} onChange={() => setOrigin('SYNTHETIC')} /> {SOURCE_LABELS.SYNTHETIC}</label>
     </div>
     {origin === 'IMPORTED' ? (confirmed.length === 0 ? noCases : <>
       <label htmlFor="new-study-case">Caso importado</label>

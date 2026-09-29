@@ -130,10 +130,11 @@ test('Etapa 6: finalidade opcional executa XLSX e demo restaura com Estudo impor
   await page.getByRole('button', { name: 'Criar com carteira gerada' }).click();
   await expect(page).toHaveURL(/\/carteira\/[0-9a-f-]+$/);
   const importedStudyId = page.url().split('/').at(-1)!;
-  await page.getByRole('radio', { name: 'Caso observado', exact: true }).check();
+  await page.getByRole('button', { name: 'Trocar origem' }).click();
+  await page.getByRole('radio', { name: 'Dados importados de uma empresa' }).check();
   const caseId = new URL(profileUrl!, page.url()).searchParams.get('caseId')!;
-  await page.getByLabel('Caso confirmado').selectOption(caseId);
-  await page.getByRole('button', { name: 'Usar caso confirmado' }).click();
+  await page.getByLabel('Caso importado').selectOption(caseId);
+  await page.getByRole('button', { name: 'Usar este caso' }).click();
   await page.getByRole('button', { name: 'Executar cenário atual' }).click();
   await expect.poll(() => page.evaluate((id) => window.__MOTOR_E2E__!.studyExecutionStatuses(id), importedStudyId)).toEqual(['RUNNING', 'SUCCEEDED']);
   await page.goto(`/estudos/${importedStudyId}/diagnostico`);

@@ -10,7 +10,8 @@ async function createStudy(page: Page, synthetic = true): Promise<string> {
   await page.getByRole('button', { name: 'Criar com carteira gerada' }).click();
   await expect(page).toHaveURL(/\/carteira\/[0-9a-f-]+$/);
   if (!synthetic) {
-    await page.getByRole('radio', { name: 'Autoria manual' }).check();
+    await page.getByRole('button', { name: 'Trocar origem' }).click();
+    await page.getByRole('radio', { name: 'Montar à mão (avançado)' }).check();
     await page.getByRole('button', { name: 'Preparar carteira manual' }).click();
   }
   return page.url().split('/').at(-1)!;

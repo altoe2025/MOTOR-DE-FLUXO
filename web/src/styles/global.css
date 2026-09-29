@@ -460,3 +460,6 @@ a { color: inherit; }
 .replay-company-filter { align-items: center; display: inline-flex; gap: var(--space-2); margin-left: var(--space-4); }
 .replay-company-filter select { max-width: 14rem; }
 .replay-frontier__date { display: block; font-size: .7rem; font-weight: 400; }
+.source-summary { align-items: center; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); display: flex; flex-wrap: wrap; gap: var(--space-3); justify-content: space-between; margin: var(--space-2) 0 var(--space-4); padding: var(--space-3) var(--space-4); }
+.source-summary h2 { font-size: 1rem; margin: 0 0 var(--space-1); }
+.source-summary p { margin: 0; }
