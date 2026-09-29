@@ -21,6 +21,9 @@ import type { StudyControllerStatus } from '../study/studyController';
 import { Button } from '../ui/Button';
 import { InlineNotice } from '../ui/InlineNotice';
 
+/** Nome da carteira de uma combinação sem alavancas; com alavancas, o nome as descreve. */
+const COMBINATION_BASE_NAME = 'Cenário base';
+
 function sourceLabel(scenario: ScenarioDocument): string {
   if (scenario.sourceSnapshot.source.kind === 'OBSERVED_CASE') return 'Dados observados';
   if (isProfileMvpScenario(scenario)) return 'Simulação baseada em Perfil';
@@ -102,6 +105,7 @@ export function StudyPortfolioPage() {
   const scenario = study.scenarios.find((item) => item.id === study.baseScenarioId);
   if (scenario === undefined) throw new Error('Estudo sem cenário base.');
   const selectedBase = study.scenarios.find((item) => item.id === selectedBaseId) ?? scenario;
+  const combinationStudy = study.studyType === 'PORTFOLIO_COMBINATIONS';
   const save = (next: StudyDocument) => { controller.edit(next); setStudy(next); };
   const persist = async (next: StudyDocument, failure: string) => {
     controller.edit(next);
@@ -128,7 +132,9 @@ export function StudyPortfolioPage() {
         : await resolvePortfolioSource(source, dependencies);
       const horizonDays = snapshot.orders.length === 0 ? 1 : Math.max(...snapshot.orders.map((order) => order.dia_limite)) + 1;
       const now = new Date().toISOString();
-      const updated = await updateScenario(study, scenario.id, { sourceSnapshot: snapshot, period: periodCovering(scenario.period, horizonDays) }, now);
+      // Na combinação, trocar as empresas volta a carteira ao original: as alavancas aplicadas saem.
+      const updated = await updateScenario(study, scenario.id, { sourceSnapshot: snapshot, period: periodCovering(scenario.period, horizonDays),
+        ...(combinationStudy ? { name: COMBINATION_BASE_NAME } : {}) }, now);
       save(updated);
       // Estudo ainda com o nome padrão ganha um nome a partir da origem (empresas + período).
       const suggestion = study.name === DEFAULT_STUDY_NAME ? suggestStudyName(casesBehind(source, cases), companies) : null;
@@ -139,6 +145,13 @@ export function StudyPortfolioPage() {
     }
   };
   const takenNames = () => study.scenarios.map((item) => item.name);
+  const applyLeversToBase = async (levers: Levers) => {
+    const recordedAt = new Date().toISOString();
+    const draft = await buildLeverScenario({ base: scenario, levers, id: crypto.randomUUID(), authoredPortfolioId: crypto.randomUUID(), recordedAt });
+    const name = variationName(levers, scenario.name, scenario.name === COMBINATION_BASE_NAME);
+    await persist(await updateScenario(study, scenario.id, { sourceSnapshot: draft.sourceSnapshot, period: draft.period, name }, recordedAt),
+      'A sessão mudou antes de aplicar a alavanca.');
+  };
   const createLeverVariation = async (levers: Levers) => {
     const recordedAt = new Date().toISOString();
     const draft = await buildLeverScenario({
@@ -253,12 +266,17 @@ Os diagnósticos dele também serão apagados. Não dá para desfazer.`)) return
     save(await updateScenario(study, scenario.id, { ...update, inputProvenance }, recordedAt));
   }} />
   {error === null ? null : <InlineNotice tone="error">{error}</InlineNotice>}
-  {study.studyType === 'PORTFOLIO_COMBINATIONS' ? <section aria-labelledby="combination-diagnosis-title">
+  {combinationStudy ? <>
+  <p className="eyebrow">Passo 3</p>
+  {scenario.name === COMBINATION_BASE_NAME ? null : <p className="inline-notice" role="status">Alavancas aplicadas à carteira: {scenario.name}</p>}
+  <LeverBuilder key={`${scenario.id}:${scenario.sourceSnapshot.sourceFingerprint}`} base={scenario} applyToBase onCreate={applyLeversToBase} />
+  <p className="eyebrow">Passo 4</p>
+  <section aria-labelledby="combination-diagnosis-title">
     <h2 id="combination-diagnosis-title">Diagnóstico das combinações</h2>
     <p>As combinações são calculadas internamente. O diagnóstico mostra a recomendação e as principais alternativas.</p>
     <Button disabled={combinationProgress !== null} onClick={() => void diagnoseCombinations()}>Diagnosticar combinações</Button>
     {combinationProgress === null ? null : <p role="status">{combinationProgress}</p>}
-  </section> : <>
+  </section></> : <>
   <section className="scenario-workspace" aria-labelledby="scenario-list-title">
     <p className="eyebrow">Passo 3</p>
     <h2 id="scenario-list-title">Cenários do estudo</h2>

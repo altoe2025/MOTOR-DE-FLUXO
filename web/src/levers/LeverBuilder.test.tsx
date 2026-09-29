@@ -58,13 +58,32 @@ describe('LeverBuilder · composição', () => {
     expect(onCreateCombinations).toHaveBeenCalledWith([['A', 'C']], ['A', 'B', 'C']);
   });
 
-  it('"Todas as combinações" é avançada e mostra a contagem antes de criar', async () => {
+  it('"Gerar todas as combinações" fica visível, com a contagem, e cria todas de uma vez', async () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     const { onCreateCombinations, user } = subject(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']);
-    expect(screen.getByText('Avançado: todas as combinações (254 variações)')).toBeInTheDocument();
-    await user.click(screen.getByText('Avançado: todas as combinações (254 variações)'));
-    await user.click(screen.getByRole('button', { name: 'Criar as 254 variações' }));
+    await user.click(screen.getByRole('button', { name: 'Gerar todas as combinações (254)' }));
     expect(onCreateCombinations).toHaveBeenCalledOnce();
     expect(onCreateCombinations.mock.calls[0]![0]).toHaveLength(254);
+  });
+
+  it('com mais de 8 empresas, "Gerar todas" fica indisponível e explica o porquê', () => {
+    subject(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I']);
+    expect(screen.getByRole('button', { name: 'Gerar todas as combinações (0)' })).toBeDisabled();
+    expect(screen.getByText(/combinações demais para gerar de uma vez/)).toBeInTheDocument();
+  });
+});
+
+describe('LeverBuilder · aplicar à carteira (combinação de carteiras)', () => {
+  it('não oferece composição nem tirar empresa, e aplica a alavanca à carteira', async () => {
+    const onCreate = vi.fn().mockResolvedValue(undefined);
+    render(<LeverBuilder base={base(['A', 'B'])} applyToBase onCreate={onCreate} />);
+    expect(screen.queryByRole('heading', { name: 'Composição' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('checkbox', { name: /Tirar a empresa inteira/ })).not.toBeInTheDocument();
+    const user = userEvent.setup();
+    const volumeOut = screen.getByLabelText('Volume OUT ×');
+    await user.clear(volumeOut);
+    await user.type(volumeOut, '2');
+    await user.click(screen.getByRole('button', { name: 'Aplicar à carteira' }));
+    expect(onCreate).toHaveBeenCalledWith(expect.objectContaining({ group: 'A', volumeOut: '2', removeCompany: false }));
   });
 });
