@@ -84,7 +84,7 @@ export function VariationComparison({ study, selectedScenarioId, running, progre
     </div>}
     {origin.length < 2 ? null : <section className="savings-origin" aria-labelledby="savings-origin-title">
       <h3 id="savings-origin-title">De onde vem a economia de cada empresa</h3>
-      {!hasSolo ? <p className="field-hint">Gere as combinações no estudo (elas incluem cada empresa sozinha) e rode todas para separar o que cada empresa faria sozinha do que a carteira acrescenta.</p> : <>
+      {!hasSolo ? <p className="field-hint">No estudo, use “Cada empresa sozinha” a partir do original e rode todas para comparar o que cada empresa faria sozinha com sua participação na carteira.</p> : <>
         <p className="field-hint">“Sozinha” usa as mesmas operações e premissas, sem as outras empresas. A diferença mostra como a economia atribuída à empresa muda na carteira; não é a contribuição total dela para o conjunto.</p>
         <div className="table-scroll" role="region" tabIndex={0} aria-label="Origem da economia por empresa">
           <table className="company-table">

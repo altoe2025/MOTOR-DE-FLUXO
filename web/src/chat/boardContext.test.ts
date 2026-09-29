@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { BoardRow } from '../pages/ComparisonBoardPage';
+import { makeScenarioDraft } from '../study/fixtures';
 import { buildBoardChatContext } from './boardContext';
 
 function row(changes: Partial<BoardRow> = {}): BoardRow {
@@ -9,6 +10,7 @@ function row(changes: Partial<BoardRow> = {}): BoardRow {
     studyName: 'Estudo A', scenarioName: 'Cenário A', origin: 'Sintético', windowDays: 7,
     orderCount: 2, inBrl: '10', outBrl: '20', netability: '0.5', baselineTotal: '8',
     nettedTotal: '3.5', savings: '4.5', diagnosticExecutionId: 'run-a',
+    grossVolume: '30', savingsBps: '1500', periodLabel: '30 dias', premises: makeScenarioDraft().premises,
     finishedAt: '2026-09-26T12:00:00Z', breakdown: null, ...changes,
   };
 }

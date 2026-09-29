@@ -6,6 +6,7 @@ import { MemoryRouter, useNavigate } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { ChatConversation } from './domain';
+import { makeScenarioDraft } from '../study/fixtures';
 import { conversation, message } from './fixtures';
 import { ChatProvider, useChat } from './ChatProvider';
 import { ChatPanel } from './components/ChatPanel';
@@ -56,6 +57,7 @@ describe('session chat shell', () => {
     const row = { key: 's:c', studyId: 's', scenarioId: 'c', executionId: 'e', studyName: 'Estudo',
       scenarioName: 'Cenário', origin: 'Sintético', windowDays: 7, orderCount: 2, inBrl: '10', outBrl: '20',
       netability: '0.5', baselineTotal: '8', nettedTotal: '3', savings: '5',
+      grossVolume: '30', savingsBps: '1666.67', periodLabel: '30 dias', premises: makeScenarioDraft().premises,
       diagnosticExecutionId: 'e', finishedAt: '2026-09-26T12:00:00Z', breakdown: null } satisfies BoardRow;
     const board = await buildBoardChatContext([row]);
     const nextBoard = await buildBoardChatContext([{ ...row, key: 's:c-b', scenarioId: 'c-b', scenarioName: 'Outra seleção' }]);

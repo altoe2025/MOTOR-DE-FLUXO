@@ -2,7 +2,10 @@ import { strFromU8, Unzip, UnzipInflate } from 'fflate';
 import { Parser } from 'saxen';
 
 import type { ImportErrorCode } from './domain';
+import { FILE_TOO_LARGE_MESSAGE, ImportFileError, invalidXlsx, ROW_LIMIT_MESSAGE } from './errors';
 import { columnLetter, IMPORT_HEADERS, IMPORT_LIMIT_ROWS, IMPORT_MAX_FILE_MIB, IMPORT_SHEET_NAME, REQUIRED_IMPORT_HEADERS } from './layout';
+
+export { FILE_TOO_LARGE_MESSAGE, ImportFileError, invalidXlsx, ROW_LIMIT_MESSAGE, type SerializedImportFileError } from './errors';
 
 const MAX_FILE_BYTES = IMPORT_MAX_FILE_MIB * 1024 * 1024;
 const MAX_ENTRIES = 128;
@@ -11,23 +14,12 @@ const OLE_SIGNATURE = new Uint8Array([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 
 const MAX_WORKSHEET_ROW = IMPORT_LIMIT_ROWS + 1;
 const USE_TEMPLATE = 'Baixe o modelo.';
 
-export type SerializedImportFileError = Readonly<{ code: ImportErrorCode; message: string }>;
 
-export class ImportFileError extends Error {
-  readonly code: ImportErrorCode;
-  /** Texto para a pessoa: o que está errado e como corrigir, sem o código. */
-  readonly detail: string;
-  constructor(code: ImportErrorCode, detail: string = code) { super(`${code}: ${detail}`); this.name = 'ImportFileError'; this.code = code; this.detail = detail; }
-}
+
 
 const MACRO_MESSAGE = 'A planilha tem macros ou objetos incorporados. Salve como .xlsx comum (sem macros) ou cole os dados no modelo.';
 const EXTERNAL_LINK_MESSAGE = 'A planilha tem links para outros arquivos. Quebre os links (Dados → Editar links) ou cole só os valores no modelo.';
-export const ROW_LIMIT_MESSAGE = `A planilha passa do limite de até ${IMPORT_LIMIT_ROWS.toLocaleString('pt-BR')} operações por arquivo. Divida em arquivos de até ${IMPORT_LIMIT_ROWS.toLocaleString('pt-BR')} linhas (sem contar o cabeçalho) e apague linhas vazias no fim.`;
-export const FILE_TOO_LARGE_MESSAGE = `O arquivo passa de ${IMPORT_MAX_FILE_MIB} MiB. Apague abas, imagens e formatação extras, ou cole só os dados no modelo.`;
 
-export function invalidXlsx(what: string): string {
-  return `O arquivo não é um .xlsx válido (${what}). Abra no Excel e salve de novo como Pasta de Trabalho do Excel (.xlsx), ou use o modelo.`;
-}
 
 function fail(code: ImportErrorCode, message: string): never { throw new ImportFileError(code, message); }
 function hasPrefix(bytes: Uint8Array, prefix: Uint8Array): boolean { return bytes.length >= prefix.length && prefix.every((value, index) => bytes[index] === value); }

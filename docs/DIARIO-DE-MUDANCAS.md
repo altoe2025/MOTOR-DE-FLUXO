@@ -33,10 +33,11 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-09-28, durante a publicação da ajuda contextual do chat.
+Atualizada em 2026-09-29, durante a preparação da atualização da bancada.
 
 | Branch | Situação | Dono |
 |---|---|---|
+| `codex/carteira-criterios` | Integra estudo separado de combinações, últimas melhorias de `feat/bancada-exploracao` e chat já publicado do PR #57; deploy aguardando comando do Gabriel | Codex |
 | `codex/chat-interface-render` | PR #57 aberto (draft, base `feat/bancada-exploracao`); código `8d43695` publicado no Render com status Live em 2026-09-28; sem merge na `main` | Codex |
 | `codex/integracao-etapas-5-6` | Consolida `feat/bancada-exploracao` e `codex/finalidade-verificacao`, incluindo histórico de `origin/main`; publicação/CI em preparação, sem deploy | Codex |
 | `main` | Autonetting preferencial e integração final incorporados até o PR #37 (`c2ad175`); grade histórica não regenerada | os dois |
@@ -75,6 +76,13 @@ Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. 
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+## 2026-09-29 — Integração das atualizações para publicação posterior (MOT-99)
+
+1. **Sintoma.** As melhorias de carteiras, bancada e chat estavam em branches diferentes; publicar só a branch de carteiras retiraria melhorias do chat já em produção.
+2. **Causa.** O Render foi publicado por SHA específico do PR #57, enquanto a bancada recebeu novas mudanças posteriormente.
+3. **O que foi feito.** `codex/carteira-criterios` integra `codex/chat-interface-render` e `feat/bancada-exploracao` até `666a71d`. Resolução preserva criação em lote sem crash, estudo separado, presets e proveniência das combinações, comparação exata das operações executadas, bps no Quadro e contexto do chat. Validadores foram regenerados a partir do schema combinado. Python: 1.239 testes aprovados e 3 opt-in ignorados. Gabriel pediu concluir a preparação, mas aguardar novo comando para publicar: nenhum deploy foi acionado.
+4. **O que isso invalida.** As branches isoladas deixam de ser candidatas completas para a próxima publicação. Nenhuma regra do motor mudou. O deploy ativo permanece o já registrado em 2026-09-28.
 
 ## 2026-09-29 — Combinação de carteiras como estudo separado (MOT-99)
 
@@ -126,6 +134,27 @@ Validação: build de produção, typecheck e lint dos arquivos alterados passar
 2. **Causa.** O classificador via só a pergunta e a rota, misturava pertinência temática com suficiência de evidência, e `/quadro` era rotulado como uma tela genérica de Estudos. O request aceitava apenas um documento de Estudo; não existia projeção ou ferramenta de leitura para a seleção do Quadro. O fallback estático também não aceitava o deep link `/quadro`.
 3. **O que foi feito.** No worktree isolado `chat-context-quality`, baseado no commit local `1bd7654` de `feat/bancada-exploracao`, o classificador passa a receber o histórico validado e decide somente `IN_SCOPE`, `OUT_OF_SCOPE` ou `MIXED`. A suficiência fica na resposta fundamentada. O request ganhou contexto discriminado `STUDY | BOARD`, fingerprint e evidências estritas; `consultar_quadro` lê somente as linhas marcadas. O cliente publica a seleção, valida respostas e resolve citações para `/quadro`; rotas desconhecidas usam `general`. Catálogo, OpenAPI, tipos, validadores, provider/E2E controlado e smoke real opt-in foram atualizados. Nenhuma regra ou métrica do motor mudou. Não houve commit, push, PR ou deploy porque não foi fornecido `MOT-N`.
 4. **O que isso invalida.** Requests de chat com o campo legado `communication`, a interpretação de `/quadro` como `studies` e testes que permitiam `INSUFFICIENT_EVIDENCE` no classificador ficam superados. Não se declara qualidade semântica universal do modelo: o provider real permanece teste manual opt-in. Números simulados, aceites do motor e conclusões de negócio não mudam.
+## 2026-09-28 — Bancada, nível 1 de usabilidade: %, modelo de importação, mediana, presets e bps
+
+1. **Sintoma.** Premissas pediam fração com ponto (IOF `0.035`) e o ticket se chamava "médio", mas era mediana. A importação não tinha modelo, e o erro de cabeçalho era genérico ("headers fora da ordem canônica"), com o código técnico repetido na tela. O diagnóstico mostrava só a execução detalhada, escolhida como a primeira do plano e chamada de "representativa", sem a distribuição. "Todas as combinações" gerava 254 variações com 8 empresas. A origem da economia podia usar "A volume ×2" como "A sozinha". O quadro comparava R$ de períodos e volumes diferentes.
+2. **Causa.** Os campos gravavam o texto digitado direto na fração. A lista de colunas estava duplicada no preflight e no parser, e o worker reserializava a mensagem já prefixada. A repetição de detalhe era fixada no pedido, antes de rodar. As variações não guardavam de qual base vieram, e o quadro não tinha métrica relativa ao volume.
+3. **O que foi feito.** Branch `feat/bancada-exploracao`, commits `72138e4` a `ae96db5`.
+   - Premissas em % e R$ com vírgula (`study/numberInput.ts`), armazenamento ainda em fração e "Ticket mediano".
+   - `importer/layout.ts` como fonte única, modelo `.xlsx` gerado no navegador (passa no próprio preflight) e mensagens que dizem como corrigir.
+   - Servidor: em entrada gerada, `aggregate_diagnostic` detalha a repetição com economia igual ao P50 (posto mais próximo; em empate, a primeira do plano). Nenhuma regra do motor mudou. Pacote demo regenerado com o mesmo SHA e critério `MEDIAN_SAVINGS_REPETITION`.
+   - Topo do resultado com P10/P50/P90, amplitude, repetições e qual execução vai para o Replay.
+   - Presets "Cada empresa sozinha" e "Retirar uma por vez", mais seleção manual e "todas" como opção avançada com contagem. Campo opcional `derivation` no cenário (schema do estudo e validadores regenerados). `savingsOrigin` só usa "sozinha" da mesma base, versão, premissas e período.
+   - Quadro com economia em bps (economia ÷ `volume_bruto_periodo_brl` × 10.000, ordenação padrão), período e volume medidos, e aviso de premissas diferentes.
+   - Apagar estudo pelo quadro, feito em sessão paralela, commitado à parte.
+   - Verificação: `tsc`, `eslint`, 1.121 testes unitários e 675 testes de `tests/web_api` passam.
+4. **O que isso invalida.**
+   - Diagnósticos gerados novos detalham a repetição mediana, não a primeira: Replay, apresentação e comunicação de diagnósticos novos mostram outra carteira que a da regra anterior. Diagnósticos antigos seguem válidos e exibem o critério antigo.
+   - O pacote demo mudou (outras repetições selecionadas), então snapshots visuais e specs Playwright do demo podem precisar de revisão; não foram rodados.
+   - Bug conhecido, anterior e não corrigido: com aquecimento, `analyze_diagnostic_repetitions` falha ("volume casado excede o potencial estrutural") quando a repetição selecionada tem ordens medidas casando com ordens do aquecimento, porque o teto usa só as medidas. Reproduzido em 6 de 10 repetições do demo com seeds deslocadas; a correção muda a regra do eixo e aguarda decisão.
+   - Com algumas seeds, o motor lança "taxas por mecanismo não reconciliam com netabilidade" (visto com seeds do demo +7919); não investigado.
+   - `router.test.tsx › offers the global chat…` é instável já no commit `f1c6f04`.
+   - Nenhum deploy.
+
 ## 2026-09-28 — Bancada: carteira de várias empresas, combinações e front mais claro
 
 1. **Sintoma.** Testar composição exigia montar uma planilha por combinação, com a empresa marcada só pelo prefixo do ID; o netting entre linhas da mesma empresa (ex.: AstroPay Foreign PIX × Multimoedas) aparecia como "entre clientes", misturado ao ganho que a carteira traz; a apresentação não abria para carteiras de casos juntos; a tela do estudo misturava caminhos antigos (prévia, hipótese, comparar) com o fluxo novo.

@@ -7,6 +7,7 @@ import { buildCommunicationDocument } from '../../communication/buildCommunicati
 import { comparisonInput, observedInput } from '../../communication/testFixtures';
 import { buildBoardChatContext } from '../boardContext';
 import type { BoardRow } from '../../pages/ComparisonBoardPage';
+import { makeScenarioDraft } from '../../study/fixtures';
 import { routeChatContext } from '../routeContext';
 
 const catalog = validateProductHelpCatalog({ ...productHelp, catalogVersion: 'a'.repeat(64) })!;
@@ -18,6 +19,7 @@ describe('citation navigation', () => {
     const row = { key: 's:c', studyId: 's', scenarioId: 'c', executionId: 'e', studyName: 'Estudo',
       scenarioName: 'Cenário', origin: 'Sintético', windowDays: 7, orderCount: 2, inBrl: '10', outBrl: '20',
       netability: '0.5', baselineTotal: '8', nettedTotal: '3', savings: '5',
+      grossVolume: '30', savingsBps: '1666.67', periodLabel: '30 dias', premises: makeScenarioDraft().premises,
       diagnosticExecutionId: 'e', finishedAt: '2026-09-26T12:00:00Z', breakdown: null } satisfies BoardRow;
     const context = await buildBoardChatContext([row]);
     const destination = boardCitationDestination({ kind: 'EVIDENCE', id: 'BOARD:s:c:savingsBrl' },

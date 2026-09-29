@@ -335,7 +335,7 @@ export function StudyDiagnosticPage() {
     <p className="page-introduction">{combinationOverview
       ? 'Compare a economia das composições da carteira e escolha o limite de espera que faz sentido para você.'
       : generated
-        ? 'A carteira é gerada; o diagnóstico roda várias repetições e mostra a repetição representativa.'
+        ? 'A carteira é gerada; o diagnóstico roda várias repetições, mostra a distribuição da economia e detalha a repetição mediana.'
         : `Cenário: ${scenario?.name ?? '…'}. Custo sem pool é cada ordem remetendo sozinha; custo com pool é o que sobra depois do netting.`}</p>
     {study === null || scenario === null ? <DiagnosticStatus state={viewState ?? { kind: 'UNAVAILABLE', reason: 'Carregando estudo…' }} /> : combinationStudy ? <>
       {combinationOverview ? <>

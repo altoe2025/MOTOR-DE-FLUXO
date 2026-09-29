@@ -1,6 +1,6 @@
 import type { ParsedImport, WorkerRequest, WorkerResponse } from './xlsxParser';
 import { IMPORT_MAX_FILE_MIB } from './layout';
-import { FILE_TOO_LARGE_MESSAGE, ImportFileError } from './xlsxPreflight';
+import { FILE_TOO_LARGE_MESSAGE, ImportFileError } from './errors';
 
 function abortError(): DOMException { return new DOMException('Importação cancelada', 'AbortError'); }
 const MAX_FILE_BYTES = IMPORT_MAX_FILE_MIB * 1024 * 1024;

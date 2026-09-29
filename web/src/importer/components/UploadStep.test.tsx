@@ -30,7 +30,7 @@ describe('UploadStep', () => {
     const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
     subject();
     await userEvent.setup().click(screen.getByRole('button', { name: 'Baixar modelo (.xlsx)' }));
-    expect(created).toHaveLength(1);
+    await vi.waitFor(() => expect(created).toHaveLength(1));
     expect(created[0]!.type).toBe('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     expect(created[0]!.size).toBeGreaterThan(0);
     expect(click).toHaveBeenCalledOnce();

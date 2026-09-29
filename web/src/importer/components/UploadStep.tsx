@@ -1,11 +1,12 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react';
 
 import { IMPORT_COLUMNS, IMPORT_LIMIT_ROWS, IMPORT_MAX_FILE_MIB, IMPORT_SHEET_NAME } from '../layout';
-import { buildImportTemplate, IMPORT_TEMPLATE_FILENAME } from '../xlsxTemplate';
 
 const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
-function downloadTemplate() {
+// O gerador do modelo só é carregado no clique, para não pesar a abertura da tela.
+async function downloadTemplate() {
+  const { buildImportTemplate, IMPORT_TEMPLATE_FILENAME } = await import('../xlsxTemplate');
   const bytes = buildImportTemplate();
   const url = URL.createObjectURL(new Blob([bytes as Uint8Array<ArrayBuffer>], { type: XLSX_MIME }));
   const link = document.createElement('a');
@@ -23,7 +24,7 @@ function TemplateInstructions() {
       até {IMPORT_LIMIT_ROWS.toLocaleString('pt-BR')} operações (uma por linha). Sem fórmulas, células mescladas ou macros.
     </p>
     <ol className="import-columns">{IMPORT_COLUMNS.map((column) => <li key={column.name}><code>{column.name}</code>{column.required ? '' : ' (opcional)'} — {column.format}</li>)}</ol>
-    <button className="button" type="button" onClick={downloadTemplate}>Baixar modelo (.xlsx)</button>
+    <button className="button" type="button" onClick={() => void downloadTemplate()}>Baixar modelo (.xlsx)</button>
   </section>;
 }
 

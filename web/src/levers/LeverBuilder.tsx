@@ -5,7 +5,7 @@ import type { ScenarioDocument } from '../study/model';
 import { Button } from '../ui/Button';
 import { describeLevers, NEUTRAL_LEVERS, type Levers } from './applyLevers';
 import { companyResolver } from './companies';
-import { companySubsets, leverBaseAvailable } from './leverScenario';
+import { combinationPreset, companySubsets, leverBaseAvailable } from './leverScenario';
 
 type DeadlineMode = Levers['deadline']['mode'];
 
@@ -31,12 +31,13 @@ export function LeverBuilder({ base, progress, onCreate, onCreateCombinations }:
   const [showOrders, setShowOrders] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [manual, setManual] = useState<Set<string>>(new Set());
 
   if (!leverBaseAvailable(base) || groups.length === 0) {
     return <section className="lever-builder" aria-labelledby="lever-title">
       <h2 id="lever-title">Alavancas</h2>
       <p className="field-hint">Alavancas funcionam sobre cenários com ordens explícitas (caso importado ou variação). “{base.name}” é sintético.</p>
-      <p className="field-hint">Para comparar combinações de empresas, escolha “Juntar casos de empresas” no Passo 1, selecione de 2 a 8 empresas e clique em “Usar casos juntos”. Depois, “Gerar todas as combinações” aparecerá aqui.</p>
+      <p className="field-hint">Para comparar combinações de empresas, abra “Nova combinação de carteiras” em Estudos e selecione de 2 a 8 empresas.</p>
     </section>;
   }
 
@@ -63,18 +64,31 @@ export function LeverBuilder({ base, progress, onCreate, onCreateCombinations }:
       setBusy(false);
     }
   };
-  const subsets = groups.length >= 2 && groups.length <= 8 ? companySubsets(groups) : [];
-  const createCombinations = async () => {
-    if (!window.confirm(`Criar ${subsets.length} variações, uma para cada combinação de ${groups.join(', ')}?`)) return;
+  const allSubsets = groups.length >= 2 && groups.length <= 8 ? companySubsets(groups) : [];
+  const alone = combinationPreset('ALONE', groups);
+  const leaveOneOut = combinationPreset('LEAVE_ONE_OUT', groups);
+  const manualSubset = groups.filter((item) => manual.has(item));
+  const createCombinations = async (subsets: readonly (readonly string[])[]) => {
+    if (subsets.length === 0) return;
     setBusy(true); setError(null);
     try {
       await onCreateCombinations(subsets, groups);
+      setManual(new Set());
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Não foi possível criar as combinações.');
     } finally {
       setBusy(false);
     }
   };
+  const createAll = () => {
+    if (!window.confirm(`Criar ${allSubsets.length} variações, uma para cada combinação de ${groups.join(', ')}?`)) return;
+    void createCombinations(allSubsets);
+  };
+  const toggleManual = (company: string) => setManual((current) => {
+    const next = new Set(current);
+    if (!next.delete(company)) next.add(company);
+    return next;
+  });
   const toggleOrder = (id: string) => setRemoved((current) => {
     const next = new Set(current);
     if (!next.delete(id)) next.add(id);
@@ -121,11 +135,31 @@ export function LeverBuilder({ base, progress, onCreate, onCreateCombinations }:
     {groups.length < 2 ? null : <div className="lever-combinations">
       <h3>Composição</h3>
       <p className="field-hint">
-        {subsets.length === 0
-          ? `São ${groups.length} empresas: combinações demais para gerar de uma vez (máximo 8).`
-          : `Cria ${subsets.length} variações: cada empresa sozinha e cada grupo de empresas. Depois, no diagnóstico, “Rodar todas” e compare pela economia.`}
+        Cada variação usa as mesmas ordens, valores, datas, período e premissas de “{base.name}”, só sem as empresas de fora.
+        Depois, no diagnóstico, “Rodar todas” e compare. “Cada empresa sozinha” alimenta a origem da economia de cada empresa.
       </p>
-      <Button variant="secondary" disabled={busy || subsets.length === 0} onClick={() => void createCombinations()}>Gerar todas as combinações</Button>
+      <div className="source-actions">
+        <Button variant="secondary" disabled={busy} onClick={() => void createCombinations(alone)}>Cada empresa sozinha ({alone.length})</Button>
+        {leaveOneOut.length === 0 ? null
+          : <Button variant="secondary" disabled={busy} onClick={() => void createCombinations(leaveOneOut)}>Retirar uma por vez ({leaveOneOut.length})</Button>}
+      </div>
+      <fieldset className="lever-manual">
+        <legend>Escolher as empresas de uma variação</legend>
+        {groups.map((item) => <label key={item} className="checkbox-field">
+          <input type="checkbox" aria-label={`Incluir ${item}`} checked={manual.has(item)} onChange={() => toggleManual(item)} /> {item}
+        </label>)}
+        <Button variant="secondary" disabled={busy || manualSubset.length === 0 || manualSubset.length === groups.length}
+          onClick={() => void createCombinations([manualSubset])}>Criar com as marcadas</Button>
+      </fieldset>
+      <details className="lever-advanced">
+        <summary>{allSubsets.length === 0
+          ? `Avançado: todas as combinações (indisponível com ${groups.length} empresas; máximo 8)`
+          : `Avançado: todas as combinações (${allSubsets.length} variações)`}</summary>
+        {allSubsets.length === 0 ? null : <>
+          <p className="field-hint">Cria uma variação para cada grupo possível de empresas. Com muitas empresas, a lista e o tempo de “Rodar todas” crescem rápido.</p>
+          <Button variant="secondary" disabled={busy} onClick={createAll}>Criar as {allSubsets.length} variações</Button>
+        </>}
+      </details>
       {progress ? <p role="status">{progress}</p> : null}
     </div>}
     {error === null ? null : <p role="alert" className="field-error">{error}</p>}

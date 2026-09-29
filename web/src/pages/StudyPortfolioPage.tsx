@@ -7,7 +7,7 @@ import { isProfileMvpScenario } from '../hypotheses/hypothesis';
 import type { Levers } from '../levers/applyLevers';
 import { LeverBuilder } from '../levers/LeverBuilder';
 import { NEUTRAL_LEVERS } from '../levers/applyLevers';
-import { buildLeverScenario, periodCovering } from '../levers/leverScenario';
+import { buildLeverScenario, derivationKind, periodCovering } from '../levers/leverScenario';
 import { currentDiagnostic } from '../levers/savingsOrigin';
 import { prepareCombinationStudy } from '../levers/prepareCombinationStudy';
 import { resolvePortfolioSource } from '../preparation/resolvePortfolioSource';
@@ -161,6 +161,10 @@ export function StudyPortfolioPage() {
           base: selectedBase, id: crypto.randomUUID(), authoredPortfolioId: crypto.randomUUID(), recordedAt,
           levers: removed.map((company) => ({ ...NEUTRAL_LEVERS, group: company, removeCompany: true })),
           name,
+          derivation: {
+            kind: derivationKind(subset, groups), baseScenarioId: selectedBase.id,
+            baseSourceFingerprint: selectedBase.sourceSnapshot.sourceFingerprint, companies: [...subset],
+          },
         });
         drafts.push(draft);
         if ((index + 1) % 8 === 0 || index + 1 === subsets.length) {
