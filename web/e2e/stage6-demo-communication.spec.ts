@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { strToU8, unzipSync, zipSync } from 'fflate';
 import { AXIS_TITLES } from '../src/hypotheses/comparison';
 import { formatFraction, formatMoney } from '../src/presentation/format';
+import { loadDemoIfEmpty } from './helpers/demo';
 
 const OWNER = '00000000-0000-4000-8000-000000000021';
 const packageValue = JSON.parse(readFileSync(fileURLToPath(new URL('../src/demo/generated/demo-study.v1.json', import.meta.url)), 'utf8')) as {
@@ -47,10 +48,7 @@ async function snapshot(page: Page): Promise<DemoSnapshot> {
 }
 
 async function installedDemo(page: Page): Promise<DemoSnapshot> {
-  // Conta nova começa vazia; a demonstração entra só pelo botão explícito.
-  if ((await snapshot(page)).studies.length === 0) {
-    await page.getByRole('button', { name: 'Carregar estudo demonstrativo' }).click();
-  }
+  await loadDemoIfEmpty(page);
   await expect.poll(async () => (await snapshot(page)).studies.length, { timeout: 20_000 }).toBe(1);
   return snapshot(page);
 }
@@ -88,8 +86,8 @@ test('primeiro acesso começa vazio; carregar instala uma vez; remoção não re
   const empty = await snapshot(page);
   expect(empty.studies).toHaveLength(0);
   expect(empty.profiles).toHaveLength(0);
-  await page.getByRole('button', { name: 'Carregar estudo demonstrativo' }).click();
-  await page.goto('/estudos');
+  await expect(page.getByRole('button', { name: 'Carregar estudo demonstrativo' })).toBeVisible();
+  await loadDemoIfEmpty(page);
   const first = await installedDemo(page);
   expect(first.marker).toBe('INSTALLED');
   expect(first.studies).toHaveLength(1);
@@ -105,8 +103,7 @@ test('primeiro acesso começa vazio; carregar instala uma vez; remoção não re
   await expect(page.getByRole('button', { name: 'Carregar estudo demonstrativo' })).toBeVisible();
   expect((await snapshot(page)).marker).toBe('REMOVED');
   expect((await snapshot(page)).studies).toHaveLength(0);
-  await page.getByRole('button', { name: 'Carregar estudo demonstrativo' }).click();
-  await expect(page).toHaveURL(/\/carteira\/[0-9a-f-]+$/);
+  await loadDemoIfEmpty(page);
   const restored = await snapshot(page);
   expect(restored.marker).toBe('INSTALLED');
   expect(restored.studies).toHaveLength(1);

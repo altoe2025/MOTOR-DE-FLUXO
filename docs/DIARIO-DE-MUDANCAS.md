@@ -37,7 +37,7 @@ Atualizada em 2026-09-29, durante a preparação da atualização da bancada.
 
 | Branch | Situação | Dono |
 |---|---|---|
-| `codex/replay-production-fix` | Hotfix que preserva a base compatível `7818ed1` e incorpora somente a atualização do Replay de `9f78d3b`; pronto para publicação no Render | Codex |
+| `codex/replay-production-fix` | Base compatível publicada em `c26bf98`, agora acrescida dos três commits de `feat/front-perfil-replay`: perfil, conta nova vazia e composição simplificada; unitários e tipos verdes, sem novo deploy | Codex |
 | `codex/frontend-performance-fixes` | Integra as correções de travamento e `feat/estudo-vs-combinacao` sobre o release `829d224`; publicação no Render em preparação | Codex |
 | `codex/carteira-criterios` | Integra estudo separado de combinações, últimas melhorias de `feat/bancada-exploracao` e chat já publicado do PR #57; deploy aguardando comando do Gabriel | Codex |
 | `codex/chat-interface-render` | PR #57 aberto (draft, base `feat/bancada-exploracao`); código `8d43695` publicado no Render com status Live em 2026-09-28; sem merge na `main` | Codex |
@@ -78,6 +78,13 @@ Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. 
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+## 2026-09-29 — Perfil, primeiro acesso vazio e composição simplificada integrados (MOT-99)
+
+- **Sintoma:** a barra lateral não identificava o e-mail da conta, o primeiro login instalava dados sintéticos automaticamente e a composição oferecia quatro modos concorrentes para a mesma tarefa.
+- **Causa:** o contrato de autenticação não propagava o e-mail, `switchSession` tratava a demonstração como bootstrap obrigatório e o `LeverBuilder` expunha presets e seleção manual separados.
+- **O que foi feito:** `codex/replay-production-fix` avançou sobre `c26bf98` com os três commits de `feat/front-perfil-replay`: `334611d` adiciona o perfil com e-mail, `6dcda20` deixa contas novas vazias e torna a demonstração explícita nos E2E, e `a5820ca` centraliza a composição em `compositionSubsets`, com etiquetas clicáveis e limite de oito empresas. Os commits originais permanecem separados. A corrida de navegação encontrada ao executar o novo E2E de primeiro acesso foi removida reutilizando `loadDemoIfEmpty`; esse fluxo passou isoladamente. A suíte unitária passou com 1.230 testes e o typecheck passou. Uma execução ampliada dos Playwright teve 27 aprovações, 11 falhas e 1 skip: as falhas restantes apontam expectativas anteriores da base `c26bf98` sobre Painel A, Replay e controles já removidos, fora do escopo destes três commits. Visual e smoke real do Render não foram executados; não houve deploy.
+- **O que isso invalida:** invalida testes e capturas que assumiam demonstração automática ou a barra lateral anterior, além do contrato de `combinationPreset` e dos quatro controles antigos de composição. A suíte Playwright ampliada não pode ser citada como verde nesta integração até as expectativas legadas e as baselines visuais serem reconciliadas. Não altera o motor nem as métricas financeiras.
 
 ## 2026-09-29 — Replay reintegrado sem regredir estudos persistidos (MOT-99)
 
