@@ -93,17 +93,6 @@ export async function buildLeverScenario(input: Readonly<{
   };
 }
 
-export type CombinationPreset = 'ALONE' | 'LEAVE_ONE_OUT';
-
-/**
- * Presets de composição: cada empresa sozinha, ou a carteira sem cada uma delas. Com duas
- * empresas "retirar uma" coincide com "sozinha" e não gera nada a mais.
- */
-export function combinationPreset(preset: CombinationPreset, companies: readonly string[]): string[][] {
-  if (preset === 'ALONE') return companies.map((company) => [company]);
-  if (companies.length < 3) return [];
-  return companies.map((removed) => companies.filter((company) => company !== removed));
-}
 
 /** Tipo do vínculo de uma variação que mantém `subset` das `companies` da base. */
 export function derivationKind(subset: readonly string[], companies: readonly string[]): ScenarioDerivation['kind'] {
@@ -114,9 +103,20 @@ export function derivationKind(subset: readonly string[], companies: readonly st
 
 /** Todas as carteiras formadas por um subconjunto não vazio e próprio das empresas. */
 export function companySubsets(companies: readonly string[]): string[][] {
+  return compositionSubsets(companies, companies);
+}
+
+/**
+ * Combinações da composição feitas com as empresas `included` (as demais foram tiradas pelo usuário).
+ * Com todas as empresas, o grupo completo fica de fora porque é a própria carteira base; tirando
+ * alguma, o grupo que sobrou entra como mais uma combinação.
+ */
+export function compositionSubsets(included: readonly string[], companies: readonly string[]): string[][] {
+  const members = companies.filter((company) => included.includes(company));
+  const complete = members.length === companies.length;
   const subsets: string[][] = [];
-  for (let mask = 1; mask < (1 << companies.length) - 1; mask += 1) {
-    subsets.push(companies.filter((_, index) => (mask & (1 << index)) !== 0));
+  for (let mask = 1; mask < (1 << members.length) - (complete ? 1 : 0); mask += 1) {
+    subsets.push(members.filter((_, index) => (mask & (1 << index)) !== 0));
   }
   return subsets.sort((left, right) => left.length - right.length || left.join().localeCompare(right.join()));
 }

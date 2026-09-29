@@ -461,6 +461,10 @@ a { color: inherit; }
 .savings-origin { margin-top: var(--space-6); }
 .lever-combinations { border-top: 1px solid var(--border); margin-top: var(--space-4); padding-top: var(--space-4); }
 .lever-combinations h3 { margin: 0 0 var(--space-2); }
+.composition-companies { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: var(--space-3) 0; }
+.composition-company { background: #e7efe9; border: 1px solid #267064; border-radius: 999px; color: #1d2927; cursor: pointer; font-weight: 600; padding: var(--space-1) var(--space-3); }
+.composition-company:hover { background: #d4e4da; }
+.composition-company[aria-pressed="false"] { background: transparent; border-color: var(--border); border-style: dashed; color: var(--muted); text-decoration: line-through; }
 .replay-frontier__open { margin-top: var(--space-4); text-align: center; }
 .study-editor > .eyebrow { margin-top: var(--space-6); }
 .scenario-rename { align-items: end; display: flex; flex-wrap: wrap; gap: var(--space-2); }
