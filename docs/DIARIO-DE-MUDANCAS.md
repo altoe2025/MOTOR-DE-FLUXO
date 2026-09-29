@@ -37,7 +37,7 @@ Atualizada em 2026-09-29, durante a preparação da atualização da bancada.
 
 | Branch | Situação | Dono |
 |---|---|---|
-| `codex/frontend-performance-fixes` | Corrige travamentos de combinações, Replay e catálogo sobre o release `829d224`; validada localmente, sem deploy | Codex |
+| `codex/frontend-performance-fixes` | Integra as correções de travamento e `feat/estudo-vs-combinacao` sobre o release `829d224`; publicação no Render em preparação | Codex |
 | `codex/carteira-criterios` | Integra estudo separado de combinações, últimas melhorias de `feat/bancada-exploracao` e chat já publicado do PR #57; deploy aguardando comando do Gabriel | Codex |
 | `codex/chat-interface-render` | PR #57 aberto (draft, base `feat/bancada-exploracao`); código `8d43695` publicado no Render com status Live em 2026-09-28; sem merge na `main` | Codex |
 | `codex/integracao-etapas-5-6` | Consolida `feat/bancada-exploracao` e `codex/finalidade-verificacao`, incluindo histórico de `origin/main`; publicação/CI em preparação, sem deploy | Codex |
@@ -77,6 +77,13 @@ Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. 
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+## 2026-09-29 — Estudo comum e combinação de carteiras integrados (MOT-99)
+
+1. **Sintoma.** O estudo comum e a combinação de carteiras ainda dividiam controles de forma confusa; a versão com alavancas na combinação estava separada das correções de desempenho.
+2. **Causa.** O trabalho de `feat/estudo-vs-combinacao` partiu do release anterior e mantinha lotes internos antigos ao alterar a carteira, permitindo que cenários e diagnósticos ocultos crescessem a cada nova rodada.
+3. **O que foi feito.** A branch `codex/frontend-performance-fixes` integra `24e2349`: o estudo comum volta a criar variações, enquanto a combinação aplica alavancas à carteira-base e apresenta somente recomendação e alternativas. Alavanca neutra não altera o estudo. Ao preparar uma nova rodada, cenários internos e diagnósticos obsoletos são removidos em uma única revisão, preservando a base, combinações ainda atuais e seus resultados. A geração exaustiva no estudo comum permanece na área avançada. O bloqueio contra criação concorrente foi preservado.
+4. **O que isso invalida.** Invalida a retenção deliberada de combinações pertencentes a bases antigas e qualquer contagem que incluísse esses cenários ocultos. Não altera o motor, as métricas financeiras nem resultados de diagnósticos preservados.
 
 ## 2026-09-29 — Correções de travamento na bancada publicada (MOT-99)
 

@@ -22,9 +22,17 @@ export function StudyList({ studies, selectedId, onCreate, onCreateCombinations,
   const [showTrash, setShowTrash] = useState(false);
   const visibleStudies = studies.filter((study) => (study.deletedAt !== null) === showTrash);
   return <>
+    {showTrash ? null : <div className="create-options">
+      <div className="create-option">
+        <Button onClick={onCreate}>Novo estudo</Button>
+        <p className="field-hint">Rode o que quiser: escolha as empresas, mexa nas alavancas e compare os cenários.</p>
+      </div>
+      {onCreateCombinations === undefined ? null : <div className="create-option">
+        <Button variant="secondary" disabled={createCombinationsDisabled} onClick={onCreateCombinations}>Nova combinação de carteiras</Button>
+        <p className="field-hint">Escolha as empresas e ajuste as alavancas; todas as combinações entre elas são testadas e a tela diz qual carteira atende melhor.</p>
+      </div>}
+    </div>}
     <div className="list-toolbar">
-      {!showTrash && <Button onClick={onCreate}>Novo estudo</Button>}
-      {!showTrash && onCreateCombinations !== undefined ? <Button variant="secondary" disabled={createCombinationsDisabled} onClick={onCreateCombinations}>Nova combinação de carteiras</Button> : null}
       <Button variant="secondary" onClick={() => setShowTrash((current) => !current)}>
         {showTrash ? 'Voltar aos estudos' : 'Lixeira de estudos'}
       </Button>

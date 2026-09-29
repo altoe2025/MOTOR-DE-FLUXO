@@ -22,6 +22,21 @@ export const NEUTRAL_LEVERS: Omit<Levers, 'group'> = {
   deadline: { mode: 'KEEP' },
 };
 
+export function isNeutralLevers(levers: Levers): boolean {
+  try {
+    return !levers.removeCompany
+      && levers.removedOrderIds.length === 0
+      && new Decimal(levers.volumeIn).equals(1)
+      && new Decimal(levers.volumeOut).equals(1)
+      && new Decimal(levers.spacingFactor).equals(1)
+      && levers.shiftDays === 0
+      && (levers.deadline.mode === 'KEEP'
+        || (levers.deadline.mode === 'DELTA' && levers.deadline.days === 0));
+  } catch {
+    return false;
+  }
+}
+
 export type LeverResult = Readonly<{
   orders: CanonicalAuthoredOrder[];
   provenanceByOrder: Record<string, OrderFieldProvenance>;

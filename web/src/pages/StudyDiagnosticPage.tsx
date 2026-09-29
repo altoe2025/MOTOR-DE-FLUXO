@@ -354,7 +354,7 @@ export function StudyDiagnosticPage() {
         : `Cenário: ${scenario?.name ?? '…'}. Custo sem pool é cada ordem remetendo sozinha; custo com pool é o que sobra depois do netting.`}</p>
     {study === null || scenario === null ? <DiagnosticStatus state={viewState ?? { kind: 'UNAVAILABLE', reason: 'Carregando estudo…' }} /> : combinationStudy ? <>
       {combinationOverview ? <>
-        <p><Link to={`/carteira/${encodeURIComponent(study.id)}`}>Alterar empresas e premissas</Link></p>
+        <p><Link to={`/carteira/${encodeURIComponent(study.id)}`}>Alterar empresas, premissas e alavancas</Link></p>
         <Button onClick={() => void runAll()} disabled={runInProgress || controller.snapshot.status === 'STORAGE_FAILURE'}>
           Diagnosticar combinações
         </Button>

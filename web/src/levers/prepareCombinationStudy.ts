@@ -1,8 +1,8 @@
-import { appendScenarios } from '../study/domain';
+import { replaceScenarioBatch, updateScenario } from '../study/domain';
 import { canonical } from '../study/fingerprints';
 import type { ScenarioDraft, StudyDocument } from '../study/model';
-import { combinationName } from '../study/naming';
-import { NEUTRAL_LEVERS } from './applyLevers';
+import { combinationName, variationName } from '../study/naming';
+import { isNeutralLevers, NEUTRAL_LEVERS, type Levers } from './applyLevers';
 import { companyResolver } from './companies';
 import { buildLeverScenario, companySubsets, leverBaseAvailable } from './leverScenario';
 
@@ -26,6 +26,26 @@ export function isCurrentCombinationScenario(study: StudyDocument, scenario: Sce
   const orders = base.sourceSnapshot.orders.filter((order) => groups.has(companyOf(order.id)));
   return orders.length > 0 && compositionKey(scenario) === compositionKey({ ...base,
     sourceSnapshot: { ...base.sourceSnapshot, orders } });
+}
+
+export async function applyLeversToCombinationBase(
+  study: StudyDocument,
+  levers: Levers,
+  recordedAt: string,
+  ids: () => string = () => crypto.randomUUID(),
+): Promise<StudyDocument> {
+  if (study.studyType !== 'PORTFOLIO_COMBINATIONS') throw new Error('Este estudo não é uma combinação de carteiras.');
+  if (isNeutralLevers(levers)) return study;
+  const base = study.scenarios.find((scenario) => scenario.id === study.baseScenarioId);
+  if (base === undefined) throw new Error('Estudo sem cenário base.');
+  const draft = await buildLeverScenario({
+    base, levers, id: ids(), authoredPortfolioId: ids(), recordedAt,
+  });
+  return updateScenario(study, base.id, {
+    sourceSnapshot: draft.sourceSnapshot,
+    period: draft.period,
+    name: variationName(levers, base.name, base.name === 'Cenário base'),
+  }, recordedAt);
 }
 
 /** Generated combinations are internal to this study type; unchanged results are reused. */
@@ -54,9 +74,12 @@ export async function prepareCombinationStudy(
       await new Promise<void>((resolve) => setTimeout(resolve, 0));
     }
   }
-  const existing = new Set(study.scenarios.filter((scenario) => scenario.id !== base.id).map(compositionKey));
+  const currentScenarios = study.scenarios.filter((scenario) => isCurrentCombinationScenario(study, scenario));
+  const currentIds = new Set(currentScenarios.map((scenario) => scenario.id));
+  const existing = new Set(currentScenarios.filter((scenario) => scenario.id !== base.id).map(compositionKey));
   const missing = drafts.filter((draft) => !existing.has(compositionKey(draft)));
-  if (missing.length === 0) return study;
+  const hasObsoleteScenarios = currentScenarios.length !== study.scenarios.length;
+  if (missing.length === 0 && !hasObsoleteScenarios) return study;
   onProgress('Salvando as combinações…');
-  return appendScenarios(study, missing, now);
+  return replaceScenarioBatch(study, currentIds, missing, now);
 }

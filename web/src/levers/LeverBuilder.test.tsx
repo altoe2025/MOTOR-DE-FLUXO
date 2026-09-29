@@ -58,13 +58,43 @@ describe('LeverBuilder · composição', () => {
     expect(onCreateCombinations).toHaveBeenCalledWith([['A', 'C']], ['A', 'B', 'C']);
   });
 
-  it('"Todas as combinações" é avançada e mostra a contagem antes de criar', async () => {
+  it('mantém todas as combinações como opção avançada, não como ação primária', async () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     const { onCreateCombinations, user } = subject(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']);
-    expect(screen.getByText('Avançado: todas as combinações (254 variações)')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Gerar todas as combinações/ })).not.toBeInTheDocument();
     await user.click(screen.getByText('Avançado: todas as combinações (254 variações)'));
     await user.click(screen.getByRole('button', { name: 'Criar as 254 variações' }));
     expect(onCreateCombinations).toHaveBeenCalledOnce();
     expect(onCreateCombinations.mock.calls[0]![0]).toHaveLength(254);
+  });
+
+  it('com mais de 8 empresas, a opção avançada explica que todas estão indisponíveis', () => {
+    subject(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I']);
+    expect(screen.getByText('Avançado: todas as combinações (indisponível com 9 empresas; máximo 8)')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Criar as .* variações/ })).not.toBeInTheDocument();
+  });
+});
+
+describe('LeverBuilder · aplicar à carteira (combinação de carteiras)', () => {
+  it('desabilita a aplicação neutra e não chama a persistência', async () => {
+    const onCreate = vi.fn().mockResolvedValue(undefined);
+    render(<LeverBuilder base={base(['A', 'B'])} applyToBase onCreate={onCreate} />);
+    const apply = screen.getByRole('button', { name: 'Aplicar à carteira' });
+    expect(apply).toBeDisabled();
+    await userEvent.setup().click(apply);
+    expect(onCreate).not.toHaveBeenCalled();
+  });
+
+  it('não oferece composição nem tirar empresa, e aplica a alavanca à carteira', async () => {
+    const onCreate = vi.fn().mockResolvedValue(undefined);
+    render(<LeverBuilder base={base(['A', 'B'])} applyToBase onCreate={onCreate} />);
+    expect(screen.queryByRole('heading', { name: 'Composição' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('checkbox', { name: /Tirar a empresa inteira/ })).not.toBeInTheDocument();
+    const user = userEvent.setup();
+    const volumeOut = screen.getByLabelText('Volume OUT ×');
+    await user.clear(volumeOut);
+    await user.type(volumeOut, '2');
+    await user.click(screen.getByRole('button', { name: 'Aplicar à carteira' }));
+    expect(onCreate).toHaveBeenCalledWith(expect.objectContaining({ group: 'A', volumeOut: '2', removeCompany: false }));
   });
 });
