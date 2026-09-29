@@ -31,7 +31,11 @@ export function ReplayControls({ document, playback, sort, onSort, residue = nul
         title={`Dia com mais volume remetido: ${formatMoney(residue.valueBrl)}`}>Ir ao maior resíduo (D{residue.day})</button>}
     </div>
     <div className="replay-timeline">
-      <div><span>D0{dateOf === null ? '' : ` · ${dateOf(0)}`}</span><strong>Dia {playback.day}{dateOf === null ? '' : ` · ${dateOf(playback.day)}`} de {lastDay}</strong><span>D{lastDay}{dateOf === null ? '' : ` · ${dateOf(lastDay)}`}</span></div>
+      <div><span>D0{dateOf === null ? '' : ` · ${dateOf(0)}`}</span><span className="replay-timeline__current"><strong>D{playback.day}</strong><button
+        className="replay-timeline__toggle" type="button" onClick={playback.togglePlaying} aria-pressed={playback.playing}
+        aria-label={playback.primaryAction === 'RESTART' ? 'Recomeçar' : playback.playing ? 'Pausar' : 'Tocar'}>
+        {playback.primaryAction === 'RESTART' ? '↺' : playback.playing ? 'Ⅱ' : '▶'}
+      </button></span><span>D{lastDay}{dateOf === null ? '' : ` · ${dateOf(lastDay)}`}</span></div>
       <label className="visually-hidden" htmlFor="replay-day-range">Selecionar dia</label>
       <input id="replay-day-range" aria-label="Selecionar dia" type="range" min={0} max={lastDay} value={playback.day} onChange={(event) => playback.selectDay(Number(event.currentTarget.value))} />
       <div className="replay-closing-marks" aria-hidden="true">{document.days.filter((day) => day.closing !== null).map((day) => <i key={day.day} style={{ left: `${lastDay === 0 ? 0 : (day.day / lastDay) * 100}%` }} />)}</div>

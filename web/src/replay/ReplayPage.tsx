@@ -225,7 +225,7 @@ function ReplayReady({ document, study, studyId, scenarioId, selected, initialDa
   }, [chatOpen, publishCommunication, study, scenarioId, document, playback.day]);
   const [sort, setSort] = useState<ReplaySort>('ARRIVAL');
   const state = replayStateAt(document, playback.day);
-  const directDay = `Dia ${playback.day}${dateOf === null ? '' : ` (${dateOf(playback.day)})`} de ${document.period.settlement_end_day}`;
+  const directDay = `D${playback.day}`;
   const phaseLabel = state.phase === 'WARMUP' ? 'Aquecimento' : state.phase === 'MEASUREMENT' ? 'Medição' : 'Liquidação';
   return <article className="replay-page">
     <header className="replay-titlebar">
@@ -247,7 +247,7 @@ function ReplayReady({ document, study, studyId, scenarioId, selected, initialDa
       companies={companies} company={company} onCompany={setCompany} />
     <p className="replay-live" aria-live="polite">{directDay} · {phaseLabel}</p>
     <ReplayStage document={document} state={state} sort={sort} transitionMode={playback.transitionMode} transitionKey={playback.transitionKey}
-      companyOf={companyOf} company={company} dateOf={dateOf} />
+      companyOf={companyOf} company={company} dateOf={dateOf} frozen={playback.paused} />
     <ReplayMetrics document={document} state={state} />
     <ReplayJournal document={document} day={playback.day} />
   </article>;

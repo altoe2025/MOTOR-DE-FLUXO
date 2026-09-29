@@ -289,6 +289,9 @@ a { color: inherit; }
 .replay-timeline { margin-top: var(--space-4); position: relative; }
 .replay-timeline > div:first-child { align-items: baseline; color: #dbe4e1; display: flex; justify-content: space-between; }
 .replay-timeline strong { color: white; font-variant-numeric: tabular-nums; }
+.replay-timeline__current { align-items: center; display: inline-flex; gap: var(--space-2); }
+.replay-timeline__toggle { align-items: center; background: rgb(255 255 255 / 8%); border: 1px solid rgb(255 255 255 / 36%); border-radius: 999px; color: white; cursor: pointer; display: inline-flex; height: 1.85rem; justify-content: center; padding: 0; width: 1.85rem; }
+.replay-timeline__toggle:hover { background: #f0ece2; color: #203735; }
 .replay-timeline input { accent-color: #e6b568; display: block; margin: var(--space-2) 0 0; width: 100%; }
 .replay-closing-marks { height: 8px; margin: -7px 7px 0; pointer-events: none; position: relative; }
 .replay-closing-marks i { background: #e6b568; border-radius: 50%; height: 6px; position: absolute; transform: translateX(-50%); width: 6px; }
@@ -342,6 +345,7 @@ a { color: inherit; }
 .replay-order__deadline { color: #b3261e; font-size: 0.78rem; font-weight: 700; margin-top: var(--space-1) !important; }
 .replay-stage--animating .replay-order:not(.replay-order--departing) { animation: replay-card-arrive 500ms ease both; }
 .replay-order--departing { animation: replay-card-depart 1000ms ease 2600ms both; border-color: #8b403c; }
+.replay-stage--frozen .replay-order--departing { animation: none; opacity: 1; }
 .replay-connections { height: 100%; inset: 0; overflow: visible; pointer-events: none; position: absolute; width: 100%; z-index: 4; }
 .replay-connection-labels { height: 100%; inset: 0; overflow: visible; pointer-events: none; position: absolute; width: 100%; z-index: 6; }
 .replay-connection { fill: none; stroke-linecap: round; stroke-width: 4; }

@@ -159,7 +159,9 @@ describe('ReplayPage', () => {
     expect(mocks.buildReplay).toHaveBeenCalledWith(expect.objectContaining({
       diagnostic_execution_id: '00000000-0000-4000-8000-000000000701',
     }), expect.any(AbortSignal));
-    expect(screen.getByText('Dia 0 de 2')).toBeInTheDocument();
+    expect(screen.queryByText(/Dia 0 de 2/)).not.toBeInTheDocument();
+    expect(screen.getByText('D0 · Medição')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Tocar' })).toBeInTheDocument();
     // Resumo em uma linha; o detalhe da repetição fica recolhido, mas acessível.
     expect(screen.getByRole('region', { name: 'Repetição exibida' })).toHaveTextContent('00000000-0000-4000-8000-000000000703');
     const summary = screen.getByText(/Repetição 00000000 de 10 · Primeira repetição do plano/i);

@@ -66,6 +66,24 @@ describe('cena Fronteira Viva', () => {
     expect(container.querySelector('.replay-connections')).not.toBeInTheDocument();
   });
 
+  it('congela cartões liquidados e setas enquanto pausado', () => {
+    vi.useFakeTimers();
+    const document = replayDocumentWithBothRemittancesFixture();
+    const props = { document, state: replayStateAt(document, 2), sort: 'ARRIVAL' as const, transitionKey: 1 };
+    const { container, rerender } = render(<ReplayStage {...props} transitionMode="ANIMATE" frozen={false} />);
+
+    act(() => vi.advanceTimersByTime(3_800));
+    expect(screen.queryByRole('article', { name: /OUT out-1/i })).not.toBeInTheDocument();
+
+    rerender(<ReplayStage {...props} transitionMode="ANIMATE" frozen />);
+    expect(screen.getByRole('article', { name: /OUT out-1/i })).toHaveTextContent('Liquidada');
+    expect(container.querySelector('.replay-connections')).toBeInTheDocument();
+    expect(container.querySelector('.replay-stage--frozen')).toBeInTheDocument();
+    act(() => vi.advanceTimersByTime(10_000));
+    expect(screen.getByRole('article', { name: /OUT out-1/i })).toBeInTheDocument();
+    expect(container.querySelector('.replay-connections')).toBeInTheDocument();
+  });
+
   it('rotula cada seta casada como autonetting ou netting multilateral', () => {
     const document = replayDocumentFixture();
     document.days[0]!.closing!.flow_segments = [

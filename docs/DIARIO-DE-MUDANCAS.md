@@ -37,6 +37,7 @@ Atualizada em 2026-09-29, durante a preparação da atualização da bancada.
 
 | Branch | Situação | Dono |
 |---|---|---|
+| `codex/replay-production-fix` | Hotfix que preserva a base compatível `7818ed1` e incorpora somente a atualização do Replay de `9f78d3b`; pronto para publicação no Render | Codex |
 | `codex/frontend-performance-fixes` | Integra as correções de travamento e `feat/estudo-vs-combinacao` sobre o release `829d224`; publicação no Render em preparação | Codex |
 | `codex/carteira-criterios` | Integra estudo separado de combinações, últimas melhorias de `feat/bancada-exploracao` e chat já publicado do PR #57; deploy aguardando comando do Gabriel | Codex |
 | `codex/chat-interface-render` | PR #57 aberto (draft, base `feat/bancada-exploracao`); código `8d43695` publicado no Render com status Live em 2026-09-28; sem merge na `main` | Codex |
@@ -77,6 +78,13 @@ Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. 
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+## 2026-09-29 — Replay reintegrado sem regredir estudos persistidos (MOT-99)
+
+- **Sintoma:** após publicar `9f78d3b`, a tela Estudos passou a rejeitar documentos já salvos com `StudyDocument persistido inválido: INVALID_STRUCTURE`.
+- **Causa:** `9f78d3b` estava em uma linha divergente e anterior à release `7818ed1`; publicá-lo como release completa removeu contratos de persistência que os estudos existentes já utilizavam.
+- **O que foi feito:** a branch `codex/replay-production-fix` parte de `7818ed1` e transplanta somente a atualização visual e de pausa do Replay, com regressões específicas do Replay e da persistência verificadas.
+- **O que isso invalida:** `9f78d3b` deixa de ser um candidato de release completo; ele só pode ser usado como origem das mudanças isoladas do Replay. Não altera números nem regras do motor.
 
 ## 2026-09-29 — Estudo comum e combinação de carteiras integrados (MOT-99)
 

@@ -39,7 +39,7 @@ function reducedMotion(): boolean {
 
 const triggerLabels = { WINDOW: 'janela', DEADLINE: 'prazo', HORIZON_END: 'fim do horizonte' } as const;
 
-export function ReplayStage({ document, state, sort, transitionMode, transitionKey, companyOf, company = null, dateOf = null }: Readonly<{
+export function ReplayStage({ document, state, sort, transitionMode, transitionKey, companyOf, company = null, dateOf = null, frozen = false }: Readonly<{
   document: ReplayDocument;
   companyOf?: (orderId: string) => string;
   /** Mostra só os cartões desta empresa; totais e linhas continuam da carteira toda. */
@@ -49,14 +49,21 @@ export function ReplayStage({ document, state, sort, transitionMode, transitionK
   sort: ReplaySort;
   transitionMode: ReplayTransitionMode;
   transitionKey: number;
+  frozen?: boolean;
 }>) {
   const stageRef = useRef<HTMLDivElement>(null);
   const [departing, setDeparting] = useState<readonly OpenReplayOrder[]>([]);
   const [eventActive, setEventActive] = useState(false);
   const view = presentReplayDay(document, state.day);
   const animate = transitionMode === 'ANIMATE' && view.hasOperationalEvent && !reducedMotion();
+  const hold = frozen && view.hasOperationalEvent;
 
   useEffect(() => {
+    if (hold) {
+      setEventActive(true);
+      setDeparting(departingOrders(document, state.day));
+      return undefined;
+    }
     if (!animate) {
       setDeparting([]);
       setEventActive(false);
@@ -69,7 +76,7 @@ export function ReplayStage({ document, state, sort, transitionMode, transitionK
       setEventActive(false);
     }, 3_800);
     return () => globalThis.clearTimeout(timeout);
-  }, [animate, document, state.day, transitionKey]);
+  }, [animate, hold, document, state.day, transitionKey]);
 
   const visible = useMemo(() => {
     const currentIds = new Set(state.openOrders.map((order) => order.orderId));
@@ -89,7 +96,7 @@ export function ReplayStage({ document, state, sort, transitionMode, transitionK
         <span><i className="legend-line legend-line--remitted" />Remetido — atravessa a fronteira</span>
       </div>
     </div>
-    <div ref={stageRef} className={`replay-stage${animate ? ' replay-stage--animating' : ''}`} role="region" aria-label="Cena Fronteira Viva">
+    <div ref={stageRef} className={`replay-stage${animate ? ' replay-stage--animating' : ''}${hold ? ' replay-stage--frozen' : ''}`} role="region" aria-label="Cena Fronteira Viva">
       <div className="replay-territory replay-territory--brasil"><span>Brasil</span><small>reais</small></div>
       <div className="replay-territory replay-territory--cnr"><span>CNR</span><small>fronteira</small></div>
       <div className="replay-territory replay-territory--exterior"><span>Exterior</span><small>moeda estrangeira</small></div>
