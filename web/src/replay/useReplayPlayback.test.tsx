@@ -81,6 +81,24 @@ describe('useReplayPlayback', () => {
     expect(result.current.playing).toBe(false);
   });
 
+  it('marca pausa pelo usuário até voltar a tocar ou recomeçar', () => {
+    const { result } = renderHook(() => useReplayPlayback(replayDocumentFixture()));
+
+    expect(result.current.paused).toBe(false);
+    act(() => result.current.togglePlaying());
+    expect(result.current.paused).toBe(false);
+    act(() => result.current.togglePlaying());
+    expect(result.current.paused).toBe(true);
+    act(() => result.current.next());
+    expect(result.current.paused).toBe(true);
+    act(() => result.current.togglePlaying());
+    expect(result.current.paused).toBe(false);
+    act(() => result.current.next());
+    expect(result.current.paused).toBe(true);
+    act(() => result.current.restart());
+    expect(result.current.paused).toBe(false);
+  });
+
   it('limpa o timeout ao desmontar e reinicia quando muda a identidade do documento', () => {
     const replay = replayDocumentFixture();
     const { result, rerender, unmount } = renderHook(

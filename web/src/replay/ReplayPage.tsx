@@ -193,7 +193,7 @@ function ReplayReady({ document, study, studyId, scenarioId, selected, initialDa
   }, [publishCommunication, study, scenarioId, document, playback.day]);
   const [sort, setSort] = useState<ReplaySort>('ARRIVAL');
   const state = replayStateAt(document, playback.day);
-  const directDay = `Dia ${playback.day} de ${document.period.settlement_end_day}`;
+  const directDay = `D${playback.day}`;
   const phaseLabel = state.phase === 'WARMUP' ? 'Aquecimento' : state.phase === 'MEASUREMENT' ? 'Medição' : 'Liquidação';
   return <article className="replay-page">
     <header className="replay-titlebar">
@@ -214,6 +214,7 @@ function ReplayReady({ document, study, studyId, scenarioId, selected, initialDa
     <p className="replay-live" aria-live="polite">{directDay} · {phaseLabel}</p>
     <ReplayMetrics document={document} state={state} />
     <ReplayStage document={document} state={state} sort={sort} transitionMode={playback.transitionMode} transitionKey={playback.transitionKey}
+      frozen={playback.paused}
       companyOf={companyResolver(study.executions.find((item) => item.id === document.diagnostic_execution_id)?.sourceSnapshot?.source)} />
     <ReplayJournal document={document} day={playback.day} />
   </article>;
