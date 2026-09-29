@@ -37,6 +37,7 @@ Atualizada em 2026-09-29, durante a preparação da atualização da bancada.
 
 | Branch | Situação | Dono |
 |---|---|---|
+| `codex/frontend-performance-fixes` | Corrige travamentos de combinações, Replay e catálogo sobre o release `829d224`; validada localmente, sem deploy | Codex |
 | `codex/carteira-criterios` | Integra estudo separado de combinações, últimas melhorias de `feat/bancada-exploracao` e chat já publicado do PR #57; deploy aguardando comando do Gabriel | Codex |
 | `codex/chat-interface-render` | PR #57 aberto (draft, base `feat/bancada-exploracao`); código `8d43695` publicado no Render com status Live em 2026-09-28; sem merge na `main` | Codex |
 | `codex/integracao-etapas-5-6` | Consolida `feat/bancada-exploracao` e `codex/finalidade-verificacao`, incluindo histórico de `origin/main`; publicação/CI em preparação, sem deploy | Codex |
@@ -76,6 +77,13 @@ Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. 
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+## 2026-09-29 — Correções de travamento na bancada publicada (MOT-99)
+
+1. **Sintoma.** A bancada ficava lenta conforme estudos e diagnósticos se acumulavam; o Replay engasgava ao trocar de dia e o diagnóstico de combinações podia aparentar travamento em carteiras grandes. Cliques repetidos também podiam iniciar duas criações de estudo.
+2. **Causa.** A lista de estudos associava cada estudo a todas as execuções com filtros repetidos e reagia a estados intermediários com novas leituras integrais. O Replay recalculava estados já reconciliados e reconstruía o contexto do chat mesmo fechado. O lote de combinações persistia reserva e resultado separadamente para cada cenário e não oferecia cancelamento. A criação de combinações não tinha guarda síncrona.
+3. **O que foi feito.** Na branch `codex/frontend-performance-fixes`, execuções são agrupadas por estudo em uma passagem e os refreshes da lista são serializados e protegidos pelo ciclo de vida. A criação concorrente foi bloqueada. O Replay só publica contexto com o chat aberto, invalida publicações antigas, agrupa mudanças rápidas de dia e reutiliza estados de documentos profundamente imutáveis. O lote de combinações ganhou cancelamento após a execução atual e persiste reserva e terminal atomicamente em uma única revisão por cenário. Foram adicionados testes de regressão para os quatro fluxos.
+4. **O que isso invalida.** Invalida a expectativa de duas persistências do estudo por diagnóstico no modo em lote e medições de desempenho feitas sobre a implementação publicada em `829d224`. O fluxo de diagnóstico individual, o motor, as métricas financeiras e os resultados calculados não mudaram.
 
 ## 2026-09-29 — Apresentação acessível e referências visuais atualizadas (MOT-99)
 

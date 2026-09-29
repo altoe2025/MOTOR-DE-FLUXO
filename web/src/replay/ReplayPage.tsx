@@ -77,6 +77,13 @@ type LoadState =
     selected: ReturnType<typeof describeSelectedRepetition> }>
   | Readonly<{ kind: 'ERROR'; code: ReplayPublicErrorCode; message: string; retryable: boolean }>;
 
+function freezeReplayDocument<T>(value: T, visited = new WeakSet<object>()): T {
+  if (value === null || typeof value !== 'object' || visited.has(value)) return value;
+  visited.add(value);
+  for (const child of Object.values(value)) freezeReplayDocument(child, visited);
+  return Object.freeze(value);
+}
+
 function errorState(reason: unknown): Extract<LoadState, { kind: 'ERROR' }> {
   if (reason instanceof ApiError) {
     const code = publicCodes.has(reason.code as ReplayPublicErrorCode)
@@ -128,7 +135,7 @@ export function ReplayPage() {
         if (execution?.kind !== 'DIAGNOSTIC') throw new Error('Execução diagnóstica ausente.');
         if (!active || token !== identityToken.current || abort.signal.aborted) return;
         const selected = describeSelectedRepetition(resolution.request.diagnostic_envelope);
-        const document = await client.buildReplay(resolution.request, abort.signal);
+        const document = freezeReplayDocument(await client.buildReplay(resolution.request, abort.signal));
         if (active && token === identityToken.current) {
           if (document.repetition_id !== selected.repetitionId) {
             setLoadState({ kind: 'ERROR', code: 'REPLAY_INCONSISTENTE',
@@ -187,6 +194,7 @@ function ReplayReady({ document, study, studyId, scenarioId, selected, initialDa
   const setReplayDay = chat?.setReplayDay;
   const setScenarioId = chat?.setScenarioId;
   const publishCommunication = chat?.publishCommunication;
+  const chatOpen = chat?.open ?? false;
   const { controller } = useDiagnosticRuntime();
   const [cases, setCases] = useState<readonly ObservedCase[]>([]);
   useEffect(() => {
@@ -202,10 +210,19 @@ function ReplayReady({ document, study, studyId, scenarioId, selected, initialDa
   const residue = useMemo(() => largestResidueDay(document), [document]);
   useEffect(() => { setReplayDay?.(playback.day); }, [setReplayDay, playback.day]);
   useEffect(() => { setScenarioId?.(scenarioId); }, [setScenarioId, scenarioId]);
-  useEffect(() => { publishCommunication?.({ study, scenarioId,
-    diagnosticExecutionId: document.diagnostic_execution_id, comparisonExecutionId: null,
-    replay: document, replayDay: playback.day });
-  }, [publishCommunication, study, scenarioId, document, playback.day]);
+  useEffect(() => {
+    publishCommunication?.(null);
+    if (!chatOpen) {
+      return undefined;
+    }
+    const timeout = globalThis.setTimeout(() => publishCommunication?.({ study, scenarioId,
+      diagnosticExecutionId: document.diagnostic_execution_id, comparisonExecutionId: null,
+      replay: document, replayDay: playback.day }), 75);
+    return () => {
+      globalThis.clearTimeout(timeout);
+      publishCommunication?.(null);
+    };
+  }, [chatOpen, publishCommunication, study, scenarioId, document, playback.day]);
   const [sort, setSort] = useState<ReplaySort>('ARRIVAL');
   const state = replayStateAt(document, playback.day);
   const directDay = `Dia ${playback.day}${dateOf === null ? '' : ` (${dateOf(playback.day)})`} de ${document.period.settlement_end_day}`;

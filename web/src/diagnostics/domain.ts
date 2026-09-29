@@ -7,6 +7,45 @@ import {
 
 const TERMINAL = new Set(['SUCCEEDED', 'FAILED', 'CANCELLED', 'INTERRUPTED']);
 
+export async function appendDiagnosticAttemptAtomically(
+  study: StudyDocument,
+  reservation: DiagnosticExecutionRecord,
+  terminal: DiagnosticExecutionRecord,
+): Promise<StudyDocument> {
+  if (reservation.status !== 'QUEUED' || !TERMINAL.has(terminal.status)) {
+    throw new Error('Tentativa diagnóstica atômica exige reserva QUEUED e terminal.');
+  }
+  if (reservation.id === terminal.id
+    || study.executions.some((existing) => existing.id === reservation.id || existing.id === terminal.id)) {
+    throw new Error('Execução diagnóstica já anexada.');
+  }
+  if (study.executions.some((existing) => existing.kind === 'DIAGNOSTIC'
+    && existing.attemptId === reservation.attemptId)) {
+    throw new Error('Tentativa diagnóstica já possui registro persistido.');
+  }
+  if (!diagnosticAttemptIdentityMatches(reservation, terminal)
+    || !diagnosticAttemptHasPersistedShape([reservation, terminal])) {
+    throw new Error('Terminal diagnóstico não corresponde exatamente à reserva QUEUED.');
+  }
+  if (terminal.finishedAt === null) throw new Error('Terminal diagnóstico exige instante de conclusão.');
+  const timestamp = new Date(terminal.finishedAt);
+  if (Number.isNaN(timestamp.valueOf()) || !terminal.finishedAt.endsWith('Z')) {
+    throw new Error('Instante inválido.');
+  }
+  const result: StudyDocument = {
+    ...structuredClone(study),
+    executions: [
+      ...study.executions.map((item) => structuredClone(item)),
+      structuredClone(reservation),
+      structuredClone(terminal),
+    ],
+    revision: study.revision + 1,
+    updatedAt: terminal.finishedAt,
+  };
+  await assertValidStudy(result);
+  return result;
+}
+
 export async function appendDiagnosticExecution(
   study: StudyDocument,
   execution: DiagnosticExecutionRecord,

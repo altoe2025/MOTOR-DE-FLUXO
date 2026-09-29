@@ -27,12 +27,20 @@ export function StudiesPage() {
   const [demoStatus, setDemoStatus] = useState<'INSTALLED' | 'REMOVED' | null>(null);
   const [notice, setNotice] = useState<string | null>(null); const importInput = useRef<HTMLInputElement>(null);
   const [choosing, setChoosing] = useState<{ cases: ObservedCase[]; companies: CompanyRecord[] } | null>(null); const [creating, setCreating] = useState(false);
+  const creatingRef = useRef(false);
+  const mounted = useRef(false);
+  const refreshGeneration = useRef(0);
+  const refreshInFlight = useRef<Promise<void> | null>(null);
+  const refreshQueued = useRef(false);
+  const suppressSavedRefresh = useRef(false);
   const openChooser = async () => {
     setError(null);
     try { const [cases, companies] = await Promise.all([controller.listObservedCases(), controller.listCompanies()]); setChoosing({ cases, companies }); }
     catch (reason) { setError(reason instanceof Error ? reason.message : 'Não foi possível listar os casos importados.'); }
   };
   const create = async (build: (ownerSub: string) => Promise<StudyDocument>) => {
+    if (creatingRef.current) return;
+    creatingRef.current = true;
     setCreating(true); setError(null);
     try {
       if (userId === null) throw new Error('Sessão necessária.');
@@ -41,10 +49,37 @@ export function StudiesPage() {
       navigate(`/carteira/${created.id}`);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Não foi possível criar o estudo.');
-    } finally { setCreating(false); }
+    } finally { creatingRef.current = false; setCreating(false); }
   };
   const context = (ownerSub: string) => ({ ownerSub, now: new Date().toISOString(), ids: () => crypto.randomUUID() });
-  const refresh = async () => { try { const [nextStudies, nextDemoStatus] = await Promise.all([controller.listStudies(true), controller.demoInstallationStatus()]); setStudies(nextStudies); setDemoStatus(nextDemoStatus); setLoaded(true); setError(null); } catch (reason) { setError(reason instanceof Error ? reason.message : 'Não foi possível carregar os estudos.'); } };
+  const refresh = (): Promise<void> => {
+    if (!mounted.current) return Promise.resolve();
+    if (refreshInFlight.current !== null) {
+      refreshQueued.current = true;
+      return refreshInFlight.current;
+    }
+    const generation = refreshGeneration.current;
+    const running = (async () => {
+      try {
+        const [nextStudies, nextDemoStatus] = await Promise.all([controller.listStudies(true), controller.demoInstallationStatus()]);
+        if (!mounted.current || refreshGeneration.current !== generation) return;
+        setStudies(nextStudies); setDemoStatus(nextDemoStatus); setLoaded(true); setError(null);
+      } catch (reason) {
+        if (!mounted.current || refreshGeneration.current !== generation) return;
+        setError(reason instanceof Error ? reason.message : 'Não foi possível carregar os estudos.');
+      }
+    })();
+    refreshInFlight.current = running;
+    void running.finally(() => {
+      if (refreshInFlight.current !== running) return;
+      refreshInFlight.current = null;
+      if (mounted.current && refreshGeneration.current === generation && refreshQueued.current) {
+        refreshQueued.current = false;
+        void refresh();
+      }
+    });
+    return running;
+  };
   const storageError = controller.snapshot.status === 'STORAGE_FAILURE'
     ? controller.snapshot.error instanceof Error ? controller.snapshot.error.message : 'Não foi possível salvar os dados locais.'
     : null;
@@ -83,10 +118,33 @@ export function StudiesPage() {
       setError(reason instanceof Error ? `Não foi possível importar o estudo: ${reason.message}` : 'Não foi possível importar o estudo.');
     }
   };
-  useEffect(() => { heading.current?.focus(); void refresh(); return controller.subscribe(() => void refresh()); }, [controller]);
-  const editExisting = async (study: StudyDocument, update: (loaded: StudyDocument) => Promise<StudyDocument>) => { const loaded = await controller.loadStudy(study.id); if (loaded === null) throw new Error('Estudo não encontrado.'); controller.edit(await update(loaded)); await controller.flush(); await refresh(); };
+  useEffect(() => {
+    mounted.current = true;
+    refreshGeneration.current += 1;
+    heading.current?.focus();
+    void refresh();
+    const unsubscribe = controller.subscribe(() => {
+      if (controller.snapshot.status === 'SAVED' && !suppressSavedRefresh.current) void refresh();
+      if (controller.snapshot.status === 'STORAGE_FAILURE') {
+        setError(controller.snapshot.error instanceof Error ? controller.snapshot.error.message : 'Não foi possível salvar os dados locais.');
+      }
+    });
+    return () => {
+      unsubscribe();
+      mounted.current = false;
+      refreshGeneration.current += 1;
+      refreshQueued.current = false;
+      refreshInFlight.current = null;
+    };
+  }, [controller]);
+  const loadForAction = async (id: string) => {
+    suppressSavedRefresh.current = true;
+    try { return await controller.loadStudy(id); }
+    finally { suppressSavedRefresh.current = false; }
+  };
+  const editExisting = async (study: StudyDocument, update: (loaded: StudyDocument) => Promise<StudyDocument>) => { const loaded = await loadForAction(study.id); if (loaded === null) throw new Error('Estudo não encontrado.'); controller.edit(await update(loaded)); await controller.flush(); };
   const remove = async (study: StudyDocument) => { if (!window.confirm(`Mover o estudo “${study.name}” para a lixeira?`)) return; try { await editExisting(study, (loaded) => moveStudyToTrash(loaded, new Date().toISOString())); } catch (reason) { setError(reason instanceof Error ? reason.message : 'Não foi possível excluir o estudo.'); } };
   return <article className="destination-page"><p className="eyebrow">Estudos</p><h1 ref={heading} tabIndex={-1}>Estudos</h1><p className="page-introduction">Crie ou abra uma carteira salva para revisar sua origem, premissas e resultado.</p><div className="storage-notice"><p><strong>Salvo neste navegador.</strong> Os estudos ficam só aqui: limpar os dados do navegador apaga tudo. Use “Exportar” para guardar uma cópia de segurança.</p><Button variant="secondary" onClick={() => importInput.current?.click()}>Importar estudo</Button><input ref={importInput} type="file" accept="application/json,.json" hidden aria-label="Arquivo do estudo para importar" onChange={(event) => { const file = event.currentTarget.files?.[0]; event.currentTarget.value = ''; if (file !== undefined) void importStudy(file); }} /></div>{visibleError ? <p role="alert" className="inline-notice inline-notice--error">{visibleError}</p> : null}{notice ? <p role="status" className="inline-notice">{notice}</p> : null}{choosing === null ? null : <NewStudyChooser cases={choosing.cases} companies={choosing.companies} busy={creating}
     onCreateFromCases={(caseIds) => void create((ownerSub) => studyFromObservedCases(choosing.cases.filter((item) => caseIds.includes(item.id)), { ...context(ownerSub), companies: choosing.companies }))}
-    onCreateSynthetic={() => void create((ownerSub) => syntheticStudy(api, context(ownerSub)))} onCancel={() => setChoosing(null)} />}{loaded && demoStatus !== 'INSTALLED' ? <Button variant="secondary" disabled={restoringDemo} onClick={() => void restoreDemo()}>{restoringDemo ? 'Carregando demonstração…' : 'Carregar estudo demonstrativo'}</Button> : null}<StudyList studies={studies} selectedId={controller.snapshot.document?.id ?? null} onCreate={() => void openChooser()} onCreateCombinations={() => void create((ownerSub) => syntheticStudy(api, context(ownerSub), 'PORTFOLIO_COMBINATIONS'))} onOpen={(id) => navigate(`/estudos/${id}`)} onRename={(study) => void (async () => { const name = window.prompt(`Novo nome para “${study.name}”:`, study.name)?.trim(); if (!name || name === study.name) return; try { await editExisting(study, (loaded) => renameStudy(loaded, name, new Date().toISOString())); } catch (reason) { setError(reason instanceof Error ? reason.message : 'Não foi possível renomear o estudo.'); } })()} onDuplicate={(study) => void (async () => { try { const loaded = await controller.loadStudy(study.id); if (loaded === null) throw new Error('Estudo não encontrado.'); const copy = await duplicateStudy(loaded, new Date().toISOString(), () => crypto.randomUUID()); controller.startNewStudy(); controller.edit(copy); await controller.flush(); await refresh(); } catch (reason) { setError(reason instanceof Error ? reason.message : 'Não foi possível duplicar o estudo.'); } })()} onRestore={(study) => void controller.restoreStudy(study.id, study.revision).then(refresh).catch((reason: unknown) => setError(reason instanceof Error ? reason.message : 'Não foi possível restaurar o estudo.'))} onDelete={remove} onExport={exportStudy} /></article>;
+    onCreateSynthetic={() => void create((ownerSub) => syntheticStudy(api, context(ownerSub)))} onCancel={() => setChoosing(null)} />}{loaded && demoStatus !== 'INSTALLED' ? <Button variant="secondary" disabled={restoringDemo} onClick={() => void restoreDemo()}>{restoringDemo ? 'Carregando demonstração…' : 'Carregar estudo demonstrativo'}</Button> : null}<StudyList studies={studies} selectedId={controller.snapshot.document?.id ?? null} onCreate={() => void openChooser()} onCreateCombinations={() => void create((ownerSub) => syntheticStudy(api, context(ownerSub), 'PORTFOLIO_COMBINATIONS'))} createCombinationsDisabled={creating} onOpen={(id) => navigate(`/estudos/${id}`)} onRename={(study) => void (async () => { const name = window.prompt(`Novo nome para “${study.name}”:`, study.name)?.trim(); if (!name || name === study.name) return; try { await editExisting(study, (loaded) => renameStudy(loaded, name, new Date().toISOString())); } catch (reason) { setError(reason instanceof Error ? reason.message : 'Não foi possível renomear o estudo.'); } })()} onDuplicate={(study) => void (async () => { try { const loaded = await loadForAction(study.id); if (loaded === null) throw new Error('Estudo não encontrado.'); const copy = await duplicateStudy(loaded, new Date().toISOString(), () => crypto.randomUUID()); controller.startNewStudy(); controller.edit(copy); await controller.flush(); } catch (reason) { setError(reason instanceof Error ? reason.message : 'Não foi possível duplicar o estudo.'); } })()} onRestore={(study) => void controller.restoreStudy(study.id, study.revision).then(() => refresh()).catch((reason: unknown) => setError(reason instanceof Error ? reason.message : 'Não foi possível restaurar o estudo.'))} onDelete={remove} onExport={exportStudy} /></article>;
 }

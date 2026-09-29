@@ -6,6 +6,7 @@ import { describeSource } from '../sourceSummary';
 
 export type StudyListProps = Readonly<{
   studies: readonly StudyDocument[]; selectedId: string | null; onCreate(): void; onCreateCombinations?(): void;
+  createCombinationsDisabled?: boolean;
   onOpen(id: string): void; onRename(study: StudyDocument): void; onDuplicate(study: StudyDocument): void;
   onRestore(study: StudyDocument): void; onDelete(study: StudyDocument): void;
   onExport?(study: StudyDocument): void;
@@ -17,13 +18,13 @@ function sourceLabel(study: StudyDocument): string {
   return scenario === undefined ? 'Sem origem' : describeSource(scenario, [], []).label;
 }
 
-export function StudyList({ studies, selectedId, onCreate, onCreateCombinations, onOpen, onRename, onDuplicate, onRestore, onDelete, onExport }: StudyListProps) {
+export function StudyList({ studies, selectedId, onCreate, onCreateCombinations, createCombinationsDisabled = false, onOpen, onRename, onDuplicate, onRestore, onDelete, onExport }: StudyListProps) {
   const [showTrash, setShowTrash] = useState(false);
   const visibleStudies = studies.filter((study) => (study.deletedAt !== null) === showTrash);
   return <>
     <div className="list-toolbar">
       {!showTrash && <Button onClick={onCreate}>Novo estudo</Button>}
-      {!showTrash && onCreateCombinations !== undefined ? <Button variant="secondary" onClick={onCreateCombinations}>Nova combinação de carteiras</Button> : null}
+      {!showTrash && onCreateCombinations !== undefined ? <Button variant="secondary" disabled={createCombinationsDisabled} onClick={onCreateCombinations}>Nova combinação de carteiras</Button> : null}
       <Button variant="secondary" onClick={() => setShowTrash((current) => !current)}>
         {showTrash ? 'Voltar aos estudos' : 'Lixeira de estudos'}
       </Button>

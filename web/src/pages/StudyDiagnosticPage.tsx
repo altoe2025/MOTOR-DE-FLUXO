@@ -113,6 +113,7 @@ export function StudyDiagnosticPage() {
   const [runAllProgress, setRunAllProgress] = useState<string | null>(null);
   const [comparisonOpen, setComparisonOpen] = useState(false);
   const cancelInFlightRef = useRef(false);
+  const batchCancelRequested = useRef(false);
   const identityToken = useRef(0);
   const activeIdentity = useRef(screenIdentity);
 
@@ -123,6 +124,7 @@ export function StudyDiagnosticPage() {
     mounted.current = true;
     resumedAttempts.current = new Set();
     batchToken.current = null;
+    batchCancelRequested.current = false;
     setViewState(null);
     setRunInProgress(false);
     setRunAllProgress(null);
@@ -231,13 +233,14 @@ export function StudyDiagnosticPage() {
     if (study === null || study.id !== studyId || runInProgress || runAllProgress !== null || batchToken.current !== null) return;
     const token = identityToken.current;
     batchToken.current = token;
+    batchCancelRequested.current = false;
     const isActive = () => mounted.current && identityToken.current === token;
     const pending = study.scenarios.filter((item) => currentDiagnostic(study, item) === null
       && (!combinationStudy || isCurrentCombinationScenario(study, item)));
     setRunInProgress(true);
     try {
       for (const [index, item] of pending.entries()) {
-        if (!isActive()) return;
+        if (!isActive() || batchCancelRequested.current) return;
         setRunAllProgress(`Rodando ${index + 1} de ${pending.length}…`);
         const itemCount = item.sourceSnapshot.generationInputSnapshot !== undefined ? count : 1;
         const attempt = await executeStudyDiagnostic({
@@ -255,8 +258,10 @@ export function StudyDiagnosticPage() {
               scenario: currentScenario, count: itemCount, baseSeed: attemptId, previewRequest: preview,
             });
           },
+          ...(combinationStudy ? { persistence: 'TERMINAL_ONLY' as const } : {}),
         });
         if (!isActive()) return;
+        if (batchCancelRequested.current) return;
         if (attempt.status !== 'SUCCEEDED') {
           complete(attempt);
           return;
@@ -268,7 +273,11 @@ export function StudyDiagnosticPage() {
       if (isActive()) setViewState({ kind: 'FAILED', attemptId: 'não persistida', publicMessage: 'Não foi possível rodar todas as variações. As que terminaram ficaram salvas.' });
     } finally {
       if (batchToken.current === token) batchToken.current = null;
-      if (isActive()) { setRunAllProgress(null); setRunInProgress(false); }
+      if (isActive()) {
+        batchCancelRequested.current = false;
+        setRunAllProgress(null);
+        setRunInProgress(false);
+      }
     }
   }, [client, combinationStudy, complete, controller, count, runAllProgress, runInProgress, study, studyId]);
 
@@ -281,6 +290,12 @@ export function StudyDiagnosticPage() {
     setSearchParams(next, { replace: true });
     void runAll();
   }, [combinationOverview, runAll, runAllRequested, runInProgress, screenIdentity, searchParams, setSearchParams, study, studyId]);
+
+  const cancelBatch = () => {
+    if (!runInProgress || runAllProgress === null) return;
+    batchCancelRequested.current = true;
+    setRunAllProgress('Cancelando após a combinação atual…');
+  };
 
   const cancel = async () => {
     if (scenario === null || cancelInFlightRef.current) return;
@@ -343,6 +358,9 @@ export function StudyDiagnosticPage() {
         <Button onClick={() => void runAll()} disabled={runInProgress || controller.snapshot.status === 'STORAGE_FAILURE'}>
           Diagnosticar combinações
         </Button>
+        {runAllProgress === null ? null : <Button variant="secondary" onClick={cancelBatch}>
+          Cancelar lote
+        </Button>}
         <p className="field-hint">{study.scenarios.filter((item) => isCurrentCombinationScenario(study, item)).length} composições preparadas. Os diagnósticos atuais são reaproveitados.</p>
         {runAllProgress === null ? null : <p role="status" aria-live="polite">{runAllProgress}</p>}
         {viewState === null || viewState.kind === 'SUCCEEDED' ? null : <DiagnosticStatus state={viewState} />}

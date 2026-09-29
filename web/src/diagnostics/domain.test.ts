@@ -6,7 +6,7 @@ import { makeScenarioDraft } from '../study/fixtures';
 import type { DeepMutable, DiagnosticExecutionRecord } from '../study/model';
 import { parseStudyV3, validateStudyDocument } from '../study/validation';
 import { buildDiagnosticRequest } from './buildDiagnosticRequest';
-import { appendDiagnosticExecution } from './domain';
+import { appendDiagnosticAttemptAtomically, appendDiagnosticExecution } from './domain';
 
 const STUDY_ID = '00000000-0000-4000-8000-000000000301';
 const SCENARIO_ID = '00000000-0000-4000-8000-000000000302';
@@ -117,6 +117,24 @@ describe('appendDiagnosticExecution', () => {
 
     expect(completed.executions).toEqual([reservation, terminal]);
     expect(completed.revision).toBe(study.revision + 2);
+  });
+
+  it('anexa reserva e terminal atomicamente em uma única revisão', async () => {
+    const { study, reservation } = await fixture();
+    const terminal: DiagnosticExecutionRecord = {
+      ...structuredClone(reservation),
+      id: '00000000-0000-4000-8000-000000000308',
+      status: 'FAILED',
+      error: { code: 'DIAGNOSTICO_INVALIDO', message: 'A execução falhou.' },
+      finishedAt: '2026-09-20T12:01:00Z',
+    };
+
+    const completed = await appendDiagnosticAttemptAtomically(study, reservation, terminal);
+
+    expect(completed.executions).toEqual([reservation, terminal]);
+    expect(completed.revision).toBe(study.revision + 1);
+    expect(completed.updatedAt).toBe(terminal.finishedAt);
+    await expect(validateStudyDocument(completed)).resolves.toEqual({ ok: true, value: completed });
   });
 
   it('rejeita segundo terminal da mesma tentativa', async () => {

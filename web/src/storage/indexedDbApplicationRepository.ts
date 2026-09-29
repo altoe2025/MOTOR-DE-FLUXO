@@ -174,6 +174,19 @@ type ExecutionRow = Readonly<{
   document: ExecutionRecordV3;
 }>;
 
+export function groupExecutionsByStudyId<T extends { readonly study_id: string }>(
+  executions: readonly T[],
+): Map<string, T[]> {
+  const grouped = new Map<string, T[]>();
+  for (const execution of executions) {
+    const studyId = execution.study_id;
+    const studyExecutions = grouped.get(studyId);
+    if (studyExecutions === undefined) grouped.set(studyId, [execution]);
+    else studyExecutions.push(execution);
+  }
+  return grouped;
+}
+
 function requestResult<T>(request: IDBRequest<T>): Promise<T> {
   return new Promise((resolve, reject) => {
     request.onerror = () => reject(request.error);
@@ -1028,10 +1041,11 @@ export class IndexedDbApplicationRepository implements ApplicationRepository {
       requestResult<StudyRow[]>(studyRequest),
       requestResult<ExecutionRow[]>(executionRequest),
     ]);
+    const executionsByStudyId = groupExecutionsByStudyId(executions);
     const studies = rows
       .map((row) => assembleStudy(
         row,
-        executions.filter((execution) => execution.study_id === row.study_id),
+        executionsByStudyId.get(row.study_id) ?? [],
       ))
       .sort((left, right) => left.id.localeCompare(right.id));
     return Promise.all(studies.map((study) => validateStoredStudy(study, this.#ownerSub)));
