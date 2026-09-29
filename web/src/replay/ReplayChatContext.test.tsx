@@ -11,7 +11,7 @@ import { replayDocumentFixture } from './testFixtures';
 const mocks = vi.hoisted(() => {
   const loadStudy = vi.fn(); const buildReplay = vi.fn();
   return { loadStudy, buildReplay, publishCommunication: vi.fn(), setReplayDay: vi.fn(), setScenarioId: vi.fn(),
-    runtime: { ownerSub: 'owner-fixture', controller: { loadStudy },
+    runtime: { ownerSub: 'owner-fixture', controller: { loadStudy, listObservedCases: async () => [] },
       client: { buildReplay, getImportCatalog: vi.fn() } } };
 });
 vi.mock('../app/providers', () => ({ useDiagnosticRuntime: () => mocks.runtime }));

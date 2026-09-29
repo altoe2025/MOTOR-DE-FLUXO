@@ -14,6 +14,7 @@ import type {
 import {
   fractionToPercentText, parseBrlInput, parseDecimalInput, parsePercentInput, plainToBrText, type ParsedInput,
 } from '../numberInput';
+import { describeSource } from '../sourceSummary';
 import { PortfolioSourceSelector, type PortfolioSourceDraft, type PortfolioSourceKind } from './PortfolioSourceSelector';
 
 export type StudyEditorProps = Readonly<{
@@ -112,7 +113,20 @@ export function StudyEditor({ study, observedCases, companies, status, error = n
   if (scenario === undefined) throw new Error('Estudo sem cenário base.');
   const source = scenario.sourceSnapshot.source;
   const kind: PortfolioSourceKind = source.kind;
+  const summary = describeSource(scenario, observedCases, companies);
+  // A origem é escolhida no "Novo estudo"; aqui fica o resumo e o seletor só abre para trocar.
+  const [changingSource, setChangingSource] = useState(false);
+  // Aplicar uma origem fecha o seletor; "Editar as ordens à mão" também troca a origem, mas a
+  // pessoa ainda vai editar as ordens, então essa troca mantém o seletor aberto.
+  const keepSourceOpen = useRef(false);
+  useEffect(() => {
+    if (keepSourceOpen.current) { keepSourceOpen.current = false; return; }
+    setChangingSource(false);
+  }, [scenario.sourceSnapshot.sourceFingerprint]);
   useEffect(() => { setName(study.name); heading.current?.focus(); }, [study.id, study.name]);
   const submit = async (event: FormEvent) => { event.preventDefault(); if (name.trim()) await onRename(name.trim()); };
-  return <article className="study-editor" aria-busy={status === 'SAVING' || undefined}><p className="eyebrow">{study.studyType === 'PORTFOLIO_COMBINATIONS' ? 'Combinação de carteiras' : 'Editor de estudo'}</p><h1 tabIndex={-1} ref={heading}>{study.name}</h1>{status === 'CONFLICT' ? <p className="inline-notice inline-notice--error" role="alert">Este estudo foi alterado em outra aba. Recarregue antes de continuar.</p> : null}{error ? <p className="inline-notice inline-notice--error" role="alert">{error}</p> : null}<p className="save-status" role="status">{status === 'SAVING' ? 'Salvando…' : status === 'STORAGE_FAILURE' ? 'Não foi possível salvar. As alterações continuam nesta aba.' : status === 'DIRTY' ? 'Alterações não salvas.' : 'Alterações salvas.'}</p><form className="study-name-form" onSubmit={(event) => void submit(event)}><TextField id="study-editor-name" label="Nome do estudo" value={name} maxLength={120} {...(name.trim() ? {} : { error: 'Informe um nome para o estudo.' })} onChange={(event) => setName(event.currentTarget.value)} /><div className="source-actions"><Button type="submit" disabled={!name.trim()}>Salvar nome</Button><Button variant="secondary" onClick={() => void onDuplicate()}>Duplicar estudo</Button></div></form><p className="eyebrow">Passo 1</p><PortfolioSourceSelector combinationsOnly={study.studyType === 'PORTFOLIO_COMBINATIONS'} value={kind} study={study} scenario={scenario} observedCases={observedCases} companies={companies} {...(source.kind === 'OBSERVED_CASE' ? { selectedCaseId: source.caseId } : {})} onChange={(next) => void onSourceChange(next)} onConvertObserved={(caseId) => void onConvertObserved(caseId)} /><p className="eyebrow">Passo 2</p><ScenarioSettings premises={scenario.premises} period={scenario.period} onSave={onScenarioChange} /></article>;
+  const sourceControl = study.studyType === 'PORTFOLIO_COMBINATIONS'
+    ? <PortfolioSourceSelector combinationsOnly value={kind} study={study} scenario={scenario} observedCases={observedCases} companies={companies} {...(source.kind === 'OBSERVED_CASE' ? { selectedCaseId: source.caseId } : {})} onChange={(next) => void onSourceChange(next)} onConvertObserved={(caseId) => void onConvertObserved(caseId)} />
+    : <><section className="source-summary" aria-labelledby="source-summary-title"><div><h2 id="source-summary-title">Origem da carteira</h2><p><strong>{summary.label}</strong> · {summary.detail}</p></div><Button variant="secondary" aria-expanded={changingSource} onClick={() => setChangingSource((current) => !current)}>{changingSource ? 'Cancelar troca' : 'Trocar origem'}</Button></section>{changingSource ? <PortfolioSourceSelector value={kind} study={study} scenario={scenario} observedCases={observedCases} companies={companies} {...(source.kind === 'OBSERVED_CASE' ? { selectedCaseId: source.caseId } : {})} onChange={(next) => void onSourceChange(next)} onConvertObserved={(caseId) => { keepSourceOpen.current = true; void onConvertObserved(caseId); }} /> : null}</>;
+  return <article className="study-editor" aria-busy={status === 'SAVING' || undefined}><p className="eyebrow">{study.studyType === 'PORTFOLIO_COMBINATIONS' ? 'Combinação de carteiras' : 'Editor de estudo'}</p><h1 tabIndex={-1} ref={heading}>{study.name}</h1>{status === 'CONFLICT' ? <p className="inline-notice inline-notice--error" role="alert">Este estudo foi alterado em outra aba. Recarregue antes de continuar.</p> : null}{error ? <p className="inline-notice inline-notice--error" role="alert">{error}</p> : null}<p className="save-status" role="status">{status === 'SAVING' ? 'Salvando…' : status === 'STORAGE_FAILURE' ? 'Não foi possível salvar. As alterações continuam nesta aba.' : status === 'DIRTY' ? 'Alterações não salvas.' : 'Alterações salvas.'}</p><form className="study-name-form" onSubmit={(event) => void submit(event)}><TextField id="study-editor-name" label="Nome do estudo" value={name} maxLength={120} {...(name.trim() ? {} : { error: 'Informe um nome para o estudo.' })} onChange={(event) => setName(event.currentTarget.value)} /><div className="source-actions"><Button type="submit" disabled={!name.trim()}>Salvar nome</Button><Button variant="secondary" onClick={() => void onDuplicate()}>Duplicar estudo</Button></div></form><p className="eyebrow">Passo 1</p>{sourceControl}<p className="eyebrow">Passo 2</p><ScenarioSettings premises={scenario.premises} period={scenario.period} onSave={onScenarioChange} /></article>;
 }

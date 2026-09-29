@@ -30,11 +30,14 @@ test('confirmed observed case becomes an immutable study snapshot and survives r
   }, { owner: OWNER, now: NOW });
   await page.reload();
   await page.getByRole('button', { name: 'Novo estudo' }).click();
+  await page.getByRole('radio', { name: 'Carteira gerada (exemplo)' }).check();
+  await page.getByRole('button', { name: 'Criar com carteira gerada' }).click();
   await expect(page).toHaveURL(/\/carteira\/[0-9a-f-]+$/);
-  await page.getByRole('radio', { name: 'Caso observado' }).check();
-  await page.getByLabel('Caso confirmado').selectOption('case-e2e');
+  await page.getByRole('button', { name: 'Trocar origem' }).click();
+  await page.getByRole('radio', { name: 'Dados importados de uma empresa' }).check();
+  await page.getByLabel('Caso importado').selectOption('case-e2e');
   await expect(page.getByRole('heading', { name: 'Empresa anonimizada' })).toBeVisible();
-  await page.getByRole('button', { name: 'Usar caso confirmado' }).click();
+  await page.getByRole('button', { name: 'Usar este caso' }).click();
   const studyId = page.url().split('/').at(-1)!;
   await expect.poll(() => page.evaluate((id) => window.__MOTOR_E2E__!.studySource(id), studyId))
     .toBe('OBSERVED_CASE');
@@ -50,11 +53,12 @@ test('confirmed observed case becomes an immutable study snapshot and survives r
   expect(Number(observed.envelope!.result.agregado.volume_bruto_periodo_brl)).toBe(100);
 
   await page.reload();
-  await expect(page.getByRole('radio', { name: 'Caso observado' })).toBeChecked();
-  await expect(page.getByLabel('Caso confirmado')).toHaveValue('case-e2e');
+  await page.getByRole('button', { name: 'Trocar origem' }).click();
+  await expect(page.getByRole('radio', { name: 'Dados importados de uma empresa' })).toBeChecked();
+  await expect(page.getByLabel('Caso importado')).toHaveValue('case-e2e');
   expect(await persistedPreviews(page, studyId)).toEqual([observed]);
 
-  await page.getByRole('button', { name: 'Converter para autoria manual' }).click();
+  await page.getByRole('button', { name: 'Editar as ordens à mão' }).click();
   await expect.poll(() => page.evaluate((id) => window.__MOTOR_E2E__!.studySource(id), studyId))
     .toBe('AUTHORED');
   await expect.poll(() => page.evaluate((id) => window.__MOTOR_E2E__!.studyExecutionStatuses(id), studyId))

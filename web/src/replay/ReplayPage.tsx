@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { useOptionalChat } from '../chat/ChatProvider';
 
@@ -12,7 +12,9 @@ import { ReplayControls } from './components/ReplayControls';
 import { ReplayJournal } from './components/ReplayJournal';
 import { ReplayMetrics } from './components/ReplayMetrics';
 import { ReplayStage } from './components/ReplayStage';
+import type { ObservedCase } from '../cases/domain';
 import { companyResolver } from '../levers/companies';
+import { calendarForReplay, largestResidueDay, replayCompanies } from './navigation';
 import { replayStateAt } from './state';
 import { useReplayPlayback } from './useReplayPlayback';
 
@@ -185,6 +187,19 @@ function ReplayReady({ document, study, studyId, scenarioId, selected, initialDa
   const setReplayDay = chat?.setReplayDay;
   const setScenarioId = chat?.setScenarioId;
   const publishCommunication = chat?.publishCommunication;
+  const { controller } = useDiagnosticRuntime();
+  const [cases, setCases] = useState<readonly ObservedCase[]>([]);
+  useEffect(() => {
+    let active = true;
+    void controller.listObservedCases().then((items) => { if (active) setCases(items); }).catch(() => undefined);
+    return () => { active = false; };
+  }, [controller]);
+  const snapshot = study.executions.find((item) => item.id === document.diagnostic_execution_id)?.sourceSnapshot;
+  const companyOf = useMemo(() => companyResolver(snapshot?.source), [snapshot]);
+  const companies = useMemo(() => replayCompanies(document, companyOf), [document, companyOf]);
+  const [company, setCompany] = useState<string | null>(null);
+  const dateOf = useMemo(() => calendarForReplay(document, snapshot, cases), [document, snapshot, cases]);
+  const residue = useMemo(() => largestResidueDay(document), [document]);
   useEffect(() => { setReplayDay?.(playback.day); }, [setReplayDay, playback.day]);
   useEffect(() => { setScenarioId?.(scenarioId); }, [setScenarioId, scenarioId]);
   useEffect(() => { publishCommunication?.({ study, scenarioId,
@@ -193,7 +208,7 @@ function ReplayReady({ document, study, studyId, scenarioId, selected, initialDa
   }, [publishCommunication, study, scenarioId, document, playback.day]);
   const [sort, setSort] = useState<ReplaySort>('ARRIVAL');
   const state = replayStateAt(document, playback.day);
-  const directDay = `Dia ${playback.day} de ${document.period.settlement_end_day}`;
+  const directDay = `Dia ${playback.day}${dateOf === null ? '' : ` (${dateOf(playback.day)})`} de ${document.period.settlement_end_day}`;
   const phaseLabel = state.phase === 'WARMUP' ? 'Aquecimento' : state.phase === 'MEASUREMENT' ? 'Medição' : 'Liquidação';
   return <article className="replay-page">
     <header className="replay-titlebar">
@@ -204,17 +219,19 @@ function ReplayReady({ document, study, studyId, scenarioId, selected, initialDa
         Apresentar dia {playback.day}
       </Link>
     </header>
-    <section className="replay-selection" aria-label="Repetição exibida">
+    <details className="replay-selection" role="region" aria-label="Repetição exibida">
+      <summary>Repetição {selected.repetitionId.slice(0, 8)} de {selected.total} · {selected.criterion}</summary>
       <p>Replay mostra uma repetição específica do cenário, com as seeds planejadas; a distribuição reúne todas as repetições.</p>
       <dl><div><dt>ID da repetição</dt><dd>{selected.repetitionId}</dd></div>
         <div><dt>Total executado</dt><dd>{selected.total} {selected.total === 1 ? 'repetição executada' : 'repetições executadas'}</dd></div>
         <div><dt>Critério de seleção</dt><dd>{selected.criterion}</dd></div></dl>
-    </section>
-    <ReplayControls document={document} playback={playback} sort={sort} onSort={setSort} />
+    </details>
+    <ReplayControls document={document} playback={playback} sort={sort} onSort={setSort} residue={residue} dateOf={dateOf}
+      companies={companies} company={company} onCompany={setCompany} />
     <p className="replay-live" aria-live="polite">{directDay} · {phaseLabel}</p>
-    <ReplayMetrics document={document} state={state} />
     <ReplayStage document={document} state={state} sort={sort} transitionMode={playback.transitionMode} transitionKey={playback.transitionKey}
-      companyOf={companyResolver(study.executions.find((item) => item.id === document.diagnostic_execution_id)?.sourceSnapshot?.source)} />
+      companyOf={companyOf} company={company} dateOf={dateOf} />
+    <ReplayMetrics document={document} state={state} />
     <ReplayJournal document={document} day={playback.day} />
   </article>;
 }

@@ -1,54 +1,23 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import type { ApiClient, PreparationRequest } from '../api/client';
 import { useApiClient, useStudyController } from '../app/providers';
 import { useAuth } from '../auth/AuthProvider';
-import { resolvePortfolioSource } from '../preparation/resolvePortfolioSource';
+import type { CompanyRecord, ObservedCase } from '../cases/domain';
+import { NewStudyChooser } from '../study/components/NewStudyChooser';
 import { StudyList } from '../study/components/StudyList';
-import { createStudy, duplicateStudy, moveStudyToTrash, renameStudy } from '../study/domain';
-import type { CostPremises, ScenarioDraft, StudyDocument } from '../study/model';
-import { requiredBuildSha } from '../study/sourceConfiguration';
+import { duplicateStudy, moveStudyToTrash, renameStudy } from '../study/domain';
+import type { StudyDocument } from '../study/model';
+import { studyFromObservedCases, syntheticStudy } from '../study/newStudy';
+import { buildStudyExport, parseStudyExport, prepareStudyImport, studyExportFileName } from '../study/studyTransfer';
 import { Button } from '../ui/Button';
 
-const DEFAULT_COSTS: CostPremises = {
-  iof_out: '0.035', iof_in: '0.0038', carry_cnr: '0.0004', spread_rail_bps: '25',
-  custo_fixo_remessa: '40', custo_oportunidade_aa: '0', ptax: '5.40', iof_por_finalidade: [],
-};
-
-async function initialStudy(api: ApiClient, ownerSub: string, studyType?: 'PORTFOLIO_COMBINATIONS'): Promise<StudyDocument> {
-  if (api.preparePortfolio === undefined) throw new Error('A preparação de carteira não está disponível.');
-  const studyId = crypto.randomUUID(); const scenarioId = crypto.randomUUID(); const now = new Date().toISOString();
-  const participantId = crypto.randomUUID();
-  const participantPrefix = `/participants/${participantId}`;
-  const sourcePaths = [
-    '/warmup_days', '/measurement_days', '/window_days',
-    '/costs/iof_out', '/costs/iof_in', '/costs/carry_cnr', '/costs/spread_rail_bps',
-    '/costs/custo_fixo_remessa', '/costs/custo_oportunidade_aa', '/costs/ptax',
-    `${participantPrefix}/profile`, `${participantPrefix}/seed`,
-    `${participantPrefix}/monthly_volume_brl`, `${participantPrefix}/ticket_median_brl`,
-    `${participantPrefix}/out_fraction`, `${participantPrefix}/deadline/mode`,
-    `${participantPrefix}/deadline/days`, `${participantPrefix}/eh_efx`,
-    `${participantPrefix}/purpose_out`, `${participantPrefix}/purpose_in`,
-  ];
-  const preparation: PreparationRequest = {
-    preparation_version: '1.0.0', request_id: crypto.randomUUID(), study_id: studyId,
-    scenario_id: scenarioId, scenario_revision: 1,
-    expected_build_sha: requiredBuildSha(import.meta.env.VITE_MOTOR_BUILD_SHA, undefined),
-    input: {
-      participants: [{ id: participantId, profile: 'tesouraria_corporativa', monthly_volume_brl: '1000000', ticket_median_brl: '100000', out_fraction: '0.5', purpose_out: 'ANEXO_V_REMESSA_TERCEIRO', purpose_in: 'ANEXO_V_DISPONIBILIDADE', eh_efx: false, deadline: { mode: 'FIXED', days: 7 }, seed: '1' }],
-      warmup_days: 0, measurement_days: 30, window_days: 7,
-      costs: { ...DEFAULT_COSTS, iof_por_finalidade: DEFAULT_COSTS.iof_por_finalidade.map((item) => ({ ...item })) },
-      sources: Object.fromEntries(sourcePaths.map((path) => [path, {
-        kind: 'PADRAO_SINTETICO' as const,
-        source: 'catálogo oficial de exemplos',
-        recorded_at: now,
-      }])),
-    },
-  };
-  const sourceSnapshot = await resolvePortfolioSource({ kind: 'SYNTHETIC', exampleId: 'equilibrado', preparation }, { getObservedCase: async () => null, preparePortfolio: (input) => api.preparePortfolio!(input), now: () => now });
-  const baseScenario: ScenarioDraft = { id: scenarioId, revision: 1, name: 'Cenário base', sourceSnapshot, premises: { costs: DEFAULT_COSTS, windowDays: 7 }, period: { httpPeriod: { modo: 'NATURAL', dias_aquecimento: 0, periodo_medicao_dias: 30 } } };
-  return createStudy({ id: studyId, ownerSub, name: studyType === 'PORTFOLIO_COMBINATIONS' ? 'Combinação de carteiras' : 'Novo estudo', ...(studyType === undefined ? {} : { studyType }), baseScenario, now });
+function download(fileName: string, content: string) {
+  const url = URL.createObjectURL(new Blob([content], { type: 'application/json' }));
+  const link = document.createElement('a');
+  link.href = url; link.download = fileName;
+  document.body.append(link); link.click(); link.remove();
+  URL.revokeObjectURL(url);
 }
 
 export function StudiesPage() {
@@ -56,6 +25,25 @@ export function StudiesPage() {
   const heading = useRef<HTMLHeadingElement>(null); const [studies, setStudies] = useState<StudyDocument[]>([]); const [error, setError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false); const [restoringDemo, setRestoringDemo] = useState(false);
   const [demoStatus, setDemoStatus] = useState<'INSTALLED' | 'REMOVED' | null>(null);
+  const [notice, setNotice] = useState<string | null>(null); const importInput = useRef<HTMLInputElement>(null);
+  const [choosing, setChoosing] = useState<{ cases: ObservedCase[]; companies: CompanyRecord[] } | null>(null); const [creating, setCreating] = useState(false);
+  const openChooser = async () => {
+    setError(null);
+    try { const [cases, companies] = await Promise.all([controller.listObservedCases(), controller.listCompanies()]); setChoosing({ cases, companies }); }
+    catch (reason) { setError(reason instanceof Error ? reason.message : 'Não foi possível listar os casos importados.'); }
+  };
+  const create = async (build: (ownerSub: string) => Promise<StudyDocument>) => {
+    setCreating(true); setError(null);
+    try {
+      if (userId === null) throw new Error('Sessão necessária.');
+      const created = await build(userId);
+      controller.startNewStudy(); controller.edit(created); await controller.flush();
+      navigate(`/carteira/${created.id}`);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Não foi possível criar o estudo.');
+    } finally { setCreating(false); }
+  };
+  const context = (ownerSub: string) => ({ ownerSub, now: new Date().toISOString(), ids: () => crypto.randomUUID() });
   const refresh = async () => { try { const [nextStudies, nextDemoStatus] = await Promise.all([controller.listStudies(true), controller.demoInstallationStatus()]); setStudies(nextStudies); setDemoStatus(nextDemoStatus); setLoaded(true); setError(null); } catch (reason) { setError(reason instanceof Error ? reason.message : 'Não foi possível carregar os estudos.'); } };
   const storageError = controller.snapshot.status === 'STORAGE_FAILURE'
     ? controller.snapshot.error instanceof Error ? controller.snapshot.error.message : 'Não foi possível salvar os dados locais.'
@@ -73,16 +61,32 @@ export function StudiesPage() {
       setRestoringDemo(false);
     }
   };
-  useEffect(() => { heading.current?.focus(); void refresh(); return controller.subscribe(() => void refresh()); }, [controller]);
-  const editExisting = async (study: StudyDocument, update: (loaded: StudyDocument) => Promise<StudyDocument>) => { const loaded = await controller.loadStudy(study.id); if (loaded === null) throw new Error('Estudo não encontrado.'); controller.edit(await update(loaded)); await controller.flush(); await refresh(); };
-  const create = async (studyType?: 'PORTFOLIO_COMBINATIONS') => {
+  const exportStudy = (study: StudyDocument) => {
+    const now = new Date().toISOString();
+    download(studyExportFileName(study, now), JSON.stringify(buildStudyExport(study, { now, buildSha: import.meta.env.VITE_MOTOR_BUILD_SHA ?? null }), null, 2));
+  };
+  const importStudy = async (file: File) => {
+    setError(null); setNotice(null);
     try {
       if (userId === null) throw new Error('Sessão necessária.');
-      const created = await initialStudy(api, userId, studyType);
-      controller.startNewStudy(); controller.edit(created); await controller.flush();
-      navigate(`/estudos/${created.id}`);
-    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Não foi possível criar o estudo.'); }
+      const parsed = await parseStudyExport(await file.text(), userId);
+      if (!parsed.ok) { setError(parsed.error); return; }
+      const prepared = await prepareStudyImport(parsed.study, { ownerSub: userId, existing: await controller.listStudies(true), now: new Date().toISOString(), ids: () => crypto.randomUUID() });
+      await controller.saveDetachedStudy(prepared.study, 0);
+      await refresh();
+      const otherBuild = parsed.buildSha !== null && parsed.buildSha !== (import.meta.env.VITE_MOTOR_BUILD_SHA ?? null)
+        ? ' O arquivo veio de outra versão do motor; os resultados guardados continuam como foram calculados.' : '';
+      setNotice(prepared.asCopy
+        ? `Este estudo já existe neste navegador. Importado como cópia “${prepared.study.name}”, sem os resultados — rode o diagnóstico de novo na cópia.${otherBuild}`
+        : `Estudo “${prepared.study.name}” importado com premissas, cenários e resultados.${otherBuild}`);
+    } catch (reason) {
+      setError(reason instanceof Error ? `Não foi possível importar o estudo: ${reason.message}` : 'Não foi possível importar o estudo.');
+    }
   };
+  useEffect(() => { heading.current?.focus(); void refresh(); return controller.subscribe(() => void refresh()); }, [controller]);
+  const editExisting = async (study: StudyDocument, update: (loaded: StudyDocument) => Promise<StudyDocument>) => { const loaded = await controller.loadStudy(study.id); if (loaded === null) throw new Error('Estudo não encontrado.'); controller.edit(await update(loaded)); await controller.flush(); await refresh(); };
   const remove = async (study: StudyDocument) => { if (!window.confirm(`Mover o estudo “${study.name}” para a lixeira?`)) return; try { await editExisting(study, (loaded) => moveStudyToTrash(loaded, new Date().toISOString())); } catch (reason) { setError(reason instanceof Error ? reason.message : 'Não foi possível excluir o estudo.'); } };
-  return <article className="destination-page"><p className="eyebrow">Estudos</p><h1 ref={heading} tabIndex={-1}>Estudos</h1><p className="page-introduction">Crie ou abra uma carteira salva para revisar sua origem, premissas e resultado.</p>{visibleError ? <p role="alert" className="inline-notice inline-notice--error">{visibleError}</p> : null}{loaded && demoStatus !== 'INSTALLED' ? <Button variant="secondary" disabled={restoringDemo} onClick={() => void restoreDemo()}>{restoringDemo ? 'Carregando demonstração…' : 'Carregar estudo demonstrativo'}</Button> : null}<StudyList studies={studies} selectedId={controller.snapshot.document?.id ?? null} onCreate={() => void create()} onCreateCombinations={() => void create('PORTFOLIO_COMBINATIONS')} onOpen={(id) => navigate(`/estudos/${id}`)} onRename={(study) => void (async () => { const name = window.prompt(`Novo nome para “${study.name}”:`, study.name)?.trim(); if (!name || name === study.name) return; try { await editExisting(study, (loaded) => renameStudy(loaded, name, new Date().toISOString())); } catch (reason) { setError(reason instanceof Error ? reason.message : 'Não foi possível renomear o estudo.'); } })()} onDuplicate={(study) => void (async () => { try { const loaded = await controller.loadStudy(study.id); if (loaded === null) throw new Error('Estudo não encontrado.'); const copy = await duplicateStudy(loaded, new Date().toISOString(), () => crypto.randomUUID()); controller.startNewStudy(); controller.edit(copy); await controller.flush(); await refresh(); } catch (reason) { setError(reason instanceof Error ? reason.message : 'Não foi possível duplicar o estudo.'); } })()} onRestore={(study) => void controller.restoreStudy(study.id, study.revision).then(refresh).catch((reason: unknown) => setError(reason instanceof Error ? reason.message : 'Não foi possível restaurar o estudo.'))} onDelete={remove} /></article>;
+  return <article className="destination-page"><p className="eyebrow">Estudos</p><h1 ref={heading} tabIndex={-1}>Estudos</h1><p className="page-introduction">Crie ou abra uma carteira salva para revisar sua origem, premissas e resultado.</p><div className="storage-notice"><p><strong>Salvo neste navegador.</strong> Os estudos ficam só aqui: limpar os dados do navegador apaga tudo. Use “Exportar” para guardar uma cópia de segurança.</p><Button variant="secondary" onClick={() => importInput.current?.click()}>Importar estudo</Button><input ref={importInput} type="file" accept="application/json,.json" hidden aria-label="Arquivo do estudo para importar" onChange={(event) => { const file = event.currentTarget.files?.[0]; event.currentTarget.value = ''; if (file !== undefined) void importStudy(file); }} /></div>{visibleError ? <p role="alert" className="inline-notice inline-notice--error">{visibleError}</p> : null}{notice ? <p role="status" className="inline-notice">{notice}</p> : null}{choosing === null ? null : <NewStudyChooser cases={choosing.cases} companies={choosing.companies} busy={creating}
+    onCreateFromCases={(caseIds) => void create((ownerSub) => studyFromObservedCases(choosing.cases.filter((item) => caseIds.includes(item.id)), { ...context(ownerSub), companies: choosing.companies }))}
+    onCreateSynthetic={() => void create((ownerSub) => syntheticStudy(api, context(ownerSub)))} onCancel={() => setChoosing(null)} />}{loaded && demoStatus !== 'INSTALLED' ? <Button variant="secondary" disabled={restoringDemo} onClick={() => void restoreDemo()}>{restoringDemo ? 'Carregando demonstração…' : 'Carregar estudo demonstrativo'}</Button> : null}<StudyList studies={studies} selectedId={controller.snapshot.document?.id ?? null} onCreate={() => void openChooser()} onCreateCombinations={() => void create((ownerSub) => syntheticStudy(api, context(ownerSub), 'PORTFOLIO_COMBINATIONS'))} onOpen={(id) => navigate(`/estudos/${id}`)} onRename={(study) => void (async () => { const name = window.prompt(`Novo nome para “${study.name}”:`, study.name)?.trim(); if (!name || name === study.name) return; try { await editExisting(study, (loaded) => renameStudy(loaded, name, new Date().toISOString())); } catch (reason) { setError(reason instanceof Error ? reason.message : 'Não foi possível renomear o estudo.'); } })()} onDuplicate={(study) => void (async () => { try { const loaded = await controller.loadStudy(study.id); if (loaded === null) throw new Error('Estudo não encontrado.'); const copy = await duplicateStudy(loaded, new Date().toISOString(), () => crypto.randomUUID()); controller.startNewStudy(); controller.edit(copy); await controller.flush(); await refresh(); } catch (reason) { setError(reason instanceof Error ? reason.message : 'Não foi possível duplicar o estudo.'); } })()} onRestore={(study) => void controller.restoreStudy(study.id, study.revision).then(refresh).catch((reason: unknown) => setError(reason instanceof Error ? reason.message : 'Não foi possível restaurar o estudo.'))} onDelete={remove} onExport={exportStudy} /></article>;
 }

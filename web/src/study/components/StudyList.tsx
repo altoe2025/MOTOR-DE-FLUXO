@@ -2,22 +2,22 @@ import { useState } from 'react';
 
 import { Button } from '../../ui/Button';
 import type { StudyDocument } from '../model';
+import { describeSource } from '../sourceSummary';
 
 export type StudyListProps = Readonly<{
   studies: readonly StudyDocument[]; selectedId: string | null; onCreate(): void; onCreateCombinations?(): void;
   onOpen(id: string): void; onRename(study: StudyDocument): void; onDuplicate(study: StudyDocument): void;
   onRestore(study: StudyDocument): void; onDelete(study: StudyDocument): void;
+  onExport?(study: StudyDocument): void;
 }>;
 
 function sourceLabel(study: StudyDocument): string {
   if (study.studyType === 'PORTFOLIO_COMBINATIONS') return 'Combinação de carteiras';
-  const source = study.scenarios.find((item) => item.id === study.baseScenarioId)?.sourceSnapshot.source;
-  if (source?.kind === 'OBSERVED_CASE') return 'Caso observado';
-  if (source?.kind === 'AUTHORED') return 'Carteira manual';
-  return 'Exemplo sintético';
+  const scenario = study.scenarios.find((item) => item.id === study.baseScenarioId);
+  return scenario === undefined ? 'Sem origem' : describeSource(scenario, [], []).label;
 }
 
-export function StudyList({ studies, selectedId, onCreate, onCreateCombinations, onOpen, onRename, onDuplicate, onRestore, onDelete }: StudyListProps) {
+export function StudyList({ studies, selectedId, onCreate, onCreateCombinations, onOpen, onRename, onDuplicate, onRestore, onDelete, onExport }: StudyListProps) {
   const [showTrash, setShowTrash] = useState(false);
   const visibleStudies = studies.filter((study) => (study.deletedAt !== null) === showTrash);
   return <>
@@ -44,6 +44,7 @@ export function StudyList({ studies, selectedId, onCreate, onCreateCombinations,
               ? <Button variant="secondary" aria-label={`Restaurar ${study.name}`} onClick={() => onRestore(study)}>Restaurar</Button>
               : <><Button variant="secondary" aria-label={`Renomear ${study.name}`} onClick={() => onRename(study)}>Renomear</Button>
                 <Button variant="secondary" aria-label={`Duplicar ${study.name}`} onClick={() => onDuplicate(study)}>Duplicar</Button>
+                {onExport === undefined ? null : <Button variant="secondary" aria-label={`Exportar ${study.name}`} onClick={() => onExport(study)}>Exportar</Button>}
                 <Button variant="secondary" aria-label={`Excluir ${study.name}`} onClick={() => onDelete(study)}>Excluir</Button></>}
           </div>
         </li>)}

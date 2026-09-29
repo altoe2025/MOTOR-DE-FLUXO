@@ -24,6 +24,8 @@ test('two tabs expose CAS conflict while a second account stays isolated', async
   const pageB = await contextA.newPage();
   await pageA.goto('/estudos');
   await pageA.getByRole('button', { name: 'Novo estudo' }).click();
+  await pageA.getByRole('radio', { name: 'Carteira gerada (exemplo)' }).check();
+  await pageA.getByRole('button', { name: 'Criar com carteira gerada' }).click();
   await expect(pageA).toHaveURL(/\/carteira\/[0-9a-f-]+$/);
   const studyUrl = pageA.url();
   const studyId = studyUrl.split('/').at(-1)!;

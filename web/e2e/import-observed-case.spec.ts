@@ -123,11 +123,14 @@ test('Caso observado: finalidade opcional preserva privacidade até prévia e di
   await expect(page.getByRole('heading', { name: 'Versão 1' })).toBeVisible();
   await page.goto('/estudos');
   await page.getByRole('button', { name: 'Novo estudo', exact: true }).click();
+  await page.getByRole('radio', { name: 'Carteira gerada (exemplo)' }).check();
+  await page.getByRole('button', { name: 'Criar com carteira gerada' }).click();
   await expect(page).toHaveURL(/\/carteira\/[0-9a-f-]+$/);
   const studyId = page.url().split('/').at(-1)!;
-  await page.getByRole('radio', { name: 'Caso observado', exact: true }).check();
-  await page.getByLabel('Caso confirmado').selectOption(imported.caseId);
-  await page.getByRole('button', { name: 'Usar caso confirmado' }).click();
+  await page.getByRole('button', { name: 'Trocar origem' }).click();
+  await page.getByRole('radio', { name: 'Dados importados de uma empresa' }).check();
+  await page.getByLabel('Caso importado').selectOption(imported.caseId);
+  await page.getByRole('button', { name: 'Usar este caso' }).click();
   await expect.poll(() => page.evaluate((id) => window.__MOTOR_E2E__!.studySource(id), studyId)).toBe('OBSERVED_CASE');
   await page.goto(imported.profileUrl);
   await page.getByLabel('Estudo para receber a evidência').selectOption(studyId);
@@ -162,13 +165,17 @@ test('Caso observado: ancestralidade XLSX permite autoria com finalidade sem reg
   const imported = await readAndConfirm(page);
   await page.goto('/estudos');
   await page.getByRole('button', { name: 'Novo estudo', exact: true }).click();
+  await page.getByRole('radio', { name: 'Carteira gerada (exemplo)' }).check();
+  await page.getByRole('button', { name: 'Criar com carteira gerada' }).click();
   await expect(page).toHaveURL(/\/carteira\/[0-9a-f-]+$/);
   const studyId = page.url().split('/').at(-1)!;
-  await page.getByRole('radio', { name: 'Caso observado', exact: true }).check();
-  await page.getByLabel('Caso confirmado').selectOption(imported.caseId);
-  await page.getByRole('button', { name: 'Usar caso confirmado' }).click();
+  await page.getByRole('button', { name: 'Trocar origem' }).click();
+  await page.getByRole('radio', { name: 'Dados importados de uma empresa' }).check();
+  await page.getByLabel('Caso importado').selectOption(imported.caseId);
+  await page.getByRole('button', { name: 'Usar este caso' }).click();
   await expect.poll(() => page.evaluate((id) => window.__MOTOR_E2E__!.studySource(id), studyId)).toBe('OBSERVED_CASE');
-  await page.getByRole('button', { name: 'Converter para autoria manual' }).click();
+  await page.getByRole('button', { name: 'Trocar origem' }).click();
+  await page.getByRole('button', { name: 'Editar as ordens à mão' }).click();
   for (const [id, direction] of [['E2E-IN', 'OUT'], ['E2E-OUT', 'IN']] as const) {
     for (const [field, value] of [
       ['ID', `edited-${id}`], ['Cliente', `edited-client-${id}`], ['Dia conhecido', '1'],
@@ -181,6 +188,7 @@ test('Caso observado: ancestralidade XLSX permite autoria com finalidade sem reg
   await expect.poll(() => page.evaluate((id) => window.__MOTOR_E2E__!.studySource(id), studyId)).toBe('AUTHORED');
   await expect.poll(async () => JSON.stringify((await storage(page)).stores.studies)).toContain('FINALIDADE_FICTICIA_EDITADA');
   await page.reload();
+  await page.getByRole('button', { name: 'Trocar origem' }).click();
   await expect(page.getByLabel('ID da operação edited-E2E-IN', { exact: true })).toHaveValue('edited-E2E-IN');
   await page.getByRole('button', { name: 'Executar cenário atual' }).click();
   await expect.poll(() => page.evaluate((id) => window.__MOTOR_E2E__!.studyExecutionStatuses(id), studyId)).toEqual(['RUNNING', 'SUCCEEDED']);

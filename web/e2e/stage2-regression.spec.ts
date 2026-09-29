@@ -28,19 +28,25 @@ test('Stage 2 observed, authored, synthetic, migration, history and unique termi
   });
 
   await page.getByRole('button', { name: 'Novo estudo', exact: true }).click();
+
+  await page.getByRole('radio', { name: 'Carteira gerada (exemplo)' }).check();
+
+  await page.getByRole('button', { name: 'Criar com carteira gerada' }).click();
   await expect(page).toHaveURL(/\/carteira\/[0-9a-f-]+$/);
   const studyId = page.url().split('/').at(-1)!;
   await executeAndWait(page);
   const synthetic = await expectCanonicalPreview(page, studyId);
   expect(synthetic.sourceSnapshot?.source.kind).toBe('SYNTHETIC');
-  await page.getByRole('radio', { name: 'Autoria manual' }).check();
+  await page.getByRole('button', { name: 'Trocar origem' }).click();
+  await page.getByRole('radio', { name: 'Montar à mão (avançado)' }).check();
   await page.getByRole('button', { name: 'Preparar carteira manual' }).click();
   await executeAndWait(page);
   await expect.poll(async () => (await persistedPreviews(page, studyId)).length).toBe(2);
   const authored = await expectCanonicalPreview(page, studyId, 2);
   expect(authored.sourceSnapshot?.source.kind).toBe('AUTHORED');
   await page.reload();
-  await expect(page.getByRole('radio', { name: 'Autoria manual' })).toBeChecked();
+  await page.getByRole('button', { name: 'Trocar origem' }).click();
+  await expect(page.getByRole('radio', { name: 'Montar à mão (avançado)' })).toBeChecked();
   expect(await persistedPreviews(page, studyId)).toEqual([synthetic, authored]);
   await expect.poll(() => page.evaluate((id) => window.__MOTOR_E2E__!.previewAttemptShapes(id), studyId))
     .toEqual([{ reservation: 1, terminal: 1 }, { reservation: 1, terminal: 1 }]);

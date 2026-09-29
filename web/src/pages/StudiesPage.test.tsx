@@ -8,16 +8,23 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createStudy } from '../study/domain';
 import { resolvePortfolioSource } from '../preparation/resolvePortfolioSource';
-import { FIXTURE_NOW, FIXTURE_OWNER, makeScenarioDraft } from '../study/fixtures';
+import type { CompanyRecord, ObservedCase } from '../cases/domain';
+import { FIXTURE_NOW, FIXTURE_OWNER, makeObservedCase, makeObservedSnapshot, makeScenarioDraft } from '../study/fixtures';
 import type { StudyDocument } from '../study/model';
 import { StudiesPage } from './StudiesPage';
+import { buildStudyExport } from '../study/studyTransfer';
 
 const api = { preparePortfolio: vi.fn() };
 const controller = {
-  startNewStudy: vi.fn(), edit: vi.fn(), flush: vi.fn<() => Promise<void>>(),
   listStudies: vi.fn<() => Promise<StudyDocument[]>>(),
   demoInstallationStatus: vi.fn<() => Promise<'INSTALLED' | 'REMOVED' | null>>(),
   restoreDemoStudy: vi.fn<() => Promise<StudyDocument | null>>(),
+  saveDetachedStudy: vi.fn<(study: StudyDocument, expectedRevision: number) => Promise<StudyDocument>>(),
+  listObservedCases: vi.fn<() => Promise<ObservedCase[]>>(),
+  listCompanies: vi.fn<() => Promise<CompanyRecord[]>>(),
+  startNewStudy: vi.fn(),
+  edit: vi.fn<(study: StudyDocument) => void>(),
+  flush: vi.fn(async () => null),
   subscribe: () => () => undefined,
   snapshot: { document: null, status: 'IDLE', error: null as unknown },
 };
@@ -34,6 +41,7 @@ function page() {
   return render(<MemoryRouter><Routes>
     <Route path="/" element={<StudiesPage />} />
     <Route path="/estudos/:id" element={<h1>Demonstração aberta</h1>} />
+    <Route path="/carteira/:id" element={<h1>Carteira aberta</h1>} />
   </Routes></MemoryRouter>);
 }
 
@@ -45,13 +53,13 @@ async function study() {
 describe('StudiesPage demo recovery', () => {
   it('cria e salva o tipo separado de combinação sem alterar a criação de estudos comuns', async () => {
     vi.stubEnv('VITE_MOTOR_BUILD_SHA', 'd'.repeat(40));
-    vi.mocked(resolvePortfolioSource).mockResolvedValue(makeScenarioDraft().sourceSnapshot);
-    controller.flush.mockResolvedValue();
+    vi.mocked(resolvePortfolioSource).mockResolvedValueOnce(makeScenarioDraft().sourceSnapshot);
+    controller.flush.mockResolvedValue(null);
     controller.edit.mockClear();
     page();
     expect(screen.getByRole('button', { name: 'Novo estudo' })).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Nova combinação de carteiras' }));
-    expect(await screen.findByRole('heading', { name: 'Demonstração aberta' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Carteira aberta' })).toBeInTheDocument();
     expect(controller.edit).toHaveBeenCalledWith(expect.objectContaining({
       name: 'Combinação de carteiras', studyType: 'PORTFOLIO_COMBINATIONS',
     }));
@@ -105,5 +113,75 @@ describe('StudiesPage demo recovery', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Carregar estudo demonstrativo' }));
     expect(controller.restoreDemoStudy).toHaveBeenCalledOnce();
     expect(await screen.findByRole('heading', { name: 'Demonstração aberta' })).toBeInTheDocument();
+  });
+});
+
+describe('StudiesPage cópia de segurança', () => {
+  beforeEach(() => {
+    controller.listStudies.mockResolvedValue([]);
+    controller.demoInstallationStatus.mockResolvedValue('INSTALLED');
+    controller.snapshot.error = null;
+    controller.snapshot.status = 'IDLE';
+    controller.saveDetachedStudy.mockReset();
+    controller.saveDetachedStudy.mockImplementation(async (value) => value);
+  });
+
+  it('avisa que o estudo fica salvo só neste navegador', async () => {
+    page();
+    expect(await screen.findByText('Salvo neste navegador.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Importar estudo' })).toBeInTheDocument();
+  });
+
+  it('importa um arquivo exportado e grava o estudo como revisão 1', async () => {
+    const exported = buildStudyExport({ ...(await study()), revision: 5 }, { now: FIXTURE_NOW, buildSha: null });
+    page();
+    await screen.findByText('Nenhum estudo salvo nesta conta.');
+    const file = new File([JSON.stringify(exported)], 'estudo.json', { type: 'application/json' });
+    await userEvent.upload(screen.getByLabelText('Arquivo do estudo para importar'), file);
+    expect(await screen.findByText(/Estudo “Demonstração” importado/)).toBeInTheDocument();
+    expect(controller.saveDetachedStudy).toHaveBeenCalledWith(expect.objectContaining({ id: 'demo', revision: 1 }), 0);
+  });
+
+  it('mostra erro claro para arquivo que não é estudo', async () => {
+    page();
+    await screen.findByText('Nenhum estudo salvo nesta conta.');
+    await userEvent.upload(screen.getByLabelText('Arquivo do estudo para importar'), new File(['{"x":1}'], 'x.json', { type: 'application/json' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('não é um estudo exportado');
+    expect(controller.saveDetachedStudy).not.toHaveBeenCalled();
+  });
+});
+
+describe('StudiesPage novo estudo', () => {
+  beforeEach(() => {
+    controller.listStudies.mockResolvedValue([]);
+    controller.demoInstallationStatus.mockResolvedValue('INSTALLED');
+    controller.snapshot.error = null;
+    controller.snapshot.status = 'IDLE';
+    controller.edit.mockReset();
+    controller.listCompanies.mockResolvedValue([{ id: 'company-1', displayName: 'AstroPay' } as CompanyRecord]);
+  });
+
+  it('pergunta a origem antes de criar e cria com o caso importado, sem gerar exemplo', async () => {
+    vi.mocked(resolvePortfolioSource).mockResolvedValueOnce(makeObservedSnapshot(makeObservedCase()));
+    controller.listObservedCases.mockResolvedValue([makeObservedCase()]);
+    page();
+    await userEvent.click(await screen.findByRole('button', { name: 'Novo estudo' }));
+    expect(await screen.findByRole('heading', { name: 'Novo estudo: de onde vêm os dados?' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'Dados importados de uma empresa' })).toBeChecked();
+    expect(controller.edit).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole('button', { name: 'Criar estudo' }));
+    expect(await screen.findByRole('heading', { name: 'Carteira aberta' })).toBeInTheDocument();
+    const created = controller.edit.mock.calls[0]![0];
+    expect(created.scenarios[0]!.sourceSnapshot.source).toMatchObject({ kind: 'OBSERVED_CASE', caseId: 'case-1' });
+    expect(created.name).toBe('AstroPay · set/2026');
+  });
+
+  it('sem casos importados, oferece importar e deixa a carteira gerada como escolha', async () => {
+    controller.listObservedCases.mockResolvedValue([]);
+    page();
+    await userEvent.click(await screen.findByRole('button', { name: 'Novo estudo' }));
+    expect(await screen.findByRole('radio', { name: 'Carteira gerada (exemplo)' })).toBeChecked();
+    await userEvent.click(screen.getByRole('radio', { name: 'Dados importados de uma empresa' }));
+    expect(screen.getByRole('link', { name: 'Importar planilha' })).toHaveAttribute('href', '/importar');
   });
 });

@@ -9,8 +9,11 @@ test('synthetic and manual portfolios use the preparation service and persist af
 
   await page.goto('/estudos');
   await page.getByRole('button', { name: 'Novo estudo' }).click();
+  await page.getByRole('radio', { name: 'Carteira gerada (exemplo)' }).check();
+  await page.getByRole('button', { name: 'Criar com carteira gerada' }).click();
   await expect(page).toHaveURL(/\/carteira\/[0-9a-f-]+$/);
 
+  await page.getByRole('button', { name: 'Trocar origem' }).click();
   await page.getByLabel('Escolha do exemplo sintético').selectOption('exportadores');
   await page.getByRole('button', { name: 'Preparar exemplo' }).click();
   const studyId = page.url().split('/').at(-1)!;
@@ -20,11 +23,12 @@ test('synthetic and manual portfolios use the preparation service and persist af
   const synthetic = await expectCanonicalPreview(page, studyId);
   expect(synthetic.sourceSnapshot?.source).toMatchObject({ kind: 'SYNTHETIC', recipe: { exampleId: 'exportadores' } });
   await page.reload();
-  await expect(page.getByRole('radio', { name: 'Exemplo sintético' })).toBeChecked();
+  await page.getByRole('button', { name: 'Trocar origem' }).click();
+  await expect(page.getByRole('radio', { name: 'Carteira gerada (exemplo)' })).toBeChecked();
   await expect(page.getByLabel('Escolha do exemplo sintético')).toHaveValue('exportadores');
   expect(await persistedPreviews(page, studyId)).toEqual([synthetic]);
 
-  await page.getByRole('radio', { name: 'Autoria manual' }).check();
+  await page.getByRole('radio', { name: 'Montar à mão (avançado)' }).check();
   await page.getByLabel('Nome do grupo').fill('Nome local que não cruza a rede');
   await page.getByRole('button', { name: 'Preparar carteira manual' }).click();
   await expect.poll(() => page.evaluate((id) => window.__MOTOR_E2E__!.studySource(id), studyId))
@@ -34,7 +38,8 @@ test('synthetic and manual portfolios use the preparation service and persist af
   const authored = await expectCanonicalPreview(page, studyId, 2);
   expect(authored.sourceSnapshot?.source.kind).toBe('AUTHORED');
   await page.reload();
-  await expect(page.getByRole('radio', { name: 'Autoria manual' })).toBeChecked();
+  await page.getByRole('button', { name: 'Trocar origem' }).click();
+  await expect(page.getByRole('radio', { name: 'Montar à mão (avançado)' })).toBeChecked();
   expect(await persistedPreviews(page, studyId)).toEqual([synthetic, authored]);
   await expect.poll(async () => (await persistedPreviews(page, studyId)).length).toBe(2);
 
