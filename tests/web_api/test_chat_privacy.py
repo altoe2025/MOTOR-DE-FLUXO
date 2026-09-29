@@ -39,8 +39,8 @@ class CanaryVerifier:
 def private_source():
     source = payload(True)
     source["message"] = QUESTION
-    source["communication"]["study"]["name"] = STUDY
-    sign(source["communication"])
+    source["context"]["document"]["study"]["name"] = STUDY
+    sign(source["context"]["document"])
     return source
 
 
@@ -104,7 +104,7 @@ def test_provider_wire_omits_identity_raw_workbook_and_unrequested_financial_dat
 
 def test_metric_tool_publishes_only_requested_value_and_keeps_runtime_logs_private(caplog):
     source = private_source()
-    doc = source["communication"]
+    doc = source["context"]["document"]
     unrequested_value = "98765432109876.123456"
     doc["executiveMetrics"].append({
         **doc["executiveMetrics"][0], "code": "unrequested", "value": unrequested_value,

@@ -344,6 +344,78 @@ export interface components {
             state: "AVAILABLE";
             value: components["schemas"]["DistributionSummary"];
         };
+        /** BoardChatContextV1 */
+        BoardChatContextV1: {
+            document: components["schemas"]["BoardChatDocumentV1"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "BOARD";
+        };
+        /** BoardChatDocumentV1 */
+        BoardChatDocumentV1: {
+            /**
+             * Apiversion
+             * @constant
+             */
+            apiVersion: "1.0.0";
+            /** Contextfingerprint */
+            contextFingerprint: string;
+            /** Evidenceindex */
+            evidenceIndex: {
+                [key: string]: components["schemas"]["BoardEvidenceV1"];
+            };
+            /** Generatedat */
+            generatedAt: string;
+            /** Rows */
+            rows: components["schemas"]["BoardChatRowV1"][];
+        };
+        /** BoardChatRowV1 */
+        BoardChatRowV1: {
+            /** Baselinetotalbrl */
+            baselineTotalBrl: string;
+            /** Executionid */
+            executionId: string;
+            /** Inbrl */
+            inBrl: string;
+            /** Netability */
+            netability: string;
+            /** Nettedtotalbrl */
+            nettedTotalBrl: string;
+            /** Ordercount */
+            orderCount: number;
+            /** Outbrl */
+            outBrl: string;
+            /** Rowkey */
+            rowKey: string;
+            /** Savingsbrl */
+            savingsBrl: string;
+            /** Scenarioid */
+            scenarioId: string;
+            /** Scenarioname */
+            scenarioName: string;
+            /** Sourcelabel */
+            sourceLabel: string;
+            /** Studyid */
+            studyId: string;
+            /** Studyname */
+            studyName: string;
+            /** Windowdays */
+            windowDays: number;
+        };
+        /** BoardEvidenceV1 */
+        BoardEvidenceV1: {
+            /**
+             * Field
+             * @enum {string}
+             */
+            field: "studyId" | "scenarioId" | "executionId" | "studyName" | "scenarioName" | "sourceLabel" | "windowDays" | "orderCount" | "inBrl" | "outBrl" | "netability" | "baselineTotalBrl" | "nettedTotalBrl" | "savingsBrl";
+            /** Rowkey */
+            rowKey: string;
+            /** Value */
+            value: string;
+        };
         /** CatalogoImportacao */
         CatalogoImportacao: {
             /** Catalog Version */
@@ -415,7 +487,8 @@ export interface components {
              * @constant
              */
             apiVersion: "1.0.0";
-            communication: components["schemas"]["CommunicationDocumentV1"] | null;
+            /** Context */
+            context: (components["schemas"]["StudyChatContextV1"] | components["schemas"]["BoardChatContextV1"]) | null;
             /** Conversationid */
             conversationId: string;
             /**
@@ -1954,6 +2027,8 @@ export interface components {
             scenarioId: string | null;
             /** Studyid */
             studyId: string | null;
+            /** Uicontrols */
+            uiControls?: components["schemas"]["UiControlState"][];
         };
         /** SessionResponse */
         SessionResponse: {
@@ -1994,6 +2069,15 @@ export interface components {
             /** Imbalance Brl */
             imbalance_brl: components["schemas"]["AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"] | components["schemas"]["UnavailableEvidenceMetric"];
         };
+        /** StudyChatContextV1 */
+        StudyChatContextV1: {
+            document: components["schemas"]["CommunicationDocumentV1"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "STUDY";
+        };
         /** TemporalCompatibilityAxis */
         TemporalCompatibilityAxis: {
             /** Deadline Closures */
@@ -2008,6 +2092,15 @@ export interface components {
             weighted_wait_days: components["schemas"]["AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"] | components["schemas"]["UnavailableEvidenceMetric"];
             /** Window Closures */
             window_closures: components["schemas"]["AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"] | components["schemas"]["UnavailableEvidenceMetric"];
+        };
+        /** UiControlState */
+        UiControlState: {
+            /** Disabledcount */
+            disabledCount: number;
+            /** Enabledcount */
+            enabledCount: number;
+            /** Helpid */
+            helpId: string;
         };
         /** UnavailableEvidenceMetric */
         UnavailableEvidenceMetric: {

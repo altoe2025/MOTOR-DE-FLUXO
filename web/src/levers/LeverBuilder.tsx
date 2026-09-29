@@ -131,7 +131,7 @@ export function LeverBuilder({ base, progress, onCreate, onCreateCombinations }:
     {error === null ? null : <p role="alert" className="field-error">{error}</p>}
     <div className="source-actions">
       <span className="field-hint">Variação: {describeLevers(levers)}</span>
-      <Button disabled={busy} onClick={() => void create()}>{busy ? 'Criando…' : 'Criar variação'}</Button>
+      <Button data-chat-help-id="control.alavancas.criar" disabled={busy} onClick={() => void create()}>{busy ? 'Criando…' : 'Criar variação'}</Button>
     </div>
   </section>;
 }

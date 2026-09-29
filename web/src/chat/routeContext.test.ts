@@ -9,13 +9,15 @@ describe('chat route context', () => {
     ['/empresas/acme/importar', 'import', null],
     ['/importar', 'import', null],
     ['/estudos', 'studies', null],
+    ['/quadro', 'board', null],
     ['/carteira/study-1', 'portfolio', 'study-1'],
     ['/estudos/study-1/diagnostico?scenarioId=sc-1', 'diagnostic', 'study-1'],
     ['/comparar?studyId=study-1', 'comparison', 'study-1'],
     ['/estudos/study-1/replay?executionId=run-1&day=3', 'replay', 'study-1'],
     ['/estudos/study-1/apresentacao', 'presentation', 'study-1'],
   ])('maps %s to typed %s context', (url, routeId, studyId) => {
-    expect(routeChatContext(url)).toMatchObject({ routeId, studyId, helpId: null });
+    expect(routeChatContext(url)).toMatchObject({ routeId, studyId,
+      helpId: routeId === 'board' ? 'page.quadro' : null });
   });
 
   it('preserves selected scenario, execution and replay day without accepting malformed day', () => {
@@ -30,6 +32,10 @@ describe('chat route context', () => {
     expect(routeChatContext('/comparar?studyId=s&baseExecutionId=base-1&hypothesisExecutionId=hyp-1'))
       .toMatchObject({ comparisonExecutionId: 'base-1', diagnosticExecutionId: 'hyp-1' });
     expect(routeChatContext('/comparar?studyId=s&baseExecutionId=%20&hypothesisExecutionId=hyp-1')?.comparisonExecutionId).toBeNull();
+  });
+
+  it('does not mislabel an unknown page as Studies', () => {
+    expect(routeChatContext('/rota-futura')).toMatchObject({ routeId: 'general', studyId: null, helpId: null });
   });
 
   it.each(['/login', '/auth/callback', '/auth/definir-senha', '/estudos/s/imprimir', '/estudos/s/print'])

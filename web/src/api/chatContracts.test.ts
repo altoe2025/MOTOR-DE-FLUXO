@@ -9,7 +9,7 @@ const request: components['schemas']['ChatRequestV1'] = {
     routeId: 'studies', helpId: null, studyId: null, scenarioId: null,
     diagnosticExecutionId: null, replayDay: null,
   },
-  communication: null, history: [],
+  context: null, history: [],
 };
 
 describe('generated chat contracts', () => {

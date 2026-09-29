@@ -311,6 +311,236 @@
         "title": "AvailableEvidenceMetric[DistributionSummary]",
         "type": "object"
       },
+      "BoardChatContextV1": {
+        "additionalProperties": false,
+        "properties": {
+          "document": {
+            "$ref": "#/components/schemas/BoardChatDocumentV1"
+          },
+          "kind": {
+            "const": "BOARD",
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "document"
+        ],
+        "title": "BoardChatContextV1",
+        "type": "object"
+      },
+      "BoardChatDocumentV1": {
+        "additionalProperties": false,
+        "properties": {
+          "apiVersion": {
+            "const": "1.0.0",
+            "title": "Apiversion",
+            "type": "string"
+          },
+          "contextFingerprint": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Contextfingerprint",
+            "type": "string"
+          },
+          "evidenceIndex": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/BoardEvidenceV1"
+            },
+            "maxProperties": 1400,
+            "propertyNames": {
+              "maxLength": 128,
+              "minLength": 1
+            },
+            "title": "Evidenceindex",
+            "type": "object"
+          },
+          "generatedAt": {
+            "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$",
+            "title": "Generatedat",
+            "type": "string"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/BoardChatRowV1"
+            },
+            "maxItems": 100,
+            "title": "Rows",
+            "type": "array"
+          }
+        },
+        "required": [
+          "apiVersion",
+          "generatedAt",
+          "rows",
+          "evidenceIndex",
+          "contextFingerprint"
+        ],
+        "title": "BoardChatDocumentV1",
+        "type": "object"
+      },
+      "BoardChatRowV1": {
+        "additionalProperties": false,
+        "properties": {
+          "baselineTotalBrl": {
+            "maxLength": 80,
+            "minLength": 1,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Baselinetotalbrl",
+            "type": "string"
+          },
+          "executionId": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Executionid",
+            "type": "string"
+          },
+          "inBrl": {
+            "maxLength": 80,
+            "minLength": 1,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Inbrl",
+            "type": "string"
+          },
+          "netability": {
+            "maxLength": 80,
+            "minLength": 1,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Netability",
+            "type": "string"
+          },
+          "nettedTotalBrl": {
+            "maxLength": 80,
+            "minLength": 1,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Nettedtotalbrl",
+            "type": "string"
+          },
+          "orderCount": {
+            "minimum": 0.0,
+            "title": "Ordercount",
+            "type": "integer"
+          },
+          "outBrl": {
+            "maxLength": 80,
+            "minLength": 1,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Outbrl",
+            "type": "string"
+          },
+          "rowKey": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Rowkey",
+            "type": "string"
+          },
+          "savingsBrl": {
+            "maxLength": 80,
+            "minLength": 1,
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "title": "Savingsbrl",
+            "type": "string"
+          },
+          "scenarioId": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Scenarioid",
+            "type": "string"
+          },
+          "scenarioName": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Scenarioname",
+            "type": "string"
+          },
+          "sourceLabel": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Sourcelabel",
+            "type": "string"
+          },
+          "studyId": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Studyid",
+            "type": "string"
+          },
+          "studyName": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Studyname",
+            "type": "string"
+          },
+          "windowDays": {
+            "minimum": 1.0,
+            "title": "Windowdays",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "rowKey",
+          "studyId",
+          "scenarioId",
+          "executionId",
+          "studyName",
+          "scenarioName",
+          "sourceLabel",
+          "windowDays",
+          "orderCount",
+          "inBrl",
+          "outBrl",
+          "netability",
+          "baselineTotalBrl",
+          "nettedTotalBrl",
+          "savingsBrl"
+        ],
+        "title": "BoardChatRowV1",
+        "type": "object"
+      },
+      "BoardEvidenceV1": {
+        "additionalProperties": false,
+        "properties": {
+          "field": {
+            "enum": [
+              "studyId",
+              "scenarioId",
+              "executionId",
+              "studyName",
+              "scenarioName",
+              "sourceLabel",
+              "windowDays",
+              "orderCount",
+              "inBrl",
+              "outBrl",
+              "netability",
+              "baselineTotalBrl",
+              "nettedTotalBrl",
+              "savingsBrl"
+            ],
+            "title": "Field",
+            "type": "string"
+          },
+          "rowKey": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Rowkey",
+            "type": "string"
+          },
+          "value": {
+            "maxLength": 20000,
+            "minLength": 1,
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "rowKey",
+          "field",
+          "value"
+        ],
+        "title": "BoardEvidenceV1",
+        "type": "object"
+      },
       "CatalogoImportacao": {
         "additionalProperties": false,
         "properties": {
@@ -479,15 +709,30 @@
             "title": "Apiversion",
             "type": "string"
           },
-          "communication": {
+          "context": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/CommunicationDocumentV1"
+                "discriminator": {
+                  "mapping": {
+                    "BOARD": "#/components/schemas/BoardChatContextV1",
+                    "STUDY": "#/components/schemas/StudyChatContextV1"
+                  },
+                  "propertyName": "kind"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/StudyChatContextV1"
+                  },
+                  {
+                    "$ref": "#/components/schemas/BoardChatContextV1"
+                  }
+                ]
               },
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Context"
           },
           "conversationId": {
             "maxLength": 128,
@@ -543,7 +788,7 @@
           "messageId",
           "message",
           "routeContext",
-          "communication",
+          "context",
           "history"
         ],
         "title": "ChatRequestV1",
@@ -5154,6 +5399,14 @@
               }
             ],
             "title": "Studyid"
+          },
+          "uiControls": {
+            "items": {
+              "$ref": "#/components/schemas/UiControlState"
+            },
+            "maxItems": 200,
+            "title": "Uicontrols",
+            "type": "array"
           }
         },
         "required": [
@@ -5307,6 +5560,25 @@
         "title": "StructuralPotentialAxis",
         "type": "object"
       },
+      "StudyChatContextV1": {
+        "additionalProperties": false,
+        "properties": {
+          "document": {
+            "$ref": "#/components/schemas/CommunicationDocumentV1"
+          },
+          "kind": {
+            "const": "STUDY",
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "document"
+        ],
+        "title": "StudyChatContextV1",
+        "type": "object"
+      },
       "TemporalCompatibilityAxis": {
         "additionalProperties": false,
         "properties": {
@@ -5440,6 +5712,37 @@
           "horizon_closures"
         ],
         "title": "TemporalCompatibilityAxis",
+        "type": "object"
+      },
+      "UiControlState": {
+        "additionalProperties": false,
+        "properties": {
+          "disabledCount": {
+            "maximum": 1000.0,
+            "minimum": 0.0,
+            "title": "Disabledcount",
+            "type": "integer"
+          },
+          "enabledCount": {
+            "maximum": 1000.0,
+            "minimum": 0.0,
+            "title": "Enabledcount",
+            "type": "integer"
+          },
+          "helpId": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Helpid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "helpId",
+          "enabledCount",
+          "disabledCount"
+        ],
+        "title": "UiControlState",
         "type": "object"
       },
       "UnavailableEvidenceMetric": {

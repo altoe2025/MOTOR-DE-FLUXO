@@ -5,13 +5,20 @@
       "id": "page.importacao",
       "routePattern": "/importar",
       "elementKind": "PAGE",
-      "label": "Importação",
+      "label": "Importar operações",
       "purpose": "Revisar uma planilha local antes de confirmar um Caso. A coluna finalidade_codigo é opcional.",
       "changes": "Organiza a confirmação explícita dos dados. A execução usa as premissas persistidas: regra específica quando existe combinação exata de finalidade e direção; nos demais casos, IOF padrão por direção. Catálogo vazio ou indisponível não bloqueia esse cenário.",
       "doesNotChange": "A ausência de finalidade não infere classificação regulatória. Não altera a planilha original nem confirma um Caso sem ação da pessoa usuária; custos da simulação não são cotação.",
-      "disabledWhen": ["Não há arquivo selecionado ou a sessão não está autenticada."],
-      "recovery": ["Selecione novamente o arquivo e corrija os bloqueios informados na revisão."],
-      "relatedConceptIds": ["concept.caso", "concept.empresa"]
+      "disabledWhen": [
+        "Não há arquivo selecionado ou a sessão não está autenticada."
+      ],
+      "recovery": [
+        "Selecione novamente o arquivo e corrija os bloqueios informados na revisão."
+      ],
+      "relatedConceptIds": [
+        "concept.caso",
+        "concept.empresa"
+      ]
     },
     {
       "id": "concept.empresa",
@@ -21,9 +28,16 @@
       "purpose": "Identificar a organização que reúne Casos e Perfis no produto.",
       "changes": "Serve de contexto para criar e consultar registros relacionados.",
       "doesNotChange": "Não substitui o conteúdo histórico de Casos ou Perfis já publicados.",
-      "disabledWhen": ["Não existe Empresa selecionada na sessão."],
-      "recovery": ["Crie ou selecione uma Empresa antes de continuar."],
-      "relatedConceptIds": ["concept.caso", "concept.perfil"]
+      "disabledWhen": [
+        "Não existe Empresa selecionada na sessão."
+      ],
+      "recovery": [
+        "Crie ou selecione uma Empresa antes de continuar."
+      ],
+      "relatedConceptIds": [
+        "concept.caso",
+        "concept.perfil"
+      ]
     },
     {
       "id": "concept.caso",
@@ -33,9 +47,16 @@
       "purpose": "Preservar a versão observada ou preparada que fundamenta um Estudo.",
       "changes": "Pode ser selecionado como origem para etapas posteriores do produto.",
       "doesNotChange": "Não executa diagnóstico nem cria Perfil automaticamente.",
-      "disabledWhen": ["A importação ainda possui bloqueios de validação."],
-      "recovery": ["Volte à revisão, corrija os bloqueios e confirme a importação."],
-      "relatedConceptIds": ["page.importacao", "concept.perfil"]
+      "disabledWhen": [
+        "A importação ainda possui bloqueios de validação."
+      ],
+      "recovery": [
+        "Volte à revisão, corrija os bloqueios e confirme a importação."
+      ],
+      "relatedConceptIds": [
+        "page.importacao",
+        "concept.perfil"
+      ]
     },
     {
       "id": "concept.perfil",
@@ -45,9 +66,17 @@
       "purpose": "Registrar parâmetros operacionais reutilizáveis em uma carteira de Estudo.",
       "changes": "Uma nova versão do Perfil pode ser escolhida ao preparar um Estudo.",
       "doesNotChange": "Não modifica versões anteriores nem dados de um Caso confirmado.",
-      "disabledWhen": ["A Empresa de contexto não está selecionada."],
-      "recovery": ["Selecione uma Empresa e preencha os campos obrigatórios do Perfil."],
-      "relatedConceptIds": ["concept.empresa", "concept.participante", "concept.arquetipo"]
+      "disabledWhen": [
+        "A Empresa de contexto não está selecionada."
+      ],
+      "recovery": [
+        "Selecione uma Empresa e preencha os campos obrigatórios do Perfil."
+      ],
+      "relatedConceptIds": [
+        "concept.empresa",
+        "concept.participante",
+        "concept.arquetipo"
+      ]
     },
     {
       "id": "concept.participante",
@@ -57,9 +86,16 @@
       "purpose": "Representar uma presença individual na composição de uma carteira.",
       "changes": "Pode ser incluído ou removido da hipótese em edição.",
       "doesNotChange": "Não altera o Perfil operacional que deu origem ao participante.",
-      "disabledWhen": ["Não há Estudo aberto para edição."],
-      "recovery": ["Abra um Estudo e use a ação de alterar carteira."],
-      "relatedConceptIds": ["concept.perfil", "concept.composicao"]
+      "disabledWhen": [
+        "Não há Estudo aberto para edição."
+      ],
+      "recovery": [
+        "Abra um Estudo e use a ação de alterar carteira."
+      ],
+      "relatedConceptIds": [
+        "concept.perfil",
+        "concept.composicao"
+      ]
     },
     {
       "id": "concept.arquetipo",
@@ -69,9 +105,16 @@
       "purpose": "Descrever a receita de geração associada a um participante sintético.",
       "changes": "Define características usadas ao preparar entradas da simulação.",
       "doesNotChange": "Não é uma medição observada nem uma previsão comercial.",
-      "disabledWhen": ["O participante não possui um arquétipo disponível."],
-      "recovery": ["Escolha um arquétipo compatível ao criar ou editar o participante."],
-      "relatedConceptIds": ["concept.participante", "concept.mix-demonstrativo"]
+      "disabledWhen": [
+        "O participante não possui um arquétipo disponível."
+      ],
+      "recovery": [
+        "Escolha um arquétipo compatível ao criar ou editar o participante."
+      ],
+      "relatedConceptIds": [
+        "concept.participante",
+        "concept.mix-demonstrativo"
+      ]
     },
     {
       "id": "concept.composicao",
@@ -81,9 +124,17 @@
       "purpose": "Mostrar como participantes e arquétipos formam a carteira do Estudo.",
       "changes": "Uma hipótese pode ajustar participantes sem editar os Perfis de origem.",
       "doesNotChange": "Não substitui o cenário base até que uma nova hipótese seja criada explicitamente.",
-      "disabledWhen": ["Não há cenário selecionado no Estudo."],
-      "recovery": ["Selecione ou crie uma hipótese antes de editar a composição."],
-      "relatedConceptIds": ["concept.participante", "concept.arquetipo", "concept.mix-demonstrativo"]
+      "disabledWhen": [
+        "Não há cenário selecionado no Estudo."
+      ],
+      "recovery": [
+        "Selecione ou crie uma hipótese antes de editar a composição."
+      ],
+      "relatedConceptIds": [
+        "concept.participante",
+        "concept.arquetipo",
+        "concept.mix-demonstrativo"
+      ]
     },
     {
       "id": "concept.mix-demonstrativo",
@@ -93,9 +144,16 @@
       "purpose": "Explicar a receita sintética usada para compor o Estudo demonstrativo.",
       "changes": "Define pesos de composição para a demonstração reproduzível.",
       "doesNotChange": "Não calibra valores nem representa uma carteira real.",
-      "disabledWhen": ["O Estudo aberto não é o demonstrativo sintético."],
-      "recovery": ["Abra o Estudo demonstrativo para consultar sua composição publicada."],
-      "relatedConceptIds": ["concept.composicao", "concept.seed"]
+      "disabledWhen": [
+        "O Estudo aberto não é o demonstrativo sintético."
+      ],
+      "recovery": [
+        "Abra o Estudo demonstrativo para consultar sua composição publicada."
+      ],
+      "relatedConceptIds": [
+        "concept.composicao",
+        "concept.seed"
+      ]
     },
     {
       "id": "concept.seed",
@@ -105,9 +163,16 @@
       "purpose": "Identificar o valor explícito que torna uma geração sintética reproduzível.",
       "changes": "A mesma receita e as mesmas seeds reproduzem a mesma entrada.",
       "doesNotChange": "Não transforma uma execução sintética em dado observado.",
-      "disabledWhen": ["A execução não foi gerada a partir de uma receita com seed."],
-      "recovery": ["Consulte a proveniência da execução ou crie uma nova hipótese gerada."],
-      "relatedConceptIds": ["concept.mix-demonstrativo", "concept.repeticao"]
+      "disabledWhen": [
+        "A execução não foi gerada a partir de uma receita com seed."
+      ],
+      "recovery": [
+        "Consulte a proveniência da execução ou crie uma nova hipótese gerada."
+      ],
+      "relatedConceptIds": [
+        "concept.mix-demonstrativo",
+        "concept.repeticao"
+      ]
     },
     {
       "id": "concept.repeticao",
@@ -117,9 +182,17 @@
       "purpose": "Distinguir uma execução individual dentro do conjunto diagnosticado.",
       "changes": "Cada repetição contribui para as estatísticas publicadas do diagnóstico.",
       "doesNotChange": "Não implica que todas as repetições apareçam no Replay.",
-      "disabledWhen": ["O diagnóstico ainda não possui execução concluída."],
-      "recovery": ["Aguarde a conclusão ou execute novamente o diagnóstico."],
-      "relatedConceptIds": ["concept.seed", "concept.repeticao-representativa", "concept.replay"]
+      "disabledWhen": [
+        "O diagnóstico ainda não possui execução concluída."
+      ],
+      "recovery": [
+        "Aguarde a conclusão ou execute novamente o diagnóstico."
+      ],
+      "relatedConceptIds": [
+        "concept.seed",
+        "concept.repeticao-representativa",
+        "concept.replay"
+      ]
     },
     {
       "id": "concept.repeticao-representativa",
@@ -129,9 +202,16 @@
       "purpose": "Explicar qual repetição concreta fundamenta o Replay exibido.",
       "changes": "Conecta o identificador e o critério publicados ao Replay correspondente.",
       "doesNotChange": "Não inventa um critério de seleção ausente no envelope do diagnóstico.",
-      "disabledWhen": ["O diagnóstico não publicou uma repetição selecionada."],
-      "recovery": ["Consulte uma execução que tenha resultado e repetição selecionada."],
-      "relatedConceptIds": ["concept.repeticao", "concept.replay"]
+      "disabledWhen": [
+        "O diagnóstico não publicou uma repetição selecionada."
+      ],
+      "recovery": [
+        "Consulte uma execução que tenha resultado e repetição selecionada."
+      ],
+      "relatedConceptIds": [
+        "concept.repeticao",
+        "concept.replay"
+      ]
     },
     {
       "id": "concept.replay",
@@ -141,33 +221,75 @@
       "purpose": "Percorrer dia a dia uma única repetição selecionada já executada.",
       "changes": "Muda apenas o dia visualizado dentro do resultado publicado.",
       "doesNotChange": "Não recalcula o motor nem seleciona outra repetição.",
-      "disabledWhen": ["Não há Replay disponível para a execução selecionada."],
-      "recovery": ["Abra um diagnóstico concluído com repetição selecionada e gere o Replay."],
-      "relatedConceptIds": ["concept.repeticao", "concept.repeticao-representativa"]
+      "disabledWhen": [
+        "Não há Replay disponível para a execução selecionada."
+      ],
+      "recovery": [
+        "Abra um diagnóstico concluído com repetição selecionada e gere o Replay."
+      ],
+      "relatedConceptIds": [
+        "concept.repeticao",
+        "concept.repeticao-representativa"
+      ]
     },
     {
       "id": "page.diagnostico",
       "routePattern": "/estudos/:studyId/diagnostico",
       "elementKind": "PAGE",
-      "label": "Diagnóstico",
+      "label": "Diagnóstico robusto",
       "purpose": "Exibir resultados, disponibilidade, proveniência e limitações de uma execução.",
       "changes": "Permite escolher o contexto publicado para inspeção e continuidade.",
       "doesNotChange": "Não recalcula métricas no navegador.",
-      "disabledWhen": ["Não existe execução diagnóstica concluída para o cenário."],
-      "recovery": ["Execute ou recarregue o diagnóstico e selecione uma execução concluída."],
-      "relatedConceptIds": ["concept.repeticao", "concept.replay", "page.comparacao"]
+      "disabledWhen": [
+        "Não existe execução diagnóstica concluída para o cenário."
+      ],
+      "recovery": [
+        "Execute ou recarregue o diagnóstico e selecione uma execução concluída."
+      ],
+      "relatedConceptIds": [
+        "concept.repeticao",
+        "concept.replay",
+        "page.comparacao"
+      ]
     },
     {
       "id": "page.comparacao",
       "routePattern": "/comparar",
       "elementKind": "PAGE",
-      "label": "Comparação",
-      "purpose": "Confrontar execuções compatíveis usando os valores já publicados.",
-      "changes": "Expõe diferenças entre os contextos selecionados quando a comparação é possível.",
+      "label": "Comparar cenários",
+      "purpose": "Endereço legado que agora redireciona ao Quadro comparativo (/quadro).",
+      "changes": "Abre o Quadro para selecionar linhas de diagnósticos já publicados; não existe mais o seletor antigo de duas execuções nessa rota.",
       "doesNotChange": "Não aproxima resultados incompatíveis nem cria valores ausentes.",
-      "disabledWhen": ["Não há duas execuções compatíveis selecionadas."],
-      "recovery": ["Selecione execuções compatíveis ou volte ao Diagnóstico para gerar uma nova execução."],
-      "relatedConceptIds": ["page.diagnostico", "page.apresentacao", "page.relatorio"]
+      "disabledWhen": [
+        "Não há duas execuções compatíveis selecionadas."
+      ],
+      "recovery": [
+        "Selecione execuções compatíveis ou volte ao Diagnóstico para gerar uma nova execução."
+      ],
+      "relatedConceptIds": [
+        "page.diagnostico",
+        "page.apresentacao",
+        "page.relatorio"
+      ]
+    },
+    {
+      "id": "page.quadro",
+      "routePattern": "/quadro",
+      "elementKind": "PAGE",
+      "label": "Quadro comparativo",
+      "purpose": "Comparar no chat somente as linhas que a pessoa marcou no quadro.",
+      "changes": "Atualiza o contexto do chat quando a seleção visível do quadro muda.",
+      "doesNotChange": "Não envia estudos fora da seleção, não recalcula resultados e não altera execuções.",
+      "disabledWhen": [
+        "Nenhuma linha está marcada no quadro."
+      ],
+      "recovery": [
+        "Marque um ou mais cenários no quadro antes de perguntar sobre seus números."
+      ],
+      "relatedConceptIds": [
+        "page.comparacao",
+        "page.chat"
+      ]
     },
     {
       "id": "page.apresentacao",
@@ -177,21 +299,34 @@
       "purpose": "Organizar um resumo executivo contínuo a partir do documento de comunicação publicado.",
       "changes": "Muda a forma de leitura do mesmo contexto selecionado.",
       "doesNotChange": "Não altera resultados, cenário ou evidências de origem.",
-      "disabledWhen": ["O documento de comunicação não está disponível para o contexto selecionado."],
-      "recovery": ["Volte ao Diagnóstico e selecione uma execução com dados publicados."],
-      "relatedConceptIds": ["page.diagnostico", "page.comparacao", "page.relatorio"]
+      "disabledWhen": [
+        "O documento de comunicação não está disponível para o contexto selecionado."
+      ],
+      "recovery": [
+        "Volte ao Diagnóstico e selecione uma execução com dados publicados."
+      ],
+      "relatedConceptIds": [
+        "page.diagnostico",
+        "page.comparacao",
+        "page.relatorio"
+      ]
     },
     {
       "id": "page.relatorio",
-      "routePattern": "/estudos/:studyId/relatorio",
+      "routePattern": "/estudos/:studyId/apresentacao",
       "elementKind": "PAGE",
       "label": "Relatório",
-      "purpose": "Apresentar uma página imprimível do mesmo documento de comunicação.",
-      "changes": "Permite preparar a visualização para impressão pelo navegador.",
-      "doesNotChange": "Não cria uma cotação, não recalcula métricas e não envia o arquivo automaticamente.",
-      "disabledWhen": ["O documento de comunicação não está disponível para o contexto selecionado."],
-      "recovery": ["Escolha uma execução publicada antes de abrir o relatório."],
-      "relatedConceptIds": ["page.apresentacao", "page.diagnostico"]
+      "purpose": "Preparar a impressão A4 da apresentação do mesmo documento de comunicação; não existe rota separada /relatorio no router atual.",
+      "changes": "Salvar PDF abre a impressão do navegador sobre a própria apresentação.",
+      "doesNotChange": "Não cria uma cotação, não recalcula métricas nem gera PDF no servidor.",
+      "disabledWhen": [],
+      "recovery": [
+        "Abra uma apresentação válida e escolha Salvar PDF; no diálogo do navegador selecione Salvar como PDF."
+      ],
+      "relatedConceptIds": [
+        "page.apresentacao",
+        "page.diagnostico"
+      ]
     },
     {
       "id": "page.chat",
@@ -200,10 +335,2727 @@
       "label": "Perguntar sobre isto",
       "purpose": "Abrir uma pergunta contextual sobre a página, o controle ou o Estudo selecionado.",
       "changes": "Envia ao chat apenas o catálogo e o contexto tipado necessário para a pergunta.",
-      "doesNotChange": "Não lê o DOM, não altera dados do produto e não responde sobre assuntos externos ao projeto.",
-      "disabledWhen": ["A sessão não está autenticada ou a ajuda contextual não foi carregada."],
-      "recovery": ["Recarregue a sessão; se a ajuda continuar indisponível, use o produto sem o contexto do chat."],
-      "relatedConceptIds": ["page.diagnostico", "page.comparacao", "page.apresentacao", "page.relatorio"]
+      "doesNotChange": "Não envia valores de campos ou texto arbitrário da página; o contexto visual se limita a IDs de controles publicados e estado habilitado/desabilitado. Não altera dados do produto.",
+      "disabledWhen": [
+        "A sessão não está autenticada ou a ajuda contextual não foi carregada."
+      ],
+      "recovery": [
+        "Recarregue a sessão; se a ajuda continuar indisponível, use o produto sem o contexto do chat."
+      ],
+      "relatedConceptIds": [
+        "page.diagnostico",
+        "page.comparacao",
+        "page.quadro",
+        "page.apresentacao",
+        "page.relatorio"
+      ]
+    },
+    {
+      "id": "page.empresas",
+      "routePattern": "/empresas",
+      "elementKind": "PAGE",
+      "label": "Empresas",
+      "purpose": "Consultar empresas da conta, com acesso a casos, perfis e estudos relacionados.",
+      "changes": "Abre o contexto da empresa escolhida e oferece importação.",
+      "doesNotChange": "Não cria Empresa apenas por abrir a lista.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "concept.empresa"
+      ]
+    },
+    {
+      "id": "page.estudos",
+      "routePattern": "/estudos",
+      "elementKind": "PAGE",
+      "label": "Estudos",
+      "purpose": "Criar, abrir e administrar estudos salvos da conta e sua lixeira.",
+      "changes": "Permite criar, renomear, duplicar, excluir e restaurar estudos.",
+      "doesNotChange": "Não executa diagnóstico ao abrir a lista.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "page.carteira",
+      "routePattern": "/carteira/:id",
+      "elementKind": "PAGE",
+      "label": "Editor de estudo",
+      "purpose": "Revisar origem, premissas e cenários do Estudo em passos, selecionando o cenário base das alavancas. Os caminhos antigos de prévia e Criar hipótese não aparecem mais nesse editor.",
+      "changes": "Mantém alterações do Estudo e oferece execução e navegação para diagnóstico.",
+      "doesNotChange": "Abrir o editor não executa cálculos.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "concept.composicao",
+        "page.diagnostico"
+      ]
+    },
+    {
+      "id": "field.importacao.empresa",
+      "routePattern": "/importar",
+      "elementKind": "CONTROL",
+      "label": "Empresa",
+      "purpose": "Escolher a Empresa que receberá o Caso Observado.",
+      "changes": "Seleciona a Empresa antes da leitura.",
+      "doesNotChange": "Não confirma o Caso nem cria Estudo.",
+      "disabledWhen": [
+        "Durante inspeção ou leitura da planilha."
+      ],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.importacao"
+      ]
+    },
+    {
+      "id": "field.importacao.nome-empresa",
+      "routePattern": "/importar",
+      "elementKind": "CONTROL",
+      "label": "Nome da nova empresa",
+      "purpose": "Informar nome de uma Empresa preparada nesta importação.",
+      "changes": "Preenche o nome usado ao preparar a nova Empresa.",
+      "doesNotChange": "Não publica a Empresa ao digitar.",
+      "disabledWhen": [
+        "Durante inspeção ou leitura da planilha."
+      ],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.importacao"
+      ]
+    },
+    {
+      "id": "control.importacao.nova-empresa",
+      "routePattern": "/importar",
+      "elementKind": "CONTROL",
+      "label": "Usar nova empresa neste Caso",
+      "purpose": "Preparar uma Empresa para vincular ao Caso importado.",
+      "changes": "Adiciona uma Empresa provisória à seleção; a confirmação publica Empresa e Caso.",
+      "doesNotChange": "Não salva a Empresa nem o Caso sozinha.",
+      "disabledWhen": [
+        "Durante inspeção ou leitura da planilha."
+      ],
+      "recovery": [
+        "Informe nome não vazio; se já existir, selecione a Empresa na lista."
+      ],
+      "relatedConceptIds": [
+        "page.importacao"
+      ]
+    },
+    {
+      "id": "field.importacao.arquivo",
+      "routePattern": "/importar",
+      "elementKind": "CONTROL",
+      "label": "Planilha canônica XLSX",
+      "purpose": "Escolher o arquivo XLSX canônico a revisar.",
+      "changes": "Seleciona o arquivo; Ler planilha inicia a leitura.",
+      "doesNotChange": "Não confirma automaticamente operações.",
+      "disabledWhen": [
+        "Durante inspeção ou leitura da planilha."
+      ],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.importacao"
+      ]
+    },
+    {
+      "id": "field.importacao.operacoes-explicitas",
+      "routePattern": "/importar",
+      "elementKind": "CONTROL",
+      "label": "Confirmo que as linhas representam operações explícitas colocadas na pool.",
+      "purpose": "Confirmar o significado das linhas antes da leitura.",
+      "changes": "Habilita a condição de confirmação da entrada exigida por Ler planilha.",
+      "doesNotChange": "Não pré-neta OUT e IN nem valida a planilha.",
+      "disabledWhen": [
+        "Durante inspeção ou leitura da planilha."
+      ],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.importacao"
+      ]
+    },
+    {
+      "id": "control.importacao.ler",
+      "routePattern": "/importar",
+      "elementKind": "CONTROL",
+      "label": "Ler planilha",
+      "purpose": "Inspecionar e ler o XLSX para construir uma revisão de operações.",
+      "changes": "Inicia inspeção e leitura no worker e apresenta erros ou a revisão.",
+      "doesNotChange": "Não publica o Caso; finalidade_codigo é opcional.",
+      "disabledWhen": [
+        "Durante inspeção ou leitura.",
+        "Sem arquivo selecionado.",
+        "Sem Empresa selecionada.",
+        "Sem confirmação de operações explícitas."
+      ],
+      "recovery": [
+        "Escolha arquivo e Empresa e marque a confirmação; corrija os erros de leitura publicados."
+      ],
+      "relatedConceptIds": [
+        "page.importacao"
+      ]
+    },
+    {
+      "id": "control.importacao.cancelar-leitura",
+      "routePattern": "/importar",
+      "elementKind": "CONTROL",
+      "label": "Cancelar leitura",
+      "purpose": "Interromper uma leitura em andamento.",
+      "changes": "Cancela o fluxo de leitura atual.",
+      "doesNotChange": "Não publica o Caso Observado.",
+      "disabledWhen": [],
+      "recovery": [
+        "Escolha novamente os dados de entrada para iniciar outra leitura."
+      ],
+      "relatedConceptIds": [
+        "page.importacao"
+      ]
+    },
+    {
+      "id": "field.importacao.filtro",
+      "routePattern": "/importar",
+      "elementKind": "CONTROL",
+      "label": "Filtrar revisão",
+      "purpose": "Exibir Todas as linhas, Com erro ou Em conflito na revisão.",
+      "changes": "Filtra as linhas visíveis; Com erro desconsidera PURPOSE_MISSING.",
+      "doesNotChange": "Não corrige nem exclui operações.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.importacao"
+      ]
+    },
+    {
+      "id": "control.importacao.corrigir",
+      "routePattern": "/importar",
+      "elementKind": "CONTROL",
+      "label": "Corrigir",
+      "purpose": "Escolher uma linha importada para corrigir um campo.",
+      "changes": "Abre o formulário de correção da versão selecionada.",
+      "doesNotChange": "Não aplica correção até Aplicar correção.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.importacao"
+      ]
+    },
+    {
+      "id": "field.importacao.campo",
+      "routePattern": "/importar",
+      "elementKind": "CONTROL",
+      "label": "Campo",
+      "purpose": "Escolher Direção, Data conhecida, Data limite, Valor BRL ou Finalidade.",
+      "changes": "Seleciona o campo da linha a corrigir.",
+      "doesNotChange": "Não permite editar ID de operação por este seletor.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.importacao"
+      ]
+    },
+    {
+      "id": "field.importacao.valor-corrigido",
+      "routePattern": "/importar",
+      "elementKind": "CONTROL",
+      "label": "Valor corrigido",
+      "purpose": "Informar o valor substituto do campo selecionado.",
+      "changes": "Prepara o valor bruto que será normalizado na revisão.",
+      "doesNotChange": "Não publica correção apenas por digitar.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.importacao"
+      ]
+    },
+    {
+      "id": "control.importacao.aplicar-correcao",
+      "routePattern": "/importar",
+      "elementKind": "CONTROL",
+      "label": "Aplicar correção",
+      "purpose": "Registrar uma correção de campo na versão selecionada.",
+      "changes": "Adiciona comando de correção e reavalia a revisão e seu histórico.",
+      "doesNotChange": "Não confirma o Caso nem apaga a fonte original.",
+      "disabledWhen": [],
+      "recovery": [
+        "Selecione a linha e preencha Valor corrigido; siga erros publicados pela revisão."
+      ],
+      "relatedConceptIds": [
+        "page.importacao"
+      ]
+    },
+    {
+      "id": "control.importacao.excluir",
+      "routePattern": "/importar",
+      "elementKind": "CONTROL",
+      "label": "Excluir",
+      "purpose": "Retirar uma operação da projeção elegível da revisão.",
+      "changes": "Registra exclusão da operação, preservando histórico.",
+      "doesNotChange": "Não apaga a Empresa nem um Estudo; a operação pode ser restaurada na revisão.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.importacao"
+      ]
+    },
+    {
+      "id": "control.importacao.restaurar",
+      "routePattern": "/importar",
+      "elementKind": "CONTROL",
+      "label": "Restaurar",
+      "purpose": "Reincluir operação excluída durante a revisão.",
+      "changes": "Registra restauração e reavalia elegibilidade.",
+      "doesNotChange": "Não resolve automaticamente erros ou conflitos da operação.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.importacao"
+      ]
+    },
+    {
+      "id": "field.importacao.versao",
+      "routePattern": "/importar",
+      "elementKind": "CONTROL",
+      "label": "Versão a manter",
+      "purpose": "Resolver versões conflitantes de uma operação usando as origens mostradas.",
+      "changes": "Registra a versão escolhida para a operação em conflito.",
+      "doesNotChange": "Não soma versões duplicadas nem escolhe pelo menor custo.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.importacao"
+      ]
+    },
+    {
+      "id": "field.importacao.alias",
+      "routePattern": "/importar",
+      "elementKind": "CONTROL",
+      "label": "Nome na fonte",
+      "purpose": "Informar o nome da fonte a associar a um cliente canônico.",
+      "changes": "Prepara uma associação explícita de identidade.",
+      "doesNotChange": "Não associa ao digitar.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.importacao"
+      ]
+    },
+    {
+      "id": "field.importacao.cliente",
+      "routePattern": "/importar",
+      "elementKind": "CONTROL",
+      "label": "Cliente canônico",
+      "purpose": "Escolher a identidade cadastrada para associar um nome de cliente.",
+      "changes": "Prepara o destino da associação de alias.",
+      "doesNotChange": "Não infere finalidade ou direção.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.importacao"
+      ]
+    },
+    {
+      "id": "control.importacao.associar",
+      "routePattern": "/importar",
+      "elementKind": "CONTROL",
+      "label": "Associar alias",
+      "purpose": "Registrar uma associação explícita entre nome na fonte e cliente canônico.",
+      "changes": "Reavalia a identidade de cliente usada na revisão.",
+      "doesNotChange": "Não confirma o Caso automaticamente.",
+      "disabledWhen": [],
+      "recovery": [
+        "Preencha Nome na fonte e escolha Cliente canônico."
+      ],
+      "relatedConceptIds": [
+        "page.importacao"
+      ]
+    },
+    {
+      "id": "control.importacao.confirmar",
+      "routePattern": "/importar",
+      "elementKind": "CONTROL",
+      "label": "Confirmar Caso Observado",
+      "purpose": "Publicar o Caso revisado após resolver seus bloqueios.",
+      "changes": "Confirma atomicamente o Caso e a Empresa preparada, quando houver.",
+      "doesNotChange": "Não cria Perfil Operacional ou Estudo; finalidade ausente não é bloqueio.",
+      "disabledWhen": [
+        "O fluxo não está em READY_TO_CONFIRM, incluindo bloqueios ou confirmação em andamento."
+      ],
+      "recovery": [
+        "Revise os bloqueios exibidos, corrija erros e resolva conflitos; aguarde a confirmação em andamento."
+      ],
+      "relatedConceptIds": [
+        "page.importacao"
+      ]
+    },
+    {
+      "id": "control.importacao.cancelar",
+      "routePattern": "/importar",
+      "elementKind": "CONTROL",
+      "label": "Cancelar importação",
+      "purpose": "Encerrar a revisão ainda não confirmada.",
+      "changes": "Cancela o fluxo e limpa a Empresa provisória da seleção.",
+      "doesNotChange": "Não confirma o Caso.",
+      "disabledWhen": [
+        "Durante confirmação do Caso."
+      ],
+      "recovery": [
+        "Aguarde terminar a confirmação em andamento."
+      ],
+      "relatedConceptIds": [
+        "page.importacao"
+      ]
+    },
+    {
+      "id": "control.importacao.abrir-caso",
+      "routePattern": "/importar",
+      "elementKind": "CONTROL",
+      "label": "Abrir Caso",
+      "purpose": "Consultar o Caso recém-confirmado na Empresa.",
+      "changes": "Navega para o histórico de casos e sua âncora.",
+      "doesNotChange": "Não altera operações nem cria Perfil.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.importacao"
+      ]
+    },
+    {
+      "id": "control.importacao.criar-perfil",
+      "routePattern": "/importar",
+      "elementKind": "CONTROL",
+      "label": "Criar Perfil Operacional",
+      "purpose": "Continuar manualmente da importação para um Perfil.",
+      "changes": "Abre Perfis da Empresa com o Caso e sua revisão pré-selecionados.",
+      "doesNotChange": "Não confirma uma versão de Perfil automaticamente.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.importacao"
+      ]
+    },
+    {
+      "id": "control.importacao.abrir-estudos",
+      "routePattern": "/importar",
+      "elementKind": "CONTROL",
+      "label": "Abrir Estudos",
+      "purpose": "Consultar Estudos relacionados à Empresa do Caso confirmado.",
+      "changes": "Navega para Estudos da Empresa.",
+      "doesNotChange": "Não cria nem executa um Estudo.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.importacao"
+      ]
+    },
+    {
+      "id": "control.empresa.excluir",
+      "routePattern": "/empresas",
+      "elementKind": "CONTROL",
+      "label": "Excluir",
+      "purpose": "Excluir a Empresa após confirmação explícita.",
+      "changes": "Apaga Empresa, casos importados e perfis; o diálogo informa que não há desfazer.",
+      "doesNotChange": "Não apaga Estudos já criados que guardam cópias das ordens.",
+      "disabledWhen": [
+        "Enquanto uma exclusão de Empresa está em andamento."
+      ],
+      "recovery": [
+        "Aguarde a exclusão; leia a confirmação antes de continuar."
+      ],
+      "relatedConceptIds": [
+        "concept.empresa"
+      ]
+    },
+    {
+      "id": "field.casos.inicio",
+      "routePattern": "/empresas/:companyId/casos",
+      "elementKind": "CONTROL",
+      "label": "Início",
+      "purpose": "Filtrar casos pelo início do período.",
+      "changes": "Atualiza os filtros da URL e o histórico visível.",
+      "doesNotChange": "Não modifica casos nem calcula diagnósticos.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "concept.caso"
+      ]
+    },
+    {
+      "id": "field.casos.fim",
+      "routePattern": "/empresas/:companyId/casos",
+      "elementKind": "CONTROL",
+      "label": "Fim",
+      "purpose": "Filtrar casos pelo fim do período.",
+      "changes": "Atualiza os filtros da URL e o histórico visível.",
+      "doesNotChange": "Não modifica casos nem calcula diagnósticos.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "concept.caso"
+      ]
+    },
+    {
+      "id": "field.casos.fonte",
+      "routePattern": "/empresas/:companyId/casos",
+      "elementKind": "CONTROL",
+      "label": "Tipo de fonte",
+      "purpose": "Filtrar casos pelo tipo de fonte.",
+      "changes": "Atualiza os filtros da URL e o histórico visível.",
+      "doesNotChange": "Não modifica casos nem calcula diagnósticos.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "concept.caso"
+      ]
+    },
+    {
+      "id": "field.casos.qualidade",
+      "routePattern": "/empresas/:companyId/casos",
+      "elementKind": "CONTROL",
+      "label": "Qualidade",
+      "purpose": "Filtrar casos com avisos, bloqueios ou dados não coletados.",
+      "changes": "Atualiza os filtros da URL e o histórico visível.",
+      "doesNotChange": "Não modifica casos nem calcula diagnósticos.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "concept.caso"
+      ]
+    },
+    {
+      "id": "field.perfis.casos",
+      "routePattern": "/empresas/:companyId/perfis",
+      "elementKind": "CONTROL",
+      "label": "Casos observados",
+      "purpose": "Selecionar os Casos que fundamentam a nova versão do Perfil.",
+      "changes": "Atualiza a prévia quando a seleção é compatível.",
+      "doesNotChange": "Não modifica Casos confirmados nem confirma a versão.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "concept.perfil"
+      ]
+    },
+    {
+      "id": "field.perfis.estudo",
+      "routePattern": "/empresas/:companyId/perfis",
+      "elementKind": "CONTROL",
+      "label": "Estudo para receber a evidência",
+      "purpose": "Escolher o Estudo que receberá uma versão confirmada como evidência.",
+      "changes": "Define o destino da ação Usar como evidência em estudo.",
+      "doesNotChange": "Não anexa nada apenas por selecionar.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "concept.perfil"
+      ]
+    },
+    {
+      "id": "control.perfis.confirmar",
+      "routePattern": "/empresas/:companyId/perfis",
+      "elementKind": "CONTROL",
+      "label": "Confirmar versão",
+      "purpose": "Salvar uma versão imutável do Perfil calculado a partir dos Casos selecionados.",
+      "changes": "Acrescenta a nova versão confirmada.",
+      "doesNotChange": "Não atualiza versões anteriores nem inicia simulação.",
+      "disabledWhen": [
+        "Sem prévia calculada.",
+        "Enquanto uma confirmação está em andamento."
+      ],
+      "recovery": [
+        "Selecione Casos compatíveis, trate os bloqueios apresentados e aguarde a prévia; confirme fontes repetidas apenas se forem operações distintas."
+      ],
+      "relatedConceptIds": [
+        "concept.perfil"
+      ]
+    },
+    {
+      "id": "control.perfis.anexar",
+      "routePattern": "/empresas/:companyId/perfis",
+      "elementKind": "CONTROL",
+      "label": "Usar como evidência em estudo",
+      "purpose": "Anexar um snapshot da versão confirmada ao Estudo selecionado.",
+      "changes": "Carrega o Estudo escolhido e guarda o Perfil como evidência.",
+      "doesNotChange": "Não substitui a carteira por um Perfil nem executa diagnóstico.",
+      "disabledWhen": [
+        "Sem Estudo selecionado.",
+        "Enquanto uma anexação está em andamento."
+      ],
+      "recovery": [
+        "Escolha Estudo para receber a evidência e aguarde a anexação."
+      ],
+      "relatedConceptIds": [
+        "concept.perfil"
+      ]
+    },
+    {
+      "id": "control.estudos.novo",
+      "routePattern": "/estudos",
+      "elementKind": "CONTROL",
+      "label": "Novo estudo",
+      "purpose": "Criar um Estudo com cenário inicial sintético.",
+      "changes": "Prepara a carteira oficial, salva o Estudo e abre o editor.",
+      "doesNotChange": "Não executa diagnóstico nem importa uma Empresa.",
+      "disabledWhen": [],
+      "recovery": [
+        "Se aparecer erro de sessão ou preparação, resolva a mensagem antes de tentar novamente."
+      ],
+      "relatedConceptIds": [
+        "page.estudos"
+      ]
+    },
+    {
+      "id": "control.estudos.demonstrativo",
+      "routePattern": "/estudos",
+      "elementKind": "CONTROL",
+      "label": "Carregar estudo demonstrativo",
+      "purpose": "Instalar ou restaurar o pacote demonstrativo reproduzível.",
+      "changes": "Carrega a demonstração e navega para seu Estudo.",
+      "doesNotChange": "Não calibra a demonstração com dados observados.",
+      "disabledWhen": [
+        "Enquanto a demonstração está sendo carregada."
+      ],
+      "recovery": [
+        "Aguarde a carga; o botão aparece quando a demonstração não está instalada."
+      ],
+      "relatedConceptIds": [
+        "page.estudos"
+      ]
+    },
+    {
+      "id": "control.estudos.renomear",
+      "routePattern": "/estudos",
+      "elementKind": "CONTROL",
+      "label": "Renomear",
+      "purpose": "Alterar o nome de um Estudo por um diálogo.",
+      "changes": "Salva o nome não vazio informado.",
+      "doesNotChange": "Não modifica ordens, premissas ou resultados.",
+      "disabledWhen": [],
+      "recovery": [
+        "Informe um novo nome no diálogo."
+      ],
+      "relatedConceptIds": [
+        "page.estudos"
+      ]
+    },
+    {
+      "id": "control.estudos.duplicar",
+      "routePattern": "/estudos",
+      "elementKind": "CONTROL",
+      "label": "Duplicar",
+      "purpose": "Criar uma cópia independente do Estudo.",
+      "changes": "Salva um novo Estudo usando a operação de duplicação.",
+      "doesNotChange": "Não altera o original.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.estudos"
+      ]
+    },
+    {
+      "id": "control.estudos.excluir",
+      "routePattern": "/estudos",
+      "elementKind": "CONTROL",
+      "label": "Excluir",
+      "purpose": "Mover um Estudo para a lixeira após confirmação.",
+      "changes": "Marca o Estudo como excluído da lista principal.",
+      "doesNotChange": "Não apaga irreversivelmente o Estudo; Restaurar permite recuperá-lo.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.estudos"
+      ]
+    },
+    {
+      "id": "control.estudos.lixeira",
+      "routePattern": "/estudos",
+      "elementKind": "CONTROL",
+      "label": "Lixeira de estudos",
+      "purpose": "Consultar Estudos removidos da lista principal.",
+      "changes": "Alterna a lista para Estudos na lixeira.",
+      "doesNotChange": "Não exclui mais Estudos nem executa cálculos.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.estudos"
+      ]
+    },
+    {
+      "id": "control.estudos.voltar",
+      "routePattern": "/estudos",
+      "elementKind": "CONTROL",
+      "label": "Voltar aos estudos",
+      "purpose": "Retornar da lixeira à lista principal.",
+      "changes": "Exibe Estudos ativos.",
+      "doesNotChange": "Não restaura Estudos excluídos.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.estudos"
+      ]
+    },
+    {
+      "id": "control.estudos.restaurar",
+      "routePattern": "/estudos",
+      "elementKind": "CONTROL",
+      "label": "Restaurar",
+      "purpose": "Retirar um Estudo da lixeira.",
+      "changes": "Restaura o Estudo e atualiza a lista.",
+      "doesNotChange": "Não cria um novo diagnóstico.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.estudos"
+      ]
+    },
+    {
+      "id": "field.carteira.nome",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Nome do estudo",
+      "purpose": "Editar o nome do Estudo aberto.",
+      "changes": "Mantém nome em rascunho até Salvar nome.",
+      "doesNotChange": "Não muda cenário, ordens ou execução.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "control.carteira.salvar-nome",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Salvar nome",
+      "purpose": "Salvar o nome digitado do Estudo.",
+      "changes": "Renomeia o Estudo.",
+      "doesNotChange": "Não recalcula resultados.",
+      "disabledWhen": [
+        "O nome está vazio após remover espaços."
+      ],
+      "recovery": [
+        "Informe um nome para o Estudo."
+      ],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "control.carteira.duplicar",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Duplicar estudo",
+      "purpose": "Criar uma cópia do Estudo no editor.",
+      "changes": "Salva a cópia e navega para o editor dela.",
+      "doesNotChange": "Não altera o Estudo de origem.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "field.carteira.origem",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Origem da carteira",
+      "purpose": "Escolher Exemplo sintético, Autoria manual, Caso observado ou Juntar casos de empresas.",
+      "changes": "Alterna o formulário de origem; trocar descarta autoria manual não aplicada após confirmação.",
+      "doesNotChange": "Não aplica a nova origem só por alternar o formulário.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "field.carteira.exemplo",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Escolha do exemplo sintético",
+      "purpose": "Selecionar uma das receitas oficiais de exemplo.",
+      "changes": "Prepara a escolha usada ao clicar Preparar exemplo.",
+      "doesNotChange": "Não gera ordens ao escolher uma opção.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "control.carteira.preparar-exemplo",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Preparar exemplo",
+      "purpose": "Materializar a receita sintética escolhida pela preparação oficial.",
+      "changes": "Aplica o snapshot sintético ao cenário base.",
+      "doesNotChange": "Não executa diagnóstico; o exemplo continua sintético.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "field.carteira.caso",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Caso confirmado",
+      "purpose": "Escolher uma revisão confirmada de Caso Observado como origem.",
+      "changes": "Exibe resumo e ações do Caso escolhido.",
+      "doesNotChange": "Não modifica o Caso nem aplica a origem automaticamente.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "control.carteira.usar-caso",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Usar caso confirmado",
+      "purpose": "Copiar a revisão escolhida do Caso para o snapshot do cenário.",
+      "changes": "Aplica a origem observada com ordens explícitas.",
+      "doesNotChange": "Não altera o Caso confirmado nem pré-neta as operações.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "control.carteira.converter",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Converter para autoria manual",
+      "purpose": "Criar autoria manual a partir das operações do Caso confirmado.",
+      "changes": "Aplica cópia explícita editável e preserva proveniência.",
+      "doesNotChange": "Não altera as operações do Caso confirmado.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "control.carteira.juntar",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Usar {N} casos juntos",
+      "purpose": "Juntar pelo menos dois Casos escolhidos num calendário comum, um por Empresa.",
+      "changes": "Aplica uma carteira de operações explícitas com dia zero na data inicial mais antiga.",
+      "doesNotChange": "Não modifica Casos de origem; {N} é a quantidade selecionada exibida no botão.",
+      "disabledWhen": [
+        "Menos de dois Casos selecionados."
+      ],
+      "recovery": [
+        "Selecione pelo menos dois Casos, um por Empresa, e trate o erro mostrado se a combinação não for válida."
+      ],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "control.carteira.adicionar-grupo",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Adicionar grupo",
+      "purpose": "Adicionar um grupo à autoria manual paramétrica.",
+      "changes": "Inclui grupo e participante inicial no rascunho manual.",
+      "doesNotChange": "Não aplica a carteira nem executa o motor.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "control.carteira.adicionar-participante",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Adicionar participante",
+      "purpose": "Adicionar um participante ao grupo manual.",
+      "changes": "Acrescenta participante com parâmetros do grupo no rascunho.",
+      "doesNotChange": "Não aplica a origem ao cenário.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "control.carteira.preparar-manual",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Preparar carteira manual",
+      "purpose": "Validar os parâmetros da autoria e preparar ordens pela API oficial.",
+      "changes": "Aplica carteira paramétrica com proveniência de estimativa do usuário.",
+      "doesNotChange": "Não transforma autoria em observação real.",
+      "disabledWhen": [],
+      "recovery": [
+        "Use ponto decimal, valores positivos para frequência/ticket e prazo inteiro não negativo."
+      ],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "control.carteira.salvar-operacoes",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Salvar operações explícitas",
+      "purpose": "Validar e aplicar alterações na cópia manual das operações.",
+      "changes": "Guarda novos valores e proveniência USER_CORRECTED para campos alterados.",
+      "doesNotChange": "Não altera o Caso original nem infere finalidade ausente.",
+      "disabledWhen": [],
+      "recovery": [
+        "Confira valor positivo, datas relativas inteiras e limite não anterior ao dia conhecido."
+      ],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "field.carteira.iof-out",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "IOF OUT",
+      "purpose": "Definir a alíquota padrão OUT, em fração decimal, usada quando não há regra exata de finalidade e direção.",
+      "changes": "Edita premissas ou período no rascunho do cenário base até Salvar premissas e período.",
+      "doesNotChange": "Não recalcula uma execução já publicada nem altera alíquotas regulatórias por si.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "field.carteira.iof-in",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "IOF IN",
+      "purpose": "Definir a alíquota padrão IN, em fração decimal, usada quando não há regra exata de finalidade e direção.",
+      "changes": "Edita premissas ou período no rascunho do cenário base até Salvar premissas e período.",
+      "doesNotChange": "Não recalcula uma execução já publicada nem altera alíquotas regulatórias por si.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "field.carteira.carry",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Carry CNR",
+      "purpose": "Definir a premissa de carry CNR em fração decimal.",
+      "changes": "Edita premissas ou período no rascunho do cenário base até Salvar premissas e período.",
+      "doesNotChange": "Não recalcula uma execução já publicada nem altera alíquotas regulatórias por si.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "field.carteira.fixo",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Custo fixo por remessa",
+      "purpose": "Definir o custo fixo associado às remessas.",
+      "changes": "Edita premissas ou período no rascunho do cenário base até Salvar premissas e período.",
+      "doesNotChange": "Não recalcula uma execução já publicada nem altera alíquotas regulatórias por si.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "field.carteira.oportunidade",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Custo de oportunidade anual",
+      "purpose": "Definir a premissa anual do custo de oportunidade.",
+      "changes": "Edita premissas ou período no rascunho do cenário base até Salvar premissas e período.",
+      "doesNotChange": "Não recalcula uma execução já publicada nem altera alíquotas regulatórias por si.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "field.carteira.spread",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Spread do rail em bps",
+      "purpose": "Definir o spread do rail em pontos-base.",
+      "changes": "Edita premissas ou período no rascunho do cenário base até Salvar premissas e período.",
+      "doesNotChange": "Não recalcula uma execução já publicada nem altera alíquotas regulatórias por si.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "field.carteira.ptax",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "PTAX",
+      "purpose": "Definir a taxa de conversão usada pelo cenário.",
+      "changes": "Edita premissas ou período no rascunho do cenário base até Salvar premissas e período.",
+      "doesNotChange": "Não recalcula uma execução já publicada nem altera alíquotas regulatórias por si.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "field.carteira.janela",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Janela em dias",
+      "purpose": "Definir a janela fixa de fechamento P0 como inteiro positivo.",
+      "changes": "Edita premissas ou período no rascunho do cenário base até Salvar premissas e período.",
+      "doesNotChange": "Não recalcula uma execução já publicada nem altera alíquotas regulatórias por si.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "field.carteira.aquecimento",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Aquecimento em dias",
+      "purpose": "Definir o aquecimento no período natural.",
+      "changes": "Edita premissas ou período no rascunho do cenário base até Salvar premissas e período.",
+      "doesNotChange": "Não recalcula uma execução já publicada nem altera alíquotas regulatórias por si.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "field.carteira.medicao",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Período de medição em dias",
+      "purpose": "Definir os dias da medição do período natural.",
+      "changes": "Edita premissas ou período no rascunho do cenário base até Salvar premissas e período.",
+      "doesNotChange": "Não recalcula uma execução já publicada nem altera alíquotas regulatórias por si.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "field.carteira.horizonte",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Horizonte executável em dias",
+      "purpose": "Definir o horizonte executável em cenários de período legado.",
+      "changes": "Edita premissas ou período no rascunho do cenário base até Salvar premissas e período.",
+      "doesNotChange": "Não recalcula uma execução já publicada nem altera alíquotas regulatórias por si.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "control.carteira.salvar-premissas",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Salvar premissas e período",
+      "purpose": "Aplicar os valores editados às premissas e ao período do cenário base.",
+      "changes": "Atualiza a revisão do cenário e registra proveniência de estimativa do usuário.",
+      "doesNotChange": "Não executa cálculos nem mantém resultado antigo como diagnóstico da nova revisão.",
+      "disabledWhen": [],
+      "recovery": [
+        "Use ponto decimal, valores não negativos e janela inteira positiva; corrija a mensagem de validação exibida."
+      ],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "control.carteira.executar",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Executar cenário atual",
+      "purpose": "Executar uma prévia do cenário base aberto no editor.",
+      "changes": "Salva execução PREVIEW e exibe o resultado concluído.",
+      "doesNotChange": "Não executa todas as hipóteses nem produz diagnóstico robusto.",
+      "disabledWhen": [
+        "Enquanto a execução do cenário está em andamento."
+      ],
+      "recovery": [
+        "Aguarde concluir a execução e trate a mensagem de erro caso apareça."
+      ],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "control.carteira.diagnostico",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Executar diagnóstico",
+      "purpose": "Continuar do cenário escolhido para sua tela de diagnóstico; aparece como Abrir diagnóstico quando já existe diagnóstico atual.",
+      "changes": "Confirma gravação do Estudo antes de navegar com scenarioId e, quando disponível, executionId do diagnóstico atual.",
+      "doesNotChange": "Não dispara o cálculo por esse botão de navegação.",
+      "disabledWhen": [],
+      "recovery": [
+        "Se salvar falhar, resolva o erro exibido e tente a navegação novamente."
+      ],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "control.carteira.comparar",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Comparar resultados",
+      "purpose": "Controle legado removido do editor atual. Para comparar, use o Quadro comparativo na navegação; /comparar redireciona a /quadro.",
+      "changes": "Confirma gravação antes de navegar para /comparar.",
+      "doesNotChange": "Não seleciona nem compara execuções automaticamente.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "control.carteira.apagar",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Apagar",
+      "purpose": "Apagar um cenário de hipótese após confirmação.",
+      "changes": "Remove cenário e seus diagnósticos; o diálogo informa que não há desfazer.",
+      "doesNotChange": "Não está disponível para o cenário base.",
+      "disabledWhen": [],
+      "recovery": [
+        "Escolha uma hipótese e leia a confirmação antes de apagar."
+      ],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "field.alavancas.empresa",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Empresa",
+      "purpose": "Escolher a Empresa/grupo de ordens a alterar nesta variação.",
+      "changes": "Troca o grupo e limpa a seleção de ordens a retirar.",
+      "doesNotChange": "Não modifica outra Empresa ou o cenário original.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "control.alavancas.criar"
+      ]
+    },
+    {
+      "id": "field.alavancas.tirar-empresa",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Tirar a empresa inteira",
+      "purpose": "Remover todas as ordens do grupo escolhido na futura variação.",
+      "changes": "Esconde os demais campos e prepara a remoção do grupo.",
+      "doesNotChange": "Não apaga o cadastro da Empresa nem o cenário original.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "control.alavancas.criar"
+      ]
+    },
+    {
+      "id": "field.alavancas.volume-in",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Volume IN ×",
+      "purpose": "Multiplicar os valores IN da Empresa escolhida.",
+      "changes": "Define multiplicador aplicado às ordens IN da futura variação.",
+      "doesNotChange": "Não aplica alterações até Criar variação; o original permanece igual.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "control.alavancas.criar"
+      ]
+    },
+    {
+      "id": "field.alavancas.volume-out",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Volume OUT ×",
+      "purpose": "Multiplicar os valores OUT da Empresa escolhida.",
+      "changes": "Define multiplicador aplicado às ordens OUT da futura variação.",
+      "doesNotChange": "Não aplica alterações até Criar variação; o original permanece igual.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "control.alavancas.criar"
+      ]
+    },
+    {
+      "id": "field.alavancas.deslocar",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Deslocar datas (dias, ±)",
+      "purpose": "Deslocar datas conhecidas e limites das ordens do grupo em dias.",
+      "changes": "Prepara deslocamento temporal positivo ou negativo.",
+      "doesNotChange": "Não aplica alterações até Criar variação; o original permanece igual.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "control.alavancas.criar"
+      ]
+    },
+    {
+      "id": "field.alavancas.espacamento",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Espaçamento ×",
+      "purpose": "Comprimir ou expandir o espaçamento das datas do grupo.",
+      "changes": "Prepara novas datas; ×0,5 aproxima o começo e ×2 espalha.",
+      "doesNotChange": "Não aplica alterações até Criar variação; o original permanece igual.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "control.alavancas.criar"
+      ]
+    },
+    {
+      "id": "field.alavancas.prazo",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Prazo",
+      "purpose": "Escolher Manter, Fixar em N dias ou Somar ± N dias.",
+      "changes": "Prepara a política de prazo da variação.",
+      "doesNotChange": "Não aplica alterações até Criar variação; o original permanece igual.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "control.alavancas.criar"
+      ]
+    },
+    {
+      "id": "field.alavancas.prazo-fixo",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Prazo (dias)",
+      "purpose": "Informar o prazo fixo relativo ao dia conhecido.",
+      "changes": "Define dias usados no modo Fixar em N dias.",
+      "doesNotChange": "Não aplica alterações até Criar variação; o original permanece igual.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "control.alavancas.criar"
+      ]
+    },
+    {
+      "id": "field.alavancas.prazo-delta",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Somar ao prazo (dias, ±)",
+      "purpose": "Informar o ajuste positivo ou negativo do prazo.",
+      "changes": "Define dias somados ao prazo original.",
+      "doesNotChange": "Não aplica alterações até Criar variação; o original permanece igual.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "control.alavancas.criar"
+      ]
+    },
+    {
+      "id": "control.alavancas.mostrar-ordens",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Escolher ordens para tirar ({N} de {empresa})",
+      "purpose": "Abrir a tabela para selecionar ordens do grupo a retirar.",
+      "changes": "Expande a tabela com a quantidade e o grupo publicados no botão.",
+      "doesNotChange": "Não retira ordens ao abrir a tabela.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "control.alavancas.esconder-ordens",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Esconder ordens",
+      "purpose": "Recolher a tabela de ordens do grupo.",
+      "changes": "Muda apenas a exibição da tabela.",
+      "doesNotChange": "Não limpa as ordens já marcadas para retirada.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "control.alavancas.combinacoes",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Gerar todas as combinações",
+      "purpose": "Criar variações para os subconjuntos de Empresas do cenário.",
+      "changes": "Após confirmação, acrescenta cenários, incluindo Empresas sozinhas, ao Estudo.",
+      "doesNotChange": "Não roda seus diagnósticos nem modifica a base.",
+      "disabledWhen": [
+        "Enquanto uma criação está em andamento.",
+        "Sem subconjuntos geráveis: o controle aparece a partir de 2 Empresas e aceita no máximo 8."
+      ],
+      "recovery": [
+        "Use uma base de ordens explícitas com 2 a 8 Empresas e aguarde criações; depois use Rodar todas no diagnóstico."
+      ],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "control.alavancas.criar",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Criar variação",
+      "purpose": "Aplicar alavancas às ordens explícitas do cenário selecionado em um novo cenário.",
+      "changes": "Acrescenta e salva a variação no mesmo Estudo; ao concluir, reinicia os campos de alavanca.",
+      "doesNotChange": "Não modifica o original nem executa diagnóstico.",
+      "disabledWhen": [
+        "Enquanto uma criação está em andamento."
+      ],
+      "recovery": [
+        "Alavancas só aparecem para base com ordens explícitas e ao menos um grupo; corrija a mensagem de validação e rode o diagnóstico da variação."
+      ],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "control.hipotese.criar",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Criar hipótese",
+      "purpose": "Criar um novo cenário usando a base selecionada e o rascunho de hipótese; a composição por Perfil também exige nome e alguma mudança.",
+      "changes": "Salva a hipótese e navega para seu diagnóstico; mudanças de geração podem regenerar ordens.",
+      "doesNotChange": "Não sobrescreve a base nem muda o Perfil confirmado.",
+      "disabledWhen": [
+        "Enquanto a hipótese está sendo criada.",
+        "Na composição por Perfil: nome vazio ou nenhuma mudança proposta."
+      ],
+      "recovery": [
+        "Preencha os campos e trate a mensagem de validação; Tentar novamente reenvia a criação ou a gravação pendente."
+      ],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "field.hipotese.nome",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Nome da hipótese",
+      "purpose": "Dar nome ao novo cenário da hipótese.",
+      "changes": "Edita somente o rascunho de hipótese; criar aplica a mudança.",
+      "doesNotChange": "Não atualiza base nem Perfil original; os campos de geração aparecem apenas no fluxo por Perfil.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "control.hipotese.criar"
+      ]
+    },
+    {
+      "id": "field.hipotese.volume",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Multiplicador de volume",
+      "purpose": "Alterar volume de geração de uma simulação baseada em Perfil.",
+      "changes": "Edita somente o rascunho de hipótese; criar aplica a mudança.",
+      "doesNotChange": "Não atualiza base nem Perfil original; os campos de geração aparecem apenas no fluxo por Perfil.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "control.hipotese.criar"
+      ]
+    },
+    {
+      "id": "field.hipotese.ticket",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Multiplicador de ticket",
+      "purpose": "Alterar ticket da geração de uma simulação baseada em Perfil.",
+      "changes": "Edita somente o rascunho de hipótese; criar aplica a mudança.",
+      "doesNotChange": "Não atualiza base nem Perfil original; os campos de geração aparecem apenas no fluxo por Perfil.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "control.hipotese.criar"
+      ]
+    },
+    {
+      "id": "field.hipotese.fracao-out",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Deslocamento da fração OUT",
+      "purpose": "Ajustar a fração OUT da geração baseada em Perfil.",
+      "changes": "Edita somente o rascunho de hipótese; criar aplica a mudança.",
+      "doesNotChange": "Não atualiza base nem Perfil original; os campos de geração aparecem apenas no fluxo por Perfil.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "control.hipotese.criar"
+      ]
+    },
+    {
+      "id": "field.hipotese.prazo",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Prazo",
+      "purpose": "Escolher manter, derivar do Perfil ou fixar prazo na hipótese por Perfil.",
+      "changes": "Edita somente o rascunho de hipótese; criar aplica a mudança.",
+      "doesNotChange": "Não atualiza base nem Perfil original; os campos de geração aparecem apenas no fluxo por Perfil.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "control.hipotese.criar"
+      ]
+    },
+    {
+      "id": "field.hipotese.dias-prazo",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Dias de prazo",
+      "purpose": "Informar o prazo usado quando a hipótese por Perfil escolhe Fixo.",
+      "changes": "Edita somente o rascunho de hipótese; criar aplica a mudança.",
+      "doesNotChange": "Não atualiza base nem Perfil original; os campos de geração aparecem apenas no fluxo por Perfil.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "control.hipotese.criar"
+      ]
+    },
+    {
+      "id": "field.diagnostico.repeticoes",
+      "routePattern": "/estudos/:studyId/diagnostico",
+      "elementKind": "CONTROL",
+      "label": "Repetições",
+      "purpose": "Escolher 10, 30 ou 100 repetições para entrada gerável.",
+      "changes": "Define a amostragem da próxima tentativa; entrada fixa usa uma execução e não exibe seletor.",
+      "doesNotChange": "Não escolhe manualmente a repetição representativa nem altera resultados concluídos.",
+      "disabledWhen": [
+        "Enquanto há execução em andamento.",
+        "Quando o controlador indica STORAGE_FAILURE."
+      ],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.diagnostico"
+      ]
+    },
+    {
+      "id": "control.diagnostico.executar",
+      "routePattern": "/estudos/:studyId/diagnostico",
+      "elementKind": "CONTROL",
+      "label": "Executar diagnóstico",
+      "purpose": "Iniciar diagnóstico do cenário selecionado e de sua revisão atual.",
+      "changes": "Submete tentativa e acompanha execução, com múltiplas repetições se a entrada é gerável.",
+      "doesNotChange": "Não usa várias repetições para entrada fixa nem sobrescreve tentativas anteriores.",
+      "disabledWhen": [
+        "Enquanto há execução em andamento.",
+        "Quando o controlador indica STORAGE_FAILURE."
+      ],
+      "recovery": [
+        "Aguarde a execução ou resolva a falha ao salvar antes de iniciar novo cálculo."
+      ],
+      "relatedConceptIds": [
+        "page.diagnostico"
+      ]
+    },
+    {
+      "id": "control.diagnostico.rodar-todas",
+      "routePattern": "/estudos/:studyId/diagnostico",
+      "elementKind": "CONTROL",
+      "label": "Rodar todas",
+      "purpose": "Executar em sequência os cenários sem diagnóstico atual do Estudo.",
+      "changes": "Salva cada tentativa; usa a contagem escolhida para geráveis e 1 para entrada fixa; interrompe a sequência se uma tentativa não concluir.",
+      "doesNotChange": "Não refaz cenários que já têm diagnóstico atual nem remove os que terminaram.",
+      "disabledWhen": [
+        "Enquanto há execução em andamento.",
+        "Todos os cenários já têm diagnóstico atual."
+      ],
+      "recovery": [
+        "Aguarde a execução; crie ou altere uma variação para ter cenários pendentes. O controle aparece quando há pelo menos dois cenários."
+      ],
+      "relatedConceptIds": [
+        "page.diagnostico"
+      ]
+    },
+    {
+      "id": "control.diagnostico.cancelar",
+      "routePattern": "/estudos/:studyId/diagnostico",
+      "elementKind": "CONTROL",
+      "label": "Cancelar diagnóstico",
+      "purpose": "Solicitar cancelamento do job diagnóstico em curso após confirmação.",
+      "changes": "Registra o resultado do pedido na tentativa e no histórico.",
+      "doesNotChange": "Não apaga tentativas anteriores nem garante cancelamento antes de o servidor concluir.",
+      "disabledWhen": [],
+      "recovery": [
+        "Disponível em estados ativos quando não há solicitação/pedido de cancelamento já em andamento."
+      ],
+      "relatedConceptIds": [
+        "page.diagnostico"
+      ]
+    },
+    {
+      "id": "control.diagnostico.repetir",
+      "routePattern": "/estudos/:studyId/diagnostico",
+      "elementKind": "CONTROL",
+      "label": "Tentar novamente",
+      "purpose": "Repetir tentativa diagnóstica com falha ou cancelada.",
+      "changes": "Solicita nova tentativa de diagnóstico e preserva o histórico anterior.",
+      "doesNotChange": "Não restaura automaticamente resultados inexistentes.",
+      "disabledWhen": [],
+      "recovery": [
+        "O botão aparece para falha ou cancelamento com ação disponível; aguarde terminar outra tentativa antes de repetir."
+      ],
+      "relatedConceptIds": [
+        "page.diagnostico"
+      ]
+    },
+    {
+      "id": "control.diagnostico.replay",
+      "routePattern": "/estudos/:studyId/diagnostico",
+      "elementKind": "CONTROL",
+      "label": "Abrir Replay · Fronteira Viva",
+      "purpose": "Abrir o Replay da execução diagnóstica concluída exibida.",
+      "changes": "Navega com executionId para reconstruir a repetição selecionada.",
+      "doesNotChange": "Não representa toda a distribuição nem escolhe outra repetição.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.diagnostico"
+      ]
+    },
+    {
+      "id": "control.diagnostico.apresentar",
+      "routePattern": "/estudos/:studyId/diagnostico",
+      "elementKind": "CONTROL",
+      "label": "Apresentar esta execução",
+      "purpose": "Abrir apresentação da execução e cenário diagnosticados.",
+      "changes": "Navega com seleção explícita de cenário e execução.",
+      "doesNotChange": "Não executa novo diagnóstico.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.diagnostico"
+      ]
+    },
+    {
+      "id": "field.comparacao.base",
+      "routePattern": "/comparar",
+      "elementKind": "CONTROL",
+      "label": "Execução base",
+      "purpose": "Escolher diagnóstico concluído e atual do cenário base.",
+      "changes": "Seleciona a base e limpa a comparação exibida.",
+      "doesNotChange": "Não compara automaticamente nem seleciona execuções antigas.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.comparacao"
+      ]
+    },
+    {
+      "id": "field.comparacao.hipotese",
+      "routePattern": "/comparar",
+      "elementKind": "CONTROL",
+      "label": "Execução da hipótese",
+      "purpose": "Escolher diagnóstico concluído e atual de um cenário de hipótese.",
+      "changes": "Seleciona hipótese e limpa a comparação exibida.",
+      "doesNotChange": "Não executa a hipótese nem garante compatibilidade antes de comparar.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.comparacao"
+      ]
+    },
+    {
+      "id": "control.comparacao.comparar",
+      "routePattern": "/comparar",
+      "elementKind": "CONTROL",
+      "label": "Comparar",
+      "purpose": "Confrontar explicitamente a execução base e a execução de hipótese selecionadas.",
+      "changes": "Calcula a projeção de comparação dos resultados publicados; incompatibilidade aparece como erro.",
+      "doesNotChange": "Não roda o motor nem aproxima execuções incompatíveis.",
+      "disabledWhen": [
+        "Sem execução base escolhida.",
+        "Sem execução da hipótese escolhida.",
+        "Os dois identificadores de execução são iguais."
+      ],
+      "recovery": [
+        "Selecione diagnósticos atuais da base e da hipótese; se a comparação indicar incompatibilidade, use a mensagem publicada para escolher outro par."
+      ],
+      "relatedConceptIds": [
+        "page.comparacao"
+      ]
+    },
+    {
+      "id": "control.comparacao.apresentar",
+      "routePattern": "/comparar",
+      "elementKind": "CONTROL",
+      "label": "Apresentar comparação",
+      "purpose": "Abrir apresentação da comparação válida exibida.",
+      "changes": "Navega com hipótese, execução e identificador de comparação explícitos.",
+      "doesNotChange": "Não refaz a comparação nem altera os resultados.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.comparacao"
+      ]
+    },
+    {
+      "id": "field.quadro.filtro",
+      "routePattern": "/quadro",
+      "elementKind": "CONTROL",
+      "label": "Filtrar",
+      "purpose": "Procurar candidatos por nome do Estudo, cenário ou origem/Empresa.",
+      "changes": "Filtra candidatos a marcar, sem mudar os já escolhidos para o quadro.",
+      "doesNotChange": "Não remove seleções existentes nem filtra o contexto financeiro do chat por texto.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.quadro"
+      ]
+    },
+    {
+      "id": "field.quadro.ordenar",
+      "routePattern": "/quadro",
+      "elementKind": "CONTROL",
+      "label": "Ordenar por",
+      "purpose": "Ordenar os cenários escolhidos por Maior economia, Maior netabilidade ou Nome.",
+      "changes": "Muda a ordem visual das linhas do quadro.",
+      "doesNotChange": "Não altera a seleção enviada ao chat nem resultados.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.quadro"
+      ]
+    },
+    {
+      "id": "control.quadro.marcar",
+      "routePattern": "/quadro",
+      "elementKind": "CONTROL",
+      "label": "Marcar todos",
+      "purpose": "Adicionar todos os candidatos à seleção quando o filtro está vazio.",
+      "changes": "Marca candidatos e guarda a seleção localmente.",
+      "doesNotChange": "Não executa cenários nem altera estudos.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.quadro"
+      ]
+    },
+    {
+      "id": "control.quadro.marcar-filtrados",
+      "routePattern": "/quadro",
+      "elementKind": "CONTROL",
+      "label": "Marcar filtrados",
+      "purpose": "Adicionar os candidatos que correspondem ao filtro à seleção.",
+      "changes": "Marca filtrados sem retirar seleções anteriores.",
+      "doesNotChange": "Não apaga linhas selecionadas fora do filtro.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.quadro"
+      ]
+    },
+    {
+      "id": "control.quadro.limpar",
+      "routePattern": "/quadro",
+      "elementKind": "CONTROL",
+      "label": "Limpar quadro",
+      "purpose": "Desmarcar todos os cenários escolhidos para o quadro.",
+      "changes": "Limpa a seleção local e o contexto de linhas escolhidas para o chat.",
+      "doesNotChange": "Não exclui Estudos, cenários ou execuções.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.quadro"
+      ]
+    },
+    {
+      "id": "control.quadro.remover",
+      "routePattern": "/quadro",
+      "elementKind": "CONTROL",
+      "label": "Remover",
+      "purpose": "Retirar uma linha da seleção do quadro.",
+      "changes": "Desmarca o cenário e atualiza o contexto do chat.",
+      "doesNotChange": "Não apaga o cenário nem seu diagnóstico.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.quadro"
+      ]
+    },
+    {
+      "id": "field.quadro.nome-empresa",
+      "routePattern": "/quadro",
+      "elementKind": "CONTROL",
+      "label": "Nome de {grupo}",
+      "purpose": "Dar nome de exibição local a um grupo no detalhe de economia por Empresa.",
+      "changes": "Atualiza rótulo local; {grupo} identifica o grupo no campo.",
+      "doesNotChange": "Não renomeia cadastro de Empresa nem modifica custos publicados.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.quadro"
+      ]
+    },
+    {
+      "id": "control.replay.tocar",
+      "routePattern": "/estudos/:studyId/replay",
+      "elementKind": "CONTROL",
+      "label": "▶ Tocar",
+      "purpose": "Percorrer automaticamente os dias do Replay carregado.",
+      "changes": "Inicia reprodução na velocidade escolhida.",
+      "doesNotChange": "Não executa o motor nem troca a repetição.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "concept.replay"
+      ]
+    },
+    {
+      "id": "control.replay.pausar",
+      "routePattern": "/estudos/:studyId/replay",
+      "elementKind": "CONTROL",
+      "label": "Ⅱ Pausar",
+      "purpose": "Pausar a reprodução automática do Replay.",
+      "changes": "Mantém o dia corrente e interrompe avanço automático.",
+      "doesNotChange": "Não cancela diagnóstico.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "concept.replay"
+      ]
+    },
+    {
+      "id": "control.replay.recomecar",
+      "routePattern": "/estudos/:studyId/replay",
+      "elementKind": "CONTROL",
+      "label": "↺ Recomeçar",
+      "purpose": "Voltar ao começo ao chegar ao fim do Replay.",
+      "changes": "Seleciona D0 e pausa; use Tocar para iniciar a reprodução novamente.",
+      "doesNotChange": "Não reconstrói outra repetição.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "concept.replay"
+      ]
+    },
+    {
+      "id": "control.replay.anterior",
+      "routePattern": "/estudos/:studyId/replay",
+      "elementKind": "CONTROL",
+      "label": "← Anterior",
+      "purpose": "Visualizar o dia anterior.",
+      "changes": "Move o dia visualizado um passo para trás.",
+      "doesNotChange": "Não modifica eventos registrados.",
+      "disabledWhen": [
+        "O dia selecionado é 0."
+      ],
+      "recovery": [
+        "Use Seguinte ou selecione um dia posterior."
+      ],
+      "relatedConceptIds": [
+        "concept.replay"
+      ]
+    },
+    {
+      "id": "control.replay.seguinte",
+      "routePattern": "/estudos/:studyId/replay",
+      "elementKind": "CONTROL",
+      "label": "Seguinte →",
+      "purpose": "Visualizar o dia seguinte.",
+      "changes": "Move o dia visualizado um passo adiante.",
+      "doesNotChange": "Não executa outro ciclo.",
+      "disabledWhen": [
+        "O dia selecionado é o último dia da liquidação."
+      ],
+      "recovery": [
+        "Volte a um dia anterior ou use Recomeçar."
+      ],
+      "relatedConceptIds": [
+        "concept.replay"
+      ]
+    },
+    {
+      "id": "control.replay.proximo-fechamento",
+      "routePattern": "/estudos/:studyId/replay",
+      "elementKind": "CONTROL",
+      "label": "Próximo fechamento",
+      "purpose": "Saltar ao próximo dia com fechamento registrado.",
+      "changes": "Seleciona um fechamento posterior ao dia atual.",
+      "doesNotChange": "Não força um fechamento novo.",
+      "disabledWhen": [
+        "Não há fechamento posterior ao dia atual."
+      ],
+      "recovery": [
+        "Selecione um dia anterior para percorrer os fechamentos existentes."
+      ],
+      "relatedConceptIds": [
+        "concept.replay"
+      ]
+    },
+    {
+      "id": "control.replay.repetir-evento",
+      "routePattern": "/estudos/:studyId/replay",
+      "elementKind": "CONTROL",
+      "label": "Repetir evento",
+      "purpose": "Reexibir a transição do dia selecionado.",
+      "changes": "Repete a animação do evento atual.",
+      "doesNotChange": "Não duplica alocações nem muda métricas.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "concept.replay"
+      ]
+    },
+    {
+      "id": "field.replay.dia",
+      "routePattern": "/estudos/:studyId/replay",
+      "elementKind": "CONTROL",
+      "label": "Selecionar dia",
+      "purpose": "Inspecionar um dia entre zero e o fim da liquidação.",
+      "changes": "Muda o dia exibido e o contexto desse dia no chat.",
+      "doesNotChange": "Não escolhe outra repetição nem calcula métricas novas.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "concept.replay"
+      ]
+    },
+    {
+      "id": "control.replay.velocidade-um",
+      "routePattern": "/estudos/:studyId/replay",
+      "elementKind": "CONTROL",
+      "label": "1×",
+      "purpose": "Escolher velocidade de reprodução do Replay.",
+      "changes": "Define reprodução em 1×.",
+      "doesNotChange": "Não altera dias, ordens ou resultados.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "concept.replay"
+      ]
+    },
+    {
+      "id": "control.replay.velocidade-dois",
+      "routePattern": "/estudos/:studyId/replay",
+      "elementKind": "CONTROL",
+      "label": "2×",
+      "purpose": "Escolher velocidade de reprodução do Replay.",
+      "changes": "Define reprodução em 2×.",
+      "doesNotChange": "Não altera dias, ordens ou resultados.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "concept.replay"
+      ]
+    },
+    {
+      "id": "control.replay.velocidade-quatro",
+      "routePattern": "/estudos/:studyId/replay",
+      "elementKind": "CONTROL",
+      "label": "4×",
+      "purpose": "Escolher velocidade de reprodução do Replay.",
+      "changes": "Define reprodução em 4×.",
+      "doesNotChange": "Não altera dias, ordens ou resultados.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "concept.replay"
+      ]
+    },
+    {
+      "id": "control.replay.chegada",
+      "routePattern": "/estudos/:studyId/replay",
+      "elementKind": "CONTROL",
+      "label": "Chegada",
+      "purpose": "Ordenar cartões abertos pela chegada.",
+      "changes": "Muda a ordem visual dos cartões abertos.",
+      "doesNotChange": "Não muda a política ou alocações já executadas.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "concept.replay"
+      ]
+    },
+    {
+      "id": "control.replay.edf",
+      "routePattern": "/estudos/:studyId/replay",
+      "elementKind": "CONTROL",
+      "label": "EDF",
+      "purpose": "Ordenar cartões abertos por prioridade EDF.",
+      "changes": "Muda a ordem visual dos cartões abertos.",
+      "doesNotChange": "Não muda a política ou alocações já executadas.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "concept.replay"
+      ]
+    },
+    {
+      "id": "control.replay.voltar",
+      "routePattern": "/estudos/:studyId/replay",
+      "elementKind": "CONTROL",
+      "label": "Voltar ao diagnóstico",
+      "purpose": "Voltar do Replay ao diagnóstico do Estudo.",
+      "changes": "Navega de volta ao diagnóstico; no Replay pronto preserva scenarioId.",
+      "doesNotChange": "Não cancela nem executa diagnóstico.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "concept.replay"
+      ]
+    },
+    {
+      "id": "control.apresentacao.pdf",
+      "routePattern": "/estudos/:studyId/apresentacao",
+      "elementKind": "CONTROL",
+      "label": "Salvar PDF",
+      "purpose": "Abrir impressão do navegador para salvar a apresentação em PDF.",
+      "changes": "Abre a janela de impressão; escolha Salvar como PDF para gerar arquivo no dispositivo.",
+      "doesNotChange": "Não gera PDF no servidor nem envia o arquivo.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.apresentacao"
+      ]
+    },
+    {
+      "id": "control.apresentacao.repetir",
+      "routePattern": "/estudos/:studyId/apresentacao",
+      "elementKind": "CONTROL",
+      "label": "Tentar novamente",
+      "purpose": "Repetir carregamento da apresentação após erro.",
+      "changes": "Recarrega a seleção do documento de comunicação.",
+      "doesNotChange": "Não cria resultado diagnóstico novo.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.apresentacao"
+      ]
+    },
+    {
+      "id": "control.chat.abrir",
+      "routePattern": "/:route",
+      "elementKind": "CONTROL",
+      "label": "Perguntar",
+      "purpose": "Abrir ou fechar o painel ORKE AI sobre a tela atual.",
+      "changes": "Alterna o painel mantendo a conversa e o contexto da rota.",
+      "doesNotChange": "Não envia uma pergunta ao abrir o painel.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.chat"
+      ]
+    },
+    {
+      "id": "control.chat.fechar",
+      "routePattern": "/:route",
+      "elementKind": "CONTROL",
+      "label": "Fechar chat",
+      "purpose": "Recolher o painel de chat.",
+      "changes": "Fecha o painel e retorna o foco ao botão Perguntar.",
+      "doesNotChange": "Não exclui a conversa nem dados do produto.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.chat"
+      ]
+    },
+    {
+      "id": "control.chat.conversas",
+      "routePattern": "/:route",
+      "elementKind": "CONTROL",
+      "label": "Conversas",
+      "purpose": "Alternar a lista das conversas salvas.",
+      "changes": "Exibe ou esconde a lista para selecionar uma conversa.",
+      "doesNotChange": "Não inicia nem exclui conversas.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.chat"
+      ]
+    },
+    {
+      "id": "control.chat.nova",
+      "routePattern": "/:route",
+      "elementKind": "CONTROL",
+      "label": "Nova conversa",
+      "purpose": "Iniciar uma conversa separada.",
+      "changes": "Cria uma conversa local vazia.",
+      "doesNotChange": "Não limpa estudos ou altera o motor.",
+      "disabledWhen": [
+        "Durante carregamento, erro do histórico, gestão de conversa ou envio.",
+        "Ao atingir 20 conversas."
+      ],
+      "recovery": [
+        "Aguarde ações em andamento; exclua uma conversa para liberar espaço ou resolva a indisponibilidade do histórico."
+      ],
+      "relatedConceptIds": [
+        "page.chat"
+      ]
+    },
+    {
+      "id": "control.chat.excluir",
+      "routePattern": "/:route",
+      "elementKind": "CONTROL",
+      "label": "Excluir conversa",
+      "purpose": "Preparar exclusão da conversa ativa.",
+      "changes": "Abre confirmação de exclusão da conversa.",
+      "doesNotChange": "Não exclui até Confirmar exclusão nem apaga Estudos.",
+      "disabledWhen": [
+        "Durante carregamento, erro do histórico, gestão de conversa ou envio."
+      ],
+      "recovery": [
+        "Aguarde operações em andamento e resolva erro de histórico."
+      ],
+      "relatedConceptIds": [
+        "page.chat"
+      ]
+    },
+    {
+      "id": "control.chat.confirmar-exclusao",
+      "routePattern": "/:route",
+      "elementKind": "CONTROL",
+      "label": "Confirmar exclusão",
+      "purpose": "Apagar definitivamente a conversa cuja exclusão foi confirmada.",
+      "changes": "Exclui a conversa e suas mensagens locais.",
+      "doesNotChange": "Não tem desfazer e não exclui dados dos Estudos.",
+      "disabledWhen": [
+        "Durante gestão de conversa ou envio."
+      ],
+      "recovery": [
+        "Aguarde a operação terminar antes de confirmar."
+      ],
+      "relatedConceptIds": [
+        "page.chat"
+      ]
+    },
+    {
+      "id": "control.chat.cancelar-exclusao",
+      "routePattern": "/:route",
+      "elementKind": "CONTROL",
+      "label": "Cancelar exclusão",
+      "purpose": "Fechar a confirmação sem excluir a conversa.",
+      "changes": "Cancela apenas o diálogo de exclusão.",
+      "doesNotChange": "Não cancela um envio nem altera mensagens.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.chat"
+      ]
+    },
+    {
+      "id": "field.chat.pergunta",
+      "routePattern": "/:route",
+      "elementKind": "CONTROL",
+      "label": "Sua pergunta",
+      "purpose": "Escrever uma pergunta sobre o motor, a interface ou o contexto selecionado.",
+      "changes": "Edita o rascunho; Enter envia e Shift+Enter acrescenta uma linha.",
+      "doesNotChange": "Não envia texto antes de Enviar ou Enter; limite de 4000 caracteres.",
+      "disabledWhen": [
+        "Quando canSend é falso ou há envio em andamento."
+      ],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.chat"
+      ]
+    },
+    {
+      "id": "control.chat.enviar",
+      "routePattern": "/:route",
+      "elementKind": "CONTROL",
+      "label": "Enviar",
+      "purpose": "Enviar uma pergunta não vazia com o contexto atual.",
+      "changes": "Envia a pergunta e o contexto tipado à OpenAI e registra a resposta.",
+      "doesNotChange": "Não altera dados do produto nem executa cálculos.",
+      "disabledWhen": [
+        "Pergunta vazia após remover espaços.",
+        "Durante carregamento, erro de histórico ou gestão de conversa.",
+        "Ao atingir o limite de 100 mensagens.",
+        "Sem conversa ativa, cliente de API ou catálogo de ajuda."
+      ],
+      "recovery": [
+        "Preencha a pergunta, aguarde ações pendentes e confira os avisos do histórico/catálogo; inicie nova conversa ao atingir 100 mensagens."
+      ],
+      "relatedConceptIds": [
+        "page.chat"
+      ]
+    },
+    {
+      "id": "control.chat.cancelar-envio",
+      "routePattern": "/:route",
+      "elementKind": "CONTROL",
+      "label": "Cancelar envio",
+      "purpose": "Interromper a solicitação do chat que está em andamento.",
+      "changes": "Cancela a solicitação atual; o histórico pode registrar a resposta pendente como falha, permitindo tentar novamente.",
+      "doesNotChange": "Não desfaz alterações do produto nem exclui a conversa.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.chat"
+      ]
+    },
+    {
+      "id": "field.autoria.grupo-frequencia",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Frequência mensal do grupo",
+      "purpose": "Definir frequência mensal usada com ticket para obter volume mensal.",
+      "changes": "Edita o rascunho de parâmetros na autoria manual.",
+      "doesNotChange": "Não gera ordens até Preparar carteira manual nem altera dados observados.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "field.autoria.grupo-ticket",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Ticket médio do grupo",
+      "purpose": "Definir o ticket que prepara ticket_median_brl para a geração.",
+      "changes": "Edita o rascunho de parâmetros na autoria manual.",
+      "doesNotChange": "Não gera ordens até Preparar carteira manual nem altera dados observados.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "field.autoria.grupo-direcao",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Direção do grupo",
+      "purpose": "Escolher Mista (fração OUT 0,5), OUT (1) ou IN (0) na receita.",
+      "changes": "Edita o rascunho de parâmetros na autoria manual.",
+      "doesNotChange": "Não gera ordens até Preparar carteira manual nem altera dados observados.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "field.autoria.grupo-prazo",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Prazo em dias do grupo",
+      "purpose": "Definir prazo fixo inteiro não negativo da geração.",
+      "changes": "Edita o rascunho de parâmetros na autoria manual.",
+      "doesNotChange": "Não gera ordens até Preparar carteira manual nem altera dados observados.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "field.autoria.grupo-finalidade",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Finalidade do grupo",
+      "purpose": "Definir finalidade explícita da direção selecionada na receita.",
+      "changes": "Edita o rascunho de parâmetros na autoria manual.",
+      "doesNotChange": "Não gera ordens até Preparar carteira manual nem altera dados observados.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "field.autoria.grupo-perfil",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Perfil do grupo",
+      "purpose": "Escolher o perfil do gerador na autoria manual.",
+      "changes": "Edita o rascunho de parâmetros na autoria manual.",
+      "doesNotChange": "Não gera ordens até Preparar carteira manual nem altera dados observados.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "field.autoria.participante-frequencia",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Frequência mensal do participante",
+      "purpose": "Definir frequência mensal usada com ticket para obter volume mensal.",
+      "changes": "Edita o rascunho de parâmetros na autoria manual.",
+      "doesNotChange": "Não gera ordens até Preparar carteira manual nem altera dados observados.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "field.autoria.participante-ticket",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Ticket médio do participante",
+      "purpose": "Definir o ticket que prepara ticket_median_brl para a geração.",
+      "changes": "Edita o rascunho de parâmetros na autoria manual.",
+      "doesNotChange": "Não gera ordens até Preparar carteira manual nem altera dados observados.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "field.autoria.participante-direcao",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Direção do participante",
+      "purpose": "Escolher Mista (fração OUT 0,5), OUT (1) ou IN (0) na receita.",
+      "changes": "Edita o rascunho de parâmetros na autoria manual.",
+      "doesNotChange": "Não gera ordens até Preparar carteira manual nem altera dados observados.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "field.autoria.participante-prazo",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Prazo em dias do participante",
+      "purpose": "Definir prazo fixo inteiro não negativo da geração.",
+      "changes": "Edita o rascunho de parâmetros na autoria manual.",
+      "doesNotChange": "Não gera ordens até Preparar carteira manual nem altera dados observados.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "field.autoria.participante-finalidade",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Finalidade do participante",
+      "purpose": "Definir finalidade explícita da direção selecionada na receita.",
+      "changes": "Edita o rascunho de parâmetros na autoria manual.",
+      "doesNotChange": "Não gera ordens até Preparar carteira manual nem altera dados observados.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "field.autoria.participante-perfil",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Perfil do participante",
+      "purpose": "Escolher o perfil do gerador na autoria manual.",
+      "changes": "Edita o rascunho de parâmetros na autoria manual.",
+      "doesNotChange": "Não gera ordens até Preparar carteira manual nem altera dados observados.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "field.autoria.nome-grupo",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Nome do grupo",
+      "purpose": "Dar nome ao grupo paramétrico de autoria.",
+      "changes": "Atualiza nome no rascunho manual.",
+      "doesNotChange": "Não renomeia Empresa cadastrada.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "field.autoria.sobrescrever",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Sobrescrever parâmetros do participante",
+      "purpose": "Editar um participante com valores próprios.",
+      "changes": "Ao marcar ou desmarcar, copia os parâmetros do grupo para o participante e alterna o formulário.",
+      "doesNotChange": "Não aplica carteira nem modifica outros participantes.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "field.operacoes.id",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "ID da operação {id}",
+      "purpose": "Editar identidade da operação na cópia manual.",
+      "changes": "Edita a cópia no formulário; Salvar operações explícitas valida, aplica e registra proveniência para campos alterados.",
+      "doesNotChange": "Não altera o Caso de origem; {id} é o identificador publicado na label.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "field.operacoes.cliente",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Cliente da operação {id}",
+      "purpose": "Editar identidade do cliente na cópia manual.",
+      "changes": "Edita a cópia no formulário; Salvar operações explícitas valida, aplica e registra proveniência para campos alterados.",
+      "doesNotChange": "Não altera o Caso de origem; {id} é o identificador publicado na label.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "field.operacoes.direcao",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Direção da operação {id}",
+      "purpose": "Escolher OUT ou IN na cópia manual.",
+      "changes": "Edita a cópia no formulário; Salvar operações explícitas valida, aplica e registra proveniência para campos alterados.",
+      "doesNotChange": "Não altera o Caso de origem; {id} é o identificador publicado na label.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "field.operacoes.dia-conhecido",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Dia conhecido da operação {id}",
+      "purpose": "Editar dia relativo em que a operação fica conhecida.",
+      "changes": "Edita a cópia no formulário; Salvar operações explícitas valida, aplica e registra proveniência para campos alterados.",
+      "doesNotChange": "Não altera o Caso de origem; {id} é o identificador publicado na label.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "field.operacoes.dia-limite",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Dia limite da operação {id}",
+      "purpose": "Editar dia relativo do vencimento.",
+      "changes": "Edita a cópia no formulário; Salvar operações explícitas valida, aplica e registra proveniência para campos alterados.",
+      "doesNotChange": "Não altera o Caso de origem; {id} é o identificador publicado na label.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "field.operacoes.valor",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Valor BRL da operação {id}",
+      "purpose": "Editar o valor positivo da operação em BRL.",
+      "changes": "Edita a cópia no formulário; Salvar operações explícitas valida, aplica e registra proveniência para campos alterados.",
+      "doesNotChange": "Não altera o Caso de origem; {id} é o identificador publicado na label.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "field.operacoes.finalidade",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Finalidade da operação {id}",
+      "purpose": "Editar finalidade; campo vazio conserva ausência sem inferir classificação.",
+      "changes": "Edita a cópia no formulário; Salvar operações explícitas valida, aplica e registra proveniência para campos alterados.",
+      "doesNotChange": "Não altera o Caso de origem; {id} é o identificador publicado na label.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "field.operacoes.efx",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "EFX da operação {id}",
+      "purpose": "Editar indicador EFX da operação.",
+      "changes": "Edita a cópia no formulário; Salvar operações explícitas valida, aplica e registra proveniência para campos alterados.",
+      "doesNotChange": "Não altera o Caso de origem; {id} é o identificador publicado na label.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "field.composicao.volume",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Volume mensal (BRL) — {empresa}",
+      "purpose": "Ajustar o volume mensal do participante da hipótese de composição.",
+      "changes": "Edita participante no rascunho da hipótese; mudanças de participante podem regenerar as ordens ao criar.",
+      "doesNotChange": "Não altera o Perfil de origem nem o cenário base; {empresa} é o complemento acessível da label.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "field.composicao.ticket",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Ticket mediano (BRL) — {empresa}",
+      "purpose": "Ajustar o ticket mediano do participante da hipótese.",
+      "changes": "Edita participante no rascunho da hipótese; mudanças de participante podem regenerar as ordens ao criar.",
+      "doesNotChange": "Não altera o Perfil de origem nem o cenário base; {empresa} é o complemento acessível da label.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "field.composicao.fracao-out",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Fração OUT (0 a 1) — {empresa}",
+      "purpose": "Ajustar proporção OUT do participante da hipótese.",
+      "changes": "Edita participante no rascunho da hipótese; mudanças de participante podem regenerar as ordens ao criar.",
+      "doesNotChange": "Não altera o Perfil de origem nem o cenário base; {empresa} é o complemento acessível da label.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "field.composicao.arquetipo",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Arquétipo — {empresa}",
+      "purpose": "Escolher o arquétipo gerador do participante da hipótese.",
+      "changes": "Edita participante no rascunho da hipótese; mudanças de participante podem regenerar as ordens ao criar.",
+      "doesNotChange": "Não altera o Perfil de origem nem o cenário base; {empresa} é o complemento acessível da label.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "field.composicao.finalidade-out",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Finalidade OUT — {empresa}",
+      "purpose": "Definir finalidade OUT do participante da hipótese.",
+      "changes": "Edita participante no rascunho da hipótese; mudanças de participante podem regenerar as ordens ao criar.",
+      "doesNotChange": "Não altera o Perfil de origem nem o cenário base; {empresa} é o complemento acessível da label.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "field.composicao.finalidade-in",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Finalidade IN — {empresa}",
+      "purpose": "Definir finalidade IN do participante da hipótese.",
+      "changes": "Edita participante no rascunho da hipótese; mudanças de participante podem regenerar as ordens ao criar.",
+      "doesNotChange": "Não altera o Perfil de origem nem o cenário base; {empresa} é o complemento acessível da label.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "field.composicao.efx",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Opera via eFX — {empresa}",
+      "purpose": "Definir indicador eFX na receita do participante da hipótese.",
+      "changes": "Edita participante no rascunho da hipótese; mudanças de participante podem regenerar as ordens ao criar.",
+      "doesNotChange": "Não altera o Perfil de origem nem o cenário base; {empresa} é o complemento acessível da label.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "control.composicao.adicionar-iof",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Adicionar regra de IOF",
+      "purpose": "Acrescentar regra de IOF ao rascunho da hipótese de composição.",
+      "changes": "Adiciona regra com finalidade vazia, direção OUT e alíquota zero para preenchimento.",
+      "doesNotChange": "Não publica alíquota regulatória nem aplica custo ao cenário base.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "field.composicao.iof-finalidade",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Finalidade da regra {N}",
+      "purpose": "Informar finalidade exata para uma regra de IOF da hipótese.",
+      "changes": "Edita a regra no rascunho; só combinação exata de finalidade e direção aplica a alíquota específica.",
+      "doesNotChange": "Não infere finalidade de operações; {N} é a posição da regra exibida.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "field.composicao.iof-direcao",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Direção da regra {N}",
+      "purpose": "Escolher direção exata da regra de IOF da hipótese.",
+      "changes": "Edita a regra no rascunho; só combinação exata de finalidade e direção aplica a alíquota específica.",
+      "doesNotChange": "Não infere finalidade de operações; {N} é a posição da regra exibida.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "field.composicao.iof-aliquota",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Alíquota da regra {N}",
+      "purpose": "Informar alíquota da regra em fração decimal.",
+      "changes": "Edita a regra no rascunho; só combinação exata de finalidade e direção aplica a alíquota específica.",
+      "doesNotChange": "Não infere finalidade de operações; {N} é a posição da regra exibida.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "control.composicao.remover-iof",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Remover regra {N}",
+      "purpose": "Retirar uma regra de IOF do rascunho da hipótese.",
+      "changes": "Remove a regra escolhida das premissas propostas.",
+      "doesNotChange": "Não modifica regras do cenário base; {N} é a posição da regra exibida.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "field.simulacao-perfil.participante",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Participante",
+      "purpose": "Definir ID de participante derivado de Perfil.",
+      "changes": "Edita dados explícitos da receita proposta para o Perfil selecionado.",
+      "doesNotChange": "Não modifica o Perfil confirmado nem transforma ordens geradas em operações observadas.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "field.simulacao-perfil.gerador",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Perfil do gerador",
+      "purpose": "Escolher perfil do gerador para a receita baseada em Perfil.",
+      "changes": "Edita dados explícitos da receita proposta para o Perfil selecionado.",
+      "doesNotChange": "Não modifica o Perfil confirmado nem transforma ordens geradas em operações observadas.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "field.simulacao-perfil.seed",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Seed",
+      "purpose": "Definir seed explícita da geração baseada em Perfil.",
+      "changes": "Edita dados explícitos da receita proposta para o Perfil selecionado.",
+      "doesNotChange": "Não modifica o Perfil confirmado nem transforma ordens geradas em operações observadas.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "field.simulacao-perfil.finalidade-out",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Finalidade OUT",
+      "purpose": "Informar finalidade OUT explícita da receita; este fluxo exige campo preenchido.",
+      "changes": "Edita dados explícitos da receita proposta para o Perfil selecionado.",
+      "doesNotChange": "Não modifica o Perfil confirmado nem transforma ordens geradas em operações observadas.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "field.simulacao-perfil.finalidade-in",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Finalidade IN",
+      "purpose": "Informar finalidade IN explícita da receita; este fluxo exige campo preenchido.",
+      "changes": "Edita dados explícitos da receita proposta para o Perfil selecionado.",
+      "doesNotChange": "Não modifica o Perfil confirmado nem transforma ordens geradas em operações observadas.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "field.simulacao-perfil.efx",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "eFX",
+      "purpose": "Definir indicador eFX da receita baseada em Perfil.",
+      "changes": "Edita dados explícitos da receita proposta para o Perfil selecionado.",
+      "doesNotChange": "Não modifica o Perfil confirmado nem transforma ordens geradas em operações observadas.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "control.simulacao-perfil.preparar",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Preparar simulação por Perfil",
+      "purpose": "Preparar entrada sintética a partir de Perfis anexados e campos explícitos.",
+      "changes": "Valida a seleção, prepara a receita e aplica a simulação baseada em evidência agregada.",
+      "doesNotChange": "Não altera Perfis e não classifica finalidade ausente automaticamente.",
+      "disabledWhen": [
+        "Sem Perfis selecionados.",
+        "Enquanto a preparação está em andamento."
+      ],
+      "recovery": [
+        "Anexe e selecione Perfis, preencha finalidades e os campos da receita e trate os bloqueios publicados."
+      ],
+      "relatedConceptIds": [
+        "concept.perfil"
+      ]
+    },
+    {
+      "id": "page.carteira-rascunho",
+      "routePattern": "/carteira",
+      "elementKind": "PAGE",
+      "label": "Carteira",
+      "purpose": "Manter um rascunho local de nome e executar o percurso sintético de referência.",
+      "changes": "Guarda o nome neste navegador e nesta conta e oferece prévia real pela API.",
+      "doesNotChange": "Não é o editor de Estudo salvo /carteira/:id.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira"
+      ]
+    },
+    {
+      "id": "field.carteira.rascunho-nome",
+      "routePattern": "/carteira",
+      "elementKind": "CONTROL",
+      "label": "Nome do estudo",
+      "purpose": "Dar nome ao rascunho local inicial.",
+      "changes": "Salva o nome no navegador a cada edição; erro de armazenamento mantém apenas memória.",
+      "doesNotChange": "Não cria um Estudo salvo nem renomeia outro Estudo.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "page.carteira-rascunho"
+      ]
+    },
+    {
+      "id": "control.carteira.referencia",
+      "routePattern": "/carteira",
+      "elementKind": "CONTROL",
+      "label": "Executar exemplo de referência",
+      "purpose": "Executar o exemplo sintético de validação pela API e pelo motor.",
+      "changes": "Carrega uma prévia de referência disponível no Diagnóstico geral.",
+      "doesNotChange": "Não calibra fluxos/custos nem executa um Estudo salvo.",
+      "disabledWhen": [
+        "Enquanto a prévia está sendo executada."
+      ],
+      "recovery": [
+        "Aguarde a execução ou trate o erro apresentado; resultado anterior continua disponível se já houver."
+      ],
+      "relatedConceptIds": [
+        "page.carteira-rascunho"
+      ]
+    },
+    {
+      "id": "control.composicao.editar",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Criar hipótese / alterar carteira",
+      "purpose": "Acessar o construtor de hipótese de composição de uma simulação baseada em Perfil.",
+      "changes": "Move foco e rolagem para o editor de hipóteses.",
+      "doesNotChange": "Não aplica mudança nem cria hipótese ao clicar.",
+      "disabledWhen": [],
+      "recovery": [],
+      "relatedConceptIds": [
+        "concept.composicao",
+        "control.hipotese.criar"
+      ]
     }
   ]
 }

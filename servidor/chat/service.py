@@ -15,6 +15,7 @@ from servidor.chat.tools import ReadOnlyTools
 from servidor.contracts.chat import (
     Answer,
     ChatCitation,
+    ChatClassification,
     ChatId,
     ChatRequestV1,
     ChatResponseV1,
@@ -54,15 +55,12 @@ async def respond(
         raise ChatUnavailable
     async with asyncio.timeout(timeout_seconds):
         decision = await provider.classify(ScopeRequest(
-            message=source.message, routeContext=source.routeContext,
+            message=source.message, routeContext=source.routeContext, history=source.history,
         ))
         decision = ScopeDecision.model_validate(decision.model_dump(warnings=False))
-        classification = decision.classification
+        classification: ChatClassification = decision.classification
         if classification == "OUT_OF_SCOPE":
             answer = ProviderAnswer(answer=OUT_OF_SCOPE_TEXT, citations=[], limitationCodes=[])
-        elif classification == "INSUFFICIENT_EVIDENCE":
-            answer = ProviderAnswer(answer=INSUFFICIENT_TEXT, citations=[],
-                                    limitationCodes=["INSUFFICIENT_EVIDENCE"])
         else:
             supplied = await provider.answer(AnswerRequest(chat=source, scope=decision,
                                                            catalog=catalog))
@@ -71,8 +69,16 @@ async def respond(
             if (answer.classification == "INSUFFICIENT_EVIDENCE" or not answer.citations
                     or "INSUFFICIENT_EVIDENCE" in answer.limitationCodes):
                 classification = "INSUFFICIENT_EVIDENCE"
-                answer = ProviderAnswer(answer=INSUFFICIENT_TEXT, citations=[],
-                                        limitationCodes=["INSUFFICIENT_EVIDENCE"])
+                if answer.classification == "INSUFFICIENT_EVIDENCE" and answer.citations:
+                    answer = ProviderAnswer.model_validate({
+                        **answer.model_dump(),
+                        "limitationCodes": list(dict.fromkeys([
+                            *answer.limitationCodes, "INSUFFICIENT_EVIDENCE",
+                        ])),
+                    })
+                else:
+                    answer = ProviderAnswer(answer=INSUFFICIENT_TEXT, citations=[],
+                                            limitationCodes=["INSUFFICIENT_EVIDENCE"])
             if decision.classification == "MIXED":
                 answer = ProviderAnswer.model_validate({
                     **answer.model_dump(), "answer": answer.answer + "\n\n" + OUT_OF_SCOPE_TEXT,
@@ -81,8 +87,7 @@ async def respond(
         apiVersion="1.0.0", messageId=source.messageId,
         classification=classification,
         answer=answer.answer, citations=answer.citations,
-        contextFingerprint=(
-            source.communication.contextFingerprint if source.communication is not None else None
-        ),
+        contextFingerprint=(source.context.document.contextFingerprint
+                            if source.context is not None else None),
         limitationCodes=answer.limitationCodes,
     )

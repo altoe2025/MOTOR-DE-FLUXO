@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
+import { captureUiControls } from './uiContext';
 
 import type { ApplicationRepository } from '../storage/applicationRepository';
 import type { ApiClient } from '../api/client';
@@ -12,6 +13,7 @@ import { communicationMatchesRoute, selectChatContext, type ChatIntent } from '.
 import type { ChatConversation } from './domain';
 import { recoverInterruptedConversation } from './repository';
 import { routeChatContext, type RouteChatContext } from './routeContext';
+import type { BoardChatContext, ChatContext } from './chatContext';
 
 type ChatRepository = Pick<ApplicationRepository, 'listChatConversations' | 'getChatConversation' | 'saveChatConversation' | 'deleteChatConversation'>;
 type ChatState = Readonly<{
@@ -29,8 +31,9 @@ type ChatState = Readonly<{
   conversationLimitReached: boolean;
   messageLimitReached: boolean;
   catalog: ProductHelpCatalogV1 | null;
+  context: ChatContext | null;
   communication: CommunicationDocumentV1 | null;
-  sentContext: CommunicationDocumentV1 | null;
+  sentContext: ChatContext | null;
   focusComposerToken: number;
   intent: ChatIntent | null;
   show(): void;
@@ -43,6 +46,7 @@ type ChatState = Readonly<{
   cancel(): void;
   askAbout(helpId: HelpId, metricId?: string, contextKind?: 'REPLAY' | 'REPETITION' | 'LIMITATIONS' | 'COMPARISON'): void;
   publishCommunication(input: CommunicationInput | null, validatedDocument?: CommunicationDocumentV1): void;
+  publishBoardContext(context: BoardChatContext | null): void;
   setHelpId(helpId: string | null): void;
   setReplayDay(day: number | null): void;
   setDiagnosticExecutionId(id: string | null): void;
@@ -77,7 +81,7 @@ export function ChatProvider({ ownerSub, repository, client, catalog = null, chi
   });
   const routeContext = useMemo(() => baseContext === null ? null : {
     ...baseContext,
-    helpId: selection.routeKey === routeKey ? selection.helpId : null,
+    helpId: selection.routeKey === routeKey ? selection.helpId ?? baseContext.helpId : baseContext.helpId,
     replayDay: (baseContext.routeId === 'replay' || baseContext.routeId === 'presentation')
       && selection.routeKey === routeKey && selection.replayDay !== undefined
       ? selection.replayDay : baseContext.replayDay,
@@ -105,8 +109,8 @@ export function ChatProvider({ ownerSub, repository, client, catalog = null, chi
   const busyRef = useRef(false);
   const [focusComposerToken, setFocusComposerToken] = useState(0);
   const [intent, setIntent] = useState<ChatIntent | null>(null);
-  const [publication, setPublication] = useState<{ routeKey: string; document: CommunicationDocumentV1 } | null>(null);
-  const [sentPublication, setSentPublication] = useState<{ routeKey: string; document: CommunicationDocumentV1 } | null>(null);
+  const [publication, setPublication] = useState<{ routeKey: string; context: ChatContext } | null>(null);
+  const [sentPublication, setSentPublication] = useState<{ routeKey: string; context: ChatContext } | null>(null);
   const publicationToken = useRef(0);
   const routeKeyRef = useRef(routeKey);
   routeKeyRef.current = routeKey;
@@ -116,11 +120,18 @@ export function ChatProvider({ ownerSub, repository, client, catalog = null, chi
   const recovering = useRef(new Set<string>());
   const reopenPending = useRef(new Set<string>());
   const generation = useRef(0);
-  const communication = publication?.routeKey === routeKey && communicationMatchesRoute(publication.document, routeContext)
-    ? publication.document : null;
-  const sentContext = sentPublication?.routeKey === routeKey ? sentPublication.document : null;
-  const currentContextFingerprint = sentContext !== null && communicationMatchesRoute(sentContext, routeContext)
-    ? sentContext.contextFingerprint : contextFingerprint;
+  const contextMatchesRoute = (candidate: ChatContext, route: RouteChatContext | null) => candidate.kind === 'STUDY'
+    ? communicationMatchesRoute(candidate.document, route)
+    : route?.routeId === 'board' && route.studyId === null && route.scenarioId === null
+      && route.diagnosticExecutionId === null && route.replayDay === null;
+  const context = publication?.routeKey === routeKey && contextMatchesRoute(publication.context, routeContext)
+    ? publication.context : null;
+  const communication = context?.kind === 'STUDY' ? context.document : null;
+  const sentContext = sentPublication?.routeKey === routeKey ? sentPublication.context : null;
+  const currentContextFingerprint = routeContext?.routeId === 'board'
+    ? context?.document.contextFingerprint ?? contextFingerprint
+    : sentContext !== null && contextMatchesRoute(sentContext, routeContext)
+      ? sentContext.document.contextFingerprint : contextFingerprint;
 
   useEffect(() => {
     const currentGeneration = ++generation.current;
@@ -271,13 +282,19 @@ export function ChatProvider({ ownerSub, repository, client, catalog = null, chi
       if (validatedDocument.study.id !== input.study.id
         || validatedDocument.selection.scenarioId !== input.scenarioId
         || validatedDocument.selection.diagnosticExecutionId !== input.diagnosticExecutionId) return;
-      if (routeKeyRef.current === selectedRoute) setPublication({ routeKey: selectedRoute, document: validatedDocument });
+      if (routeKeyRef.current === selectedRoute) setPublication({
+        routeKey: selectedRoute, context: { kind: 'STUDY', document: validatedDocument },
+      });
       return;
     }
     void buildCommunicationDocument(input).then((document) => {
       if (publicationToken.current !== token || routeKeyRef.current !== selectedRoute) return;
-      setPublication({ routeKey: selectedRoute, document });
+      setPublication({ routeKey: selectedRoute, context: { kind: 'STUDY', document } });
     }).catch(() => { if (publicationToken.current === token) setPublication(null); });
+  }, [routeKey]);
+  const publishBoardContext = useCallback((boardContext: BoardChatContext | null) => {
+    publicationToken.current += 1;
+    setPublication(boardContext === null ? null : { routeKey, context: boardContext });
   }, [routeKey]);
   const askAbout = useCallback((helpId: HelpId, metricId?: string, contextKind?: 'REPLAY' | 'REPETITION' | 'LIMITATIONS' | 'COMPARISON') => {
     setHelpId(helpId);
@@ -309,19 +326,27 @@ export function ChatProvider({ ownerSub, repository, client, catalog = null, chi
       setConversations((rows) => rows.map((row) => row.id === document.id && row.revision <= document.revision ? document : row));
     };
     try {
-      const fragment = await selectChatContext(communication, selectedIntent);
+      const selectedContext: ChatContext | null = context?.kind === 'BOARD' && selectedIntent.kind !== 'HELP'
+        ? context : null;
+      const fragment = context?.kind === 'STUDY'
+        ? await selectChatContext(context.document, selectedIntent) : null;
+      const requestContext = context?.kind === 'STUDY'
+        ? (fragment === null ? null : { kind: 'STUDY' as const, document: fragment }) : selectedContext;
       if (controller.signal.aborted || generation.current !== currentGeneration) throw new Error('Envio cancelado.');
-      if (fragment !== null && routeKeyRef.current === selectedRoute) setSentPublication({ routeKey: selectedRoute, document: fragment });
+      if (requestContext !== null && routeKeyRef.current === selectedRoute) {
+        setSentPublication({ routeKey: selectedRoute, context: requestContext });
+      }
       await sendChatMessage({ repository, client, conversation: activeConversation, question,
         ...(retryAssistantId === undefined ? {} : { retryAssistantId }),
-        routeContext, communication: fragment, catalog, signal: controller.signal, onSaved: applySaved });
+        routeContext: { ...routeContext, uiControls: captureUiControls(document, catalog) },
+        context: requestContext, catalog, signal: controller.signal, onSaved: applySaved });
       setIntent(null);
       setHelpId(null);
     } finally {
       if (request.current === controller) { request.current = null; requestConversationId.current = null; }
       busyRef.current = false; setBusy(false);
     }
-  }, [activeConversation, catalog, client, communication, intent, ownerSub, repository, routeContext, routeKey, scope, studyId, setHelpId]);
+  }, [activeConversation, catalog, client, context, intent, ownerSub, repository, routeContext, routeKey, scope, studyId, setHelpId]);
   useEffect(() => {
     if (!open || activeConversation === null || !activeConversation.messages.some((item) => item.status === 'PENDING')) return;
     if (requestConversationId.current === activeConversation.id
@@ -348,9 +373,10 @@ export function ChatProvider({ ownerSub, repository, client, catalog = null, chi
   const value: ChatState = { routeContext, contextFingerprint: currentContextFingerprint, conversations: visibleConversations, activeConversation,
     error, loading, open, busy, managing, actionError, conversationLimitReached: visibleConversations.length >= 20, messageLimitReached,
     canSend: !loading && !error && !managing && !messageLimitReached && activeConversation !== null && client !== undefined && catalog !== null,
-    catalog, communication, sentContext, focusComposerToken, intent,
+    catalog, context, communication, sentContext, focusComposerToken, intent,
     show: () => setOpen(true), hide: () => setOpen(false),
-    selectConversation: setActiveId, newConversation, deleteConversation, beginRequest, send, cancel, askAbout, publishCommunication,
+    selectConversation: setActiveId, newConversation, deleteConversation, beginRequest, send, cancel, askAbout,
+    publishCommunication, publishBoardContext,
     setHelpId, setReplayDay, setDiagnosticExecutionId, setComparisonExecutionId, setScenarioId,
   };
   return <Context.Provider value={value}>{children}</Context.Provider>;

@@ -37,12 +37,30 @@ function setup(deferCreate = false) {
   }));
   render(<MemoryRouter initialEntries={['/estudos']}><ChatProvider ownerSub="owner-a" repository={repository}
     client={{ sendChatMessage }} catalog={catalog}>
-    <ChatPanel />
+    <main><button data-chat-help-id="page.chat" disabled>Controle de teste</button></main><ChatPanel />
   </ChatProvider></MemoryRouter>);
   return { repository, sendChatMessage, releaseCreate, get current() { return current; } };
 }
 
 describe('chat panel send', () => {
+  it('captures current control state on each send without needing a financial document', async () => {
+    const user = userEvent.setup(); const state = setup();
+    await user.click(screen.getByRole('button', { name: 'Perguntar' }));
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'Sua pergunta' })).toBeEnabled());
+    await user.type(screen.getByRole('textbox', { name: 'Sua pergunta' }), 'O que faz este botão?');
+    await user.click(screen.getByRole('button', { name: 'Enviar' }));
+    await waitFor(() => expect(state.sendChatMessage).toHaveBeenCalledTimes(1));
+    expect(state.sendChatMessage.mock.calls[0]![0]).toMatchObject({ context: null,
+      routeContext: { uiControls: [{ helpId: 'page.chat', enabledCount: 0, disabledCount: 1 }] } });
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'Sua pergunta' })).toBeEnabled());
+    (screen.getByRole('button', { name: 'Controle de teste' }) as HTMLButtonElement).disabled = false;
+    await user.type(screen.getByRole('textbox', { name: 'Sua pergunta' }), 'E agora?');
+    await user.click(screen.getByRole('button', { name: 'Enviar' }));
+    await waitFor(() => expect(state.sendChatMessage).toHaveBeenCalledTimes(2));
+    expect(state.sendChatMessage.mock.calls[1]![0].routeContext.uiControls).toEqual([
+      { helpId: 'page.chat', enabledCount: 1, disabledCount: 0 },
+    ]);
+  });
   it('marks a sent answer as earlier context when selection changes on the same URL', async () => {
     const input = await observedInput();
     const user = userEvent.setup();
@@ -65,7 +83,7 @@ describe('chat panel send', () => {
     const sendChatMessage = vi.fn(async (request: ChatRequest): Promise<ChatResponse> => ({
       apiVersion: '1.0.0', messageId: request.messageId, classification: 'IN_SCOPE', answer: 'Resposta citada',
       citations: [{ kind: 'METRIC', id: 'SAVINGS_BRL' }],
-      contextFingerprint: request.communication?.contextFingerprint ?? null, limitationCodes: [],
+      contextFingerprint: request.context?.document.contextFingerprint ?? null, limitationCodes: [],
     }));
     render(<MemoryRouter initialEntries={[`/estudos/${input.study.id}/diagnostico?scenarioId=${input.scenarioId}&executionId=${input.diagnosticExecutionId}`]}>
       <ChatProvider ownerSub="owner-a" repository={repository} client={{ sendChatMessage }} catalog={catalog}>
@@ -108,10 +126,10 @@ describe('chat panel send', () => {
     await user.type(screen.getByRole('textbox', { name: 'Sua pergunta' }), 'Como funciona o Replay?');
     await user.click(screen.getByRole('button', { name: 'Enviar' }));
     await waitFor(() => expect(state.current?.messages.at(-1)?.status).toBe('SUCCEEDED'));
-    expect(screen.getByRole('link', { name: /Importação/ })).toHaveAttribute('href', '/importar');
+    expect(screen.getByRole('link', { name: 'Importar operações' })).toHaveAttribute('href', '/importar');
     expect(screen.getByText('Ajuda do produto', { selector: '.chat-message p' })).toBeVisible();
     expect(state.sendChatMessage).toHaveBeenCalledWith(expect.objectContaining({
-      message: 'Como funciona o Replay?', communication: null,
+      message: 'Como funciona o Replay?', context: null,
     }), expect.any(AbortSignal));
   });
 });

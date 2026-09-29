@@ -65,8 +65,8 @@ function ScenarioItem({ study, scenario, selected, onSelect, onRename, onDiagnos
         <Button variant="secondary" onClick={() => setDraft(null)}>Cancelar</Button>
       </form>}
     <span>{sourceLabel(scenario)}{isBase ? ' · original' : ' · variação'}{diagnosed ? ' · diagnóstico atual' : ' · sem diagnóstico'}</span>
-    <Button variant="secondary" onClick={onDiagnose}>{diagnosed ? 'Abrir diagnóstico' : 'Executar diagnóstico'}</Button>
-    {draft === null ? <Button variant="secondary" aria-label={`Renomear cenário ${scenario.name}`} onClick={() => setDraft(scenario.name)}>Renomear</Button> : null}
+    <Button data-chat-help-id="control.carteira.diagnostico" variant="secondary" onClick={onDiagnose}>{diagnosed ? 'Abrir diagnóstico' : 'Executar diagnóstico'}</Button>
+    {draft === null ? <Button variant="secondary" className="button--compact" aria-label={`Renomear cenário ${scenario.name}`} onClick={() => setDraft(scenario.name)}>Renomear</Button> : null}
     {isBase ? null : <Button variant="secondary" className="button--danger" aria-label={`Apagar cenário ${scenario.name}`} onClick={onDelete}>Apagar</Button>}
   </li>;
 }
