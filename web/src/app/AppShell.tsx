@@ -15,7 +15,7 @@ const destinations = [
 ];
 
 export function AppShell() {
-  const { userId, signOut } = useAuth();
+  const { userId, userEmail, signOut } = useAuth();
   const chatRepository = useChatRepository();
   const apiClient = useApiClient();
   const helpCatalog = useProductHelpCatalog();
@@ -53,11 +53,16 @@ export function AppShell() {
             ))}
           </ul>
         </nav>
-        <div className="session-label">
-          <span>Sessão protegida</span>
-          <small title={userId ?? undefined}>Conta autenticada</small>
+        <section className="session-profile" aria-label="Perfil">
+          <div className="session-profile__identity">
+            <span className="session-profile__avatar" aria-hidden="true">{(userEmail ?? '?').charAt(0).toUpperCase()}</span>
+            <div>
+              <span className="session-profile__label">Perfil</span>
+              <small className="session-profile__email" title={userEmail ?? userId ?? undefined}>{userEmail ?? 'Conta autenticada'}</small>
+            </div>
+          </div>
           <button className="session-signout" type="button" onClick={() => void signOut()}>Sair</button>
-        </div>
+        </section>
       </aside>
       <section className="workspace">
         <header className="workspace-header">

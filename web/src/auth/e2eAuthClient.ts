@@ -6,12 +6,12 @@ export const CONTROLLED_E2E_TOKEN_B = 'mot32-controlled-e2e-token-b';
 const sessionA: AuthSession = Object.freeze({
   access_token: CONTROLLED_E2E_TOKEN,
   expires_at: 4_102_444_800,
-  user: Object.freeze({ id: '00000000-0000-4000-8000-000000000021' }),
+  user: Object.freeze({ id: '00000000-0000-4000-8000-000000000021', email: 'conta-a@e2e.local' }),
 });
 const sessionB: AuthSession = Object.freeze({
   access_token: CONTROLLED_E2E_TOKEN_B,
   expires_at: 4_102_444_800,
-  user: Object.freeze({ id: '00000000-0000-4000-8000-000000000022' }),
+  user: Object.freeze({ id: '00000000-0000-4000-8000-000000000022', email: 'conta-b@e2e.local' }),
 });
 
 type StateReader = Pick<Storage, 'getItem'>;

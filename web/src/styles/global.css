@@ -15,8 +15,12 @@ a { color: inherit; }
 .destination-list { display: grid; gap: var(--space-1); list-style: none; margin: 0; padding: 0; }
 .destination-link { align-items: center; border-radius: var(--radius); color: var(--on-nav); display: flex; overflow-wrap: anywhere; padding: var(--space-2) var(--space-3); text-decoration: none; }
 .destination-link[aria-current='page'], .destination-link:hover { background: #3c4843; }
-.session-label { border-top: 1px solid #718078; color: #d7dbd5; display: grid; font-size: 0.8125rem; gap: var(--space-2); margin: auto 0 0; padding-top: var(--space-4); }
-.session-label small { color: #c9cec7; overflow: hidden; text-overflow: ellipsis; }
+.session-profile { border-top: 1px solid #718078; color: #d7dbd5; display: grid; font-size: 0.8125rem; gap: var(--space-3); margin: auto 0 0; padding-top: var(--space-4); }
+.session-profile__identity { align-items: center; display: flex; gap: var(--space-2); min-width: 0; }
+.session-profile__identity > div { display: grid; min-width: 0; }
+.session-profile__avatar { align-items: center; background: #e6b568; border-radius: 50%; color: #1d2927; display: inline-flex; flex: none; font-weight: 700; height: 32px; justify-content: center; width: 32px; }
+.session-profile__label { color: #aab4ae; font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; }
+.session-profile__email { color: #f0f2ee; font-size: 0.8125rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .session-signout { background: transparent; border: 1px solid #8b9891; border-radius: var(--radius); color: var(--on-nav); cursor: pointer; padding: var(--space-2); text-align: left; }
 .session-signout:hover { background: #3c4843; }
 .workspace { min-width: 0; }
