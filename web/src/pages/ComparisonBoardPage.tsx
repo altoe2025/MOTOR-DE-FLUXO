@@ -4,7 +4,10 @@ import { Link } from 'react-router-dom';
 
 import { useStudyController } from '../app/providers';
 import { Button } from '../ui/Button';
+import { companyResolver } from '../levers/companies';
+import { moveStudyToTrash } from '../study/domain';
 import { breakdownByCompany, type Breakdown } from './comparisonBoardBreakdown';
+import { measuredPeriodLabel, premisesDivergence, savingsBps } from './comparisonBoardMetrics';
 import type { CompanyRecord, ObservedCase } from '../cases/domain';
 import { formatFraction, formatMoney } from '../presentation/format';
 import type { ExecutionRecordV3, PreviewEnvelope, ScenarioDocument, StudyDocument } from '../study/model';
@@ -24,12 +27,17 @@ type BoardRow = Readonly<{
   baselineTotal: string;
   nettedTotal: string;
   savings: string;
+  /** Volume bruto medido: o que atravessaria a fronteira sem pool. */
+  grossVolume: string;
+  savingsBps: string | null;
+  periodLabel: string;
+  premises: ScenarioDocument['premises'];
   diagnosticExecutionId: string | null;
   finishedAt: string;
   breakdown: Breakdown | null;
 }>;
 
-type SortKey = 'savings' | 'netability' | 'name';
+type SortKey = 'bps' | 'savings' | 'netability' | 'name';
 
 function envelopeOf(execution: ExecutionRecordV3): PreviewEnvelope | null {
   if (execution.status !== 'SUCCEEDED' || execution.envelope === null) return null;
@@ -87,9 +95,14 @@ export function buildRows(
       baselineTotal: aggregate.baseline_periodo.total,
       nettedTotal: aggregate.netado_periodo.total,
       savings: aggregate.economia_periodo_brl,
+      grossVolume: aggregate.volume_bruto_periodo_brl,
+      savingsBps: savingsBps(aggregate.economia_periodo_brl, aggregate.volume_bruto_periodo_brl),
+      periodLabel: measuredPeriodLabel(scenario.period.httpPeriod,
+        'executableHorizonDays' in scenario.period ? scenario.period.executableHorizonDays : undefined),
+      premises: scenario.premises,
       diagnosticExecutionId: execution.kind === 'DIAGNOSTIC' ? execution.id : null,
       finishedAt: execution.finishedAt ?? '',
-      breakdown: safeBreakdown(envelope),
+      breakdown: safeBreakdown(envelope, companyResolver(execution.sourceSnapshot?.source ?? scenario.sourceSnapshot.source)),
     }];
   }));
 }
@@ -102,8 +115,12 @@ function safeBreakdown(...args: Parameters<typeof breakdownByCompany>): Breakdow
   }
 }
 
-function sortRows(rows: readonly BoardRow[], key: SortKey): BoardRow[] {
+export function sortRows(rows: readonly BoardRow[], key: SortKey): BoardRow[] {
   return [...rows].sort((left, right) => {
+    if (key === 'bps') {
+      if (left.savingsBps === null || right.savingsBps === null) return (left.savingsBps === null ? 1 : 0) - (right.savingsBps === null ? 1 : 0);
+      return new Decimal(right.savingsBps).comparedTo(left.savingsBps);
+    }
     if (key === 'name') return `${left.studyName} ${left.scenarioName}`.localeCompare(`${right.studyName} ${right.scenarioName}`);
     const field = key === 'savings' ? 'savings' : 'netability';
     return new Decimal(right[field]).comparedTo(left[field]);
@@ -152,7 +169,7 @@ export function ComparisonBoardPage() {
   const heading = useRef<HTMLHeadingElement>(null);
   const [rows, setRows] = useState<BoardRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [sortKey, setSortKey] = useState<SortKey>('savings');
+  const [sortKey, setSortKey] = useState<SortKey>('bps');
   const [filter, setFilter] = useState('');
   const [selected, setSelected] = useState<Set<string>>(readSelection);
   const [names, setNames] = useState<Record<string, string>>(readNames);
@@ -162,6 +179,8 @@ export function ComparisonBoardPage() {
     return next;
   });
   const label = (group: string) => names[group]?.trim() || group;
+
+  const [reload, setReload] = useState(0);
 
   useEffect(() => heading.current?.focus(), []);
   useEffect(() => {
@@ -174,7 +193,7 @@ export function ComparisonBoardPage() {
         if (active) setError(reason instanceof Error ? reason.message : 'Não foi possível carregar os estudos.');
       });
     return () => { active = false; };
-  }, [controller]);
+  }, [controller, reload]);
 
   const updateSelection = (change: (current: Set<string>) => void) => setSelected((current) => {
     const next = new Set(current);
@@ -183,6 +202,20 @@ export function ComparisonBoardPage() {
     return next;
   });
   const toggle = (key: string) => updateSelection((next) => { if (!next.delete(key)) next.add(key); });
+  const removeStudy = async (row: BoardRow) => {
+    if (!window.confirm(`Apagar o estudo “${row.studyName}”? Todos os cenários dele saem do quadro; dá para restaurar pela lixeira em Estudos.`)) return;
+    try {
+      const loaded = await controller.loadStudy(row.studyId);
+      if (loaded === null) throw new Error('Estudo não encontrado.');
+      controller.edit(await moveStudyToTrash(loaded, new Date().toISOString()));
+      await controller.flush();
+      updateSelection((next) => (rows ?? []).forEach((item) => { if (item.studyId === row.studyId) next.delete(item.key); }));
+      setError(null);
+      setReload((value) => value + 1);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Não foi possível apagar o estudo.');
+    }
+  };
 
   const candidates = useMemo(() => {
     const term = filter.trim().toLowerCase();
@@ -193,6 +226,7 @@ export function ComparisonBoardPage() {
     () => sortRows((rows ?? []).filter((row) => selected.has(row.key)), sortKey),
     [rows, selected, sortKey],
   );
+  const divergence = useMemo(() => premisesDivergence(board.map((row) => ({ key: row.key, premises: row.premises }))), [board]);
   const groups = useMemo(() => [...new Set(board.flatMap((row) =>
     row.breakdown?.companies.map((item) => item.group) ?? []))].sort(), [board]);
 
@@ -200,7 +234,7 @@ export function ComparisonBoardPage() {
     <p className="eyebrow">Estudos</p>
     <h1 ref={heading} tabIndex={-1}>Quadro comparativo</h1>
     <p className="page-introduction">
-      Escolha os estudos que entram no quadro. Vale a última execução concluída da revisão atual de cada cenário; com diagnóstico de várias repetições, os números são da repetição representativa.
+      Escolha os estudos que entram no quadro. Vale a última execução concluída da revisão atual de cada cenário; com diagnóstico de várias repetições, os números são da repetição mediana da economia.
     </p>
     {error ? <p role="alert" className="field-error">{error}</p> : null}
     {rows === null && error === null ? <p role="status">Carregando estudos…</p> : null}
@@ -218,6 +252,7 @@ export function ComparisonBoardPage() {
           <input type="checkbox" checked={selected.has(row.key)} onChange={() => toggle(row.key)} />
           {' '}{row.studyName} · {row.scenarioName} — {row.origin}
         </label>
+        <Button variant="secondary" onClick={() => void removeStudy(row)} aria-label={`Apagar o estudo ${row.studyName}`}>Apagar estudo</Button>
       </li>)}</ul>
     </fieldset> : null}
 
@@ -225,25 +260,32 @@ export function ComparisonBoardPage() {
     {board.length > 0 ? <>
       <div className="source-actions">
         <label>Ordenar por<select value={sortKey} onChange={(event) => setSortKey(event.target.value as SortKey)}>
-          <option value="savings">Maior economia</option>
+          <option value="bps">Maior economia em bps</option>
+          <option value="savings">Maior economia em R$</option>
           <option value="netability">Maior netabilidade</option>
           <option value="name">Nome</option>
         </select></label>
       </div>
+      {divergence.differing.length === 0 ? null : <p role="note" className="inline-notice">
+        As premissas não são as mesmas em todas as linhas ({divergence.fields.join(', ')}). As linhas marcadas com “premissas diferentes” rodaram com outros valores; parte da diferença de economia vem daí, não da carteira.
+      </p>}
       <div className="table-scroll">
         <table className="company-table">
-          <caption>{board.length} {board.length === 1 ? 'cenário' : 'cenários'} no quadro</caption>
+          <caption>{board.length} {board.length === 1 ? 'cenário' : 'cenários'} no quadro. Netabilidade: parte do volume que não cruzou a fronteira; custo sem pool: cada ordem remetendo sozinha.</caption>
           <thead><tr>
             <th scope="col">Estudo · cenário</th>
             <th scope="col">Origem</th>
+            <th scope="col">Período</th>
             <th scope="col">Janela</th>
             <th scope="col">Ordens</th>
             <th scope="col">IN</th>
             <th scope="col">OUT</th>
-            <th scope="col">Netabilidade</th>
+            <th scope="col" title="Parte do volume que não cruzou a fronteira">Netabilidade</th>
             <th scope="col">Custo sem pool</th>
             <th scope="col">Custo com pool</th>
             <th scope="col">Economia</th>
+            <th scope="col" title="Volume bruto medido: soma das ordens do período medido, o que atravessaria a fronteira sem pool.">Volume medido</th>
+            <th scope="col" title="Economia ÷ volume medido × 10.000. 1 bp = 0,01% do volume. Compara carteiras de tamanhos e períodos diferentes.">Economia (bps)</th>
             <th scope="col"><span className="visually-hidden">Ações</span></th>
           </tr></thead>
           <tbody>{board.map((row) => <tr key={row.key}>
@@ -252,8 +294,10 @@ export function ComparisonBoardPage() {
                 ? `/carteira/${encodeURIComponent(row.studyId)}`
                 : `/estudos/${encodeURIComponent(row.studyId)}/diagnostico?scenarioId=${encodeURIComponent(row.scenarioId)}&executionId=${encodeURIComponent(row.diagnosticExecutionId)}`}>{row.studyName}</Link>
               <small>{row.scenarioName}</small>
+              {divergence.differing.includes(row.key) ? <small className="premises-flag">premissas diferentes</small> : null}
             </th>
             <td>{row.origin}</td>
+            <td>{row.periodLabel}</td>
             <td>{row.windowDays} d</td>
             <td>{row.orderCount}</td>
             <td>{formatMoney(row.inBrl)}</td>
@@ -262,7 +306,12 @@ export function ComparisonBoardPage() {
             <td>{formatMoney(row.baselineTotal)}</td>
             <td>{formatMoney(row.nettedTotal)}</td>
             <td>{formatMoney(row.savings)}</td>
-            <td><Button variant="secondary" onClick={() => toggle(row.key)} aria-label={`Remover ${row.studyName} · ${row.scenarioName} do quadro`}>Remover</Button></td>
+            <td>{formatMoney(row.grossVolume)}</td>
+            <td>{row.savingsBps === null ? '—' : `${new Decimal(row.savingsBps).toFixed(2).replace('.', ',')} bps`}</td>
+            <td>
+              <Button variant="secondary" onClick={() => toggle(row.key)} aria-label={`Remover ${row.studyName} · ${row.scenarioName} do quadro`}>Remover</Button>
+              <Button variant="secondary" onClick={() => void removeStudy(row)} aria-label={`Apagar o estudo ${row.studyName}`}>Apagar estudo</Button>
+            </td>
           </tr>)}</tbody>
         </table>
       </div>
@@ -270,7 +319,7 @@ export function ComparisonBoardPage() {
       <section className="board-breakdown" aria-labelledby="board-breakdown-title">
         <h2 id="board-breakdown-title">Economia por empresa</h2>
         <p className="field-hint">
-          A empresa de cada ordem é o prefixo do ID da operação antes do primeiro hífen (AP-…, X-…, Y-…). IOF, carry e espera são exatos por ordem; spread e custo fixo das remessas agregadas são repartidos pelo volume que cada empresa remeteu. Abaixo da economia: quanto do volume da empresa não cruzou a fronteira (casando com ela mesma + com as outras).
+          A empresa de cada ordem é a do cadastro quando o estudo junta casos de empresas; num caso único, é o prefixo do ID da operação antes do primeiro hífen (AP-…, X-…, Y-…). IOF, carry e espera são exatos por ordem; spread e custo fixo das remessas agregadas são repartidos pelo volume que cada empresa remeteu. Abaixo da economia: quanto do volume da empresa não cruzou a fronteira (casando com ela mesma + com as outras).
         </p>
         <div className="source-actions">
           {groups.map((group) => <label key={group}>Nome de {group}<input value={names[group] ?? ''} placeholder={group} onChange={(event) => rename(group, event.target.value)} /></label>)}

@@ -16,8 +16,8 @@ export function CostTable({ envelope }: { envelope: PreviewEnvelope }) {
       <h2 id="cost-table-title">Decomposição de custos</h2>
       <div className="table-scroll" role="region" aria-label="Tabela de decomposição de custos" tabIndex={0}>
       <table>
-        <caption>Custos informados pela prévia canônica.</caption>
-        <thead><tr><th scope="col">Componente</th><th scope="col">Sem agrupamento</th><th scope="col">Com agrupamento</th></tr></thead>
+        <caption>Custo sem pool: cada ordem remetendo sozinha. Custo com pool: depois do netting.</caption>
+        <thead><tr><th scope="col">Componente</th><th scope="col">Custo sem pool</th><th scope="col">Custo com pool</th></tr></thead>
         <tbody>
           <tr><th scope="row">Total</th><td>{formatMoney(aggregate.baseline_periodo.total)}</td><td>{formatMoney(aggregate.netado_periodo.total)}</td></tr>
           {rows.map(([label, key]) => <tr key={key}><th scope="row">{label}</th><td>{formatMoney(aggregate.baseline_periodo[key])}</td><td>{formatMoney(aggregate.netado_periodo[key])}</td></tr>)}

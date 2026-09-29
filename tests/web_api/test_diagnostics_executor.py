@@ -5,6 +5,7 @@ from __future__ import annotations
 import multiprocessing
 from concurrent.futures import Future, ProcessPoolExecutor
 from datetime import UTC, datetime, timedelta
+from decimal import Decimal
 from threading import Condition
 from typing import Any
 from uuid import UUID
@@ -578,3 +579,50 @@ def test_worker_generated_usa_exatamente_as_seeds_do_plano():
     assert result.input_fingerprint == "e" * 64
     assert result.envelope.statistics.repetition_id == generated.selected_repetition_id
     assert result.request.cenario.ordens
+
+
+def test_repeticao_mediana_usa_posto_mais_proximo_e_desempata_pelo_plano():
+    """Pega escolha da primeira repetição ou de média interpolada que não existe."""
+    from servidor.diagnostics.analysis import median_repetition_index
+
+    assert median_repetition_index((Decimal(5), Decimal(1), Decimal(3))) == 2
+    # n=4: posto ceil(0,5*4)=2 → segundo menor valor (2), não a média 2,5.
+    assert median_repetition_index((Decimal(4), Decimal(2), Decimal(1), Decimal(3))) == 1
+    # Empate no valor mediano: vale a primeira do plano.
+    assert median_repetition_index((Decimal(9), Decimal(2), Decimal(2), Decimal(0))) == 1
+
+
+def test_diagnostico_gerado_detalha_a_repeticao_mediana_da_economia():
+    """Pega detalhe/Replay presos à repetição indicada no pedido em vez da mediana."""
+    from servidor.diagnostics.service import (
+        RepetitionTask,
+        aggregate_diagnostic,
+        execute_repetition,
+    )
+
+    generated = _generated_request()
+    results = tuple(
+        execute_repetition(
+            RepetitionTask(request=generated, repetition_index=index, build_sha="a" * 40)
+        )
+        for index in range(10)
+    )
+    envelope = aggregate_diagnostic(UUID(int=701), generated, results)
+
+    savings = [Decimal(item.savings_brl) for item in envelope.repetitions]
+    p50 = Decimal(envelope.axes.economic_robustness.savings_brl.value.p50)
+    expected = next(
+        item.repetition_id
+        for item, value in zip(envelope.repetitions, savings, strict=True)
+        if value == p50
+    )
+    assert envelope.statistics.selected_repetition_id == expected
+    assert envelope.selected_execution.statistics.repetition_id == expected
+    selected_summary = next(
+        item for item in envelope.repetitions if item.repetition_id == expected
+    )
+    assert Decimal(selected_summary.savings_brl) == p50
+    assert (
+        selected_summary.execution_fingerprint
+        == envelope.selected_execution.execution_fingerprint
+    )

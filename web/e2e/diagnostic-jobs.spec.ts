@@ -80,7 +80,8 @@ test('fixed input has no distribution and a failed generated repetition publishe
   const fixedStudy = await createStudy(page, false);
   await page.evaluate((id) => window.__MOTOR_E2E__!.freezeStudyInput(id), fixedStudy);
   await page.goto(`/estudos/${fixedStudy}/diagnostico`);
-  await expect(page.getByText(/entrada fixa.*execução individual.*não uma distribuição/i)).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Diagnóstico', exact: true })).toBeVisible();
+  await expect(page.getByLabel('Repetições')).toHaveCount(0);
   await page.getByRole('button', { name: 'Executar diagnóstico' }).click();
   await release(page);
   await expect(page.getByRole('heading', { name: 'Resultado do motor' })).toBeVisible();

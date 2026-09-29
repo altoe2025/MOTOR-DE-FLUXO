@@ -10,8 +10,10 @@ import { appendDiagnosticExecution } from '../diagnostics/domain';
 import { buildPreviewRequest, type PreviewRequestProvenance } from '../preparation/buildPreviewRequest';
 import {
   appendExecution,
+  appendScenario,
   createStudy,
   moveStudyToTrash,
+  removeScenario,
   renameStudy,
   updateScenario,
 } from '../study/domain';
@@ -708,6 +710,39 @@ describe('studies', () => {
       document: changed,
     })).rejects.toBeInstanceOf(OperationConflictError);
     expect(await target.getStudy(original.id)).toEqual(withExecution);
+  });
+
+  it('apaga um cenário com as execuções dele e mantém as outras imutáveis', async () => {
+    const target = repository();
+    const original = await study();
+    const withVariation = await appendScenario(original, {
+      ...makeScenarioDraft(), id: '00000000-0000-4000-8000-000000000040', name: 'Variação',
+    }, '2026-09-19T12:30:00Z');
+    const variation = withVariation.scenarios[1]!;
+    const variationExecution = {
+      ...executionFor(withVariation), id: '00000000-0000-4000-8000-000000000041',
+      scenarioId: variation.id, scenarioRevision: variation.revision, inputFingerprint: variation.inputFingerprint,
+      requestSnapshot: { ...executionFor(withVariation).requestSnapshot, request_id: '00000000-0000-4000-8000-000000000042', scenario_id: variation.id },
+    } satisfies ExecutionRecord;
+    const step1 = await appendExecution(withVariation, variationExecution, '2026-09-19T13:00:00Z');
+    const baseExecution = executionFor(step1);
+    const step2 = await appendExecution(step1, baseExecution, '2026-09-19T13:10:00Z');
+    for (const [index, document] of [original, withVariation, step1, step2].entries()) {
+      await target.saveStudy({ expectedRevision: document.revision - 1, operationId: `save-${index}`, document });
+    }
+
+    const removed = await removeScenario(step2, variation.id, '2026-09-19T14:00:00Z');
+    expect(removed.scenarios.map((item) => item.id)).toEqual([original.scenarios[0]!.id]);
+    expect(removed.executions.map((item) => item.id)).toEqual([baseExecution.id]);
+    await target.saveStudy({ expectedRevision: step2.revision, operationId: OPERATION_B, document: removed });
+    expect(await target.getStudy(original.id)).toEqual(removed);
+
+    const tampered = structuredClone(removed) as DeepMutable<StudyDocument>;
+    tampered.revision = removed.revision + 1;
+    tampered.executions = [];
+    await expect(target.saveStudy({ expectedRevision: removed.revision, operationId: OPERATION_C, document: tampered }))
+      .rejects.toBeInstanceOf(OperationConflictError);
+    await expect(removeScenario(removed, original.baseScenarioId, '2026-09-19T15:00:00Z')).rejects.toThrow('base');
   });
 
   it('preserva reserva e terminal diagnósticos e rejeita reescrita ou terminal duplicado', async () => {

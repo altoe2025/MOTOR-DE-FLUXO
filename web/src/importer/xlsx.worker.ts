@@ -1,13 +1,13 @@
 import { parseXlsxBuffer, type WorkerRequest, type WorkerResponse } from './xlsxParser';
-import { ImportFileError, type SerializedImportFileError } from './xlsxPreflight';
+import { ImportFileError, invalidXlsx, type SerializedImportFileError } from './xlsxPreflight';
 
 type WorkerScope = { onmessage: ((event: MessageEvent<WorkerRequest>) => void) | null; postMessage(message: WorkerResponse): void };
 const workerScope = self as unknown as WorkerScope;
 
 function serializeError(error: unknown): SerializedImportFileError {
   return error instanceof ImportFileError
-    ? { code: error.code, message: error.message }
-    : { code: 'INVALID_XLSX', message: 'não foi possível processar o XLSX' };
+    ? { code: error.code, message: error.detail }
+    : { code: 'INVALID_XLSX', message: invalidXlsx('não foi possível processar o conteúdo') };
 }
 
 workerScope.onmessage = async (event: MessageEvent<WorkerRequest>) => {

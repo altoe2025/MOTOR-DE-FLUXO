@@ -1,20 +1,22 @@
 import { useMemo, useState } from 'react';
 
-import { groupOf } from '../pages/comparisonBoardBreakdown';
 import { formatMoney } from '../presentation/format';
 import type { ScenarioDocument } from '../study/model';
 import { Button } from '../ui/Button';
 import { describeLevers, NEUTRAL_LEVERS, type Levers } from './applyLevers';
-import { leverBaseAvailable } from './leverScenario';
+import { companyResolver } from './companies';
+import { combinationPreset, companySubsets, leverBaseAvailable } from './leverScenario';
 
 type DeadlineMode = Levers['deadline']['mode'];
 
-export function LeverBuilder({ base, onCreate }: Readonly<{
+export function LeverBuilder({ base, onCreate, onCreateCombinations }: Readonly<{
   base: ScenarioDocument;
   onCreate(levers: Levers): Promise<void>;
+  onCreateCombinations(subsets: readonly (readonly string[])[], companies: readonly string[]): Promise<void>;
 }>) {
   const orders = base.sourceSnapshot.orders;
-  const groups = useMemo(() => [...new Set(orders.map((order) => groupOf(order.id)))].sort(), [orders]);
+  const companyOf = useMemo(() => companyResolver(base.sourceSnapshot.source), [base.sourceSnapshot.source]);
+  const groups = useMemo(() => [...new Set(orders.map((order) => companyOf(order.id)))].sort(), [orders, companyOf]);
   const [chosenGroup, setGroup] = useState(groups[0] ?? '');
   const group = groups.includes(chosenGroup) ? chosenGroup : groups[0] ?? '';
   const [removeCompany, setRemoveCompany] = useState(false);
@@ -28,6 +30,7 @@ export function LeverBuilder({ base, onCreate }: Readonly<{
   const [showOrders, setShowOrders] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [manual, setManual] = useState<Set<string>>(new Set());
 
   if (!leverBaseAvailable(base) || groups.length === 0) {
     return <section className="lever-builder" aria-labelledby="lever-title">
@@ -36,7 +39,7 @@ export function LeverBuilder({ base, onCreate }: Readonly<{
     </section>;
   }
 
-  const groupOrders = orders.filter((order) => groupOf(order.id) === group)
+  const groupOrders = orders.filter((order) => companyOf(order.id) === group)
     .sort((left, right) => left.dia_limite - right.dia_limite || left.id.localeCompare(right.id));
   const levers: Levers = {
     ...NEUTRAL_LEVERS, group, removeCompany, removedOrderIds: [...removed].filter((id) => groupOrders.some((order) => order.id === id)),
@@ -59,6 +62,31 @@ export function LeverBuilder({ base, onCreate }: Readonly<{
       setBusy(false);
     }
   };
+  const allSubsets = groups.length >= 2 && groups.length <= 8 ? companySubsets(groups) : [];
+  const alone = combinationPreset('ALONE', groups);
+  const leaveOneOut = combinationPreset('LEAVE_ONE_OUT', groups);
+  const manualSubset = groups.filter((item) => manual.has(item));
+  const createCombinations = async (subsets: readonly (readonly string[])[]) => {
+    if (subsets.length === 0) return;
+    setBusy(true); setError(null);
+    try {
+      await onCreateCombinations(subsets, groups);
+      setManual(new Set());
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Não foi possível criar as combinações.');
+    } finally {
+      setBusy(false);
+    }
+  };
+  const createAll = () => {
+    if (!window.confirm(`Criar ${allSubsets.length} variações, uma para cada combinação de ${groups.join(', ')}?`)) return;
+    void createCombinations(allSubsets);
+  };
+  const toggleManual = (company: string) => setManual((current) => {
+    const next = new Set(current);
+    if (!next.delete(company)) next.add(company);
+    return next;
+  });
   const toggleOrder = (id: string) => setRemoved((current) => {
     const next = new Set(current);
     if (!next.delete(id)) next.add(id);
@@ -102,6 +130,35 @@ export function LeverBuilder({ base, onCreate }: Readonly<{
         </table>
       </div> : null}
     </>}
+    {groups.length < 2 ? null : <div className="lever-combinations">
+      <h3>Composição</h3>
+      <p className="field-hint">
+        Cada variação usa as mesmas ordens, valores, datas, período e premissas de “{base.name}”, só sem as empresas de fora.
+        Depois, no diagnóstico, “Rodar todas” e compare. “Cada empresa sozinha” alimenta a origem da economia de cada empresa.
+      </p>
+      <div className="source-actions">
+        <Button variant="secondary" disabled={busy} onClick={() => void createCombinations(alone)}>Cada empresa sozinha ({alone.length})</Button>
+        {leaveOneOut.length === 0 ? null
+          : <Button variant="secondary" disabled={busy} onClick={() => void createCombinations(leaveOneOut)}>Retirar uma por vez ({leaveOneOut.length})</Button>}
+      </div>
+      <fieldset className="lever-manual">
+        <legend>Escolher as empresas de uma variação</legend>
+        {groups.map((item) => <label key={item} className="checkbox-field">
+          <input type="checkbox" aria-label={`Incluir ${item}`} checked={manual.has(item)} onChange={() => toggleManual(item)} /> {item}
+        </label>)}
+        <Button variant="secondary" disabled={busy || manualSubset.length === 0 || manualSubset.length === groups.length}
+          onClick={() => void createCombinations([manualSubset])}>Criar com as marcadas</Button>
+      </fieldset>
+      <details className="lever-advanced">
+        <summary>{allSubsets.length === 0
+          ? `Avançado: todas as combinações (indisponível com ${groups.length} empresas; máximo 8)`
+          : `Avançado: todas as combinações (${allSubsets.length} variações)`}</summary>
+        {allSubsets.length === 0 ? null : <>
+          <p className="field-hint">Cria uma variação para cada grupo possível de empresas. Com muitas empresas, a lista e o tempo de “Rodar todas” crescem rápido.</p>
+          <Button variant="secondary" disabled={busy} onClick={createAll}>Criar as {allSubsets.length} variações</Button>
+        </>}
+      </details>
+    </div>}
     {error === null ? null : <p role="alert" className="field-error">{error}</p>}
     <div className="source-actions">
       <span className="field-hint">Variação: {describeLevers(levers)}</span>

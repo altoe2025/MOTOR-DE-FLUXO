@@ -13,7 +13,7 @@ export function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  if (auth.status === 'authenticated') return <Navigate to="/carteira" replace />;
+  if (auth.status === 'authenticated') return <Navigate to="/estudos" replace />;
   const submit = async (event: FormEvent) => {
     event.preventDefault(); setBusy(true); setError(null);
     try { await auth.signIn(email, password); }
@@ -69,7 +69,7 @@ export function PasswordPage() {
     event.preventDefault();
     if (password !== confirmation) { setError('As senhas informadas não coincidem.'); return; }
     setBusy(true); setError(null);
-    try { await updatePassword(password); navigate('/carteira', { replace: true }); }
+    try { await updatePassword(password); navigate('/estudos', { replace: true }); }
     catch (caught) { setError(caught instanceof Error ? caught.message : 'Não foi possível definir a senha.'); }
     finally { setBusy(false); }
   };

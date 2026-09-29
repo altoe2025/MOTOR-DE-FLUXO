@@ -177,6 +177,17 @@ def _empirical_percentile(values: tuple[Decimal, ...], q: Decimal) -> Decimal:
     return ordered[rank - 1]
 
 
+def median_repetition_index(savings: tuple[Decimal, ...]) -> int:
+    """Índice da repetição cuja economia é o P50 por posto mais próximo.
+
+    O P50 do diagnóstico é sempre uma observação real (sem interpolação); em empate,
+    vale a primeira repetição do plano. Escolhe só qual execução detalhar — não
+    altera nenhuma regra do motor.
+    """
+    median = _empirical_percentile(savings, Decimal(".50"))
+    return savings.index(median)
+
+
 def _weighted_percentile(
     observations: tuple[tuple[Decimal, Decimal], ...], q: Decimal
 ) -> Decimal:

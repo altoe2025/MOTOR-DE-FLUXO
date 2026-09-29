@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 
+import type { CompanyRecord } from '../../cases/domain';
 import type { OperationalProfileVersion } from '../../profiles/domain';
 import type { ScenarioDocument } from '../../study/model';
 import { Button } from '../../ui/Button';
@@ -12,6 +13,7 @@ import { CompositionHypothesisBuilder } from './CompositionHypothesisBuilder';
 type Props = Readonly<{
   baseScenario: ScenarioDocument;
   availableProfiles?: readonly OperationalProfileVersion[];
+  companies?: readonly CompanyRecord[];
   onCreate(draft: MvpHypothesisDraft | CompositionHypothesisDraft): void | Promise<void>;
 }>;
 
@@ -32,7 +34,7 @@ function scalarCosts(scenario: ScenarioDocument): MvpScalarCostDraft {
 export function HypothesisBuilder(props: Props) {
   if (isProfileMvpScenario(props.baseScenario) && props.availableProfiles !== undefined) {
     return <CompositionHypothesisBuilder baseScenario={props.baseScenario}
-      availableProfiles={props.availableProfiles} onCreate={props.onCreate} />;
+      availableProfiles={props.availableProfiles} companies={props.companies} onCreate={props.onCreate} />;
   }
   return <LegacyHypothesisBuilder {...props} />;
 }

@@ -59,6 +59,10 @@ function openStudies(first: StudyDocument, second?: StudyDocument) {
   return router;
 }
 
+async function openComparison() {
+  await userEvent.click(await screen.findByRole('button', { name: 'Abrir quadros comparativos' }));
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.controller.snapshot.document = null;
@@ -66,12 +70,28 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('StudyDiagnosticPage run all', () => {
+  it('keeps the comparison tables hidden until the user opens them', async () => {
+    const study = await pendingStudy('Estudo fechado');
+    openStudies(study);
+    const toggle = await screen.findByRole('button', { name: 'Abrir quadros comparativos' });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('region', { name: 'Original × variações' })).not.toBeInTheDocument();
+
+    await userEvent.click(toggle);
+    expect(screen.getByRole('region', { name: 'Original × variações' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ocultar quadros comparativos' })).toHaveAttribute('aria-expanded', 'true');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Ocultar quadros comparativos' }));
+    expect(screen.queryByRole('region', { name: 'Original × variações' })).not.toBeInTheDocument();
+  });
+
   it.each(['resolved', 'rejected'] as const)('stops the old batch after navigation when its request is %s', async (completion) => {
     const first = await pendingStudy('Primeiro estudo');
     const second = await pendingStudy('Segundo estudo');
     const pending = deferredAttempt();
     mocks.execute.mockReturnValueOnce(pending.promise);
     const router = openStudies(first, second);
+    await openComparison();
     await userEvent.click(await screen.findByRole('button', { name: 'Rodar todas' }));
     await waitFor(() => expect(mocks.execute).toHaveBeenCalledTimes(1));
     expect(mocks.execute.mock.calls[0]![0].scenarioId).toBe(first.baseScenarioId);
@@ -97,6 +117,7 @@ describe('StudyDiagnosticPage run all', () => {
     const study = await pendingStudy('Estudo com falha');
     mocks.execute.mockResolvedValueOnce(attempt('FAILED'));
     openStudies(study);
+    await openComparison();
     await userEvent.click(await screen.findByRole('button', { name: 'Rodar todas' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível concluir o diagnóstico');

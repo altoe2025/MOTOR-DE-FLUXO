@@ -75,6 +75,34 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-28 — Bancada, nível 1 de usabilidade: %, modelo de importação, mediana, presets e bps
+
+1. **Sintoma.** Premissas pediam fração com ponto (IOF `0.035`) e o ticket se chamava "médio", mas era mediana. A importação não tinha modelo, e o erro de cabeçalho era genérico ("headers fora da ordem canônica"), com o código técnico repetido na tela. O diagnóstico mostrava só a execução detalhada, escolhida como a primeira do plano e chamada de "representativa", sem a distribuição. "Todas as combinações" gerava 254 variações com 8 empresas. A origem da economia podia usar "A volume ×2" como "A sozinha". O quadro comparava R$ de períodos e volumes diferentes.
+2. **Causa.** Os campos gravavam o texto digitado direto na fração. A lista de colunas estava duplicada no preflight e no parser, e o worker reserializava a mensagem já prefixada. A repetição de detalhe era fixada no pedido, antes de rodar. As variações não guardavam de qual base vieram, e o quadro não tinha métrica relativa ao volume.
+3. **O que foi feito.** Branch `feat/bancada-exploracao`, commits `72138e4` a `ae96db5`.
+   - Premissas em % e R$ com vírgula (`study/numberInput.ts`), armazenamento ainda em fração e "Ticket mediano".
+   - `importer/layout.ts` como fonte única, modelo `.xlsx` gerado no navegador (passa no próprio preflight) e mensagens que dizem como corrigir.
+   - Servidor: em entrada gerada, `aggregate_diagnostic` detalha a repetição com economia igual ao P50 (posto mais próximo; em empate, a primeira do plano). Nenhuma regra do motor mudou. Pacote demo regenerado com o mesmo SHA e critério `MEDIAN_SAVINGS_REPETITION`.
+   - Topo do resultado com P10/P50/P90, amplitude, repetições e qual execução vai para o Replay.
+   - Presets "Cada empresa sozinha" e "Retirar uma por vez", mais seleção manual e "todas" como opção avançada com contagem. Campo opcional `derivation` no cenário (schema do estudo e validadores regenerados). `savingsOrigin` só usa "sozinha" da mesma base, versão, premissas e período.
+   - Quadro com economia em bps (economia ÷ `volume_bruto_periodo_brl` × 10.000, ordenação padrão), período e volume medidos, e aviso de premissas diferentes.
+   - Apagar estudo pelo quadro, feito em sessão paralela, commitado à parte.
+   - Verificação: `tsc`, `eslint`, 1.121 testes unitários e 675 testes de `tests/web_api` passam.
+4. **O que isso invalida.**
+   - Diagnósticos gerados novos detalham a repetição mediana, não a primeira: Replay, apresentação e comunicação de diagnósticos novos mostram outra carteira que a da regra anterior. Diagnósticos antigos seguem válidos e exibem o critério antigo.
+   - O pacote demo mudou (outras repetições selecionadas), então snapshots visuais e specs Playwright do demo podem precisar de revisão; não foram rodados.
+   - Bug conhecido, anterior e não corrigido: com aquecimento, `analyze_diagnostic_repetitions` falha ("volume casado excede o potencial estrutural") quando a repetição selecionada tem ordens medidas casando com ordens do aquecimento, porque o teto usa só as medidas. Reproduzido em 6 de 10 repetições do demo com seeds deslocadas; a correção muda a regra do eixo e aguarda decisão.
+   - Com algumas seeds, o motor lança "taxas por mecanismo não reconciliam com netabilidade" (visto com seeds do demo +7919); não investigado.
+   - `router.test.tsx › offers the global chat…` é instável já no commit `f1c6f04`.
+   - Nenhum deploy.
+
+## 2026-09-28 — Bancada: carteira de várias empresas, combinações e front mais claro
+
+1. **Sintoma.** Testar composição exigia montar uma planilha por combinação, com a empresa marcada só pelo prefixo do ID; o netting entre linhas da mesma empresa (ex.: AstroPay Foreign PIX × Multimoedas) aparecia como "entre clientes", misturado ao ganho que a carteira traz; a apresentação não abria para carteiras de casos juntos; a tela do estudo misturava caminhos antigos (prévia, hipótese, comparar) com o fluxo novo.
+2. **Causa.** O motor só conhece `cliente_id`; o front não tinha o nível "empresa" nem juntava casos de empresas diferentes num cenário. O documento de comunicação citava a origem inteira (todas as ordens) e passava do limite de 20 mil caracteres.
+3. **O que foi feito.** Branch `feat/bancada-exploracao` (commits `402815f` a `70cb94e`), sem mudança no motor Python. Origem "Juntar casos de empresas": um caso por empresa, calendário comum (dia 0 = data inicial mais antiga), `companyByOrder`/`sourceCases` no schema do estudo e validadores regenerados. Empresa vem do cadastro; prefixo do ID fica como alternativa para caso único. "Gerar todas as combinações" (até 8 empresas) e tabela "De onde vem a economia de cada empresa" (sozinha × carteira, mesma linha × entre linhas). Apagar cenários (execuções removidas só junto com o cenário). Replay sem códigos, com empresa e prazo em destaque. Apresentação com nomes de empresa, "Carteira com N empresas", separação entre linhas da mesma empresa e entre empresas, e seção "Original × variações". Estudo em caminho único; `/premissas`, `/replay`, `/carteira` redirecionam para `/estudos` e `/comparar` para `/quadro`; aba Perfis fora da navegação; nomes automáticos e renomear cenário sem invalidar diagnóstico; rótulos "custo sem pool/com pool". `tsc`, `eslint` e 1.067 testes unitários passam.
+4. **O que isso invalida.** Treze specs Playwright (`stage4-*`, `stage6-demo-communication`, `stage6-presentation`, `study-*`, `foundation`, `real-auth` e outros) ainda esperam as telas escondidas e não foram rodadas nem reescritas: a CI de navegador deve falhar até serem ajustadas. Expectativas sobre "Executar cenário atual", "Criar hipótese", `/comparar` e textos "baseline/netado" ficam superadas. A partição "entre linhas × entre empresas" depende das variações "só X" rodadas; o número que vai para frente (qual camada é valor do produto) segue como decisão de negócio aberta. Nenhum deploy.
+
 ## 2026-09-25 — Compatibilidade dos E2Es históricos e navegação com zoom (MOT-99)
 
 1. **Sintoma.** A CI integral encontrou expectativas de blocos removidos da carteira/apresentação e transbordamento horizontal a 200% em três telas.

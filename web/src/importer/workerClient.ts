@@ -1,12 +1,13 @@
 import type { ParsedImport, WorkerRequest, WorkerResponse } from './xlsxParser';
-import { ImportFileError } from './xlsxPreflight';
+import { IMPORT_MAX_FILE_MIB } from './layout';
+import { FILE_TOO_LARGE_MESSAGE, ImportFileError } from './errors';
 
 function abortError(): DOMException { return new DOMException('Importação cancelada', 'AbortError'); }
-const MAX_FILE_BYTES = 5 * 1024 * 1024;
+const MAX_FILE_BYTES = IMPORT_MAX_FILE_MIB * 1024 * 1024;
 
 function preflightFile(file: File): void {
-  if (!file.name.toLowerCase().endsWith('.xlsx')) throw new ImportFileError('FILE_NOT_XLSX', 'somente arquivos .xlsx são permitidos');
-  if (file.size > MAX_FILE_BYTES) throw new ImportFileError('FILE_TOO_LARGE', 'o XLSX excede 5 MiB');
+  if (!file.name.toLowerCase().endsWith('.xlsx')) throw new ImportFileError('FILE_NOT_XLSX', 'Só arquivos .xlsx são aceitos. No Excel, use Salvar como → Pasta de Trabalho do Excel (.xlsx), ou baixe o modelo.');
+  if (file.size > MAX_FILE_BYTES) throw new ImportFileError('FILE_TOO_LARGE', FILE_TOO_LARGE_MESSAGE);
 }
 
 /** The only public entry point that accepts a browser File. */
@@ -35,7 +36,7 @@ export async function parseCanonicalXlsx(file: File, signal: AbortSignal): Promi
       if (response.kind === 'SUCCESS') finish(() => resolve(response.parsed));
       else finish(() => reject(new ImportFileError(response.error.code, response.error.message)));
     };
-    worker.onerror = () => finish(() => reject(new ImportFileError('WORKER_FAILURE', 'falha inesperada no worker de importação')));
+    worker.onerror = () => finish(() => reject(new ImportFileError('WORKER_FAILURE', 'A leitura da planilha falhou inesperadamente. Tente de novo; se repetir, recarregue a página.')));
     signal.addEventListener('abort', onAbort, { once: true });
     const request: WorkerRequest = { kind: 'PARSE', requestId, buffer };
     try { worker.postMessage(request, [buffer]); } catch (error) { finish(() => reject(error)); }

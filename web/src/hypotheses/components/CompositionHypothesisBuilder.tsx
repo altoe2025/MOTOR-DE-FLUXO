@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 
+import type { CompanyRecord } from '../../cases/domain';
 import type { OperationalProfileVersion } from '../../profiles/domain';
 import type { CostPremises, EffectiveInput, ScenarioDocument } from '../../study/model';
 import { Button } from '../../ui/Button';
@@ -7,6 +8,7 @@ import { InlineNotice } from '../../ui/InlineNotice';
 import type {
   CompositionHypothesisDraft, CompositionParticipantChange, CompositionParticipantPatch,
 } from '../composition';
+import { companyLabel, lineageProfileId, participantNames } from '../participantNames';
 
 type Participant = EffectiveInput['participants'][number];
 type AddedParticipant = Readonly<{
@@ -18,6 +20,7 @@ type AddedParticipant = Readonly<{
 type Props = Readonly<{
   baseScenario: ScenarioDocument;
   availableProfiles: readonly OperationalProfileVersion[];
+  companies?: readonly CompanyRecord[] | undefined;
   onCreate(draft: CompositionHypothesisDraft): void | Promise<void>;
 }>;
 
@@ -28,11 +31,6 @@ const COSTS: readonly Readonly<{ key: Exclude<keyof CostPremises, 'iof_por_final
   { key: 'custo_oportunidade_aa', label: 'Custo de oportunidade ao ano' },
   { key: 'ptax', label: 'PTAX' },
 ];
-
-function lineageProfileId(input: EffectiveInput, participantId: string): string | null {
-  const source = input.sources[`/participants/${participantId}/profile`]?.source;
-  return source?.match(/^profile-mvp:(.+)@[0-9a-f]{64}:/)?.[1] ?? null;
-}
 
 function changedPatch(base: Participant, current: Participant): CompositionParticipantPatch {
   const patch: Record<string, unknown> = {};
@@ -47,7 +45,7 @@ function changedPatch(base: Participant, current: Participant): CompositionParti
   return patch as CompositionParticipantPatch;
 }
 
-export function CompositionHypothesisBuilder({ baseScenario, availableProfiles, onCreate }: Props) {
+export function CompositionHypothesisBuilder({ baseScenario, availableProfiles, companies = [], onCreate }: Props) {
   const input = baseScenario.sourceSnapshot.generationInputSnapshot;
   if (input === undefined) throw new Error('Cenário sem entrada de geração por Perfil.');
   const [name, setName] = useState('Nova hipótese');
@@ -59,10 +57,8 @@ export function CompositionHypothesisBuilder({ baseScenario, availableProfiles, 
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const profileById = useMemo(() => new Map(availableProfiles.map((profile) => [profile.id, profile])), [availableProfiles]);
-  const companyFor = (participant: Participant) => {
-    const profileId = lineageProfileId(input, participant.id);
-    return profileById.get(profileId ?? '')?.companyId ?? profileId ?? participant.id;
-  };
+  const names = useMemo(() => participantNames(input, availableProfiles, companies), [input, availableProfiles, companies]);
+  const companyName = (companyId: string) => companyLabel(companyId, companies);
   const visible = participants.filter((participant) => !removed.includes(participant.id));
   const usedProfiles = new Set(visible.map((participant) => lineageProfileId(input, participant.id)).filter(Boolean));
   for (const item of added) usedProfiles.add(item.profile.id);
@@ -89,6 +85,11 @@ export function CompositionHypothesisBuilder({ baseScenario, availableProfiles, 
     });
     return changes;
   }, [added, input.participants, participants, removed]);
+  const changeLabel = (change: CompositionParticipantChange) => {
+    if (change.kind === 'ADD_PROFILE') return `Adicionar ${companyName(change.profile.companyId)}`;
+    const name = names.get(change.participantId)?.name ?? 'participante';
+    return change.kind === 'REMOVE_PARTICIPANT' ? `Remover ${name}` : `Alterar ${name}`;
+  };
   const commonChanged = windowDays !== baseScenario.premises.windowDays
     || JSON.stringify(costs) !== JSON.stringify(baseScenario.premises.costs);
   const hasChanges = participantChanges.length > 0 || commonChanged;
@@ -148,53 +149,72 @@ export function CompositionHypothesisBuilder({ baseScenario, availableProfiles, 
         <option value="">Selecione</option>
         {availableProfiles.filter((profile) => profile.compatibility.compatible
           && !usedProfiles.has(profile.id) && !usedCompanies.has(profile.companyId))
-          .map((profile) => <option key={profile.id} value={profile.id}>{profile.companyId}</option>)}
+          .map((profile) => <option key={profile.id} value={profile.id}>{companyName(profile.companyId)}</option>)}
       </select></label>
-      {added.map((item) => <div key={item.profile.id} className="composition-participant">
-        <p>Adicionar {item.profile.companyId}</p>
-        <label>ID do participante — {item.profile.companyId}<input value={item.participantId}
-          onChange={(event) => updateAdded(item.participantId, { participantId: event.target.value })} /></label>
-        <label>Seed — {item.profile.companyId}<input value={item.seed}
-          onChange={(event) => updateAdded(item.participantId, { seed: event.target.value })} /></label>
-        <Button variant="secondary" onClick={() => removeAdded(item.participantId)}>
-          Remover {item.profile.companyId}
-        </Button>
-      </div>)}
+      {added.map((item) => {
+        const company = companyName(item.profile.companyId);
+        return <div key={item.profile.id} className="composition-participant">
+          <h3>Adicionar {company}</h3>
+          <details className="technical-ids">
+            <summary>Identificadores técnicos</summary>
+            <div className="parameter-grid">
+              <label>ID do participante{' '}<span className="visually-hidden">— {company}</span><input value={item.participantId}
+                onChange={(event) => updateAdded(item.participantId, { participantId: event.target.value })} /></label>
+              <label>Seed{' '}<span className="visually-hidden">— {company}</span><input value={item.seed}
+                onChange={(event) => updateAdded(item.participantId, { seed: event.target.value })} /></label>
+            </div>
+          </details>
+          <div className="composition-participant__actions">
+            <Button variant="secondary" onClick={() => removeAdded(item.participantId)}>
+              Remover{' '}<span className="visually-hidden">{company}</span>
+            </Button>
+          </div>
+        </div>;
+      })}
     </fieldset>
     <fieldset><legend>Participantes</legend>{visible.map((participant) => {
-      const company = companyFor(participant);
+      const label = names.get(participant.id)!;
+      const company = label.name;
+      const hidden = <>{' '}<span className="visually-hidden">— {company}</span></>;
       return <div className="composition-participant" key={participant.id}>
-        <h3>{company}</h3>
-        <label>Volume mensal — {company}<input type="number" step="any" value={participant.monthly_volume_brl}
-          onChange={(event) => updateParticipant(participant.id, { monthly_volume_brl: event.target.value })} /></label>
-        <label>Fração OUT — {company}<input type="number" step="any" value={participant.out_fraction}
-          onChange={(event) => updateParticipant(participant.id, { out_fraction: event.target.value })} /></label>
-        <label>Ticket mediano — {company}<input type="number" step="any" value={participant.ticket_median_brl}
-          onChange={(event) => updateParticipant(participant.id, { ticket_median_brl: event.target.value })} /></label>
-        <label>Arquétipo — {company}<select value={participant.profile}
-          onChange={(event) => updateParticipant(participant.id, { profile: event.target.value as Participant['profile'] })}>
-          <option value="tesouraria_corporativa">Tesouraria corporativa</option>
-          <option value="exportador">Exportador</option><option value="remessa_outbound_massiva">Remessa outbound massiva</option>
-          <option value="psp_inbound">PSP inbound</option><option value="cripto_native_sem_fiat">Cripto sem fiat</option>
-          <option value="payroll_fornecedor">Payroll fornecedor</option>
-        </select></label>
-        <label>Prazo — {company}<select value={participant.deadline.mode}
-          onChange={(event) => updateParticipant(participant.id, {
-            deadline: event.target.value === 'FIXED' ? { mode: 'FIXED', days: 7 } : { mode: 'PROFILE' },
-          })}>
-          <option value="FIXED">Fixo</option><option value="PROFILE">Derivado do Perfil</option>
-        </select></label>
-        {participant.deadline.mode === 'FIXED' ? <label>Dias de prazo — {company}<input type="number" min="0"
-          value={participant.deadline.days} onChange={(event) => updateParticipant(participant.id, {
-            deadline: { mode: 'FIXED', days: Number(event.target.value) },
-          })} /></label> : null}
-        <label><input type="checkbox" checked={participant.eh_efx}
-          onChange={(event) => updateParticipant(participant.id, { eh_efx: event.target.checked })} /> eFX — {company}</label>
-        <label>Finalidade OUT — {company}<input value={participant.purpose_out}
-          onChange={(event) => updateParticipant(participant.id, { purpose_out: event.target.value })} /></label>
-        <label>Finalidade IN — {company}<input value={participant.purpose_in}
-          onChange={(event) => updateParticipant(participant.id, { purpose_in: event.target.value })} /></label>
-        <Button variant="secondary" onClick={() => removeParticipant(participant.id)}>Remover {company}</Button>
+        <div className="composition-participant__header">
+          <h3>{company}</h3>
+          {company.startsWith(label.archetype) ? null : <span>{label.archetype}</span>}
+        </div>
+        <div className="parameter-grid">
+          <label>Volume mensal (BRL){hidden}<input type="number" step="any" value={participant.monthly_volume_brl}
+            onChange={(event) => updateParticipant(participant.id, { monthly_volume_brl: event.target.value })} /></label>
+          <label>Ticket mediano (BRL){hidden}<input type="number" step="any" value={participant.ticket_median_brl}
+            onChange={(event) => updateParticipant(participant.id, { ticket_median_brl: event.target.value })} /></label>
+          <label>Fração OUT (0 a 1){hidden}<input type="number" step="any" min="0" max="1" value={participant.out_fraction}
+            onChange={(event) => updateParticipant(participant.id, { out_fraction: event.target.value })} /></label>
+          <label>Arquétipo{hidden}<select value={participant.profile}
+            onChange={(event) => updateParticipant(participant.id, { profile: event.target.value as Participant['profile'] })}>
+            <option value="tesouraria_corporativa">Tesouraria corporativa</option>
+            <option value="exportador">Exportador</option><option value="remessa_outbound_massiva">Remessa outbound massiva</option>
+            <option value="psp_inbound">PSP inbound</option><option value="cripto_native_sem_fiat">Cripto sem fiat</option>
+            <option value="payroll_fornecedor">Payroll fornecedor</option>
+          </select></label>
+          <label>Prazo{hidden}<select value={participant.deadline.mode}
+            onChange={(event) => updateParticipant(participant.id, {
+              deadline: event.target.value === 'FIXED' ? { mode: 'FIXED', days: 7 } : { mode: 'PROFILE' },
+            })}>
+            <option value="FIXED">Fixo</option><option value="PROFILE">Derivado do Perfil</option>
+          </select></label>
+          {participant.deadline.mode === 'FIXED' ? <label>Dias de prazo{hidden}<input type="number" min="0"
+            value={participant.deadline.days} onChange={(event) => updateParticipant(participant.id, {
+              deadline: { mode: 'FIXED', days: Number(event.target.value) },
+            })} /></label> : null}
+          <label>Finalidade OUT{hidden}<input value={participant.purpose_out}
+            onChange={(event) => updateParticipant(participant.id, { purpose_out: event.target.value })} /></label>
+          <label>Finalidade IN{hidden}<input value={participant.purpose_in}
+            onChange={(event) => updateParticipant(participant.id, { purpose_in: event.target.value })} /></label>
+        </div>
+        <div className="composition-participant__actions">
+          <label className="checkbox-field"><input type="checkbox" checked={participant.eh_efx}
+            onChange={(event) => updateParticipant(participant.id, { eh_efx: event.target.checked })} /> Opera via eFX{hidden}</label>
+          <Button variant="secondary" onClick={() => removeParticipant(participant.id)}>Remover{' '}<span className="visually-hidden">{company}</span></Button>
+        </div>
       </div>;
     })}</fieldset>
     <fieldset><legend>Premissas comuns</legend><div className="parameter-grid">
@@ -229,7 +249,7 @@ export function CompositionHypothesisBuilder({ baseScenario, availableProfiles, 
     <div className="table-scroll"><table className="hypothesis-changes">
       <caption>Resumo antes e depois</caption><thead><tr><th>Alteração</th><th>Antes</th><th>Depois</th></tr></thead>
       <tbody>{hasChanges ? <>
-        {participantChanges.map((change, index) => <tr key={`${change.kind}-${index}`}><th scope="row">{change.kind}</th><td>Composição base</td><td>Composição proposta</td></tr>)}
+        {participantChanges.map((change, index) => <tr key={`${change.kind}-${index}`}><th scope="row">{changeLabel(change)}</th><td>Composição base</td><td>Composição proposta</td></tr>)}
         {windowDays === baseScenario.premises.windowDays ? null : <tr><th scope="row">Janela</th><td>{baseScenario.premises.windowDays}</td><td>{windowDays}</td></tr>}
         {JSON.stringify(costs) === JSON.stringify(baseScenario.premises.costs) ? null : <tr><th scope="row">Custos e IOF</th><td>Premissas base</td><td>Premissas propostas</td></tr>}
       </> : <tr><td colSpan={3}>Nenhuma alteração.</td></tr>}</tbody>

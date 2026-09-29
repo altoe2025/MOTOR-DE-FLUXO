@@ -4,23 +4,23 @@ import type { NormalizedOperation, RawOperationCells } from './domain';
 import { ImportValidationError } from './errors';
 
 export function requireOperationCell(value: string | null, field: keyof RawOperationCells): string {
-  if (value === null || value === '') throw new ImportValidationError('REQUIRED', `${field} é obrigatório`);
+  if (value === null || value === '') throw new ImportValidationError('REQUIRED', `Preencha a coluna ${field}; ela é obrigatória.`);
   return value;
 }
 
 function exact(value: string, field: keyof RawOperationCells): string {
-  if (value.trim() !== value) throw new ImportValidationError('INVALID_FORMAT', `${field} não aceita espaços externos`);
+  if (value.trim() !== value) throw new ImportValidationError('INVALID_FORMAT', `Tire os espaços do começo e do fim de ${field}.`);
   return value;
 }
 
 function limited(value: string, field: keyof RawOperationCells, maximum: number): string {
-  if (value.length > maximum) throw new ImportValidationError('VALUE_OUT_OF_RANGE', `${field} excede ${maximum} caracteres`);
+  if (value.length > maximum) throw new ImportValidationError('VALUE_OUT_OF_RANGE', `${field} passa de ${maximum} caracteres; encurte o texto.`);
   return value;
 }
 
 export function normalizeDirection(value: string | null): NormalizedOperation['direction'] {
   const direction = value?.trim().toUpperCase();
-  if (direction !== 'OUT' && direction !== 'IN') throw new ImportValidationError('DIRECTION_INVALID', 'direção deve ser OUT ou IN');
+  if (direction !== 'OUT' && direction !== 'IN') throw new ImportValidationError('DIRECTION_INVALID', 'Use OUT (reais saem do Brasil) ou IN (moeda entra) na coluna direcao.');
   return direction;
 }
 
@@ -36,7 +36,7 @@ export function normalizePurposeCode(value: string | null): string | null {
 
 export function normalizeClientName(value: string | null): string {
   const name = requireOperationCell(value, 'cliente_nome').trim().replace(/\s+/g, ' ');
-  if (name === '') throw new ImportValidationError('REQUIRED', 'cliente_nome é obrigatório');
+  if (name === '') throw new ImportValidationError('REQUIRED', 'Preencha a coluna cliente_nome; ela é obrigatória.');
   return limited(name, 'cliente_nome', 200);
 }
 

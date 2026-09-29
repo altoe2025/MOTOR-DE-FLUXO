@@ -26,7 +26,7 @@ function normalizeRow(raw: RawOperationCells, rowNumber: number): MutableRow {
   const deadlineDate = validate(raw, 'data_limite', rowNumber, errors, (value) => parseCivilDate(requireOperationCell(value, 'data_limite')));
   const valueBrl = validate(raw, 'valor_brl', rowNumber, errors, (value) => parseBrlDecimal(requireOperationCell(value, 'valor_brl')));
   const purposeCode = validate(raw, 'finalidade_codigo', rowNumber, errors, normalizePurposeCode);
-  if (knownDate !== null && deadlineDate !== null && deadlineDate < knownDate) errors.push({ code: 'DATE_ORDER_INVALID', field: 'data_limite', rowNumber, value: raw.data_limite, message: 'DATE_ORDER_INVALID: data limite anterior à data conhecida' });
+  if (knownDate !== null && deadlineDate !== null && deadlineDate < knownDate) errors.push({ code: 'DATE_ORDER_INVALID', field: 'data_limite', rowNumber, value: raw.data_limite, message: 'DATE_ORDER_INVALID: A data limite vem antes da data conhecida. Corrija uma das duas datas.' });
   return { rowNumber, raw, errors, normalized: errors.length === 0 && operationId !== null && clientName !== null && direction !== null && knownDate !== null && deadlineDate !== null && valueBrl !== null ? { operationId, clientName, profileClassification, direction, knownDate, deadlineDate, valueBrl, purposeCode } : null };
 }
 
@@ -39,7 +39,7 @@ function rejectDuplicates(rows: MutableRow[]): void {
   }
   for (const [id, occurrences] of byId) {
     if (occurrences.length < 2) continue;
-    for (const row of occurrences) { row.errors.push({ code: 'DUPLICATE_ID_IN_BATCH', field: 'operacao_id', rowNumber: row.rowNumber, value: row.raw.operacao_id, message: `DUPLICATE_ID_IN_BATCH: ID repetido ${id}` }); row.normalized = null; }
+    for (const row of occurrences) { row.errors.push({ code: 'DUPLICATE_ID_IN_BATCH', field: 'operacao_id', rowNumber: row.rowNumber, value: row.raw.operacao_id, message: `DUPLICATE_ID_IN_BATCH: O operacao_id ${id} aparece em mais de uma linha. Cada operação precisa de um ID único.` }); row.normalized = null; }
   }
 }
 

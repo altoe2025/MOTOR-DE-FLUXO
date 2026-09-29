@@ -1107,8 +1107,19 @@ export class IndexedDbApplicationRepository implements ApplicationRepository {
         const existingById = new Map(
           existingExecutions.map((execution) => [execution.execution_id, execution]),
         );
-        for (const existing of existingExecutions) {
-          const candidate = input.document.executions[existing.sequence];
+        // Execuções são imutáveis e mantêm a ordem. Só somem junto com o cenário apagado;
+        // as que ficam deslizam para ocupar as posições liberadas.
+        const scenarioIds = new Set(input.document.scenarios.map((scenario) => scenario.id));
+        let removedBefore = 0;
+        for (const existing of [...existingExecutions].sort((left, right) => left.sequence - right.sequence)) {
+          if (!scenarioIds.has(existing.document.scenarioId)
+            && !input.document.executions.some((execution) => execution.id === existing.execution_id)) {
+            executions.delete([existing.study_id, existing.execution_id]);
+            existingById.delete(existing.execution_id);
+            removedBefore += 1;
+            continue;
+          }
+          const candidate = input.document.executions[existing.sequence - removedBefore];
           if (candidate === undefined
             || candidate.id !== existing.execution_id
             || (!sameDocument(candidate, existing.document)
@@ -1118,6 +1129,14 @@ export class IndexedDbApplicationRepository implements ApplicationRepository {
         }
         for (const [sequence, execution] of input.document.executions.entries()) {
           const existing = existingById.get(execution.id);
+          if (existing !== undefined && existing.sequence !== sequence) {
+            executions.put({
+              ...existing,
+              sequence,
+              document: structuredClone(isInterruptionTransition(existing.document, execution) ? execution : existing.document),
+            } satisfies ExecutionRow);
+            continue;
+          }
           if (existing === undefined) {
             executions.add({
               study_id: input.document.id,

@@ -91,6 +91,32 @@
               },
               "required": ["caseId", "caseRevision"]
             },
+            "sourceCases": {
+              "type": "array",
+              "minItems": 2,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "caseId": { "$ref": "#/$defs/Identifier" },
+                  "caseRevision": { "type": "integer", "minimum": 1 },
+                  "companyId": { "$ref": "#/$defs/Identifier" }
+                },
+                "required": ["caseId", "caseRevision", "companyId"]
+              }
+            },
+            "companyByOrder": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "companyId": { "$ref": "#/$defs/Identifier" },
+                  "companyName": { "type": "string", "minLength": 1, "maxLength": 200 }
+                },
+                "required": ["companyId", "companyName"]
+              }
+            },
             "orders": { "type": "array", "items": { "$ref": "https://motor-de-fluxo.local/contracts/schemas.json#/$defs/OrdemEntrada" } },
             "provenanceByOrder": { "type": "object", "additionalProperties": { "$ref": "#/$defs/OrderFieldProvenance" } }
           },
@@ -269,11 +295,26 @@
         "premises": { "$ref": "#/$defs/PremisesDocument" },
         "period": { "$ref": "#/$defs/PeriodDocument" },
         "inputProvenance": { "$ref": "#/$defs/ScenarioInputProvenance" },
+        "derivation": { "$ref": "#/$defs/ScenarioDerivation" },
         "inputFingerprint": { "$ref": "#/$defs/Digest" }
       },
       "required": [
         "id", "revision", "name", "sourceSnapshot", "premises", "period", "inputFingerprint"
       ]
+    },
+    "ScenarioDerivation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "enum": ["COMPANY_ALONE", "LEAVE_ONE_OUT", "SUBSET"] },
+        "baseScenarioId": { "$ref": "#/$defs/Identifier" },
+        "baseSourceFingerprint": { "$ref": "#/$defs/Digest" },
+        "companies": {
+          "type": "array", "minItems": 1, "maxItems": 64,
+          "items": { "type": "string", "minLength": 1, "maxLength": 200 }
+        }
+      },
+      "required": ["kind", "baseScenarioId", "baseSourceFingerprint", "companies"]
     },
     "ExecutionRecordBase": {
       "type": "object",

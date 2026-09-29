@@ -23,7 +23,15 @@ export function ReplayControls({ document, playback, sort, onSort }: Readonly<{
       <button type="button" onClick={playback.repeat}>Repetir evento</button>
     </div>
     <div className="replay-timeline">
-      <div><span>D0</span><strong>Dia {playback.day} de {lastDay}</strong><span>D{lastDay}</span></div>
+      <div><span>D0</span>
+        <span className="replay-timeline__current">
+          <strong>D{playback.day}</strong>
+          <button className="replay-timeline__toggle" type="button" onClick={playback.togglePlaying} aria-pressed={playback.playing}
+            aria-label={playback.primaryAction === 'RESTART' ? 'Recomeçar' : playback.playing ? 'Pausar' : 'Tocar'}>
+            {playback.primaryAction === 'RESTART' ? '↺' : playback.playing ? 'Ⅱ' : '▶'}
+          </button>
+        </span>
+        <span>D{lastDay}</span></div>
       <label className="visually-hidden" htmlFor="replay-day-range">Selecionar dia</label>
       <input id="replay-day-range" aria-label="Selecionar dia" type="range" min={0} max={lastDay} value={playback.day} onChange={(event) => playback.selectDay(Number(event.currentTarget.value))} />
       <div className="replay-closing-marks" aria-hidden="true">{document.days.filter((day) => day.closing !== null).map((day) => <i key={day.day} style={{ left: `${lastDay === 0 ? 0 : (day.day / lastDay) * 100}%` }} />)}</div>

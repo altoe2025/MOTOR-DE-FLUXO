@@ -6,6 +6,7 @@ import { projectPortfolio } from '../portfolio';
 import { normalizeDirection, normalizePurposeCode } from '../normalization';
 import { parseCivilDate } from '../dates';
 import { parseBrlDecimal } from '../decimals';
+import { humanMessage } from '../errors';
 
 const editable: readonly { value: EditableImportField; label: string }[] = [
   { value: 'direction', label: 'Direção' }, { value: 'knownDate', label: 'Data conhecida' },
@@ -67,7 +68,7 @@ export function ReviewStep({ review, onCommand }: { review: ImportReview; onComm
     </dl>
     <p>SHA-256 da fonte: {review.context.parsed.sha256}</p>
     <p>Revisão semântica: {review.semanticRevision} · correções: {review.draft.corrections.length}</p>
-    {review.blockers.length === 0 ? <p role="status">Sem bloqueios para confirmar o Caso.</p> : <div role="alert"><strong>{review.blockers.length} bloqueio(s)</strong><ul>{review.blockers.map((item, index) => <li key={`${item.code}-${index}`}>{item.message}</li>)}</ul></div>}
+    {review.blockers.length === 0 ? <p role="status">Sem bloqueios para confirmar o Caso.</p> : <div role="alert"><strong>{review.blockers.length} bloqueio(s)</strong><ul>{review.blockers.map((item, index) => <li key={`${item.code}-${index}`}>{humanMessage(item.message)}</li>)}</ul></div>}
     {review.warnings.length === 0 ? null : <section aria-label="Avisos da importação"><h3>Avisos</h3><ul>{review.warnings.map((item, index) => <li key={`${item.code}-${index}`}>{item.message}</li>)}</ul></section>}
     <label htmlFor="import-filter">Filtrar revisão</label>
     <select id="import-filter" value={filter} onChange={(event) => setFilter(event.currentTarget.value as typeof filter)}>
@@ -81,7 +82,7 @@ export function ReviewStep({ review, onCommand }: { review: ImportReview; onComm
         const isExcluded = operationId !== null && excluded.has(operationId);
         const order = review.draft.orders.find((item) => item.id === operationId);
         const canonical = review.clientIdentity.clients.find((item) => item.id === order?.clientId)?.displayName ?? '—';
-        return <tr key={row.versionId}><td>{row.rowNumber}</td><td>{operationId ?? '—'}</td><td>{row.raw.cliente_nome ?? '—'}</td><td>{canonical}</td><td>{row.normalized?.direction ?? row.raw.direcao ?? '—'}</td><td>{row.normalized?.valueBrl ?? row.raw.valor_brl ?? '—'}</td><td>{conflicts.has(operationId ?? '') ? 'Conflito' : row.errors.length === 0 ? 'Válida' : row.errors.map((error) => error.code).join(', ')}</td><td><button type="button" onClick={() => setVersionId(row.versionId)}>Corrigir</button>{operationId === null ? null : <button type="button" onClick={() => onCommand({ kind: isExcluded ? 'RESTORE_OPERATION' : 'EXCLUDE_OPERATION', operationId, ...action() })}>{isExcluded ? 'Restaurar' : 'Excluir'}</button>}</td></tr>;
+        return <tr key={row.versionId}><td>{row.rowNumber}</td><td>{operationId ?? '—'}</td><td>{row.raw.cliente_nome ?? '—'}</td><td>{canonical}</td><td>{row.normalized?.direction ?? row.raw.direcao ?? '—'}</td><td>{row.normalized?.valueBrl ?? row.raw.valor_brl ?? '—'}</td><td>{conflicts.has(operationId ?? '') ? 'Conflito' : row.errors.length === 0 ? 'Válida' : <ul className="row-errors">{row.errors.map((error, index) => <li key={`${error.code}-${index}`}>{error.field === null ? '' : `${error.field}: `}{humanMessage(error.message)}</li>)}</ul>}</td><td><button type="button" onClick={() => setVersionId(row.versionId)}>Corrigir</button>{operationId === null ? null : <button type="button" onClick={() => onCommand({ kind: isExcluded ? 'RESTORE_OPERATION' : 'EXCLUDE_OPERATION', operationId, ...action() })}>{isExcluded ? 'Restaurar' : 'Excluir'}</button>}</td></tr>;
       })}</tbody></table>
     </div>
     {versionId === '' ? null : <form aria-label="Corrigir campo" onSubmit={correct}>

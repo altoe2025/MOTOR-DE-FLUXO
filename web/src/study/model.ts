@@ -77,6 +77,10 @@ export type AuthoredPortfolioDefinition =
   | Readonly<{
       kind: 'EXPLICIT_ORDERS';
       derivedFromObservedCase?: Readonly<{ caseId: string; caseRevision: number; importedFromXlsx?: true }>;
+      /** Carteira montada juntando casos de empresas diferentes. */
+      sourceCases?: readonly Readonly<{ caseId: string; caseRevision: number; companyId: string }>[];
+      /** Empresa de cada ordem, quando a carteira junta empresas. */
+      companyByOrder?: Readonly<Record<string, Readonly<{ companyId: string; companyName: string }>>>;
       orders: readonly CanonicalAuthoredOrder[];
       provenanceByOrder: Readonly<Record<string, OrderFieldProvenance>>;
     }>;
@@ -132,6 +136,18 @@ export type ScenarioInputProvenance = Readonly<{
   period: Readonly<{ horizonDays: FieldProvenance }>;
 }>;
 
+/**
+ * De onde veio uma variação de composição: gerada a partir de uma base exata (mesmas ordens,
+ * valores, datas, período e premissas), mantendo só `companies`. Qualquer edição posterior da
+ * variação descarta o vínculo (updateScenario não o copia).
+ */
+export type ScenarioDerivation = Readonly<{
+  kind: 'COMPANY_ALONE' | 'LEAVE_ONE_OUT' | 'SUBSET';
+  baseScenarioId: string;
+  baseSourceFingerprint: string;
+  companies: readonly string[];
+}>;
+
 export type ScenarioDocument = Readonly<{
   id: string;
   revision: number;
@@ -140,6 +156,7 @@ export type ScenarioDocument = Readonly<{
   premises: PremisesDocument;
   period: PeriodDocument;
   inputProvenance?: ScenarioInputProvenance;
+  derivation?: ScenarioDerivation;
   inputFingerprint: string;
 }>;
 

@@ -56,7 +56,7 @@ function dayFromWindowStart(date: string, startDate: string): number {
   return Math.round((atMidnight(date) - atMidnight(startDate)) / 86_400_000);
 }
 
-function observedOrders(caseRecord: ObservedCase): CanonicalAuthoredOrder[] {
+export function observedOrders(caseRecord: ObservedCase): CanonicalAuthoredOrder[] {
   return caseRecord.orders.map((order) => {
     return {
       id: order.id,
@@ -71,7 +71,7 @@ function observedOrders(caseRecord: ObservedCase): CanonicalAuthoredOrder[] {
   }).sort((left, right) => ordinal(left.id, right.id));
 }
 
-function provenanceForObservedOrders(caseRecord: ObservedCase): Record<string, OrderFieldProvenance> {
+export function provenanceForObservedOrders(caseRecord: ObservedCase): Record<string, OrderFieldProvenance> {
   return Object.fromEntries(caseRecord.orders.map((order) => {
     const uniform = order.provenance.length === 1 ? order.provenance[0] : undefined;
     const associated = order.fieldProvenance;

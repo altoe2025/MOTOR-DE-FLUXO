@@ -24,7 +24,7 @@ describe('cena Fronteira Viva', () => {
     expect(screen.getByText('Brasil')).toBeInTheDocument();
     expect(screen.getByText('CNR')).toBeInTheDocument();
     expect(screen.getByText('Exterior')).toBeInTheDocument();
-    expect(screen.getByRole('article', { name: /OUT out-1/i })).toHaveTextContent('cliente-a');
+    expect(screen.getByRole('article', { name: /OUT out-1/i })).not.toHaveTextContent('cliente-a');
     expect(screen.getByRole('article', { name: /OUT out-1/i })).toHaveTextContent('R$ 60,00');
     expect(screen.getByRole('article', { name: /OUT out-1/i })).toHaveTextContent('Prazo D2');
     expect(screen.queryByRole('article', { name: /IN in-1/i })).not.toBeInTheDocument();
@@ -62,6 +62,24 @@ describe('cena Fronteira Viva', () => {
     act(() => vi.advanceTimersByTime(1_900));
     expect(screen.queryByRole('article', { name: /OUT out-1/i })).not.toBeInTheDocument();
     expect(container.querySelector('.replay-connections')).not.toBeInTheDocument();
+  });
+
+  it('congela cartões liquidados e setas enquanto pausado', () => {
+    vi.useFakeTimers();
+    const document = replayDocumentWithBothRemittancesFixture();
+    const props = { document, state: replayStateAt(document, 2), sort: 'ARRIVAL' as const, transitionKey: 1 };
+    const { container, rerender } = render(<ReplayStage {...props} transitionMode="ANIMATE" frozen={false} />);
+
+    act(() => vi.advanceTimersByTime(3_800));
+    expect(screen.queryByRole('article', { name: /OUT out-1/i })).not.toBeInTheDocument();
+
+    rerender(<ReplayStage {...props} transitionMode="ANIMATE" frozen />);
+    expect(screen.getByRole('article', { name: /OUT out-1/i })).toHaveTextContent('Liquidada');
+    expect(container.querySelector('.replay-connections')).toBeInTheDocument();
+    expect(container.querySelector('.replay-stage--frozen')).toBeInTheDocument();
+    act(() => vi.advanceTimersByTime(10_000));
+    expect(screen.getByRole('article', { name: /OUT out-1/i })).toBeInTheDocument();
+    expect(container.querySelector('.replay-connections')).toBeInTheDocument();
   });
 
   it('rotula cada seta casada como autonetting ou netting multilateral', () => {
