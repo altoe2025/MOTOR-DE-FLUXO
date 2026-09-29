@@ -62,6 +62,8 @@ export type AppendProfileVersionMutation = Readonly<{
 }>;
 
 export interface ApplicationRepository {
+  /** Limpa uma única vez todo o estado local anterior ao reset de produção. */
+  resetAllLocalDataOnce?(): Promise<boolean>;
   getDemoInstallationStatus(): Promise<'INSTALLED' | 'REMOVED' | null>;
   needsLegacyDemoCleanup?(): Promise<boolean>;
   /** Remove somente o pacote demo instalado automaticamente por versões antigas. */

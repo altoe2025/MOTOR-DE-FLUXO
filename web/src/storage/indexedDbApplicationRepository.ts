@@ -35,6 +35,7 @@ import { IndexedDbChatRepository } from '../chat/repository';
 import type { ChatConversation } from '../chat/domain';
 
 const DATABASE_VERSION = 3;
+const DATA_RESET_KEY = 'data-reset:2026-09-29-v1';
 
 const STORE_NAMES = [
   'companies',
@@ -544,6 +545,20 @@ export class IndexedDbApplicationRepository implements ApplicationRepository {
     this.#migrationSources = scope.migrationSources ?? {};
     this.#migrationSourceLoader = scope.migrationSourceLoader;
     this.#chat = new IndexedDbChatRepository(() => this.#database(), this.#ownerSub);
+  }
+
+  async resetAllLocalDataOnce(): Promise<boolean> {
+    const database = await this.#database();
+    if (this.#closed) throw new StorageClosedError();
+    return transactionResult(database, [...STORE_NAMES], 'readwrite', async (transaction) => {
+      const meta = transaction.objectStore('meta');
+      const previous = await requestResult<{ key: string; value: unknown } | undefined>(meta.get(DATA_RESET_KEY));
+      if (previous?.value === true) return false;
+      for (const storeName of STORE_NAMES) transaction.objectStore(storeName).clear();
+      meta.put({ key: 'schema_version', value: DATABASE_VERSION });
+      meta.put({ key: DATA_RESET_KEY, value: true });
+      return true;
+    });
   }
 
   listChatConversations(studyId: string | null): Promise<ChatConversation[]> {

@@ -37,7 +37,7 @@ Atualizada em 2026-09-29, durante a preparação da atualização da bancada.
 
 | Branch | Situação | Dono |
 |---|---|---|
-| `codex/replay-production-fix` | Produção em correção: limpa resíduos do demo automático antigo e preserva a falha real de diagnóstico; novo deploy autorizado | Codex |
+| `codex/replay-production-fix` | Reset total do estado local anterior preparado para produção; novo deploy autorizado | Codex |
 | `codex/frontend-performance-fixes` | Integra as correções de travamento e `feat/estudo-vs-combinacao` sobre o release `829d224`; publicação no Render em preparação | Codex |
 | `codex/carteira-criterios` | Integra estudo separado de combinações, últimas melhorias de `feat/bancada-exploracao` e chat já publicado do PR #57; deploy aguardando comando do Gabriel | Codex |
 | `codex/chat-interface-render` | PR #57 aberto (draft, base `feat/bancada-exploracao`); código `8d43695` publicado no Render com status Live em 2026-09-28; sem merge na `main` | Codex |
@@ -78,6 +78,13 @@ Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. 
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+## 2026-09-29 — Reset total do estado local anterior (MOT-99)
+
+- **Sintoma:** contas e navegadores usados durante o desenvolvimento ainda exibiam empresas, casos, perfis, estudos, execuções, Replay e chats anteriores, sintéticos ou não.
+- **Causa:** as versões anteriores preservavam o IndexedDB por usuário; a limpeza seletiva do demo não atendia ao requisito de começar a operação real sem qualquer histórico.
+- **O que foi feito:** em `codex/replay-production-fix`, o primeiro acesso após este release limpa uma única vez todos os stores locais da conta — empresas, casos, importações, perfis, estudos, execuções, operações, Replay e chats. A conta começa vazia e, depois do reset, volta a persistir normalmente apenas o que o usuário criar.
+- **O que isso invalida:** todo histórico local anterior a este release será descartado no próximo acesso. Não remove usuários do Supabase nem altera a allowlist do servidor.
 
 ## 2026-09-29 — Resíduos do demo antigo e falha opaca do diagnóstico corrigidos (MOT-99)
 
