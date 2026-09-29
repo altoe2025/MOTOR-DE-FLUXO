@@ -4,24 +4,26 @@ import { Button } from '../../ui/Button';
 import type { StudyDocument } from '../model';
 
 export type StudyListProps = Readonly<{
-  studies: readonly StudyDocument[]; selectedId: string | null; onCreate(): void;
+  studies: readonly StudyDocument[]; selectedId: string | null; onCreate(): void; onCreateCombinations?(): void;
   onOpen(id: string): void; onRename(study: StudyDocument): void; onDuplicate(study: StudyDocument): void;
   onRestore(study: StudyDocument): void; onDelete(study: StudyDocument): void;
 }>;
 
 function sourceLabel(study: StudyDocument): string {
+  if (study.studyType === 'PORTFOLIO_COMBINATIONS') return 'Combinação de carteiras';
   const source = study.scenarios.find((item) => item.id === study.baseScenarioId)?.sourceSnapshot.source;
   if (source?.kind === 'OBSERVED_CASE') return 'Caso observado';
   if (source?.kind === 'AUTHORED') return 'Carteira manual';
   return 'Exemplo sintético';
 }
 
-export function StudyList({ studies, selectedId, onCreate, onOpen, onRename, onDuplicate, onRestore, onDelete }: StudyListProps) {
+export function StudyList({ studies, selectedId, onCreate, onCreateCombinations, onOpen, onRename, onDuplicate, onRestore, onDelete }: StudyListProps) {
   const [showTrash, setShowTrash] = useState(false);
   const visibleStudies = studies.filter((study) => (study.deletedAt !== null) === showTrash);
   return <>
     <div className="list-toolbar">
       {!showTrash && <Button onClick={onCreate}>Novo estudo</Button>}
+      {!showTrash && onCreateCombinations !== undefined ? <Button variant="secondary" onClick={onCreateCombinations}>Nova combinação de carteiras</Button> : null}
       <Button variant="secondary" onClick={() => setShowTrash((current) => !current)}>
         {showTrash ? 'Voltar aos estudos' : 'Lixeira de estudos'}
       </Button>

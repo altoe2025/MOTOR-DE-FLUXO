@@ -15,6 +15,8 @@ export function PortfolioRecommendation({ study }: Readonly<{ study: StudyDocume
     && maxWaitDays !== null && Number.isFinite(maxWaitDays) && maxWaitDays >= 0);
   const recommendation = recommendPortfolios(study, valid ? maxWaitDays : null);
   const winner = valid ? recommendation.winner : null;
+  const combinationStudy = study.studyType === 'PORTFOLIO_COMBINATIONS';
+  const visibleExcluded = combinationStudy ? recommendation.excluded.slice(0, 5) : recommendation.excluded;
   const alternatives = recommendation.candidates.filter((candidate) => candidate.scenarioId !== winner?.scenarioId);
   const runnerUp = alternatives.find((candidate) => candidate.eligible);
   const waitDifference = winner && runnerUp ? winner.waitDays - runnerUp.waitDays : null;
@@ -58,12 +60,13 @@ export function PortfolioRecommendation({ study }: Readonly<{ study: StudyDocume
         </tr>)}</tbody>
       </table>
     </div>}
-    {valid && alternatives.length > 5 ? <p className="field-hint">Mostrando as 5 alternativas com maior economia entre {alternatives.length} avaliadas. A comparação abaixo traz todos os cenários.</p> : null}
+    {valid && alternatives.length > 5 ? <p className="field-hint">Mostrando as 5 alternativas com maior economia entre {alternatives.length} avaliadas.{combinationStudy ? null : ' A comparação abaixo traz todos os cenários.'}</p> : null}
     {recommendation.excluded.length === 0 ? null : <details>
       <summary>Cenários fora da recomendação ({recommendation.excluded.length})</summary>
-      <ul>{recommendation.excluded.map((scenario) => <li key={scenario.scenarioId}>
+      <ul>{visibleExcluded.map((scenario) => <li key={scenario.scenarioId}>
         <strong>{scenario.name}:</strong> {scenario.reason}
       </li>)}</ul>
+      {visibleExcluded.length < recommendation.excluded.length ? <p className="field-hint">Mostrando os motivos de 5 composições. As demais seguem os mesmos critérios de comparação.</p> : null}
     </details>}
   </section>;
 }

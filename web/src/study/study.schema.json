@@ -459,6 +459,7 @@
       "additionalProperties": false,
       "properties": {
         "schemaVersion": { "const": "3.0.0" },
+        "studyType": { "const": "PORTFOLIO_COMBINATIONS" },
         "id": { "$ref": "#/$defs/Identifier" },
         "ownerSub": { "$ref": "#/$defs/Identifier" },
         "name": { "type": "string", "minLength": 1, "maxLength": 120 },

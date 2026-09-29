@@ -4,22 +4,31 @@ import '@testing-library/jest-dom/vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createStudy } from '../study/domain';
+import { resolvePortfolioSource } from '../preparation/resolvePortfolioSource';
 import { FIXTURE_NOW, FIXTURE_OWNER, makeScenarioDraft } from '../study/fixtures';
 import type { StudyDocument } from '../study/model';
 import { StudiesPage } from './StudiesPage';
 
+const api = { preparePortfolio: vi.fn() };
 const controller = {
+  startNewStudy: vi.fn(), edit: vi.fn(), flush: vi.fn<() => Promise<void>>(),
   listStudies: vi.fn<() => Promise<StudyDocument[]>>(),
   demoInstallationStatus: vi.fn<() => Promise<'INSTALLED' | 'REMOVED' | null>>(),
   restoreDemoStudy: vi.fn<() => Promise<StudyDocument | null>>(),
   subscribe: () => () => undefined,
   snapshot: { document: null, status: 'IDLE', error: null as unknown },
 };
-vi.mock('../app/providers', () => ({ useStudyController: () => controller, useApiClient: () => ({}) }));
+vi.mock('../app/providers', () => ({ useStudyController: () => controller, useApiClient: () => api }));
 vi.mock('../auth/AuthProvider', () => ({ useAuth: () => ({ userId: FIXTURE_OWNER }) }));
+
+vi.mock('../preparation/resolvePortfolioSource', async (importOriginal) => ({
+  ...await importOriginal<typeof import('../preparation/resolvePortfolioSource')>(),
+  resolvePortfolioSource: vi.fn(),
+}));
+afterEach(() => vi.unstubAllEnvs());
 
 function page() {
   return render(<MemoryRouter><Routes>
@@ -34,6 +43,20 @@ async function study() {
 }
 
 describe('StudiesPage demo recovery', () => {
+  it('cria e salva o tipo separado de combinação sem alterar a criação de estudos comuns', async () => {
+    vi.stubEnv('VITE_MOTOR_BUILD_SHA', 'd'.repeat(40));
+    vi.mocked(resolvePortfolioSource).mockResolvedValue(makeScenarioDraft().sourceSnapshot);
+    controller.flush.mockResolvedValue();
+    controller.edit.mockClear();
+    page();
+    expect(screen.getByRole('button', { name: 'Novo estudo' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Nova combinação de carteiras' }));
+    expect(await screen.findByRole('heading', { name: 'Demonstração aberta' })).toBeInTheDocument();
+    expect(controller.edit).toHaveBeenCalledWith(expect.objectContaining({
+      name: 'Combinação de carteiras', studyType: 'PORTFOLIO_COMBINATIONS',
+    }));
+    expect(controller.flush).toHaveBeenCalled();
+  });
   beforeEach(() => {
     controller.listStudies.mockResolvedValue([]);
     controller.demoInstallationStatus.mockResolvedValue(null);

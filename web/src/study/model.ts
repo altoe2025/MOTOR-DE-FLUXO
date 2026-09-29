@@ -231,6 +231,7 @@ export type StudyEvidenceSnapshot = DeepReadonly<{
 export type StudyDocumentV3 = Readonly<
   Omit<StudyDocumentV2, 'schemaVersion' | 'executions'> & {
     schemaVersion: '3.0.0';
+    studyType?: 'PORTFOLIO_COMBINATIONS';
     evidenceSnapshots: readonly StudyEvidenceSnapshot[];
     executions: readonly ExecutionRecordV3[];
   }
@@ -273,6 +274,7 @@ export type StudyValidation<T> =
 export type IdFactory = () => string;
 
 export type CreateStudyInput = Readonly<{
+  studyType?: 'PORTFOLIO_COMBINATIONS';
   id: string;
   ownerSub: string;
   name: string;

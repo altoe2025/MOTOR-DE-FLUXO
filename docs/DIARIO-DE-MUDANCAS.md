@@ -75,6 +75,13 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-29 — Combinação de carteiras como estudo separado (MOT-99)
+
+- **Sintoma:** as combinações ocupavam a carteira com centenas de cenários e operações, dificultando o uso e pesando a interface.
+- **Causa:** a exploração de subconjuntos usava a mesma tela de edição dos estudos comuns.
+- **O que foi feito:** na branch local `codex/carteira-criterios`, Estudos ganhou “Nova combinação de carteiras”. Gabriel confirmou que a entrada continua sendo empresas selecionadas, não estudos salvos. O novo tipo mostra empresas e premissas, prepara as combinações internamente e abre um diagnóstico compacto com recomendação e até cinco alternativas. Composições e resultados anteriores são preservados; somente as composições compatíveis com a carteira atual entram no lote. O marcador opcional do documento mantém compatibilidade com estudos existentes. Verificação: 32 testes focados, build com tipos e lint aprovados; fluxo local com três empresas e sete composições concluído no navegador. Sem publicação no Render ou integração à main.
+- **O que isso invalida:** o caminho de uso das combinações passa a ter uma entrada própria. Nada nos cálculos do motor; a suíte Playwright histórica ainda requer a atualização já registrada abaixo.
+
 ## 2026-09-28 — Criação de combinações em lote sem queda da página
 
 1. **Sintoma.** Gerar 254 combinações de oito empresas interrompia a página com `Maximum update depth exceeded`, deixando um lote parcial.

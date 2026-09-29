@@ -9,6 +9,7 @@ import { LeverBuilder } from '../levers/LeverBuilder';
 import { NEUTRAL_LEVERS } from '../levers/applyLevers';
 import { buildLeverScenario, periodCovering } from '../levers/leverScenario';
 import { currentDiagnostic } from '../levers/savingsOrigin';
+import { prepareCombinationStudy } from '../levers/prepareCombinationStudy';
 import { resolvePortfolioSource } from '../preparation/resolvePortfolioSource';
 import { StudyEditor } from '../study/components/StudyEditor';
 import type { PortfolioSourceDraft } from '../study/components/PortfolioSourceSelector';
@@ -212,6 +213,22 @@ Os diagnósticos dele também serão apagados. Não dá para desfazer.`)) return
     const execution = currentDiagnostic(study, target);
     return `/estudos/${study.id}/diagnostico?scenarioId=${target.id}${execution === null ? '' : `&executionId=${execution.id}`}`;
   };
+  const diagnoseCombinations = async () => {
+    if (combinationProgress !== null) return;
+    setCombinationProgress('Preparando combinações…');
+    setError(null);
+    try {
+      await controller.flush();
+      const next = await prepareCombinationStudy(study, setCombinationProgress);
+      if (controller.snapshot.document?.id !== study.id || controller.snapshot.document.revision !== study.revision) {
+        throw new Error('O estudo mudou durante a preparação. Tente novamente.');
+      }
+      if (next !== study) await persist(next, 'Não foi possível salvar as combinações.');
+      navigate(`/estudos/${study.id}/diagnostico?runAll=1`);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Não foi possível preparar as combinações.');
+    } finally { setCombinationProgress(null); }
+  };
   return <><StudyEditor study={study} observedCases={cases} companies={companies} status={status} error={error} onRename={async (name) => save(await renameStudy(study, name, new Date().toISOString()))} onDuplicate={async () => { const copy = await duplicateStudy(study, new Date().toISOString(), () => crypto.randomUUID()); controller.startNewStudy(); controller.edit(copy); await controller.flush(); navigate(`/estudos/${copy.id}`); }} onSourceChange={applySource} onConvertObserved={() => setError(null)} onScenarioChange={async (update) => {
     const recordedAt = new Date().toISOString();
     const authored: FieldProvenance = {
@@ -232,6 +249,12 @@ Os diagnósticos dele também serão apagados. Não dá para desfazer.`)) return
     save(await updateScenario(study, scenario.id, { ...update, inputProvenance }, recordedAt));
   }} />
   {error === null ? null : <InlineNotice tone="error">{error}</InlineNotice>}
+  {study.studyType === 'PORTFOLIO_COMBINATIONS' ? <section aria-labelledby="combination-diagnosis-title">
+    <h2 id="combination-diagnosis-title">Diagnóstico das combinações</h2>
+    <p>As combinações são calculadas internamente. O diagnóstico mostra a recomendação e as principais alternativas.</p>
+    <Button disabled={combinationProgress !== null} onClick={() => void diagnoseCombinations()}>Diagnosticar combinações</Button>
+    {combinationProgress === null ? null : <p role="status">{combinationProgress}</p>}
+  </section> : <>
   <section className="scenario-workspace" aria-labelledby="scenario-list-title">
     <p className="eyebrow">Passo 3</p>
     <h2 id="scenario-list-title">Cenários do estudo</h2>
@@ -242,5 +265,5 @@ Os diagnósticos dele também serão apagados. Não dá para desfazer.`)) return
       onDelete={() => void deleteScenario(item)} />)}</ul>
   </section>
   <p className="eyebrow">Passo 4</p>
-  <LeverBuilder key={`${selectedBase.id}:${selectedBase.sourceSnapshot.sourceFingerprint}`} base={selectedBase} progress={combinationProgress} onCreate={createLeverVariation} onCreateCombinations={createCombinations} /></>;
+  <LeverBuilder key={`${selectedBase.id}:${selectedBase.sourceSnapshot.sourceFingerprint}`} base={selectedBase} progress={combinationProgress} onCreate={createLeverVariation} onCreateCombinations={createCombinations} /></>}</>;
 }

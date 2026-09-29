@@ -75,6 +75,7 @@ export async function createStudy(input: CreateStudyInput): Promise<StudyDocumen
     id: input.id,
     ownerSub: input.ownerSub,
     name: checkedName(input.name),
+    ...(input.studyType === undefined ? {} : { studyType: input.studyType }),
     revision: 1,
     baseScenarioId: baseScenario.id,
     scenarios: [baseScenario],

@@ -46,6 +46,30 @@ async function subject(overrides: Partial<React.ComponentProps<typeof StudyEdito
 }
 
 describe('StudyEditor', () => {
+  it('combina apenas os casos das empresas, mantendo nome e premissas sem outras origens', async () => {
+    const document = { ...await study(), studyType: 'PORTFOLIO_COMBINATIONS' as const };
+    const first = makeObservedCase();
+    const second = { ...makeObservedCase(), id: 'case-2', companyId: 'company-2' };
+    const companies = ['company-1', 'company-2'].map((id, index) => ({ id, ownerSub: FIXTURE_OWNER,
+      displayName: index === 0 ? 'Empresa Alfa' : 'Empresa Beta', aliases: [],
+      createdAt: FIXTURE_NOW, updatedAt: FIXTURE_NOW, revision: 1 }));
+    const { onSourceChange } = await subject({ study: document, observedCases: [first, second], companies });
+    expect(screen.getByRole('group', { name: 'Empresas da carteira' })).toBeInTheDocument();
+    expect(screen.queryByRole('radio')).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Operações explícitas' })).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Nome do estudo')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Premissas e período' })).toBeInTheDocument();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('checkbox', { name: /Empresa Alfa/ }));
+    await user.click(screen.getByRole('checkbox', { name: /Empresa Beta/ }));
+    await user.click(screen.getByRole('button', { name: 'Usar 2 casos juntos' }));
+    expect(onSourceChange).toHaveBeenCalledWith(expect.objectContaining({ kind: 'AUTHORED', definition: expect.objectContaining({
+      kind: 'EXPLICIT_ORDERS', sourceCases: [
+        { caseId: first.id, caseRevision: first.revision, companyId: first.companyId },
+        { caseId: second.id, caseRevision: second.revision, companyId: second.companyId },
+      ],
+    }) }));
+  });
   it('bloqueia preparação sem SHA real e aceita somente configuração hexadecimal válida', () => {
     expect(() => requiredBuildSha(undefined, undefined)).toThrow('VITE_MOTOR_BUILD_SHA');
     expect(() => requiredBuildSha('0'.repeat(39), undefined)).toThrow('SHA de build inválido');
@@ -359,6 +383,17 @@ describe('StudyEditor', () => {
 });
 
 describe('StudyList', () => {
+  it('oferece criação separada e identifica uma combinação de carteiras na lista', async () => {
+    const document = { ...await study(), studyType: 'PORTFOLIO_COMBINATIONS' as const };
+    const onCreate = vi.fn(); const onCreateCombinations = vi.fn();
+    render(<StudyList studies={[document]} selectedId={null} onCreate={onCreate} onCreateCombinations={onCreateCombinations}
+      onOpen={vi.fn()} onRename={vi.fn()} onDuplicate={vi.fn()} onRestore={vi.fn()} onDelete={vi.fn()} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Nova combinação de carteiras' }));
+    expect(onCreateCombinations).toHaveBeenCalledOnce();
+    expect(onCreate).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Novo estudo' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Abrir Estudo teste' })).toHaveTextContent('Combinação de carteiras');
+  });
   it('expõe Novo estudo e preserva as ações da lista', async () => {
     const document = await study(); const onCreate = vi.fn();
     render(<StudyList studies={[document]} selectedId={null} onCreate={onCreate} onOpen={vi.fn()} onRename={vi.fn()} onDuplicate={vi.fn()} onRestore={vi.fn()} onDelete={vi.fn()} />);
