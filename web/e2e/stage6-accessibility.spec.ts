@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 import { auditAccessibility } from './helpers/accessibilityAudit';
+import { loadDemoIfEmpty } from './helpers/demo';
 
 test('login has semantic structure and accessible controls', async ({ page }) => {
   await page.goto('/estudos');
@@ -32,6 +33,7 @@ test('demo, chat and presentation preserve keyboard focus and readable structure
   await expect(opener).toBeFocused();
 
   await page.waitForFunction(() => '__MOTOR_E2E__' in window);
+  await loadDemoIfEmpty(page);
   await expect.poll(async () => (await page.evaluate(() => window.__MOTOR_E2E__!.demoAcceptanceSnapshot())).studies.length).toBe(1);
   const study = (await page.evaluate(() => window.__MOTOR_E2E__!.demoAcceptanceSnapshot())).studies[0]!;
   const scenario = study.scenarios[0]!;

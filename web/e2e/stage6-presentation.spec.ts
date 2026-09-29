@@ -6,6 +6,7 @@ import { formatMoney } from '../src/presentation/format';
 import { formatCommunicationMetric } from '../src/presentation/domain';
 import type { ChatRequest, ChatResponse } from '../src/api/client';
 import { HELP_IDS } from '../src/help/helpIds';
+import { loadDemoIfEmpty } from './helpers/demo';
 
 const python = process.env.MOT_STAGE6_PDF_PYTHON ?? process.env.MOT_E2E_PYTHON
   ?? (process.env.CI === 'true' ? 'python' : process.platform === 'win32'
@@ -21,6 +22,7 @@ test('deep link e relatório A4 conservam a publicação e ocultam controles', a
   await page.goto('/estudos');
   await page.waitForFunction(() => '__MOTOR_E2E__' in window);
   await expect(page.getByRole('heading', { name: 'Estudos' })).toBeVisible();
+  await loadDemoIfEmpty(page);
   await expect.poll(async () => (await page.evaluate(() => window.__MOTOR_E2E__!.demoAcceptanceSnapshot())).studies.length)
     .toBe(1);
   const snapshot = await page.evaluate(() => window.__MOTOR_E2E__!.demoAcceptanceSnapshot());
@@ -115,7 +117,7 @@ test('deep link e relatório A4 conservam a publicação e ocultam controles', a
 
 test('comparação e Replay chegam ao Painel somente quando explicitamente escolhidos', async ({ page }) => {
   await page.goto('/estudos');
-  await page.waitForFunction(() => '__MOTOR_E2E__' in window);
+  await loadDemoIfEmpty(page);
   await expect.poll(async () => (await page.evaluate(() => window.__MOTOR_E2E__!.demoAcceptanceSnapshot())).studies.length).toBe(1);
   const study = (await page.evaluate(() => window.__MOTOR_E2E__!.demoAcceptanceSnapshot())).studies[0]!;
   const base = study.diagnostics.find((item) => item.scenarioId === study.scenarios[0]!.id)!;

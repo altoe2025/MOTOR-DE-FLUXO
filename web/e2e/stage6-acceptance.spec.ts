@@ -32,6 +32,10 @@ async function demo(page: Page) {
   await page.goto('/estudos');
   await expect(page.getByRole('heading', { name: 'Estudos', exact: true })).toBeVisible();
   await page.waitForFunction(() => '__MOTOR_E2E__' in window);
+  // Conta nova começa vazia; a demonstração entra só pelo botão explícito.
+  if ((await page.evaluate(() => window.__MOTOR_E2E__!.demoAcceptanceSnapshot())).studies.length === 0) {
+    await page.getByRole('button', { name: 'Carregar estudo demonstrativo' }).click();
+  }
   await expect.poll(async () => (await page.evaluate(() => window.__MOTOR_E2E__!.demoAcceptanceSnapshot())).studies.length).toBe(1);
   const state = await page.evaluate(() => window.__MOTOR_E2E__!.demoAcceptanceSnapshot());
   return state.studies[0]!;

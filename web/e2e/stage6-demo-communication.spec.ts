@@ -47,6 +47,10 @@ async function snapshot(page: Page): Promise<DemoSnapshot> {
 }
 
 async function installedDemo(page: Page): Promise<DemoSnapshot> {
+  // Conta nova começa vazia; a demonstração entra só pelo botão explícito.
+  if ((await snapshot(page)).studies.length === 0) {
+    await page.getByRole('button', { name: 'Carregar estudo demonstrativo' }).click();
+  }
   await expect.poll(async () => (await snapshot(page)).studies.length, { timeout: 20_000 }).toBe(1);
   return snapshot(page);
 }
@@ -77,10 +81,15 @@ function importedWorkbook(): Buffer {
   return Buffer.from(zipSync(entries, { mtime: new Date('2020-01-01T00:00:00Z') }));
 }
 
-test('primeiro acesso instala uma vez; remoção não ressuscita e restauração é explícita', async ({ page }) => {
+test('primeiro acesso começa vazio; carregar instala uma vez; remoção não ressuscita', async ({ page }) => {
   await page.goto('/estudos');
   await expect(page.getByRole('heading', { name: 'Estudos' })).toBeVisible();
   await expect.poll(() => bridge(page)).toBe(true);
+  const empty = await snapshot(page);
+  expect(empty.studies).toHaveLength(0);
+  expect(empty.profiles).toHaveLength(0);
+  await page.getByRole('button', { name: 'Carregar estudo demonstrativo' }).click();
+  await page.goto('/estudos');
   const first = await installedDemo(page);
   expect(first.marker).toBe('INSTALLED');
   expect(first.studies).toHaveLength(1);
