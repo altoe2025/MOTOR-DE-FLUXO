@@ -46,8 +46,8 @@ test('login, import, demo, chat and presentation match reviewed baselines', asyn
   const diagnostic = study.diagnostics.find((item) => item.scenarioId === scenario.id)!;
   await page.goto(`/estudos/${study.id}/apresentacao?cenario=${scenario.id}&execucao=${diagnostic.id}`);
   await expect(page.getByRole('heading', { name: study.name, level: 1 })).toBeVisible();
-  await expect(page.getByRole('region', { name: 'Limitações e versões' })).toBeVisible();
-  await expect(page.getByRole('region', { name: 'Premissas e proveniência' })).toContainText('IOF padrão por direção');
+  await expect(page.getByRole('region', { name: 'Resumo executivo' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Composição e mecanismo' })).toBeVisible();
   await expect(page).toHaveScreenshot('presentation.png', {
     fullPage: true,
     mask: [page.locator('.presentation-header time')],
@@ -69,7 +69,7 @@ test('first two A4 pages match reviewed print baselines', async ({ page }, testI
   await page.pdf({ path: pdf, format: 'A4', printBackground: true, preferCSSPageSize: true });
   const pages = testInfo.outputPath('pages');
   const rendered = spawnSync(python, ['tests/web_api/render_stage6_pdf.py', '--pdf', pdf,
-    '--render-dir', pages, '--expected-pages', '9'], { cwd: '..', encoding: 'utf8', timeout: 30_000 });
+    '--render-dir', pages, '--expect', 'Resumo executivo'], { cwd: '..', encoding: 'utf8', timeout: 30_000 });
   expect(rendered.status, rendered.stderr).toBe(0);
   expect(readFileSync(`${pages}/page-01.png`)).toMatchSnapshot('print-page-01.png');
   expect(readFileSync(`${pages}/page-02.png`)).toMatchSnapshot('print-page-02.png');

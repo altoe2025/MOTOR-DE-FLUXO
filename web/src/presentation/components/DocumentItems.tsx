@@ -28,6 +28,6 @@ export function MetricList({ document, metrics, labels = {} }: DocumentProps & R
     <dt>{labels[metric.code] ?? metric.label}</dt>
     <dd>{metricText(document, metric)}</dd>
     {metric.availability === 'AVAILABLE' && metric.meaning !== metric.label
-      ? <p className="presentation-metric__meaning">{metric.meaning}</p> : null}
+      ? <dd className="presentation-metric__meaning">{metric.meaning}</dd> : null}
   </div>)}</dl>;
 }

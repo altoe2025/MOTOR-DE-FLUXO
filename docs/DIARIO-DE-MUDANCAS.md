@@ -77,6 +77,13 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-29 — Apresentação acessível e referências visuais atualizadas (MOT-99)
+
+1. **Sintoma.** A auditoria do navegador encontrou marcação inválida na lista de métricas; a nota do cabeçalho impresso tinha contraste insuficiente. Referências visuais ainda mostravam as telas anteriores.
+2. **Causa.** O texto explicativo era um parágrafo solto dentro de uma lista de definições, e a cor clara do cabeçalho em tela era mantida sobre o fundo claro do PDF.
+3. **O que foi feito.** A explicação usa uma definição sem alterar seu estilo; a nota ganha cor legível na impressão. Teste visual acompanha as seções atuais, preservando comparação de pixels e inspeção do PDF. Workflow temporário captura referências Linux para revisão; será removido após coleta. Tipos, lint e validadores aprovados; suíte unitária integrada com 1.174 testes aprovados. Sem deploy.
+4. **O que isso invalida.** Referências das telas antigas e expectativa de nove páginas para a apresentação resumida; não altera métricas nem fontes.
+
 ## 2026-09-29 — Integração das atualizações para publicação posterior (MOT-99)
 
 1. **Sintoma.** As melhorias de carteiras, bancada e chat estavam em branches diferentes; publicar só a branch de carteiras retiraria melhorias do chat já em produção.

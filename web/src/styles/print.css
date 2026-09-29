@@ -17,7 +17,7 @@
   .definition-trigger, .definition-tooltip, button, [role='tooltip'] { display: none !important; }
   .presentation-page { color: #172a25 !important; display: block !important; margin: 0 !important; max-width: none !important; }
   .presentation-header { background: #edf4f0 !important; border: 1px solid #829b90; border-radius: 0; color: #172a25 !important; padding: 8mm; }
-  .presentation-header .eyebrow, .presentation-header dt { color: #334c40 !important; }
+  .presentation-header .eyebrow, .presentation-header dt, .presentation-header__note { color: #334c40 !important; }
   .presentation-header h1 { font-size: 23pt; margin: 3mm 0; }
   .presentation-header dl { display: grid; gap: 2mm 5mm; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 4mm 0 0; }
   .presentation-header dd { font-size: 8pt; }

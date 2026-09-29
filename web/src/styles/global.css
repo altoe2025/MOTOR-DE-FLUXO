@@ -454,7 +454,7 @@ a { color: inherit; }
 .study-editor > .eyebrow { margin-top: var(--space-6); }
 .scenario-rename { align-items: end; display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .scenario-rename label { display: grid; gap: var(--space-1); }
-.metric-hint, .presentation-metric__meaning { color: var(--muted); font-size: .8rem; font-weight: 400; margin: var(--space-1) 0 0; }
+.metric-hint, .presentation-metrics .presentation-metric__meaning { color: var(--muted); font-size: .8rem; font-weight: 400; margin: var(--space-1) 0 0; }
 .presentation-table__subtotal th, .presentation-table__subtotal td { border-top: 1px solid var(--border); font-weight: 700; }
 @media (max-width: 720px) { .scenario-list li { grid-template-columns: 1fr; } }
 #variacoes .presentation-table th[scope="row"] { min-width: 11rem; }
