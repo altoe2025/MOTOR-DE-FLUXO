@@ -162,6 +162,9 @@ describe('ReplayPage', () => {
     expect(screen.queryByText(/Dia 0 de 2/)).not.toBeInTheDocument();
     expect(screen.getByText('D0 · Medição')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Tocar' })).toBeInTheDocument();
+    const metrics = screen.getByRole('region', { name: 'Acumulados do Replay' });
+    const stage = screen.getByRole('region', { name: 'Cena Fronteira Viva' });
+    expect(metrics.compareDocumentPosition(stage) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     // Resumo em uma linha; o detalhe da repetição fica recolhido, mas acessível.
     expect(screen.getByRole('region', { name: 'Repetição exibida' })).toHaveTextContent('00000000-0000-4000-8000-000000000703');
     const summary = screen.getByText(/Repetição 00000000 de 10 · Primeira repetição do plano/i);

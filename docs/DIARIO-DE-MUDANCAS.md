@@ -37,7 +37,7 @@ Atualizada em 2026-09-29, durante a preparação da atualização da bancada.
 
 | Branch | Situação | Dono |
 |---|---|---|
-| `codex/replay-production-fix` | Reset total do estado local anterior preparado para produção; novo deploy autorizado | Codex |
+| `codex/replay-production-fix` | Reset total publicado; correção visual do Replay pronta para publicação | Codex |
 | `codex/frontend-performance-fixes` | Integra as correções de travamento e `feat/estudo-vs-combinacao` sobre o release `829d224`; publicação no Render em preparação | Codex |
 | `codex/carteira-criterios` | Integra estudo separado de combinações, últimas melhorias de `feat/bancada-exploracao` e chat já publicado do PR #57; deploy aguardando comando do Gabriel | Codex |
 | `codex/chat-interface-render` | PR #57 aberto (draft, base `feat/bancada-exploracao`); código `8d43695` publicado no Render com status Live em 2026-09-28; sem merge na `main` | Codex |
@@ -78,6 +78,13 @@ Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. 
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+## 2026-09-29 — Controles e acumulados reposicionados no Replay (MOT-99)
+
+- **Sintoma:** o controle compacto de pausa aparecia na régua superior em vez do centro da Fronteira Viva, a bolinha do dia misturava `D+n` com a data civil e os três acumulados ficavam abaixo da cena.
+- **Causa:** a integração anterior colocou o novo controle em `ReplayControls`, anexou `dateOf` ao indicador central e inverteu a ordem histórica entre `ReplayMetrics` e `ReplayStage`.
+- **O que foi feito:** o controle `Tocar/Pausar/Recomeçar` ocupa o centro da Fronteira Viva, no lugar do rótulo de fechamento; a bolinha exibe apenas `D+n`; e os cards de casado, remetido e netabilidade voltam para cima da cena. Testes focados do Replay, typecheck e build aprovados.
+- **O que isso invalida:** capturas visuais com o botão na régua, data civil dentro da bolinha ou acumulados abaixo da cena. Não altera dados, cálculos ou regras do motor.
 
 ## 2026-09-29 — Reset total do estado local anterior (MOT-99)
 

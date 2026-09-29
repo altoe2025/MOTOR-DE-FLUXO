@@ -246,9 +246,9 @@ function ReplayReady({ document, study, studyId, scenarioId, selected, initialDa
     <ReplayControls document={document} playback={playback} sort={sort} onSort={setSort} residue={residue} dateOf={dateOf}
       companies={companies} company={company} onCompany={setCompany} />
     <p className="replay-live" aria-live="polite">{directDay} · {phaseLabel}</p>
-    <ReplayStage document={document} state={state} sort={sort} transitionMode={playback.transitionMode} transitionKey={playback.transitionKey}
-      companyOf={companyOf} company={company} dateOf={dateOf} frozen={playback.paused} />
     <ReplayMetrics document={document} state={state} />
+    <ReplayStage document={document} state={state} sort={sort} transitionMode={playback.transitionMode} transitionKey={playback.transitionKey}
+      playback={playback} companyOf={companyOf} company={company} dateOf={dateOf} frozen={playback.paused} />
     <ReplayJournal document={document} day={playback.day} />
   </article>;
 }

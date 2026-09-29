@@ -4,6 +4,7 @@ import { formatMoney } from '../../presentation/format';
 import type { OpenReplayOrder, ReplayDocument, ReplaySort, ReplayState } from '../domain';
 import { presentReplayDay } from '../presentation';
 import { replayStateAt, replayTransition, sortOpenOrders } from '../state';
+import type { ReplayPlayback } from '../useReplayPlayback';
 import { ReplayConnections } from './ReplayConnections';
 import { ReplayOrderCard } from './ReplayOrderCard';
 
@@ -37,10 +38,9 @@ function reducedMotion(): boolean {
     && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
-const triggerLabels = { WINDOW: 'janela', DEADLINE: 'prazo', HORIZON_END: 'fim do horizonte' } as const;
-
-export function ReplayStage({ document, state, sort, transitionMode, transitionKey, companyOf, company = null, dateOf = null, frozen = false }: Readonly<{
+export function ReplayStage({ document, state, sort, transitionMode, transitionKey, playback, companyOf, company = null, dateOf = null, frozen = false }: Readonly<{
   document: ReplayDocument;
+  playback: Pick<ReplayPlayback, 'primaryAction' | 'playing' | 'togglePlaying'>;
   companyOf?: (orderId: string) => string;
   /** Mostra só os cartões desta empresa; totais e linhas continuam da carteira toda. */
   company?: string | null;
@@ -104,9 +104,12 @@ export function ReplayStage({ document, state, sort, transitionMode, transitionK
         {outOrders.length === 0 ? <p className="replay-lane__empty">{company === null ? 'Sem OUT aberto' : `Sem OUT aberto de ${company}`}</p> : outOrders.map((order) => <ReplayOrderCard key={order.orderId} order={order} {...(companyOf === undefined ? {} : { company: companyOf(order.orderId) })} departing={departingIds.has(order.orderId)} dateOf={dateOf} />)}
       </div>
       <div className="replay-frontier">
-        <span className="replay-frontier__day">D{state.day}{dateOf === null ? null : <small className="replay-frontier__date">{dateOf(state.day)}</small>}</span>
+        <span className="replay-frontier__day">D{state.day}</span>
         <span className="replay-frontier__phase">{state.phase === 'WARMUP' ? 'Aquecimento' : state.phase === 'MEASUREMENT' ? 'Medição' : 'Liquidação'}</span>
-        {state.closing === null ? <span className="replay-frontier__status">Sem fechamento</span> : <span className="replay-frontier__status">Fechamento · {state.closing.triggers.map((trigger) => triggerLabels[trigger]).join(' + ')}</span>}
+        <button className="replay-frontier__toggle" type="button" onClick={playback.togglePlaying} aria-pressed={playback.playing}
+          aria-label={playback.primaryAction === 'RESTART' ? 'Recomeçar' : playback.playing ? 'Pausar' : 'Tocar'}>
+          {playback.primaryAction === 'RESTART' ? '↺ Recomeçar' : playback.playing ? 'Ⅱ Pausar' : '▶ Tocar'}
+        </button>
         <div className="replay-frontier__open"><small>Ainda aberto</small><strong>{formatMoney(view.openBrl)}</strong></div>
       </div>
       <div className="replay-lane replay-lane--in" aria-label="Ordens IN abertas">
