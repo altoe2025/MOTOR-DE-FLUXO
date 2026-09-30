@@ -22,7 +22,8 @@ A primeira rodada Playwright integral passou 63/66. As três falhas eram duas
 referências visuais com os valores antigos do teto e uma corrida real que enviava o
 chat do Replay com `context: null`; as três passaram nos arquivos completos após as
 correções, sem sleeps. O pacote demonstrativo foi regenerado e reconciliado byte a
-byte. CI integral e revisão das imagens Linux são os gates publicados restantes.
+byte. A captura Linux `36787589692` atualizou somente as mesmas duas imagens após
+inspeção; as outras cinco ficaram idênticas por hash. Resta a CI integral final.
 O Render não foi alterado.
 
 ## Chat orientado à interface — 2026-09-28 (local)
