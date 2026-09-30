@@ -81,7 +81,90 @@ function HelpProbe() {
   }</output>;
 }
 
+function deferredReset() {
+  let resolve!: (value: boolean) => void;
+  let reject!: (reason: Error) => void;
+  const promise = new Promise<boolean>((onResolve, onReject) => {
+    resolve = onResolve;
+    reject = onReject;
+  });
+  return { promise, resolve, reject };
+}
+
 describe('ApplicationProviders', () => {
+  it('mantém os filhos bloqueados até o reset assíncrono terminar', async () => {
+    const auth = authClient();
+    const reset = deferredReset();
+    const resetAllLocalDataOnce = vi.fn(() => reset.promise);
+    const repositoryFactory = () => ({ close: vi.fn(), resetAllLocalDataOnce }) as unknown as ApplicationRepository;
+    render(<AuthProvider client={auth.client}>
+      <ApplicationProviders repositoryFactory={repositoryFactory}><Probe /></ApplicationProviders>
+    </AuthProvider>);
+
+    await waitFor(() => expect(resetAllLocalDataOnce).toHaveBeenCalledOnce());
+    expect(screen.getByRole('status')).toHaveTextContent('Preparando dados locais');
+    expect(screen.queryByTestId('controller-state')).not.toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+
+    await act(async () => { reset.resolve(true); });
+    await waitFor(() => expect(screen.getByTestId('controller-state')).toHaveTextContent(USER_A));
+    expect(screen.queryByText('Preparando dados locais…')).not.toBeInTheDocument();
+  });
+
+  it('ignora rejeição tardia do reset de A depois de inicializar a conta B', async () => {
+    const auth = authClient();
+    const resetA = deferredReset();
+    const resetB = deferredReset();
+    const resetForA = vi.fn(() => resetA.promise);
+    const resetForB = vi.fn(() => resetB.promise);
+    const repositoryFactory = (ownerSub: string) => ({
+      close: vi.fn(),
+      resetAllLocalDataOnce: ownerSub === USER_A ? resetForA : resetForB,
+    }) as unknown as ApplicationRepository;
+    render(<AuthProvider client={auth.client}>
+      <ApplicationProviders repositoryFactory={repositoryFactory}><Probe /></ApplicationProviders>
+    </AuthProvider>);
+
+    await waitFor(() => expect(resetForA).toHaveBeenCalledOnce());
+    act(() => auth.emit(session(USER_B)));
+    await waitFor(() => expect(resetForB).toHaveBeenCalledOnce());
+    expect(screen.queryByTestId('controller-state')).not.toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('Preparando dados locais');
+
+    await act(async () => { resetB.resolve(true); });
+    await waitFor(() => expect(screen.getByTestId('controller-state')).toHaveTextContent(USER_B));
+    fireEvent.click(screen.getByRole('button', { name: 'guardar cache' }));
+    expect(screen.getByTestId('query-cache')).toHaveTextContent(USER_B);
+    const readyState = screen.getByTestId('controller-state').textContent;
+
+    await act(async () => { resetA.reject(new Error('Reset antigo indisponível')); });
+    expect(screen.getByTestId('controller-state').textContent).toBe(readyState);
+    expect(screen.getByTestId('query-cache')).toHaveTextContent(USER_B);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Tentar novamente' })).not.toBeInTheDocument();
+  });
+
+  it('mostra falha de armazenamento sem liberar dados e permite tentar novamente', async () => {
+    const auth = authClient();
+    const open = vi.spyOn(indexedDB, 'open').mockImplementation(() => {
+      throw new DOMException('Indisponível', 'InvalidStateError');
+    });
+    try {
+      render(<AuthProvider client={auth.client}>
+        <ApplicationProviders projectRef="boot-recovery"><Probe /></ApplicationProviders>
+      </AuthProvider>);
+      expect(await screen.findByRole('alert')).toHaveTextContent('armazenamento');
+      expect(screen.queryByTestId('controller-state')).not.toBeInTheDocument();
+      expect(screen.queryByText('Preparando dados locais…')).not.toBeInTheDocument();
+      open.mockRestore();
+      fireEvent.click(screen.getByRole('button', { name: 'Tentar novamente' }));
+      await waitFor(() => expect(screen.getByTestId('controller-state')).toHaveTextContent(USER_A));
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    } finally {
+      open.mockRestore();
+    }
+  });
+
   it('carrega ajuda na sessão autenticada e a remove quando a sessão termina', async () => {
     const auth = authClient();
     const fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify({

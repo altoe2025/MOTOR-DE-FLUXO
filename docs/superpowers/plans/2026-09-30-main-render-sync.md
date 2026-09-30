@@ -13,7 +13,7 @@ Git/GitHub, Render Docker, Python/pytest, React/TypeScript/Vitest/Playwright.
 Referência Live conferida no dashboard; main inicial `3342059edddf1daaa881943a645a26dadd614139`, 52 commits atrás e nenhum exclusivo. Não incorporar branches posteriores ou alheias ao Live.
 
 ## Global Constraints
-- Não alterar comportamento de produção, motor, credenciais ou configurações do Render.
+- Preservar comportamento publicado, exceto correção pontual de abertura com IndexedDB indisponível, autorizada explicitamente após o bloqueio. Não alterar motor, credenciais ou configurações do Render.
 - Preservar o checkout original e o commit Live; trabalhar em `codex/main-render-sync`.
 - Ajustes de testes precisam refletir o comportamento já publicado, sem esconder falhas.
 - Respeitar checks e proteção da main; não usar force push ou bypass.
@@ -36,3 +36,8 @@ Render: `motor-de-fluxo-piloto`, deploy `dep-dauml9942hec73f2cpf0`, Live `29d955
 - E2E local confirmou expectativas de páginas retiradas (Premissas, Destaques do Replay, navegação antiga). Adaptações parciais permanecem locais, ainda sem validação; não foram publicadas como aprovadas.
 - **Bloqueio real de runtime:** o teste `stage6-acceptance.spec.ts`, cenário "IndexedDB indisponível", permanece em "Preparando dados locais…". `providers.tsx:100` aguarda `switchSession` sem tratar rejeição; o reset em `studyController.ts:219` pode rejeitar. Não é apenas seletor desatualizado.
 - Preservar exatamente o runtime Live e corrigir essa falha são objetivos incompatíveis. Nenhuma correção de produção, bypass da proteção, merge ou deploy foi feito. É necessária decisão do usuário sobre a correção mínima antes de prosseguir.
+
+## Retomada autorizada
+Gabriel autorizou corrigir a falha de armazenamento, concluir os testes e integrar a main, sem deploy. A correção captura a rejeição da inicialização, bloqueia os filhos, apresenta erro recuperável e recria a sessão no retry. Rejeições de conta anterior não alteram a conta atual. Teste RED reproduziu o carregamento infinito e a rejeição não tratada; GREEN: 7 testes de providers aprovados, incluindo IndexedDB real simulado, retry, reset pendente e A→B com rejeição tardia de A. Revisão independente não identificou bloqueador no diff runtime.
+
+Testes migrados já validados: foundation + stage2 (4), importação/diagnostic-jobs/study-observed/study-synthetic (12). A migração troca fluxos PREVIEW retirados por DIAGNOSTIC publicado, preservando conservação, proveniência, persistência e isolamento. Relatórios completos de apresentação foram substituídos no Live por resumo/composição/variações; os testes passam a conferir esse conteúdo, mantendo evidência e seleção no documento do chat.
