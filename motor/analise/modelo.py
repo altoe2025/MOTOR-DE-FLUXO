@@ -185,11 +185,9 @@ class AgregadoCanonico:
             != self.volume_casado_periodo_brl
         ):
             raise ValueError("volumes por mecanismo não reconciliam com volume casado")
-        if (
-            self.taxa_autonetting_periodo
-            + self.taxa_netting_multilateral_periodo
-            != self.taxa_netabilidade_periodo
-        ):
+        if somar_exato((
+            self.taxa_autonetting_periodo, self.taxa_netting_multilateral_periodo,
+        )) != self.taxa_netabilidade_periodo:
             raise ValueError("taxas por mecanismo não reconciliam com netabilidade")
         por_destino = {m.destino: m for m in self.mecanismos}
         if (

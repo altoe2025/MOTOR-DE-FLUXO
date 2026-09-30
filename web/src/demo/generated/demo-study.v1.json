@@ -14836,7 +14836,7 @@
       },
       "policy": "P0",
       "repetition_id": "2bbb1b2d-6ff8-5354-87e3-92b63462db5b",
-      "result_fingerprint": "6074cbcd4862a46e39db1c03a322eeecf958e4b8b24716ce83a90643c4210b01",
+      "result_fingerprint": "13aefe1b51940984bc397681852d9284c4e5fe183053b3524361c36652630138",
       "scenario_id": "bc4ed198-4bba-5fe4-9045-49cd8a166ef0",
       "scenario_revision": 1,
       "totals": {
@@ -56935,7 +56935,7 @@
                 },
                 "taxa_autonetting_periodo": "0.06090215583036653897334024331",
                 "taxa_netabilidade_periodo": "0.7359883220856097273340377760",
-                "taxa_netting_multilateral_periodo": "0.6750861662552431883606975327",
+                "taxa_netting_multilateral_periodo": "0.67508616625524318836069753269",
                 "volume_autonetting_periodo_brl": "142233.60",
                 "volume_bruto_periodo_brl": "2335444.42",
                 "volume_casado_periodo_brl": "1718859.82",

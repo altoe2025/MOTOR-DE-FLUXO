@@ -37,6 +37,7 @@ Atualizada em 2026-09-29, durante a preparação da atualização da bancada.
 
 | Branch | Situação | Dono |
 |---|---|---|
+| `fix/taxas-arredondadas` | Sobre `feat/replay-visual`; taxas por mecanismo reconciliadas sem duplo arredondamento; sem push, merge ou deploy | Claude |
 | `codex/replay-production-fix` | Reset total publicado; correção visual do Replay pronta para publicação | Codex |
 | `codex/frontend-performance-fixes` | Integra as correções de travamento e `feat/estudo-vs-combinacao` sobre o release `829d224`; publicação no Render em preparação | Codex |
 | `codex/carteira-criterios` | Integra estudo separado de combinações, últimas melhorias de `feat/bancada-exploracao` e chat já publicado do PR #57; deploy aguardando comando do Gabriel | Codex |
@@ -78,6 +79,13 @@ Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. 
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+## 2026-09-30 — Taxas por mecanismo reconciliam sem segundo arredondamento (MOT-99)
+
+- **Sintoma:** `AgregadoCanonico` recusava o diagnóstico inteiro com "taxas por mecanismo não reconciliam com netabilidade" em alguns cenários válidos (semente 48 de `tests/web_api/test_replay_fidelidade_motor.py`: casado 9353.52, intra 1537.60, inter 7815.92, bruto 23598.48 → soma das taxas `…1530` contra netabilidade `…1529`).
+- **Causa:** a taxa multilateral já era o complemento `netabilidade − autonetting`, mas essa subtração era arredondada no contexto de 28 dígitos. Quando a taxa de autonetting tem uma casa decimal a mais que a netabilidade (valor < 0,1), `autonetting + complemento` sofre um segundo arredondamento e passa 1 ulp da netabilidade. O comentário de `motor/simulacao.py` que promete soma exata tem o mesmo problema, mas `Resultado` não impõe o invariante.
+- **O que foi feito:** `motor/analise/pipeline.py` ganhou `taxas_por_mecanismo`, que mantém as duas divisões como antes e calcula a multilateral com `subtrair_exato`; o ramo sem recorte temporal também passa a derivar a multilateral exata a partir das taxas de `simular`. O invariante continua exato (`raise`), agora somando com `somar_exato` em `motor/analise/modelo.py` e em `servidor/contracts/output.py`; o portão `servidor/publication.py` recalcula o complemento com a mesma regra. Testes novos em `tests/test_resultado_canonico.py` (o caso da semente 48, que falhava antes, e um desvio de 5e-29 que continua recusado). `TAXAS_ARREDONDADAS` saiu da lista de `xfail`. `web/src/demo/generated/demo-study.v1.json` foi regenerado pelo gerador oficial. Branch `fix/taxas-arredondadas`, a partir de `feat/replay-visual`.
+- **O que isso invalida:** `taxa_netting_multilateral_periodo` publicada muda só no último dígito quando havia duplo arredondamento, e pode ganhar uma casa (no pacote demo, `…5327` → `…53269`, o que muda o `result_fingerprint` do pacote). Netabilidade, autonetting, volumes, custos, `Resultado` de `simular`, varredura e CLI não mudam; o número de aceitação da Amanda foi reconferido (US$ 439 k / 249 k / 190 k, 58,82%). Verificado com `pytest -q` e `python -O -m pytest -q` (sem `test_render_stage6_pdf.py`, cuja dependência `pymupdf` não existe no ambiente local): 1354 aprovados, 3 ignorados, 4 `xfail` (só o teto estrutural), 1 falha. Continua falhando `test_fixture_do_front_continua_igual_ao_motor`, que também falha na base: a fixture grava `motor_version` "desconhecida" e o ambiente usado tem o pacote instalado como `0.1.0`.
 
 ## 2026-09-30 — Fronteira Viva conferida contra o motor; controles e acumulados no mesmo visual (MOT-99)
 
