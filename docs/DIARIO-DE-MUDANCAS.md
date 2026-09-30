@@ -37,7 +37,7 @@ Atualizada em 2026-09-30, durante a integração da versão Live na main.
 
 | Branch | Situação | Dono |
 |---|---|---|
-| `codex/main-render-sync` | PR #59 draft; 1.236 testes front e 1.264 Python aprovados; merge pendente por E2E e falha real de abertura com IndexedDB indisponível; sem novo deploy | Codex |
+| `codex/main-render-sync` | PR #59 draft; abertura com falha IndexedDB corrigida/testada; testes migrados e imagens Linux revisadas; pendentes crash de janela e limite estrutural da coorte medida, sem novo deploy | Codex |
 | `codex/chat-front-context` | `29d955c` publicado no Render (Live); referência preservada da integração | Codex |
 | `codex/replay-production-fix` | `cb81781` incorporado no Live `29d955c`, incluindo reset local e Replay | Codex |
 | `codex/frontend-performance-fixes` | Integra as correções de travamento e `feat/estudo-vs-combinacao` sobre o release `829d224`; publicação no Render em preparação | Codex |
@@ -85,6 +85,7 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 
 - **Retomada autorizada:** Gabriel autorizou corrigir a abertura com falha no armazenamento e concluir a integração, sem deploy. `ApplicationProviders` captura rejeição, mantém conteúdo bloqueado e permite retry; 7 testes de providers cobrem falha/recuperação, inicialização pendente e rejeição de conta obsoleta. Revisão independente concluída. Os primeiros 16 E2E migrados para os fluxos atuais passaram. Demais gates permanecem em andamento.
 - **Referências visuais:** captura Linux temporária restrita à branch de integração para revisão das imagens da interface Live; as baselines Windows já passaram sem alteração. O workflow de captura não altera a proteção da main e será removido antes do merge; as imagens geradas só serão aceitas após inspeção.
+- **Evidências da retomada:** 7 testes de providers, 16 E2E de fundação/importação/estudos, 6 de Stage4/5, 11 acceptance/acessibilidade/visual Windows e 2 de desempenho aprovados em rodadas focadas. Demo/publicação: 5/7. Captura Linux 36782323685 inspecionada e incorporada, workflow temporário removido. Restam 3 testes ativos que expõem dois defeitos existentes: evento de campo de janela lido após expirar e limite de pool fechada aplicado à coorte medida com estoque de warmup. Essas correções adicionais foram solicitadas ao Gabriel, ainda não implementadas. Main/Render permanecem intactos; detalhes e reprodução no plano. Não há skip novo nem troca de seed para esconder falha.
 - **Validação posterior:** PR #59 aberto; CI 36779719966 aprovou Python normal e otimizado (1.264/1 skip), mas parou no alias de regex do teste, corrigido sem efeito runtime. Front unitário 1.236/1.236. E2E local encontrou uma falha real já no Live: rejeição do reset IndexedDB deixa a sessão eternamente em carregamento. A integração está pendente de decisão para corrigir runtime; a main e o Render permanecem intactos. Patches E2E parciais são locais e não validados.
 - **Sintoma:** o Render servia `29d955c`, enquanto a main permanecia em `3342059`, 52 commits atrás. Um deploy manual da ponta antiga da main poderia republicar a interface anterior.
 - **Causa:** os deploys específicos de commits avançaram em branches de desenvolvimento sem concluir a integração na main. Auto-Deploy está Off no serviço.
