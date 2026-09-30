@@ -224,12 +224,12 @@ describe('StudyController', () => {
     subject.close();
   });
 
-  it('remove a demonstração automática herdada ao abrir a sessão', async () => {
+  it('aguarda o reset local publicado ao abrir a sessão sem carregar demonstração', async () => {
     const repository = new RepositoryDouble(FIXTURE_OWNER);
-    const removeLegacyAutomaticDemo = vi.fn(async () => true);
+    const reset = deferred<boolean>();
+    const resetAllLocalDataOnce = vi.fn(() => reset.promise);
     const compatibleRepository = Object.assign(repository, {
-      getDemoInstallationStatus: async () => 'INSTALLED' as const,
-      removeLegacyAutomaticDemo,
+      resetAllLocalDataOnce,
     });
     const loadPackage = vi.fn(async () => generatedDemo as unknown as DemoStudyPackageV1);
     const subject = new StudyController({
@@ -237,10 +237,15 @@ describe('StudyController', () => {
       demoPackageLoader: loadPackage,
     });
 
-    await subject.switchSession(FIXTURE_OWNER);
+    let sessionReady = false;
+    const switching = subject.switchSession(FIXTURE_OWNER).then(() => { sessionReady = true; });
+    await vi.waitFor(() => expect(resetAllLocalDataOnce).toHaveBeenCalledOnce());
+    expect(sessionReady).toBe(false);
+    reset.resolve(true);
+    await switching;
 
-    expect(loadPackage).toHaveBeenCalledOnce();
-    expect(removeLegacyAutomaticDemo).toHaveBeenCalledWith(generatedDemo);
+    expect(sessionReady).toBe(true);
+    expect(loadPackage).not.toHaveBeenCalled();
     expect(subject.snapshot).toMatchObject({ ownerSub: FIXTURE_OWNER, status: 'IDLE', document: null });
     subject.close();
   });

@@ -33,16 +33,18 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-09-29, durante a preparação da atualização da bancada.
+Atualizada em 2026-09-30, durante a integração da versão Live na main.
 
 | Branch | Situação | Dono |
 |---|---|---|
-| `codex/replay-production-fix` | Reset total publicado; correção visual do Replay pronta para publicação | Codex |
+| `codex/main-render-sync` | Integração autorizada do Live `29d955c` na main; verificações e PR em andamento, sem novo deploy | Codex |
+| `codex/chat-front-context` | `29d955c` publicado no Render (Live); referência preservada da integração | Codex |
+| `codex/replay-production-fix` | `cb81781` incorporado no Live `29d955c`, incluindo reset local e Replay | Codex |
 | `codex/frontend-performance-fixes` | Integra as correções de travamento e `feat/estudo-vs-combinacao` sobre o release `829d224`; publicação no Render em preparação | Codex |
 | `codex/carteira-criterios` | Integra estudo separado de combinações, últimas melhorias de `feat/bancada-exploracao` e chat já publicado do PR #57; deploy aguardando comando do Gabriel | Codex |
 | `codex/chat-interface-render` | PR #57 aberto (draft, base `feat/bancada-exploracao`); código `8d43695` publicado no Render com status Live em 2026-09-28; sem merge na `main` | Codex |
 | `codex/integracao-etapas-5-6` | Consolida `feat/bancada-exploracao` e `codex/finalidade-verificacao`, incluindo histórico de `origin/main`; publicação/CI em preparação, sem deploy | Codex |
-| `main` | Autonetting preferencial e integração final incorporados até o PR #37 (`c2ad175`); grade histórica não regenerada | os dois |
+| `main` | Base remota `3342059` (Etapas 5/6 e bancada); integração dos 52 commits até o Live `29d955c` em andamento | os dois |
 | `netting/p1` | spike do P1, **NÃO MERGEAR** — dominado, e agora sabemos que a folga é zero em N ≥ 50. Só local, nunca foi pro GitHub | Felipe |
 | `fix/semantica-remessa-p0` | PR #11, mergeada | Felipe |
 | `fix/previsao-temporal-e-colunas-csv` | PR #12, mergeada | Gabriel |
@@ -78,6 +80,13 @@ Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. 
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+## 2026-09-30 — Integração da versão Live na main (MOT-99)
+
+- **Sintoma:** o Render servia `29d955c`, enquanto a main permanecia em `3342059`, 52 commits atrás. Um deploy manual da ponta antiga da main poderia republicar a interface anterior.
+- **Causa:** os deploys específicos de commits avançaram em branches de desenvolvimento sem concluir a integração na main. Auto-Deploy está Off no serviço.
+- **O que foi feito:** Gabriel autorizou integrar toda a versão Live, sem novas mudanças de produto. `codex/main-render-sync` parte exatamente de `29d955c`; a auditoria confirmou 243 arquivos diferentes da main e nenhum em `motor/`, Dockerfile, render.yaml, dependências ou Supabase. Entram estudos/combinações, importação e backup, quadro/apresentação, diagnóstico P50, Replay, perfil/primeiro acesso e chat contextual. O ambiente unitário ganha IndexedDB simulado já disponível nas dependências, e o teste de sessão passa a verificar o reset publicado, em lugar da limpeza seletiva removida. Plano e gates em `docs/superpowers/plans/2026-09-30-main-render-sync.md`. A integração segue por PR protegido, sem novo deploy e sem mudança de runtime em relação ao Live.
+- **O que isso invalida:** a main antiga deixa de ser referência do front publicado após o merge. O reset único de todas as stores locais já existente no Live é preservado, não repetido por esta integração; não se altera seu marcador. As falhas históricas de Playwright continuam sendo limitações até validação atual, não aprovações presumidas. Abas antigas devem ser recarregadas para usar o contrato atual do chat. Nenhuma regra financeira ou dado de produção é alterado por esta tarefa.
 
 ## 2026-09-30 — Ajuda do chat sincronizada com o front atual (MOT-99)
 
