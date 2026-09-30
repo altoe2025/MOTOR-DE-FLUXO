@@ -60,7 +60,10 @@ describe('StudiesPage demo recovery', () => {
     controller.flush.mockResolvedValue(null);
     controller.edit.mockClear();
     page();
-    expect(screen.getByRole('button', { name: 'Novo estudo' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Novo estudo' }))
+      .toHaveAttribute('data-chat-help-id', 'control.estudos.novo');
+    expect(screen.getByRole('button', { name: 'Nova combinação de carteiras' }))
+      .toHaveAttribute('data-chat-help-id', 'control.estudos.nova-combinacao');
     await userEvent.click(screen.getByRole('button', { name: 'Nova combinação de carteiras' }));
     expect(await screen.findByRole('heading', { name: 'Carteira aberta' })).toBeInTheDocument();
     expect(controller.edit).toHaveBeenCalledWith(expect.objectContaining({
@@ -220,7 +223,8 @@ describe('StudiesPage cópia de segurança', () => {
   it('avisa que o estudo fica salvo só neste navegador', async () => {
     page();
     expect(await screen.findByText('Salvo neste navegador.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Importar estudo' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Importar estudo' }))
+      .toHaveAttribute('data-chat-help-id', 'control.estudos.importar');
   });
 
   it('importa um arquivo exportado e grava o estudo como revisão 1', async () => {
@@ -260,6 +264,8 @@ describe('StudiesPage novo estudo', () => {
     expect(await screen.findByRole('heading', { name: 'Novo estudo: de onde vêm os dados?' })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: 'Dados importados de uma empresa' })).toBeChecked();
     expect(controller.edit).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Criar estudo' }))
+      .toHaveAttribute('data-chat-help-id', 'control.estudos.criar-caso');
     await userEvent.click(screen.getByRole('button', { name: 'Criar estudo' }));
     expect(await screen.findByRole('heading', { name: 'Carteira aberta' })).toBeInTheDocument();
     const created = controller.edit.mock.calls[0]![0];

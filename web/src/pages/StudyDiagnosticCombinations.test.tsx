@@ -57,6 +57,8 @@ describe('combination study diagnosis', () => {
     const { study } = await comboStudy(255);
     openStudy(study);
     expect(await screen.findByRole('button', { name: 'Diagnosticar combinações' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Diagnosticar combinações' }))
+      .toHaveAttribute('data-chat-help-id', 'control.diagnostico.combinacoes');
     expect(screen.getByRole('heading', { name: 'Qual carteira atende melhor?' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Abrir quadros comparativos' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Executar diagnóstico' })).not.toBeInTheDocument();

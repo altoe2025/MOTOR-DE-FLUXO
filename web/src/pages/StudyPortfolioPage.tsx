@@ -272,7 +272,7 @@ Os diagnósticos dele também serão apagados. Não dá para desfazer.`)) return
   <section aria-labelledby="combination-diagnosis-title">
     <h2 id="combination-diagnosis-title">Diagnóstico das combinações</h2>
     <p>As combinações são calculadas internamente. O diagnóstico mostra a recomendação e as principais alternativas.</p>
-    <Button disabled={combinationProgress !== null} onClick={() => void diagnoseCombinations()}>Diagnosticar combinações</Button>
+    <Button data-chat-help-id="control.carteira.diagnosticar-combinacoes" disabled={combinationProgress !== null} onClick={() => void diagnoseCombinations()}>Diagnosticar combinações</Button>
     {combinationProgress === null ? null : <p role="status">{combinationProgress}</p>}
   </section></> : <>
   <section className="scenario-workspace" aria-labelledby="scenario-list-title">

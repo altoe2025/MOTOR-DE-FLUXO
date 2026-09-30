@@ -3900,7 +3900,7 @@
           "items": {
             "$ref": "#/$defs/ProductHelpItem"
           },
-          "maxItems": 200,
+          "maxItems": 300,
           "minItems": 1,
           "title": "Items",
           "type": "array"

@@ -29,6 +29,8 @@ describe('UploadStep', () => {
     vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
     const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
     subject();
+    expect(screen.getByRole('button', { name: 'Baixar modelo (.xlsx)' }))
+      .toHaveAttribute('data-chat-help-id', 'control.importacao.modelo');
     await userEvent.setup().click(screen.getByRole('button', { name: 'Baixar modelo (.xlsx)' }));
     await vi.waitFor(() => expect(created).toHaveLength(1));
     expect(created[0]!.type).toBe('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');

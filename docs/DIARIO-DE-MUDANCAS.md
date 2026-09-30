@@ -79,6 +79,13 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-30 — Ajuda do chat sincronizada com o front atual (MOT-99)
+
+- **Sintoma:** ao perguntar pelo botão “Nova combinação de carteiras”, o chat não encontrava o controle e podia pedir informações que já estavam na interface.
+- **Causa:** o catálogo de ajuda não continha os fluxos novos; o inventário enviado ao chat despejava todos os controles sem priorizar a rota atual ou o nome perguntado.
+- **O que foi feito:** em `codex/chat-front-context`, as fichas de controles novos foram adicionadas e os fluxos alterados foram corrigidos; os botões receberam IDs observáveis; o inventário prioriza controles da tela, controles globais e nomes citados, mantendo consulta direta aos demais. Contrato OpenAPI e validador do front foram regenerados. Testes focados de chat/API, typecheck e build passaram.
+- **O que isso invalida:** a orientação anterior de que o botão de combinação não está documentado no chat. Não altera dados, cálculos, autenticação nem o deploy do Render.
+
 ## 2026-09-29 — Controles e acumulados reposicionados no Replay (MOT-99)
 
 - **Sintoma:** o controle compacto de pausa aparecia na régua superior em vez do centro da Fronteira Viva, a bolinha do dia misturava `D+n` com a data civil e os três acumulados ficavam abaixo da cena.

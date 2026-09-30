@@ -39,6 +39,23 @@ INTERFACE_CONTROLS = [
     ("control.importacao.confirmar", "Confirmar Caso Observado", "/importar"),
     ("control.empresa.excluir", "Excluir", "/empresas"),
     ("control.estudos.novo", "Novo estudo", "/estudos"),
+    ("control.estudos.nova-combinacao", "Nova combinação de carteiras", "/estudos"),
+    ("control.estudos.importar", "Importar estudo", "/estudos"),
+    ("control.estudos.exportar", "Exportar", "/estudos"),
+    ("control.estudos.criar-caso", "Criar estudo", "/estudos"),
+    ("control.estudos.criar-carteira", "Criar carteira", "/estudos"),
+    ("control.estudos.criar-gerada", "Criar com carteira gerada", "/estudos"),
+    ("control.carteira.trocar-origem", "Trocar origem", "/carteira/:id"),
+    ("control.carteira.diagnosticar-combinacoes", "Diagnosticar combinações", "/carteira/:id"),
+    ("control.alavancas.aplicar-carteira", "Aplicar à carteira", "/carteira/:id"),
+    ("control.diagnostico.combinacoes", "Diagnosticar combinações", "/estudos/:studyId/diagnostico"),
+    ("control.diagnostico.cancelar-lote", "Cancelar lote", "/estudos/:studyId/diagnostico"),
+    ("control.diagnostico.mostrar-quadros", "Abrir quadros comparativos", "/estudos/:studyId/diagnostico"),
+    ("control.importacao.modelo", "Baixar modelo (.xlsx)", "/importar"),
+    ("control.importacao.analisar-caso", "Analisar este caso", "/importar"),
+    ("control.importacao.adicionar-carteira", "Adicionar a uma carteira", "/importar"),
+    ("control.importacao.confirmar-adicao", "Adicionar e abrir o estudo", "/importar"),
+    ("control.quadro.apagar-estudo", "Apagar estudo", "/quadro"),
     ("control.carteira.executar", "Executar cenário atual", "/carteira/:id"),
     ("control.carteira.referencia", "Executar exemplo de referência", "/carteira"),
     ("control.composicao.editar", "Criar hipótese / alterar carteira", "/carteira/:id"),
@@ -94,6 +111,20 @@ def test_condicoes_de_bloqueio_nao_exigem_simulacao_para_ajuda(product_help_clie
     assert "desfaz" in items["control.chat.cancelar-envio"]["doesNotChange"]
 
 
+def test_ajuda_do_front_atual_distingue_estudo_comum_combinacao_e_resultado(product_help_client):
+    items = {item["id"]: item for item in product_help_client.get(
+        "/api/v1/catalogos/ajuda", headers=auth(),
+    ).json()["items"]}
+
+    assert "escolha da origem" in items["control.estudos.novo"]["purpose"]
+    assert "não cria" in items["control.estudos.novo"]["doesNotChange"].lower()
+    assert "separado" in items["control.estudos.nova-combinacao"]["purpose"]
+    assert "não gera nem diagnostica" in items["control.estudos.nova-combinacao"]["doesNotChange"].lower()
+    assert "carteira-base" in items["control.alavancas.aplicar-carteira"]["changes"]
+    assert "reaproveita" in items["control.diagnostico.combinacoes"]["changes"]
+    assert "não executa" in items["control.diagnostico.cancelar-lote"]["doesNotChange"].lower()
+
+
 @pytest.fixture
 def product_help_client():
     from servidor.app import create_app
@@ -119,6 +150,25 @@ def test_catalogo_de_ajuda_autenticado_publica_conteudo_versionado(product_help_
         assert isinstance(item["disabledWhen"], list)
         assert isinstance(item["recovery"], list)
         assert set(item["relatedConceptIds"]) <= set(items)
+
+
+def test_catalogo_com_mais_de_200_itens_preserva_ajuda_existente(tmp_path):
+    from servidor.catalogs.product_help import load_product_help_catalog
+
+    source = Path(__file__).resolve().parents[2] / "servidor/catalogs/product_help.v1.json"
+    document = json.loads(source.read_text(encoding="utf-8"))
+    document["items"] = document["items"][:200]
+    document["items"].append({
+        **document["items"][0], "id": "page.ajuda-adicional",
+        "relatedConceptIds": [],
+    })
+    path = tmp_path / "extended-product-help.json"
+    path.write_text(json.dumps(document, ensure_ascii=False), encoding="utf-8")
+
+    catalog = load_product_help_catalog(path)
+
+    assert len(catalog.items) == 201
+    assert catalog.items[0].id == document["items"][0]["id"]
 
 
 def test_ajuda_importacao_explica_finalidade_opcional_e_fallback(product_help_client):

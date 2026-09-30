@@ -51,7 +51,7 @@ class ProductHelpCatalogV1(StrictModel):
 
     apiVersion: Literal["1.0.0"]
     catalogVersion: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
-    items: Annotated[tuple[ProductHelpItem, ...], Field(min_length=1, max_length=200)]
+    items: Annotated[tuple[ProductHelpItem, ...], Field(min_length=1, max_length=300)]
 
     @model_validator(mode="after")
     def validate_references(self) -> Self:

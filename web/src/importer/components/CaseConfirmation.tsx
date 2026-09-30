@@ -44,8 +44,8 @@ export function CaseConfirmation({ observedCase }: { observedCase: ObservedCase 
     <p role="status">Caso {observedCase.id}, revisão {observedCase.revision}, publicado.</p>
     {error === null ? null : <p role="alert" className="inline-notice inline-notice--error">{error}</p>}
     <div className="source-actions">
-      <Button disabled={busy} onClick={() => void analyze()}>Analisar este caso</Button>
-      <Button variant="secondary" disabled={busy} onClick={() => void openAdd()}>Adicionar a uma carteira</Button>
+      <Button data-chat-help-id="control.importacao.analisar-caso" disabled={busy} onClick={() => void analyze()}>Analisar este caso</Button>
+      <Button variant="secondary" data-chat-help-id="control.importacao.adicionar-carteira" disabled={busy} onClick={() => void openAdd()}>Adicionar a uma carteira</Button>
     </div>
     {adding === null ? null : <div className="source-panel case-shortcuts">
       {adding.candidates.length === 0
@@ -59,7 +59,7 @@ export function CaseConfirmation({ observedCase }: { observedCase: ObservedCase 
             </option>)}
           </select>
           <p className="field-hint">O caso entra no cenário original do estudo. Variações já criadas ficam como estavam; rode o diagnóstico do original de novo.</p>
-          <div className="source-actions"><Button disabled={busy || target === ''} onClick={() => void add()}>Adicionar e abrir o estudo</Button><Button variant="secondary" onClick={() => setAdding(null)}>Cancelar</Button></div>
+          <div className="source-actions"><Button data-chat-help-id="control.importacao.confirmar-adicao" disabled={busy || target === ''} onClick={() => void add()}>Adicionar e abrir o estudo</Button><Button variant="secondary" onClick={() => setAdding(null)}>Cancelar</Button></div>
         </>}
     </div>}
     <nav aria-label="Continuar após importação"><ul>

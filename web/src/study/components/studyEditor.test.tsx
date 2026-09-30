@@ -76,6 +76,8 @@ describe('StudyEditor', () => {
     await subject({}, { openSource: false });
     expect(screen.getByRole('heading', { name: 'Origem da carteira' })).toBeInTheDocument();
     expect(screen.queryByRole('radiogroup', { name: 'Origem da carteira' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Trocar origem' }))
+      .toHaveAttribute('data-chat-help-id', 'control.carteira.trocar-origem');
     fireEvent.click(screen.getByRole('button', { name: 'Trocar origem' }));
     expect(screen.getByRole('radiogroup', { name: 'Origem da carteira' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Cancelar troca' })).toHaveAttribute('aria-expanded', 'true');
