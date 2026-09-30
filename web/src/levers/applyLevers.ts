@@ -22,6 +22,21 @@ export const NEUTRAL_LEVERS: Omit<Levers, 'group'> = {
   deadline: { mode: 'KEEP' },
 };
 
+export function isNeutralLevers(levers: Levers): boolean {
+  try {
+    return !levers.removeCompany
+      && levers.removedOrderIds.length === 0
+      && new Decimal(levers.volumeIn).equals(1)
+      && new Decimal(levers.volumeOut).equals(1)
+      && new Decimal(levers.spacingFactor).equals(1)
+      && levers.shiftDays === 0
+      && (levers.deadline.mode === 'KEEP'
+        || (levers.deadline.mode === 'DELTA' && levers.deadline.days === 0));
+  } catch {
+    return false;
+  }
+}
+
 export type LeverResult = Readonly<{
   orders: CanonicalAuthoredOrder[];
   provenanceByOrder: Record<string, OrderFieldProvenance>;
@@ -57,6 +72,7 @@ export function applyLevers(
   provenanceByOrder: Readonly<Record<string, OrderFieldProvenance>>,
   levers: Levers,
   recordedAt: string,
+  companyOf: (orderId: string) => string = groupOf,
 ): LeverResult {
   const volumeIn = positiveFactor(levers.volumeIn, 'Volume IN');
   const volumeOut = positiveFactor(levers.volumeOut, 'Volume OUT');
@@ -77,7 +93,7 @@ export function applyLevers(
   for (const order of orders) {
     const provenance = provenanceByOrder[order.id];
     if (provenance === undefined) throw new Error(`Proveniência ausente para ${order.id}.`);
-    if (groupOf(order.id) !== levers.group) {
+    if (companyOf(order.id) !== levers.group) {
       nextOrders.push(structuredClone(order) as CanonicalAuthoredOrder);
       nextProvenance[order.id] = structuredClone(provenance);
       continue;

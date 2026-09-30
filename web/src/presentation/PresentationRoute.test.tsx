@@ -47,7 +47,7 @@ describe('PresentationRoute', () => {
     ]}><Routes><Route path="/estudos/:studyId/apresentacao" element={<PresentationRoute />} /></Routes></MemoryRouter>);
 
     expect(await screen.findByRole('heading', { level: 1, name: study.name }, { timeout: 5_000 })).toBeVisible();
-    expect(screen.getByRole('region', { name: /Replay/ })).toBeVisible();
+    expect(screen.getByRole('region', { name: 'Resumo executivo' })).toBeVisible();
     expect(mocks.buildReplay).toHaveBeenCalledOnce();
     expect(mocks.getImportCatalog).not.toHaveBeenCalled();
   }, 15_000);

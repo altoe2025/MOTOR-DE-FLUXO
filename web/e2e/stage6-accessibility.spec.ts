@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 import { auditAccessibility } from './helpers/accessibilityAudit';
+import { loadDemoIfEmpty } from './helpers/demo';
 
 test('login has semantic structure and accessible controls', async ({ page }) => {
   await page.goto('/estudos');
@@ -32,6 +33,7 @@ test('demo, chat and presentation preserve keyboard focus and readable structure
   await expect(opener).toBeFocused();
 
   await page.waitForFunction(() => '__MOTOR_E2E__' in window);
+  await loadDemoIfEmpty(page);
   await expect.poll(async () => (await page.evaluate(() => window.__MOTOR_E2E__!.demoAcceptanceSnapshot())).studies.length).toBe(1);
   const study = (await page.evaluate(() => window.__MOTOR_E2E__!.demoAcceptanceSnapshot())).studies[0]!;
   const scenario = study.scenarios[0]!;
@@ -49,8 +51,17 @@ test('demo, chat and presentation preserve keyboard focus and readable structure
     await page.setViewportSize({ width: 1280 / zoom, height: 720 / zoom });
     const overflow = await page.evaluate(() => [...document.querySelectorAll('body *')]
       .filter((element) => element.getBoundingClientRect().right > window.innerWidth + 1)
+      .filter((element) => {
+        // Conteúdo de tabela rolável não é overflow da página; o container deve caber.
+        for (let parent = element.parentElement; parent; parent = parent.parentElement) {
+          if (['auto', 'scroll'].includes(getComputedStyle(parent).overflowX)
+            && parent.getBoundingClientRect().right <= window.innerWidth + 1) return false;
+        }
+        return true;
+      })
       .slice(0, 10).map((element) => `${element.tagName}.${(element as HTMLElement).className}: ${element.getBoundingClientRect().right}`));
     expect(overflow).toEqual([]);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
   }
   for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }]) {
     await page.setViewportSize(viewport);

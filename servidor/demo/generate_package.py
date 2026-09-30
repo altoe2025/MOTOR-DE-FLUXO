@@ -527,7 +527,7 @@ def build_package() -> dict:
         "version": VERSION, "participants": 12, "warmupDays": 30,
         "measurementDays": 30, "windowDays": 7,
         "monthlyOrderCapPerParticipant": 4,
-        "selectedRepetitionCriterion": "FIRST_PLANNED_REPETITION",
+        "selectedRepetitionCriterion": "MEDIAN_SAVINGS_REPETITION",
         "repetitionSeedOffsetByMix": {name: (1 if name == "corporativo_pesado" else 0)
             for name, _ in MIX_LABELS},
         "mixes": mixes,

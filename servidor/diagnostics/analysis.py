@@ -177,6 +177,17 @@ def _empirical_percentile(values: tuple[Decimal, ...], q: Decimal) -> Decimal:
     return ordered[rank - 1]
 
 
+def median_repetition_index(savings: tuple[Decimal, ...]) -> int:
+    """Índice da repetição cuja economia é o P50 por posto mais próximo.
+
+    O P50 do diagnóstico é sempre uma observação real (sem interpolação); em empate,
+    vale a primeira repetição do plano. Escolhe só qual execução detalhar — não
+    altera nenhuma regra do motor.
+    """
+    median = _empirical_percentile(savings, Decimal(".50"))
+    return savings.index(median)
+
+
 def _weighted_percentile(
     observations: tuple[tuple[Decimal, Decimal], ...], q: Decimal
 ) -> Decimal:
@@ -263,7 +274,27 @@ def analyze_diagnostic_repetitions(
         Decimal(0),
     )
     gross = gross_out + gross_in
-    ceiling = Decimal(2) * min(gross_out, gross_in)
+    # O numerador conta apenas ordens medidas, mas elas podem casar com ordens do
+    # aquecimento. Limite cada lado medido pela capacidade oposta da execução
+    # completa, sem contar as alocações do aquecimento no teto. O cálculo continua
+    # estrutural (ignora timing) e reduz a 2*min(OUT, IN) numa coorte fechada.
+    total_out = sum(
+        (
+            Decimal(order.valor_brl)
+            for order in chosen.request.cenario.ordens
+            if order.direcao == "OUT"
+        ),
+        Decimal(0),
+    )
+    total_in = sum(
+        (
+            Decimal(order.valor_brl)
+            for order in chosen.request.cenario.ordens
+            if order.direcao == "IN"
+        ),
+        Decimal(0),
+    )
+    ceiling = min(gross_out, total_in) + min(gross_in, total_out)
     matched = aggregate.volume_casado_periodo_brl
     uncaptured = ceiling - matched
     if uncaptured < 0:
@@ -281,7 +312,8 @@ def analyze_diagnostic_repetitions(
                 "/selected_execution/input_snapshot/cenario/ordens",
             ),
             "ceiling_brl": _available(
-                ceiling, "/selected_execution/input_snapshot/cenario/ordens"
+                ceiling, "/selected_execution/input_snapshot/cenario/ordens",
+                "/selected_execution/result/agregado/ids_ordens_medidas",
             ),
         }
     )

@@ -1,9 +1,9 @@
 import type { ApiClient, ChatRequest, ChatResponse } from '../api/client';
-import type { CommunicationDocumentV1 } from '../communication/domain';
 import type { ProductHelpCatalogV1 } from '../help/catalog';
 import type { ApplicationRepository } from '../storage/applicationRepository';
 import type { ChatConversation, ChatMessage } from './domain';
 import type { RouteChatContext } from './routeContext';
+import type { ChatContext } from './chatContext';
 
 type ChatRepository = Pick<ApplicationRepository, 'saveChatConversation' | 'getChatConversation'>;
 type ChatClient = Pick<ApiClient, 'sendChatMessage'>;
@@ -14,16 +14,17 @@ function update(document: ChatConversation, messages: readonly ChatMessage[]): C
 }
 function validResponse(response: ChatResponse, request: ChatRequest, catalog: ProductHelpCatalogV1): boolean {
   if (response.messageId !== request.messageId
-    || response.contextFingerprint !== (request.communication?.contextFingerprint ?? null)) return false;
-  const doc = request.communication;
-  const metrics = doc === null ? [] : [...doc.executiveMetrics, ...[
-    doc.composition, doc.mechanism, doc.economics, doc.robustness, doc.comparison, doc.replaySnapshot,
+    || response.contextFingerprint !== (request.context?.document.contextFingerprint ?? null)) return false;
+  const study = request.context?.kind === 'STUDY' ? request.context.document : null;
+  const board = request.context?.kind === 'BOARD' ? request.context.document : null;
+  const metrics = study === null ? [] : [...study.executiveMetrics, ...[
+    study.composition, study.mechanism, study.economics, study.robustness, study.comparison, study.replaySnapshot,
   ].filter((item): item is NonNullable<typeof item> => item !== null).flatMap((item) => item.metrics)];
   const known = {
     HELP: new Set<string>(catalog.items.map((item) => item.id)),
     METRIC: new Set(metrics.map((item) => item.code)),
-    EVIDENCE: new Set(Object.keys(doc?.evidenceIndex ?? {})),
-    LIMITATION: new Set(doc?.limitations.map((item) => item.code) ?? []),
+    EVIDENCE: new Set([...Object.keys(study?.evidenceIndex ?? {}), ...Object.keys(board?.evidenceIndex ?? {})]),
+    LIMITATION: new Set(study?.limitations.map((item) => item.code) ?? []),
   };
   return response.citations.every((citation) => known[citation.kind].has(citation.id))
     && response.limitationCodes.every((code) => code === 'INSUFFICIENT_EVIDENCE' || known.LIMITATION.has(code));
@@ -36,7 +37,7 @@ export async function sendChatMessage(input: Readonly<{
   conversation: ChatConversation;
   question: string;
   routeContext: RouteChatContext;
-  communication: CommunicationDocumentV1 | null;
+  context: ChatContext | null;
   catalog: ProductHelpCatalogV1;
   retryAssistantId?: string;
   signal?: AbortSignal;
@@ -56,7 +57,7 @@ export async function sendChatMessage(input: Readonly<{
   }
   if (question.length === 0 || question.length > 4000 || (retryIndex < 0 && snapshot.messages.length > 98)
     || snapshot.messages.some((item) => item.status === 'PENDING')) throw new Error('Pergunta ou conversa inválida.');
-  const fingerprint = input.communication?.contextFingerprint ?? null;
+  const fingerprint = input.context?.document.contextFingerprint ?? null;
   const answerId = crypto.randomUUID();
   const pending: ChatMessage = { id: answerId, role: 'ASSISTANT', text: '', status: 'PENDING',
     classification: null, citations: [], contextFingerprint: fingerprint, createdAt: now() };
@@ -81,10 +82,11 @@ export async function sendChatMessage(input: Readonly<{
   const history = previous.slice(0, retryIndex < 0 ? undefined : -1)
     .filter((item) => item.status === 'SUCCEEDED' && item.text.length > 0)
     .slice(-98).map((item) => ({ role: item.role, text: item.text, contextFingerprint: item.contextFingerprint }));
-  const { routeId, helpId, studyId, scenarioId, diagnosticExecutionId, replayDay } = input.routeContext;
+  const { routeId, helpId, studyId, scenarioId, diagnosticExecutionId, replayDay, uiControls } = input.routeContext;
   const request: ChatRequest = { apiVersion: '1.0.0', conversationId: snapshot.id, messageId: answerId,
-    message: question, routeContext: { routeId, helpId, studyId, scenarioId, diagnosticExecutionId, replayDay },
-    communication: input.communication === null ? null : structuredClone(input.communication) as ChatRequest['communication'],
+    message: question, routeContext: { routeId, helpId, studyId, scenarioId, diagnosticExecutionId, replayDay,
+      ...(uiControls === undefined ? {} : { uiControls: [...uiControls] }) },
+    context: input.context === null ? null : structuredClone(input.context) as ChatRequest['context'],
     history };
   try {
     if (input.signal?.aborted) throw new Error('Envio cancelado.');

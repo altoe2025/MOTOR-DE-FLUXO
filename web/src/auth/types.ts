@@ -1,6 +1,6 @@
 export type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated' | 'expired' | 'unavailable';
 
-export type AuthUser = { id: string };
+export type AuthUser = { id: string; email?: string };
 
 export type AuthSession = {
   access_token: string;

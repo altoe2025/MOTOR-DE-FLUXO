@@ -28,8 +28,16 @@ test('HTTPS, login, demonstração, chat real, apresentação, PDF e deep links'
   expect(health.status()).toBe(200);
   await login(page);
   await page.goto('/estudos');
-  await expect(page.getByRole('button', { name: 'Abrir Estudo demonstrativo sintético' })).toBeVisible();
-  await page.getByRole('button', { name: 'Abrir Estudo demonstrativo sintético' }).click();
+  // Conta nova começa vazia; carrega a demonstração pelo botão se ainda não estiver instalada.
+  const openDemo = page.getByRole('button', { name: 'Abrir Estudo demonstrativo sintético' });
+  const loadDemo = page.getByRole('button', { name: 'Carregar estudo demonstrativo' });
+  await expect(openDemo.or(loadDemo)).toBeVisible();
+  if (await loadDemo.isVisible()) {
+    await loadDemo.click();
+    await page.goto('/estudos');
+  }
+  await expect(openDemo).toBeVisible();
+  await openDemo.click();
   await expect(page).toHaveURL(/\/estudos\/[0-9a-f-]+$/);
   await page.getByRole('button', { name: 'Executar diagnóstico' }).first().click();
   await expect(page.getByRole('region', { name: 'Resultado do motor' })).toBeVisible();
@@ -106,10 +114,13 @@ test('XLSX sintético permanece local e o Caso alcança diagnóstico observado',
   await expect(page.getByRole('heading', { name: 'Versão 1' })).toBeVisible();
   await page.goto('/estudos');
   await page.getByRole('button', { name: 'Novo estudo', exact: true }).click();
+  await page.getByRole('radio', { name: 'Carteira gerada (exemplo)' }).check();
+  await page.getByRole('button', { name: 'Criar com carteira gerada' }).click();
   const studyId = page.url().split('/').at(-1)!;
-  await page.getByRole('radio', { name: 'Caso observado', exact: true }).check();
-  await page.getByLabel('Caso confirmado').selectOption(caseId);
-  await page.getByRole('button', { name: 'Usar caso confirmado' }).click();
+  await page.getByRole('button', { name: 'Trocar origem' }).click();
+  await page.getByRole('radio', { name: 'Dados importados de uma empresa' }).check();
+  await page.getByLabel('Caso importado').selectOption(caseId);
+  await page.getByRole('button', { name: 'Usar este caso' }).click();
   await page.goto(profileUrl!);
   await page.getByLabel('Estudo para receber a evidência').selectOption(studyId);
   await page.getByRole('button', { name: 'Usar como evidência em estudo' }).click();

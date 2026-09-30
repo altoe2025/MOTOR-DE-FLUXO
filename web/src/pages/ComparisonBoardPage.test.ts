@@ -3,7 +3,8 @@ import { describe, expect, it } from 'vitest';
 
 import { observedInput } from '../communication/testFixtures';
 import type { PreviewExecutionRecord } from '../study/model';
-import { buildRows } from './ComparisonBoardPage';
+import { buildRows, sortRows } from './ComparisonBoardPage';
+import { savingsBps } from './comparisonBoardMetrics';
 
 describe('comparison board execution identity', () => {
   it('uses the selected repetition instead of the originally prepared portfolio', async () => {
@@ -14,6 +15,7 @@ describe('comparison board execution identity', () => {
     // selected_execution contains orders regenerated with the selected seed.
     execution.sourceSnapshot.orders = [{ ...actual[0]!, valor_brl: '999999999' }];
     const [row] = buildRows([study], [], []);
+    expect(row!.executionId).toBe(execution.id);
     expect(row!.orderCount).toBe(actual.length);
     expect(row!.inBrl).toBe(actual.filter((order) => order.direcao === 'IN')
       .reduce((sum, order) => sum.plus(order.valor_brl), new Decimal(0)).toFixed());
@@ -32,6 +34,7 @@ describe('comparison board execution identity', () => {
       createdAt: '2026-09-24T12:00:00Z', finishedAt: '2026-09-24T12:00:00Z',
     };
     const [row] = buildRows([{ ...study, executions: [...study.executions, preview] }], [], []);
+    expect(row!.executionId).toBe(preview.id);
     expect(row!.finishedAt).toBe(preview.finishedAt);
     expect(row!.diagnosticExecutionId).toBeNull();
   });
@@ -43,5 +46,26 @@ describe('comparison board execution identity', () => {
     study.scenarios[0]!.revision -= 1;
     study.scenarios[0]!.inputFingerprint = 'changed-input';
     expect(buildRows([study], [], [])).toEqual([]);
+  });
+
+  it('expõe economia em bps sobre o volume bruto medido, período e premissas da linha', async () => {
+    const { study, execution } = await observedInput();
+    const aggregate = execution.envelope!.selected_execution.result.agregado;
+    const [row] = buildRows([study], [], []);
+    expect(row!.grossVolume).toBe(aggregate.volume_bruto_periodo_brl);
+    expect(row!.savingsBps).toBe(savingsBps(aggregate.economia_periodo_brl, aggregate.volume_bruto_periodo_brl));
+    expect(row!.periodLabel).toMatch(/dias? medidos?|horizonte/);
+    expect(row!.premises).toEqual(study.scenarios[0]!.premises);
+  });
+
+  it('ordena por bps, com linhas sem volume no fim', async () => {
+    const { study } = await observedInput();
+    const [row] = buildRows([study], [], []);
+    const rows = [
+      { ...row!, key: 'baixo', savingsBps: '10' },
+      { ...row!, key: 'sem-volume', savingsBps: null },
+      { ...row!, key: 'alto', savingsBps: '125.15' },
+    ];
+    expect(sortRows(rows, 'bps').map((item) => item.key)).toEqual(['alto', 'baixo', 'sem-volume']);
   });
 });

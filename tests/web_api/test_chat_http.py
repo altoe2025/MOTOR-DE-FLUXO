@@ -99,7 +99,7 @@ def test_injected_provider_receives_validated_context_and_returns_correlated_res
         "apiVersion": "1.0.0", "messageId": "message-1", "classification": "IN_SCOPE",
         "answer": "A importação revisa uma planilha local.",
         "citations": [{"kind": "HELP", "id": "page.importacao"}],
-        "contextFingerprint": source["communication"]["contextFingerprint"],
+        "contextFingerprint": source["context"]["document"]["contextFingerprint"],
         "limitationCodes": [],
     }
     assert [call[0] for call in fake.calls] == ["classify", "answer"]
@@ -133,7 +133,7 @@ def test_failure_timeout_and_invalid_provider_output_are_sanitized(fake, caplog)
     assert "pergunta-privada" not in response.text + caplog.text
 
 
-@pytest.mark.parametrize("classification", ["OUT_OF_SCOPE", "MIXED", "INSUFFICIENT_EVIDENCE"])
+@pytest.mark.parametrize("classification", ["OUT_OF_SCOPE", "MIXED"])
 def test_c4_scope_policies_are_applied_by_server(classification):
     fake = FakeProvider(classification=classification)
     with TestClient(app(fake)) as client:

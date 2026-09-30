@@ -2,7 +2,7 @@ import type { DiagnosticEnvelope, DiagnosticRequest, JobSnapshot } from '../api/
 import { validateDiagnosticEnvelope } from '../api/validators';
 import { ApiError } from '../api/errors';
 import type { DiagnosticExecutionRecord, StudyDocument } from '../study/model';
-import { appendDiagnosticExecution } from './domain';
+import { appendDiagnosticAttemptAtomically, appendDiagnosticExecution } from './domain';
 
 export type DiagnosticStudyAuthority = {
   readonly snapshot: Readonly<{
@@ -46,6 +46,7 @@ export type ExecuteStudyDiagnosticOptions = Readonly<{
   nextId?: () => string;
   now?: () => string;
   waitForNextPoll?: (signal: AbortSignal) => Promise<void>;
+  persistence?: 'RESERVATION_AND_TERMINAL' | 'TERMINAL_ONLY';
 }>;
 
 export type DiagnosticExecutionAttempt = Readonly<{
@@ -117,17 +118,39 @@ export async function executeStudyDiagnostic(
         createdAt,
         finishedAt: null,
       };
-      const withReservation = await appendDiagnosticExecution(study, reservation, createdAt);
       if (!sessionIsCurrent(options.authority, ownerSub, epoch, signal)) {
         return interrupted(reservation, null);
       }
-      options.authority.edit(withReservation);
-      const stored = await options.authority.flush();
-      if (stored === null || !sessionIsCurrent(options.authority, ownerSub, epoch, signal)) {
-        return interrupted(reservation, null);
+      if (options.persistence === 'TERMINAL_ONLY') {
+        assertDeferredReservation(study, reservation);
+        reservedStudy = study;
+      } else {
+        const withReservation = await appendDiagnosticExecution(study, reservation, createdAt);
+        options.authority.edit(withReservation);
+        const stored = await options.authority.flush();
+        if (stored === null || !sessionIsCurrent(options.authority, ownerSub, epoch, signal)) {
+          return interrupted(reservation, null);
+        }
+        reservedStudy = stored;
       }
-      reservedStudy = stored;
-      const submitted = await options.api.submitDiagnostic(request, signal);
+      let submitted: JobSnapshot;
+      try {
+        submitted = await options.api.submitDiagnostic(request, signal);
+      } catch (error) {
+        const failure = error instanceof ApiError
+          ? { code: error.code, message: error.message }
+          : { code: 'DIAGNOSTIC_SUBMISSION_FAILED', message: 'O servidor não recebeu o diagnóstico.' };
+        return persistTerminal(
+          options.authority,
+          ownerSub,
+          epoch,
+          reservedStudy,
+          reservation,
+          terminalRecord(reservation, nextId(), 'FAILED', now(), null, failure),
+          signal,
+          options.persistence === 'TERMINAL_ONLY',
+        );
+      }
       if (!sessionIsCurrent(options.authority, ownerSub, epoch, signal)) {
         return interrupted(reservation, null);
       }
@@ -157,6 +180,7 @@ export async function executeStudyDiagnostic(
           message: 'O job não está mais disponível no servidor.',
         }),
         signal,
+        options.persistence === 'TERMINAL_ONLY',
       );
     }
 
@@ -173,6 +197,7 @@ export async function executeStudyDiagnostic(
             message: 'O resultado do job não está mais disponível no servidor.',
           }),
           signal,
+          options.persistence === 'TERMINAL_ONLY',
         );
       }
       if (!sessionIsCurrent(options.authority, ownerSub, epoch, signal)) {
@@ -197,6 +222,7 @@ export async function executeStudyDiagnostic(
       reservation,
       terminalRecord(reservation, nextId(), status, now(), envelope, error),
       signal,
+      options.persistence === 'TERMINAL_ONLY',
     );
   });
   return result ?? {
@@ -330,6 +356,29 @@ function assertRequestIdentity(
   }
 }
 
+function assertDeferredReservation(
+  study: StudyDocument,
+  reservation: DiagnosticExecutionRecord,
+): void {
+  const createdAt = new Date(reservation.createdAt);
+  if (reservation.status !== 'QUEUED'
+    || reservation.id.trim().length === 0
+    || reservation.attemptId.trim().length === 0
+    || reservation.jobId === null
+    || reservation.jobId !== reservation.requestSnapshot.idempotency_key
+    || reservation.finishedAt !== null
+    || reservation.envelope !== null
+    || reservation.error !== null
+    || Number.isNaN(createdAt.valueOf())
+    || !reservation.createdAt.endsWith('Z')) {
+    throw new Error('Reserva diagnóstica local inválida.');
+  }
+  if (study.executions.some((existing) => existing.id === reservation.id
+    || (existing.kind === 'DIAGNOSTIC' && existing.attemptId === reservation.attemptId))) {
+    throw new Error('Reserva diagnóstica local colide com execução persistida.');
+  }
+}
+
 function assertJobIdentity(snapshot: JobSnapshot, reservation: DiagnosticExecutionRecord): void {
   if (snapshot.job_id !== reservation.jobId
     || snapshot.request_id !== reservation.requestSnapshot.request_id) {
@@ -404,6 +453,7 @@ async function persistTerminal(
   reservation: DiagnosticExecutionRecord,
   terminal: DiagnosticExecutionRecord,
   signal: AbortSignal,
+  reservationDeferred = false,
 ): Promise<DiagnosticExecutionAttempt> {
   if (!sessionIsCurrent(authority, ownerSub, epoch, signal)) {
     return interrupted(reservation, terminal.error);
@@ -419,7 +469,9 @@ async function persistTerminal(
     if (!currentStudy.executions.some((item) => item.kind === 'DIAGNOSTIC'
       && item.attemptId === reservation.attemptId
       && ['SUCCEEDED', 'FAILED', 'CANCELLED', 'INTERRUPTED'].includes(item.status))) {
-      const completed = await appendDiagnosticExecution(currentStudy, terminal, terminal.finishedAt!);
+      const completed = reservationDeferred
+        ? await appendDiagnosticAttemptAtomically(currentStudy, reservation, terminal)
+        : await appendDiagnosticExecution(currentStudy, terminal, terminal.finishedAt!);
       if (!sessionIsCurrent(authority, ownerSub, epoch, signal)) {
         return interrupted(reservation, terminal.error);
       }
@@ -430,7 +482,9 @@ async function persistTerminal(
       }
     }
   } else {
-    const detached = await appendDiagnosticExecution(reservedStudy, terminal, terminal.finishedAt!);
+    const detached = reservationDeferred
+      ? await appendDiagnosticAttemptAtomically(reservedStudy, reservation, terminal)
+      : await appendDiagnosticExecution(reservedStudy, terminal, terminal.finishedAt!);
     if (!sessionIsCurrent(authority, ownerSub, epoch, signal)) {
       return interrupted(reservation, terminal.error);
     }

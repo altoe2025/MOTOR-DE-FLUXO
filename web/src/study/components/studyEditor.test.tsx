@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest';
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -26,7 +26,7 @@ async function study() {
   });
 }
 
-async function subject(overrides: Partial<React.ComponentProps<typeof StudyEditor>> = {}) {
+async function subject(overrides: Partial<React.ComponentProps<typeof StudyEditor>> = {}, { openSource = true } = {}) {
   const document = await study();
   const onRename = vi.fn();
   const onSourceChange = vi.fn();
@@ -42,10 +42,70 @@ async function subject(overrides: Partial<React.ComponentProps<typeof StudyEdito
     onScenarioChange={onScenarioChange}
     {...overrides}
   />);
+  // O Passo 1 mostra um resumo; estes testes exercitam o seletor aberto por "Trocar origem".
+  if (openSource) fireEvent.click(screen.getByRole('button', { name: 'Trocar origem' }));
   return { onRename, onSourceChange, onConvertObserved, onScenarioChange, observedCase };
 }
 
 describe('StudyEditor', () => {
+  it('combina apenas os casos das empresas, mantendo nome e premissas sem outras origens', async () => {
+    const document = { ...await study(), studyType: 'PORTFOLIO_COMBINATIONS' as const };
+    const first = makeObservedCase();
+    const second = { ...makeObservedCase(), id: 'case-2', companyId: 'company-2' };
+    const companies = ['company-1', 'company-2'].map((id, index) => ({ id, ownerSub: FIXTURE_OWNER,
+      displayName: index === 0 ? 'Empresa Alfa' : 'Empresa Beta', aliases: [],
+      createdAt: FIXTURE_NOW, updatedAt: FIXTURE_NOW, revision: 1 }));
+    const { onSourceChange } = await subject({ study: document, observedCases: [first, second], companies }, { openSource: false });
+    expect(screen.getByRole('group', { name: 'Empresas da carteira' })).toBeInTheDocument();
+    expect(screen.queryByRole('radio')).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Operações explícitas' })).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Nome do estudo')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Premissas e período' })).toBeInTheDocument();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('checkbox', { name: /Empresa Alfa/ }));
+    await user.click(screen.getByRole('checkbox', { name: /Empresa Beta/ }));
+    await user.click(screen.getByRole('button', { name: 'Usar 2 casos juntos' }));
+    expect(onSourceChange).toHaveBeenCalledWith(expect.objectContaining({ kind: 'AUTHORED', definition: expect.objectContaining({
+      kind: 'EXPLICIT_ORDERS', sourceCases: [
+        { caseId: first.id, caseRevision: first.revision, companyId: first.companyId },
+        { caseId: second.id, caseRevision: second.revision, companyId: second.companyId },
+      ],
+    }) }));
+  });
+  it('mostra a origem num resumo e só abre o seletor em "Trocar origem"', async () => {
+    await subject({}, { openSource: false });
+    expect(screen.getByRole('heading', { name: 'Origem da carteira' })).toBeInTheDocument();
+    expect(screen.queryByRole('radiogroup', { name: 'Origem da carteira' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Trocar origem' }))
+      .toHaveAttribute('data-chat-help-id', 'control.carteira.trocar-origem');
+    fireEvent.click(screen.getByRole('button', { name: 'Trocar origem' }));
+    expect(screen.getByRole('radiogroup', { name: 'Origem da carteira' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Cancelar troca' })).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  it('aplicar uma origem fecha o seletor; "Editar as ordens à mão" o mantém aberto para editar', async () => {
+    const document = await study();
+    const observedCase = makeObservedCase();
+    const withSource = (fingerprint: string) => ({ ...document, scenarios: document.scenarios.map((item) => ({
+      ...item, sourceSnapshot: { ...item.sourceSnapshot, sourceFingerprint: fingerprint },
+    })) }) as typeof document;
+    const props = {
+      observedCases: [observedCase], companies: [], status: 'SAVED', onRename: vi.fn(), onDuplicate: vi.fn(),
+      onSourceChange: vi.fn(), onConvertObserved: vi.fn(), onScenarioChange: vi.fn(),
+    };
+    const { rerender } = render(<StudyEditor study={withSource('a'.repeat(64))} {...props} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Trocar origem' }));
+    rerender(<StudyEditor study={withSource('b'.repeat(64))} {...props} />);
+    expect(screen.queryByRole('radiogroup', { name: 'Origem da carteira' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Trocar origem' }));
+    fireEvent.click(screen.getByLabelText('Dados importados de uma empresa'));
+    fireEvent.change(screen.getByLabelText('Caso importado'), { target: { value: observedCase.id } });
+    fireEvent.click(screen.getByRole('button', { name: 'Editar as ordens à mão' }));
+    rerender(<StudyEditor study={withSource('c'.repeat(64))} {...props} />);
+    expect(screen.getByRole('radiogroup', { name: 'Origem da carteira' })).toBeInTheDocument();
+  });
+
   it('bloqueia preparação sem SHA real e aceita somente configuração hexadecimal válida', () => {
     expect(() => requiredBuildSha(undefined, undefined)).toThrow('VITE_MOTOR_BUILD_SHA');
     expect(() => requiredBuildSha('0'.repeat(39), undefined)).toThrow('SHA de build inválido');
@@ -62,11 +122,11 @@ describe('StudyEditor', () => {
 
   it('confirma antes de descartar autoria local e preserva os campos quando cancelado', async () => {
     const user = userEvent.setup(); await subject();
-    await user.click(screen.getByLabelText('Autoria manual'));
+    await user.click(screen.getByLabelText('Montar à mão (avançado)'));
     await user.clear(screen.getByLabelText('Nome do grupo'));
     await user.type(screen.getByLabelText('Nome do grupo'), 'Tesouraria Sul');
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
-    await user.click(screen.getByLabelText('Caso observado'));
+    await user.click(screen.getByLabelText('Dados importados de uma empresa'));
     expect(confirm).toHaveBeenCalledWith('Trocar a origem descarta a autoria manual não aplicada. Continuar?');
     expect(screen.getByLabelText('Nome do grupo')).toHaveValue('Tesouraria Sul');
   });
@@ -93,11 +153,11 @@ describe('StudyEditor', () => {
 
   it('prepara autoria manual com grupos, participante, herança e overrides como Decimal textual', async () => {
     const { onSourceChange } = await subject(); const user = userEvent.setup();
-    await user.click(screen.getByLabelText('Autoria manual'));
+    await user.click(screen.getByLabelText('Montar à mão (avançado)'));
     await user.clear(screen.getByLabelText('Frequência mensal do grupo'));
     await user.type(screen.getByLabelText('Frequência mensal do grupo'), '12');
-    await user.clear(screen.getByLabelText('Ticket médio do grupo'));
-    await user.type(screen.getByLabelText('Ticket médio do grupo'), '1500.50');
+    await user.clear(screen.getByLabelText('Ticket mediano do grupo'));
+    await user.type(screen.getByLabelText('Ticket mediano do grupo'), '1500.50');
     await user.click(screen.getByLabelText('Sobrescrever parâmetros do participante'));
     await user.clear(screen.getByLabelText('Frequência mensal do participante'));
     await user.type(screen.getByLabelText('Frequência mensal do participante'), '3');
@@ -112,12 +172,73 @@ describe('StudyEditor', () => {
 
   it('valida Decimal localmente antes da rede', async () => {
     const { onSourceChange } = await subject(); const user = userEvent.setup();
-    await user.click(screen.getByLabelText('Autoria manual'));
-    await user.clear(screen.getByLabelText('Ticket médio do grupo'));
-    await user.type(screen.getByLabelText('Ticket médio do grupo'), '1,5');
+    await user.click(screen.getByLabelText('Montar à mão (avançado)'));
+    await user.clear(screen.getByLabelText('Ticket mediano do grupo'));
+    await user.type(screen.getByLabelText('Ticket mediano do grupo'), 'mil');
     await user.click(screen.getByRole('button', { name: 'Preparar carteira manual' }));
-    expect(screen.getByRole('alert')).toHaveTextContent('Use ponto como separador decimal');
+    expect(screen.getByRole('alert')).toHaveTextContent('Ticket mediano');
+    expect(screen.getByRole('alert')).toHaveTextContent('Ex.: 40,00');
     expect(onSourceChange).not.toHaveBeenCalled();
+  });
+
+  it('aceita vírgula brasileira no ticket e envia com ponto', async () => {
+    const { onSourceChange } = await subject(); const user = userEvent.setup();
+    await user.click(screen.getByLabelText('Montar à mão (avançado)'));
+    await user.clear(screen.getByLabelText('Ticket mediano do grupo'));
+    await user.type(screen.getByLabelText('Ticket mediano do grupo'), '1.500,50');
+    await user.click(screen.getByRole('button', { name: 'Preparar carteira manual' }));
+    expect(onSourceChange).toHaveBeenCalledWith(expect.objectContaining({
+      preparation: expect.objectContaining({ input: expect.objectContaining({ participants: [expect.objectContaining({
+        ticket_median_brl: '1500.5',
+      })] }) }),
+      definition: expect.objectContaining({ groups: [expect.objectContaining({ parameters: expect.objectContaining({ ticket: '1500.50' }) })] }),
+    }));
+  });
+
+  it('mostra premissas em % e R$, converte para fração e preserva o que não mudou', async () => {
+    const onScenarioChange = vi.fn();
+    await subject({ onScenarioChange }); const user = userEvent.setup();
+    expect(screen.getByLabelText('IOF OUT')).toHaveValue('3,5');
+    expect(screen.getByLabelText('Carry CNR')).toHaveValue('0,04');
+    await user.clear(screen.getByLabelText('IOF OUT'));
+    await user.type(screen.getByLabelText('IOF OUT'), '3,8');
+    await user.clear(screen.getByLabelText('Custo fixo por remessa'));
+    await user.type(screen.getByLabelText('Custo fixo por remessa'), 'R$ 55,00');
+    await user.click(screen.getByRole('button', { name: 'Salvar premissas e período' }));
+    expect(onScenarioChange).toHaveBeenCalledWith(expect.objectContaining({
+      premises: expect.objectContaining({ costs: expect.objectContaining({
+        iof_out: '0.038', iof_in: '0.0038', carry_cnr: '0.0004', custo_fixo_remessa: '55.00', ptax: '5.40',
+      }) }),
+    }));
+  });
+
+  it('reedita a janela e salva o valor final sem perder as demais premissas', async () => {
+    const document = await study();
+    const { onScenarioChange } = await subject({ study: document }, { openSource: false });
+    const user = userEvent.setup();
+    const windowDays = screen.getByLabelText('Janela em dias');
+    await user.clear(windowDays);
+    await user.type(windowDays, '3');
+    await user.clear(windowDays);
+    await user.type(windowDays, '12');
+    expect(windowDays).toHaveValue('12');
+    await user.click(screen.getByRole('button', { name: 'Salvar premissas e período' }));
+    expect(onScenarioChange).toHaveBeenCalledExactlyOnceWith({
+      premises: { ...document.scenarios[0]!.premises, windowDays: 12 },
+      period: document.scenarios[0]!.period,
+    });
+  });
+
+  it('mostra o erro de premissa junto ao campo, com exemplo', async () => {
+    const onScenarioChange = vi.fn();
+    await subject({ onScenarioChange }); const user = userEvent.setup();
+    await user.clear(screen.getByLabelText('Carry CNR'));
+    await user.type(screen.getByLabelText('Carry CNR'), '0;04');
+    await user.click(screen.getByRole('button', { name: 'Salvar premissas e período' }));
+    const field = screen.getByLabelText('Carry CNR');
+    expect(field).toHaveAttribute('aria-invalid', 'true');
+    expect(field).toHaveAccessibleDescription(/Ex\.: 3,5/);
+    expect(onScenarioChange).not.toHaveBeenCalled();
   });
 
   it('reidrata autoria persistida e salva premissas e período sem perder texto decimal', async () => {
@@ -149,15 +270,15 @@ describe('StudyEditor', () => {
     const user = userEvent.setup();
 
     expect(screen.getByLabelText('Nome do grupo')).toHaveValue('Grupo persistido');
-    expect(screen.getByLabelText('Ticket médio do grupo')).toHaveValue('1500.50');
+    expect(screen.getByLabelText('Ticket mediano do grupo')).toHaveValue('1500.50');
     await user.clear(screen.getByLabelText('PTAX'));
-    await user.type(screen.getByLabelText('PTAX'), '5.4000');
+    await user.type(screen.getByLabelText('PTAX'), '5,4500');
     await user.clear(screen.getByLabelText('Período de medição em dias'));
     await user.type(screen.getByLabelText('Período de medição em dias'), '45');
     await user.click(screen.getByRole('button', { name: 'Salvar premissas e período' }));
 
     expect(onScenarioChange).toHaveBeenCalledWith(expect.objectContaining({
-      premises: expect.objectContaining({ costs: expect.objectContaining({ ptax: '5.4000' }) }),
+      premises: expect.objectContaining({ costs: expect.objectContaining({ ptax: '5.4500' }) }),
       period: { httpPeriod: { modo: 'NATURAL', dias_aquecimento: 0, periodo_medicao_dias: 45 } },
     }));
   });
@@ -201,8 +322,8 @@ describe('StudyEditor', () => {
   it('converte caso observado em autoria preenchida sem modificar o original', async () => {
     const { onSourceChange, onConvertObserved, observedCase } = await subject(); const user = userEvent.setup();
     const originalJson = JSON.stringify(observedCase);
-    await user.click(screen.getByLabelText('Caso observado'));
-    const selector = screen.getByLabelText('Caso confirmado');
+    await user.click(screen.getByLabelText('Dados importados de uma empresa'));
+    const selector = screen.getByLabelText('Caso importado');
     expect(within(selector).getAllByRole('option')).toHaveLength(2);
     await user.selectOptions(selector, 'case-1');
     expect(screen.getByText('Empresa Alfa')).toBeVisible();
@@ -210,9 +331,9 @@ describe('StudyEditor', () => {
     expect(screen.getByText(/1 ordem/)).toBeVisible();
     expect(screen.getByText(/Sem bloqueios/)).toBeVisible();
     expect(screen.getByText(/arquivo-observado/)).toBeVisible();
-    await user.click(screen.getByRole('button', { name: 'Usar caso confirmado' }));
+    await user.click(screen.getByRole('button', { name: 'Usar este caso' }));
     expect(onSourceChange).toHaveBeenCalledWith({ kind: 'OBSERVED_CASE', caseId: 'case-1', caseRevision: 4 });
-    await user.click(screen.getByRole('button', { name: 'Converter para autoria manual' }));
+    await user.click(screen.getByRole('button', { name: 'Editar as ordens à mão' }));
     expect(onConvertObserved).toHaveBeenCalledWith('case-1');
     expect(screen.getByLabelText('Valor BRL da operação observed-order-1')).toHaveValue('100');
     expect(screen.getByLabelText('Direção da operação observed-order-1')).toHaveValue('OUT');
@@ -236,9 +357,9 @@ describe('StudyEditor', () => {
     const observedCase = { ...fixture, orders: [{ ...fixture.orders[0]!, purposeCode: null }] };
     const { onSourceChange } = await subject({ observedCases: [observedCase] });
     const user = userEvent.setup();
-    await user.click(screen.getByLabelText('Caso observado'));
-    await user.selectOptions(screen.getByLabelText('Caso confirmado'), observedCase.id);
-    await user.click(screen.getByRole('button', { name: 'Converter para autoria manual' }));
+    await user.click(screen.getByLabelText('Dados importados de uma empresa'));
+    await user.selectOptions(screen.getByLabelText('Caso importado'), observedCase.id);
+    await user.click(screen.getByRole('button', { name: 'Editar as ordens à mão' }));
     const purpose = screen.getByLabelText('Finalidade da operação observed-order-1');
     expect(purpose).toHaveValue('');
     await user.click(screen.getByRole('button', { name: 'Salvar operações explícitas' }));
@@ -250,9 +371,9 @@ describe('StudyEditor', () => {
 
   it('marca somente campos explícitos alterados e nunca envia valor corrigido como observado', async () => {
     const { onSourceChange, observedCase } = await subject(); const user = userEvent.setup();
-    await user.click(screen.getByLabelText('Caso observado'));
-    await user.selectOptions(screen.getByLabelText('Caso confirmado'), observedCase.id);
-    await user.click(screen.getByRole('button', { name: 'Converter para autoria manual' }));
+    await user.click(screen.getByLabelText('Dados importados de uma empresa'));
+    await user.selectOptions(screen.getByLabelText('Caso importado'), observedCase.id);
+    await user.click(screen.getByRole('button', { name: 'Editar as ordens à mão' }));
     await user.clear(screen.getByLabelText('ID da operação observed-order-1'));
     await user.type(screen.getByLabelText('ID da operação observed-order-1'), 'edited-order');
     await user.clear(screen.getByLabelText('Cliente da operação observed-order-1'));
@@ -315,6 +436,17 @@ describe('StudyEditor', () => {
 });
 
 describe('StudyList', () => {
+  it('oferece criação separada e identifica uma combinação de carteiras na lista', async () => {
+    const document = { ...await study(), studyType: 'PORTFOLIO_COMBINATIONS' as const };
+    const onCreate = vi.fn(); const onCreateCombinations = vi.fn();
+    render(<StudyList studies={[document]} selectedId={null} onCreate={onCreate} onCreateCombinations={onCreateCombinations}
+      onOpen={vi.fn()} onRename={vi.fn()} onDuplicate={vi.fn()} onRestore={vi.fn()} onDelete={vi.fn()} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Nova combinação de carteiras' }));
+    expect(onCreateCombinations).toHaveBeenCalledOnce();
+    expect(onCreate).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Novo estudo' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Abrir Estudo teste' })).toHaveTextContent('Combinação de carteiras');
+  });
   it('expõe Novo estudo e preserva as ações da lista', async () => {
     const document = await study(); const onCreate = vi.fn();
     render(<StudyList studies={[document]} selectedId={null} onCreate={onCreate} onOpen={vi.fn()} onRename={vi.fn()} onDuplicate={vi.fn()} onRestore={vi.fn()} onDelete={vi.fn()} />);

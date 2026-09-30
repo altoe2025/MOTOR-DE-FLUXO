@@ -7,6 +7,7 @@ export class AuthOperationError extends Error {}
 type PublicAuth = {
   status: AuthStatus;
   userId: string | null;
+  userEmail: string | null;
   signIn(email: string, password: string): Promise<void>;
   signOut(): Promise<void>;
   getAccessToken(): Promise<string | null>;
@@ -41,6 +42,7 @@ export function AuthProvider({
 }) {
   const [status, setStatus] = useState<AuthStatus>('loading');
   const [userId, setUserId] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
   const sessionRef = useRef<AuthSession | null>(null);
   const userIdRef = useRef<string | null>(null);
   const sessionVersionRef = useRef(0);
@@ -52,6 +54,7 @@ export function AuthProvider({
     sessionRef.current = session;
     userIdRef.current = next;
     setUserId(next);
+    setUserEmail(session?.user.email ?? null);
     setStatus(session === null ? emptyStatus : 'authenticated');
     if (previous !== next) onIdentityChange?.(previous, next);
   }, [onIdentityChange]);
@@ -65,6 +68,7 @@ export function AuthProvider({
         sessionRef.current = null;
         userIdRef.current = null;
         setUserId(null);
+        setUserEmail(null);
         setStatus('unavailable');
         return;
       }
@@ -139,8 +143,8 @@ export function AuthProvider({
   }, [client]);
 
   const value = useMemo<ContextValue>(() => ({
-    status, userId, signIn, signOut, getAccessToken, verifyOtp, updatePassword, expireSession,
-  }), [expireSession, getAccessToken, signIn, signOut, status, updatePassword, userId, verifyOtp]);
+    status, userId, userEmail, signIn, signOut, getAccessToken, verifyOtp, updatePassword, expireSession,
+  }), [expireSession, getAccessToken, signIn, signOut, status, updatePassword, userEmail, userId, verifyOtp]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
@@ -152,8 +156,8 @@ function useAuthContext(): ContextValue {
 }
 
 export function useAuth(): PublicAuth {
-  const { status, userId, signIn, signOut, getAccessToken } = useAuthContext();
-  return { status, userId, signIn, signOut, getAccessToken };
+  const { status, userId, userEmail, signIn, signOut, getAccessToken } = useAuthContext();
+  return { status, userId, userEmail, signIn, signOut, getAccessToken };
 }
 
 export function useAuthFlow(): AuthFlow {

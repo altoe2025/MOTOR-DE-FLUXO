@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import ast
 from copy import deepcopy
+from datetime import UTC, datetime
+from decimal import Decimal
 from pathlib import Path
 
 import pytest
@@ -20,6 +22,7 @@ from servidor.diagnostics.consequences import (
     derive_limitations,
     validate_evidence_references,
 )
+from servidor.motor_adapter import executar_previa
 
 UUIDS = [f"00000000-0000-4000-8000-{index:012d}" for index in range(1, 40)]
 SHA256 = "a" * 64
@@ -396,11 +399,104 @@ def _fixtures() -> tuple[RepetitionInput, RepetitionInput, RepetitionInput]:
     )  # type: ignore[return-value]
 
 
+@pytest.mark.parametrize("measured_direction", ["OUT", "IN"])
+@pytest.mark.parametrize(
+    ("warmup_value", "want_matched", "want_ceiling"),
+    [("40", "40", "40"), ("100", "100", "100"), ("200", "100", "100")],
+)
+def test_measured_cohort_ceiling_includes_opposite_warmup_capacity(
+    measured_direction, warmup_value, want_matched, want_ceiling,
+):
+    opposite = "IN" if measured_direction == "OUT" else "OUT"
+    request = _request(
+        [
+            _order("warmup", "a", opposite, warmup_value, 0, 2, None),
+            _order("measured", "b", measured_direction, "100", 1, 2, None),
+        ],
+        window=3,
+        horizon=3,
+    )
+    document = request.model_dump(mode="json")
+    document["periodo"] = {
+        "modo": "NATURAL",
+        "dias_aquecimento": 1,
+        "periodo_medicao_dias": 2,
+    }
+    request = PreviaRequest.model_validate(document)
+    envelope = executar_previa(
+        request,
+        build_sha=SHA1,
+        relogio=lambda: datetime(2026, 9, 30, tzinfo=UTC),
+    )
+    axes = analyze_diagnostic_repetitions((RepetitionInput(request, envelope, 0),))
+    assert axes.policy_capture.matched_brl.value == want_matched
+    assert axes.structural_potential.ceiling_brl.value == want_ceiling
+    assert axes.policy_capture.captured_fraction.value == "1"
+    assert axes.policy_capture.uncaptured_potential_brl.value == "0"
+    gross = Decimal(axes.structural_potential.gross_out_brl.value) + Decimal(
+        axes.structural_potential.gross_in_brl.value
+    )
+    assert gross == 100
+    assert "DIRECAO_OPOSTA_AUSENTE" not in {
+        item.statement_code for item in derive_consequences(axes)
+    }
+
+
+def test_bidirectional_measured_cohort_can_exceed_its_closed_pool_ceiling():
+    request = _request(
+        [
+            _order("warmup-in", "a", "IN", "40", 0, 2, None),
+            _order("measured-out", "b", "OUT", "100", 1, 2, None),
+            _order("measured-in", "c", "IN", "30", 1, 2, None),
+        ],
+        window=3,
+        horizon=3,
+    )
+    document = request.model_dump(mode="json")
+    document["periodo"] = {
+        "modo": "NATURAL",
+        "dias_aquecimento": 1,
+        "periodo_medicao_dias": 2,
+    }
+    request = PreviaRequest.model_validate(document)
+    envelope = executar_previa(
+        request,
+        build_sha=SHA1,
+        relogio=lambda: datetime(2026, 9, 30, tzinfo=UTC),
+    )
+    axes = analyze_diagnostic_repetitions((RepetitionInput(request, envelope, 0),))
+    assert axes.structural_potential.gross_out_brl.value == "100"
+    assert axes.structural_potential.gross_in_brl.value == "30"
+    assert axes.structural_potential.ceiling_brl.value == "100"
+    assert axes.policy_capture.matched_brl.value == "100"
+    assert axes.policy_capture.captured_fraction.value == "1"
+
+
+def test_structural_ceiling_still_rejects_impossible_matched_volume():
+    _, _, mixed = _fixtures()
+    aggregate = mixed.envelope.result.agregado.model_copy(
+        update={"volume_casado_periodo_brl": Decimal(121)}
+    )
+    result = mixed.envelope.result.model_copy(update={"agregado": aggregate})
+    envelope = mixed.envelope.model_copy(update={"result": result})
+    with pytest.raises(ValueError, match="volume casado excede o potencial estrutural"):
+        analyze_diagnostic_repetitions((RepetitionInput(mixed.request, envelope, 0),))
+
+
 def test_axes_1_to_4_are_derived_from_canonical_request_and_allocations():
     only_out, uncaptured, mixed = _fixtures()
     absent = analyze_diagnostic_repetitions((only_out,))
     assert absent.structural_potential.ceiling_brl.value == "0"
     assert absent.policy_capture.captured_fraction.state == "INCOMPATIBLE"
+    opposite_absent = next(
+        item
+        for item in derive_consequences(absent)
+        if item.statement_code == "DIRECAO_OPOSTA_AUSENTE"
+    )
+    assert opposite_absent.rule_version == "1.1.0"
+    assert opposite_absent.evidence_refs == [
+        "/axes/structural_potential/ceiling_brl"
+    ]
 
     axes = analyze_diagnostic_repetitions((uncaptured,))
     assert axes.structural_potential.gross_out_brl.value == "100"

@@ -44,7 +44,7 @@ describe('chat send lifecycle', () => {
     });
     const client = createApiClient({ getAccessToken: async () => 'token', fetch });
     const result = await sendChatMessage({ repository: state.repository, client, conversation: state.current,
-      question: 'Compare as execuções', communication: null, catalog,
+      question: 'Compare as execuções', context: null, catalog,
       routeContext: { routeId: 'comparison', helpId: null, studyId: 'study-1', scenarioId: null,
         diagnosticExecutionId: null, comparisonExecutionId: 'base-1', replayDay: null } });
     expect(fetch).toHaveBeenCalledOnce();
@@ -53,7 +53,7 @@ describe('chat send lifecycle', () => {
   it('persists USER and PENDING before transport then replaces PENDING by CAS', async () => {
     const state = fixture();
     const completed = await sendChatMessage({ repository: state.repository, client: state.client,
-      conversation: state.current, question: 'Como funciona?', routeContext, communication: null, catalog,
+      conversation: state.current, question: 'Como funciona?', routeContext, context: null, catalog,
       onSaved: () => undefined });
     expect(state.saved.map((row) => row.messages.at(-1)?.status)).toEqual(['PENDING', 'SUCCEEDED']);
     expect(completed.messages.map((item) => item.role)).toEqual(['USER', 'ASSISTANT']);
@@ -68,7 +68,7 @@ describe('chat send lifecycle', () => {
       title: 'Renomeada em outra aba' }, expectedRevision: stale.revision, operationId: 'other-first' });
     const observed: ChatConversation[] = [];
     await expect(sendChatMessage({ repository: state.repository, client: state.client,
-      conversation: stale, question: 'Pergunta ainda não enviada', routeContext, communication: null, catalog,
+      conversation: stale, question: 'Pergunta ainda não enviada', routeContext, context: null, catalog,
       onSaved: (document) => observed.push(document) })).rejects.toThrow('REVISION_CONFLICT');
     expect(state.repository.getChatConversation).toHaveBeenCalledWith(stale.id);
     expect(observed.at(-1)).toMatchObject({ revision: stale.revision + 1, title: 'Renomeada em outra aba' });
@@ -76,7 +76,7 @@ describe('chat send lifecycle', () => {
     expect(state.current.messages).toEqual([]);
     await sendChatMessage({ repository: state.repository, client: state.client,
       conversation: observed.at(-1)!, question: 'Pergunta ainda não enviada',
-      routeContext, communication: null, catalog });
+      routeContext, context: null, catalog });
     expect(state.client.sendChatMessage).toHaveBeenCalledOnce();
     expect(state.current.messages[0]?.text).toBe('Pergunta ainda não enviada');
   });
@@ -88,7 +88,7 @@ describe('chat send lifecycle', () => {
       citations: [{ kind: 'HELP', id: 'missing' }], contextFingerprint: null, limitationCodes: [],
     }));
     await expect(sendChatMessage({ repository: state.repository, client: state.client,
-      conversation: state.current, question: 'Ajuda', routeContext, communication: null, catalog })).rejects.toThrow();
+      conversation: state.current, question: 'Ajuda', routeContext, context: null, catalog })).rejects.toThrow();
     expect(state.current.messages.at(-1)?.status).toBe('FAILED');
     expect(state.current.messages.at(-1)?.text).toBe('');
   });
@@ -102,7 +102,7 @@ describe('chat send lifecycle', () => {
         answer: 'Late', citations: [], contextFingerprint: null, limitationCodes: [] };
     });
     await expect(sendChatMessage({ repository: state.repository, client: state.client,
-      conversation: state.current, question: 'Pergunta', routeContext, communication: null, catalog,
+      conversation: state.current, question: 'Pergunta', routeContext, context: null, catalog,
       signal: controller.signal })).rejects.toThrow();
     expect(state.current.messages.at(-1)?.status).toBe('FAILED');
   });
@@ -112,7 +112,7 @@ describe('chat send lifecycle', () => {
       message({ id: 'failed-1', role: 'ASSISTANT', text: '', status: 'FAILED' })] });
     const state = fixture(original);
     const result = await sendChatMessage({ repository: state.repository, client: state.client,
-      conversation: original, retryAssistantId: 'failed-1', question: '', routeContext, communication: null, catalog });
+      conversation: original, retryAssistantId: 'failed-1', question: '', routeContext, context: null, catalog });
     expect(result.messages).toHaveLength(2);
     expect(result.messages[0]?.text).toBe('Pergunta original');
     expect(result.messages[1]?.id).not.toBe('failed-1');
@@ -129,14 +129,14 @@ describe('chat send lifecycle', () => {
     });
     const observed: ChatConversation[] = [];
     await expect(sendChatMessage({ repository: state.repository, client: state.client,
-      conversation: state.current, question: 'Pergunta', routeContext, communication: null, catalog,
+      conversation: state.current, question: 'Pergunta', routeContext, context: null, catalog,
       onSaved: (document) => observed.push(document) })).rejects.toThrow('REVISION_CONFLICT');
     expect(state.current.messages.map((item) => item.status)).toEqual(['SUCCEEDED', 'FAILED']);
     expect(observed.at(-1)?.revision).toBe(state.current.revision);
     expect(state.current.title).toBe('Renomeada em outra aba');
     const retried = await sendChatMessage({ repository: state.repository, client: fixture().client,
       conversation: state.current, question: '', retryAssistantId: state.current.messages[1]!.id,
-      routeContext, communication: null, catalog });
+      routeContext, context: null, catalog });
     expect(retried.messages).toHaveLength(2);
     expect(retried.messages[1]?.status).toBe('SUCCEEDED');
   });
@@ -154,7 +154,7 @@ describe('chat send lifecycle', () => {
     });
     const observed: ChatConversation[] = [];
     await expect(sendChatMessage({ repository: state.repository, client: state.client,
-      conversation: state.current, question: 'Pergunta', routeContext, communication: null, catalog,
+      conversation: state.current, question: 'Pergunta', routeContext, context: null, catalog,
       onSaved: (document) => observed.push(document) })).rejects.toThrow('REVISION_CONFLICT');
     expect(state.current.messages.at(-1)).toMatchObject({ status: 'SUCCEEDED', text: 'Resposta da outra aba' });
     expect(observed.at(-1)?.messages.at(-1)?.text).toBe('Resposta da outra aba');

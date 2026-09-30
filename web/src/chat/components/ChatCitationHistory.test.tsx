@@ -14,7 +14,7 @@ describe('historical citation', () => {
     const document = await buildCommunicationDocument(await observedInput());
     const fragment = await selectChatContext(document, { kind: 'METRIC', id: 'SAVINGS_BRL' });
     render(<MemoryRouter><ChatCitation citation={{ kind: 'METRIC', id: 'SAVINGS_BRL' }}
-      fingerprint={fragment!.contextFingerprint} catalog={null} document={document}
+      fingerprint={fragment!.contextFingerprint} catalog={null} context={{ kind: 'STUDY', document }}
       route={{ routeId: 'diagnostic', helpId: null, studyId: document.study.id,
         scenarioId: document.selection.scenarioId, diagnosticExecutionId: document.selection.diagnosticExecutionId,
         replayDay: null }} /></MemoryRouter>);

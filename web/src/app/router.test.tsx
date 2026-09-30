@@ -38,7 +38,7 @@ vi.mock('../importer/workerClient', () => ({ parseCanonicalXlsx: vi.fn(async () 
 })) }));
 
 function session(userId = 'user-a'): AuthSession {
-  return { access_token: `token-${userId}`, expires_at: Math.floor(Date.now() / 1000) + 3600, user: { id: userId } };
+  return { access_token: `token-${userId}`, expires_at: Math.floor(Date.now() / 1000) + 3600, user: { id: userId, email: `${userId}@empresa.com.br` } };
 }
 
 function client(initial: AuthSession | null, options: { loginError?: string } = {}): AuthClient {
@@ -164,11 +164,11 @@ function diagnosticSnapshot(request: DiagnosticRequest, status: JobSnapshot['sta
 describe('application routes', () => {
   it('abre deep link completo da apresentação e mantém a seleção no retorno', async () => {
     const input = await observedInput();
-    renderAppAt(`/estudos/${input.study.id}/apresentacao?cenario=${input.scenarioId}&execucao=${input.diagnosticExecutionId}#premissas`,
+    renderAppAt(`/estudos/${input.study.id}/apresentacao?cenario=${input.scenarioId}&execucao=${input.diagnosticExecutionId}#composicao`,
       client(session(input.study.ownerSub)), new RepositoryDouble([], [], [], [input.study]));
     expect(await screen.findByRole('heading', { level: 1, name: input.study.name }, { timeout: 5_000 })).toBeVisible();
     expect(screen.getAllByRole('main')).toHaveLength(1);
-    expect(screen.getByRole('region', { name: 'Premissas e proveniência' })).toHaveAttribute('id', 'premissas');
+    expect(screen.getByRole('region', { name: 'Composição e mecanismo' })).toHaveAttribute('id', 'composicao');
     expect(screen.getByRole('link', { name: 'Voltar ao diagnóstico' })).toHaveAttribute('href',
       `/estudos/${input.study.id}/diagnostico?scenarioId=${input.scenarioId}&executionId=${input.diagnosticExecutionId}`);
     expect(screen.getByRole('button', { name: 'Perguntar' })).toBeVisible();
@@ -191,10 +191,7 @@ describe('application routes', () => {
     renderAppAt(`/estudos/${input.study.id}/apresentacao?cenario=${hypothesis.scenarioId}&execucao=${hypothesis.id}&comparacao=${input.diagnosticExecutionId}`,
       client(session(input.study.ownerSub)), new RepositoryDouble([], [], [], [input.study]));
     expect(await screen.findByRole('heading', { level: 1, name: input.study.name }, { timeout: 5_000 })).toBeVisible();
-    expect(screen.getByRole('region', { name: 'Consequência econômica e comparação' }))
-      .not.toHaveTextContent('Nenhuma comparação selecionada');
-    expect(screen.getByRole('region', { name: 'Consequência econômica e comparação' }))
-      .toHaveTextContent('base');
+    expect(screen.getByRole('region', { name: 'Resumo executivo' })).toHaveTextContent('Economia simulada');
   }, 15_000);
 
   it('recusa comparação inválida na URL sem publicar resultado simples', async () => {
@@ -223,9 +220,9 @@ describe('application routes', () => {
     expect(screen.queryByRole('button', { name: 'Perguntar' })).not.toBeInTheDocument();
   });
 
-  it('redirects authenticated login to the protected portfolio with global chat', async () => {
+  it('redirects authenticated login to the protected studies with global chat', async () => {
     renderAppAt('/login', client(session('user-a')), new RepositoryDouble());
-    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/carteira'));
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/estudos'));
     expect(await screen.findByRole('button', { name: 'Perguntar' })).toBeVisible();
   });
 
@@ -445,7 +442,9 @@ describe('application routes', () => {
     renderAppAt(path);
     expect(await screen.findByRole('heading', { level: 1, name: destination })).toBeVisible();
     expect(screen.getByRole('link', { name: destination })).toHaveAttribute('aria-current', 'page');
-    expect(screen.getByRole('button', { name: 'Sair' })).toBeVisible();
+    const profile = screen.getByRole('region', { name: 'Perfil' });
+    expect(profile).toHaveTextContent('user-a@empresa.com.br');
+    expect(within(profile).getByRole('button', { name: 'Sair' })).toBeVisible();
   });
 
   it('redireciona visitante para login', async () => {
@@ -462,7 +461,7 @@ describe('application routes', () => {
     await user.type(screen.getByLabelText('E-mail'), 'gabriel@example.com');
     await user.type(screen.getByLabelText('Senha'), 'password-1234');
     await user.click(screen.getByRole('button', { name: 'Entrar' }));
-    expect(await screen.findByRole('heading', { name: 'Carteira' })).toBeVisible();
+    expect(await screen.findByRole('heading', { name: 'Estudos' })).toBeVisible();
     expect(authClient.auth.signInWithPassword).toHaveBeenCalledWith({ email: 'gabriel@example.com', password: 'password-1234' });
   });
 
@@ -483,7 +482,7 @@ describe('application routes', () => {
     await user.type(await screen.findByLabelText('Nova senha'), 'password-1234');
     await user.type(screen.getByLabelText('Confirmar nova senha'), 'password-1234');
     await user.click(screen.getByRole('button', { name: 'Definir senha' }));
-    expect(await screen.findByRole('heading', { name: 'Carteira' })).toBeVisible();
+    expect(await screen.findByRole('heading', { name: 'Estudos' })).toBeVisible();
     expect(authClient.auth.updateUser).toHaveBeenCalledWith({ password: 'password-1234' });
   });
 
@@ -496,19 +495,6 @@ describe('application routes', () => {
     await user.click(screen.getByRole('button', { name: 'Definir senha' }));
     expect(await screen.findByText('As senhas informadas não coincidem.')).toBeVisible();
     expect(authClient.auth.updateUser).not.toHaveBeenCalled();
-  });
-
-  it('salva o nome por usuário e não restaura em outra conta', async () => {
-    localStorage.clear();
-    const user = userEvent.setup();
-    const first = renderAppAt('/carteira', client(session('user-a')));
-    const field = await screen.findByLabelText('Nome do estudo');
-    await user.type(field, 'Carteira A');
-    await waitFor(() => expect(localStorage.getItem('motor-fluxo:draft:v1:user-a')).toContain('Carteira A'));
-    first.unmount();
-
-    renderAppAt('/carteira', client(session('user-b')));
-    expect(await screen.findByLabelText('Nome do estudo')).toHaveValue('');
   });
 
   it('renderiza callback inválido como erro recuperável', async () => {
@@ -534,12 +520,11 @@ describe('application routes', () => {
   });
 
   it.each([
-    ['/carteira', 'Carteira'], ['/comparar', 'Comparar cenários'],
-    ['/replay', 'Replay'], ['/premissas', 'Dados e premissas'],
-  ])('preserva a rota protegida %s fora da navegação global', async (path, heading) => {
+    ['/carteira', '/estudos'], ['/comparar', '/quadro'],
+    ['/replay', '/estudos'], ['/premissas', '/estudos'],
+  ])('redireciona a rota herdada %s para %s em vez de uma tela vazia', async (path, target) => {
     renderAppAt(path);
-    expect(await screen.findByRole('heading', { level: 1, name: heading })).toBeVisible();
-    expect(screen.queryByRole('link', { name: heading })).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent(target));
   });
 
   it('expõe Empresas, Estudos e Diagnóstico na navegação global', async () => {
@@ -554,7 +539,7 @@ describe('application routes', () => {
     expect(screen.getByRole('link', { name: 'Empresas' })).toHaveAttribute('aria-current', 'page');
   });
 
-  it('abre o diagnóstico robusto no contexto do estudo sem substituir a prévia legada', async () => {
+  it('abre o diagnóstico simples no contexto do estudo quando a entrada é fixa', async () => {
     const draft = makeScenarioDraft();
     const { generationInputSnapshot: _generationInputSnapshot, ...fixedSource } = draft.sourceSnapshot;
     const study = await createStudy({
@@ -563,8 +548,8 @@ describe('application routes', () => {
     });
     void _generationInputSnapshot;
     renderAppAt('/estudos/study-diagnostic/diagnostico', client(session('user-a')), new RepositoryDouble([], [], [], [study]));
-    expect(await screen.findByRole('heading', { level: 1, name: 'Diagnóstico robusto' }, { timeout: 5000 })).toBeVisible();
-    expect(await screen.findByText(/entrada fixa.*uma execução individual/i)).toBeVisible();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Diagnóstico' }, { timeout: 5000 })).toBeVisible();
+    expect(screen.queryByLabelText('Repetições')).not.toBeInTheDocument();
     expect(screen.getByTestId('location')).toHaveTextContent('/estudos/study-diagnostic/diagnostico');
   }, 15_000);
 
@@ -647,7 +632,7 @@ describe('application routes', () => {
     expect(screen.getByRole('button', { name: 'Tentar novamente' })).toBeVisible();
   }, 15_000);
 
-  it('navega pelo catálogo e pelas quatro áreas da empresa com foco no título', async () => {
+  it('navega pelo catálogo e pelas áreas da empresa com foco no título', async () => {
     const company: CompanyRecord = {
       id: 'company-1', ownerSub: 'user-a', displayName: 'Câmbio Exemplo', aliases: [],
       createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', revision: 1,
@@ -659,7 +644,6 @@ describe('application routes', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Câmbio Exemplo' })).toHaveFocus();
     for (const [label, path, heading] of [
       ['Casos', '/empresas/company-1/casos', 'Casos de Câmbio Exemplo'],
-      ['Perfis', '/empresas/company-1/perfis', 'Perfis de Câmbio Exemplo'],
       ['Estudos', '/empresas/company-1/estudos', 'Estudos de Câmbio Exemplo'],
     ] as const) {
       const link = within(screen.getByRole('navigation', { name: 'Áreas da empresa' })).getByRole('link', { name: label });
@@ -668,6 +652,7 @@ describe('application routes', () => {
       expect(await screen.findByRole('heading', { level: 1, name: heading })).toHaveFocus();
       expect(screen.getByTestId('location')).toHaveTextContent(path);
     }
+    expect(within(screen.getByRole('navigation', { name: 'Áreas da empresa' })).queryByRole('link', { name: 'Perfis' })).not.toBeInTheDocument();
   });
 
   it('não revela empresa de outro owner nem rota inexistente', async () => {

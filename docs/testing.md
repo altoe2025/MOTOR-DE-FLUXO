@@ -1,5 +1,94 @@
 # Testes
 
+## Candidato de integração do Live — 2026-09-30
+
+O PR #59 leva a referência publicada `29d955c` para a `main` sem acionar deploy e
+inclui as correções autorizadas encontradas pelo gate: recuperação do IndexedDB,
+edição da janela, teto estrutural coerente com ordens de aquecimento e espera pelo
+contexto selecionado antes de enviar o chat.
+
+| Verificação local | Resultado |
+|---|---|
+| `pytest -q` | 1.270 passed, 3 skipped |
+| `python -O -m pytest -q` | 1.270 passed, 3 skipped |
+| Ruff / mypy / contratos / validadores / scanner | PASS |
+| Vitest integral antes do último guard | 1.240 passed em 144 arquivos |
+| Testes focados do chat após o guard | 32 passed, incluindo 4 regressões novas |
+| Typecheck / ESLint / build de produção | PASS |
+| Playwright Stage4/5 + demo/apresentação + chat | 7/7 + 7/7 + 17/17 |
+| Playwright visual Windows após revisão | 2/2 |
+
+A primeira rodada Playwright integral passou 63/66. As três falhas eram duas
+referências visuais com os valores antigos do teto e uma corrida real que enviava o
+chat do Replay com `context: null`; as três passaram nos arquivos completos após as
+correções, sem sleeps. O pacote demonstrativo foi regenerado e reconciliado byte a
+byte. A captura Linux `36787589692` atualizou somente as mesmas duas imagens após
+inspeção; as outras cinco ficaram idênticas por hash. Resta a CI integral final.
+O Render não foi alterado.
+
+## Chat orientado à interface — 2026-09-28 (local)
+
+Base `1bd7654`, worktree `chat-context-quality`, preservando as mudanças locais de
+2026-09-26. Catálogo de 200 itens, snapshot limitado dos controles, resposta
+parcial com fontes e correções de citações/contexto foram verificados juntos.
+
+| Verificação executada | Resultado |
+|---|---|
+| `python -m pytest -q` | 1237 passed, 3 skipped |
+| `npm --prefix web run test:unit -- --maxWorkers=2 --testTimeout=15000` | 1075 passed em 125 arquivos |
+| `npm --prefix web run test:e2e -- stage6-chat.spec.ts` | 17 passed, Chromium/servidor local controlado |
+| Backend específico chat/contratos/OpenAPI/catálogo | 244 passed, 1 skipped |
+| `python -O -m pytest` nos contratos/scope/tools/ui_context/openai_provider | 131 passed |
+| `npm --prefix web run lint` / `typecheck` / `check:validators` | PASS |
+| `npm --prefix web run build -- --sourcemap` | PASS |
+| `python -m tests.web_api.scan_credentials` | credential_scan=ok |
+
+O Python usado foi o `.venv` existente de `frontend-etapa-6-integracao`; o shell
+restrito não tinha Python web no PATH. E2E usou `MOT_E2E_PYTHON` explícito e porta
+local 8037. Não houve acesso ao Render ou a dados reais nos testes. Avisos de
+depreciação Starlette/httpx/AnyIO e de chunk Vite acima de 500 kB permanecem.
+
+Regressões novas comprovam captura só de IDs conhecidos/contagens, sem valores ou
+texto arbitrário; controles ocultos/ambíguos; atualização por envio; compatibilidade
+com requests sem snapshot; resposta parcial citada preservada; mudança A→B do
+Quadro na mesma URL e seleção segura nas citações de apresentação. A revisão
+independente encontrou os dois últimos problemas; correções passaram por novo
+review. Os testes antigos de citação passaram a esperar o nome real da tela
+“Importar operações”, agora usado pelo catálogo.
+
+O provider real continua **não executado**, reservado ao opt-in com credencial
+dedicada. O teste manual foi ampliado com Criar variação, Rodar todas e Limpar
+quadro, além de histórico e comparação. Testes controlados não garantem qualidade
+semântica universal. Não houve commit, push ou deploy. A implantação futura deve
+publicar frontend e backend juntos, pois o trabalho anterior mudou `communication`
+para `context: STUDY | BOARD`.
+
+## Qualidade contextual do chat e Quadro — sem MOT (2026-09-26)
+
+Base local `1bd7654`, worktree isolado, sem commit, push, PR ou deploy. O gate desta
+mudança verificou histórico no classificador, suficiência somente na resposta,
+contextos `STUDY | BOARD`, seleção mínima do Quadro, evidências/citações, privacidade,
+deep link `/quadro` e regressões dos consumidores existentes.
+
+- Python ampliado, exceto o arquivo de PDF: **1.207 passed, 3 skipped**. O arquivo
+  `tests/web_api/test_render_stage6_pdf.py` não foi coletado porque os ambientes
+  locais disponíveis não contêm o extra opcional `pymupdf`; não houve falha de teste.
+- Python otimizado nos contratos/escopo/tools/provider do chat: **121 passed**.
+- Vitest completo sequencial: **1.067 passed em 124 arquivos**.
+- Playwright `stage6-chat.spec.ts`: **16 passed**; inclui duas linhas do Quadro,
+  resposta citada, link `/quadro` e follow-up “E por quê?” com histórico.
+- OpenAPI/estáticos, Ruff, mypy, typecheck, ESLint, validadores gerados, build de
+  produção e scanner de credenciais: **PASS**. Scanner: 720 textos, 46 binários,
+  zero artefatos runtime.
+- Provider real: **SKIP por desenho** sem `MOTOR_CHAT_REAL_OPT_IN=1`; o smoke manual
+  agora cobre interface + follow-up e duas linhas sintéticas do Quadro.
+
+A primeira rodada E2E encontrou o deep link `/quadro` ausente da allowlist estática:
+14/16 passaram e os dois dependentes da rota falharam. Após a regressão em
+`test_static.py`, ambos passaram isoladamente e o arquivo completo passou 16/16.
+O warning de chunks Vite acima de 500 kB e os avisos de depreciação Starlette/httpx
+são preexistentes e não foram tratados nesta mudança.
+
 ## Finalidade opcional — Task 5 / MOT-99 (2026-09-24)
 
 Base integrada `e9effcf`. RED confirmado na ajuda HTTP/web (faltava a explicação

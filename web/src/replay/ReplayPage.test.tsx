@@ -30,7 +30,7 @@ const mocks = vi.hoisted(() => {
   return {
     buildReplay,
     loadStudy,
-    runtime: { ownerSub: 'owner-1', controller: { loadStudy }, client: { buildReplay } },
+    runtime: { ownerSub: 'owner-1', controller: { loadStudy, listObservedCases: async () => [] }, client: { buildReplay } },
   };
 });
 
@@ -159,10 +159,19 @@ describe('ReplayPage', () => {
     expect(mocks.buildReplay).toHaveBeenCalledWith(expect.objectContaining({
       diagnostic_execution_id: '00000000-0000-4000-8000-000000000701',
     }), expect.any(AbortSignal));
-    expect(screen.getByText('Dia 0 de 2')).toBeInTheDocument();
+    expect(screen.queryByText(/Dia 0 de 2/)).not.toBeInTheDocument();
+    expect(screen.getByText('D0 · Medição')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Tocar' })).toBeInTheDocument();
+    const metrics = screen.getByRole('region', { name: 'Acumulados do Replay' });
+    const stage = screen.getByRole('region', { name: 'Cena Fronteira Viva' });
+    expect(metrics.compareDocumentPosition(stage) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // Resumo em uma linha; o detalhe da repetição fica recolhido, mas acessível.
+    expect(screen.getByRole('region', { name: 'Repetição exibida' })).toHaveTextContent('00000000-0000-4000-8000-000000000703');
+    const summary = screen.getByText(/Repetição 00000000 de 10 · Primeira repetição do plano/i);
+    expect(summary).toBeVisible();
+    fireEvent.click(summary);
     expect(screen.getByText('00000000-0000-4000-8000-000000000703')).toBeVisible();
     expect(screen.getByText(/10 repetições executadas/i)).toBeVisible();
-    expect(screen.getByText(/Primeira repetição do plano/i)).toBeVisible();
     expect(screen.getByText(/Replay mostra uma repetição específica/i)).toBeVisible();
   });
 

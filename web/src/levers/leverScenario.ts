@@ -1,20 +1,30 @@
 import { resolvePortfolioSource } from '../preparation/resolvePortfolioSource';
-import type { AuthoredPortfolioDefinition, PeriodDocument, ScenarioDocument, ScenarioDraft } from '../study/model';
+import type {
+  AuthoredPortfolioDefinition, CanonicalAuthoredOrder, OrderFieldProvenance, PeriodDocument, ScenarioDerivation, ScenarioDocument,
+  ScenarioDraft,
+} from '../study/model';
 import { applyLevers, describeLevers, type Levers } from './applyLevers';
+import { companyResolver } from './companies';
+
+type ExplicitDefinition = Extract<AuthoredPortfolioDefinition, { kind: 'EXPLICIT_ORDERS' }>;
 
 export function leverBaseAvailable(scenario: ScenarioDocument): boolean {
   const byOrder = scenario.sourceSnapshot.provenanceByOrder;
   return byOrder !== undefined && scenario.sourceSnapshot.orders.every((order) => byOrder[order.id] !== undefined);
 }
 
+function explicitDefinition(scenario: ScenarioDocument): ExplicitDefinition | undefined {
+  const source = scenario.sourceSnapshot.source;
+  return source.kind === 'AUTHORED' && source.definition?.kind === 'EXPLICIT_ORDERS' ? source.definition : undefined;
+}
+
 function derivedFrom(scenario: ScenarioDocument) {
   const source = scenario.sourceSnapshot.source;
   if (source.kind === 'OBSERVED_CASE') return { caseId: source.caseId, caseRevision: source.caseRevision };
-  if (source.kind === 'AUTHORED' && source.definition?.kind === 'EXPLICIT_ORDERS') return source.definition.derivedFromObservedCase;
-  return undefined;
+  return explicitDefinition(scenario)?.derivedFromObservedCase;
 }
 
-function periodCovering(period: PeriodDocument, horizonDays: number): PeriodDocument {
+export function periodCovering(period: PeriodDocument, horizonDays: number): PeriodDocument {
   if (period.httpPeriod.modo === 'NATURAL') {
     const total = period.httpPeriod.dias_aquecimento + period.httpPeriod.periodo_medicao_dias;
     if (total >= horizonDays) return structuredClone(period);
@@ -28,20 +38,40 @@ function periodCovering(period: PeriodDocument, horizonDays: number): PeriodDocu
 
 export async function buildLeverScenario(input: Readonly<{
   base: ScenarioDocument;
-  levers: Levers;
+  levers: Levers | readonly Levers[];
   id: string;
   authoredPortfolioId: string;
   recordedAt: string;
+  name?: string;
+  /** Só para variações de composição geradas da base sem outra alteração. */
+  derivation?: ScenarioDerivation;
 }>): Promise<ScenarioDraft> {
-  const { base, levers, recordedAt } = input;
+  const { base, recordedAt } = input;
   if (!leverBaseAvailable(base)) throw new Error('Este cenário não tem ordens explícitas para aplicar alavancas.');
-  const result = applyLevers(base.sourceSnapshot.orders, base.sourceSnapshot.provenanceByOrder!, levers, recordedAt);
+  const steps = Array.isArray(input.levers) ? input.levers as readonly Levers[] : [input.levers as Levers];
+  if (steps.length === 0) throw new Error('Nenhuma alavanca informada.');
+  const companyOf = companyResolver(base.sourceSnapshot.source);
+  let orders: CanonicalAuthoredOrder[] = base.sourceSnapshot.orders.map((order) => structuredClone(order) as CanonicalAuthoredOrder);
+  let provenance: Record<string, OrderFieldProvenance> = structuredClone(base.sourceSnapshot.provenanceByOrder!) as Record<string, OrderFieldProvenance>;
+  let horizonDays = 1;
+  for (const levers of steps) {
+    const result = applyLevers(orders, provenance, levers, recordedAt, companyOf);
+    orders = result.orders;
+    provenance = result.provenanceByOrder;
+    horizonDays = result.horizonDays;
+  }
+  const baseDefinition = explicitDefinition(base);
+  const kept = new Set(orders.map((order) => order.id));
+  const companyByOrder = baseDefinition?.companyByOrder === undefined ? undefined
+    : Object.fromEntries(Object.entries(baseDefinition.companyByOrder).filter(([id]) => kept.has(id)));
   const origin = derivedFrom(base);
-  const definition: Extract<AuthoredPortfolioDefinition, { kind: 'EXPLICIT_ORDERS' }> = {
+  const definition: ExplicitDefinition = {
     kind: 'EXPLICIT_ORDERS',
     ...(origin === undefined ? {} : { derivedFromObservedCase: structuredClone(origin) }),
-    orders: result.orders,
-    provenanceByOrder: result.provenanceByOrder,
+    ...(baseDefinition?.sourceCases === undefined ? {} : { sourceCases: structuredClone(baseDefinition.sourceCases) }),
+    ...(companyByOrder === undefined ? {} : { companyByOrder }),
+    orders,
+    provenanceByOrder: provenance,
   };
   const sourceSnapshot = await resolvePortfolioSource(
     { kind: 'AUTHORED', authoredPortfolioId: input.authoredPortfolioId, definition },
@@ -54,10 +84,39 @@ export async function buildLeverScenario(input: Readonly<{
   return {
     id: input.id,
     revision: 1,
-    name: `${base.name} · ${describeLevers(levers)}`.slice(0, 200),
+    name: (input.name ?? `${base.name} · ${steps.map(describeLevers).join(' · ')}`).slice(0, 120).trimEnd(),
     sourceSnapshot,
     premises: structuredClone(base.premises),
-    period: periodCovering(base.period, result.horizonDays),
+    period: periodCovering(base.period, horizonDays),
     ...(base.inputProvenance === undefined ? {} : { inputProvenance: structuredClone(base.inputProvenance) }),
+    ...(input.derivation === undefined ? {} : { derivation: structuredClone(input.derivation) }),
   };
+}
+
+
+/** Tipo do vínculo de uma variação que mantém `subset` das `companies` da base. */
+export function derivationKind(subset: readonly string[], companies: readonly string[]): ScenarioDerivation['kind'] {
+  if (subset.length === 1) return 'COMPANY_ALONE';
+  if (subset.length === companies.length - 1) return 'LEAVE_ONE_OUT';
+  return 'SUBSET';
+}
+
+/** Todas as carteiras formadas por um subconjunto não vazio e próprio das empresas. */
+export function companySubsets(companies: readonly string[]): string[][] {
+  return compositionSubsets(companies, companies);
+}
+
+/**
+ * Combinações da composição feitas com as empresas `included` (as demais foram tiradas pelo usuário).
+ * Com todas as empresas, o grupo completo fica de fora porque é a própria carteira base; tirando
+ * alguma, o grupo que sobrou entra como mais uma combinação.
+ */
+export function compositionSubsets(included: readonly string[], companies: readonly string[]): string[][] {
+  const members = companies.filter((company) => included.includes(company));
+  const complete = members.length === companies.length;
+  const subsets: string[][] = [];
+  for (let mask = 1; mask < (1 << members.length) - (complete ? 1 : 0); mask += 1) {
+    subsets.push(members.filter((_, index) => (mask & (1 << index)) !== 0));
+  }
+  return subsets.sort((left, right) => left.length - right.length || left.join().localeCompare(right.join()));
 }

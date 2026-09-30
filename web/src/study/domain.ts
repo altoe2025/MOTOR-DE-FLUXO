@@ -56,6 +56,7 @@ async function materializeScenario(draft: ScenarioDraft): Promise<ScenarioDocume
     ...(candidate.inputProvenance === undefined
       ? {}
       : { inputProvenance: candidate.inputProvenance }),
+    ...(candidate.derivation === undefined ? {} : { derivation: candidate.derivation }),
     inputFingerprint: await fingerprintScenarioInput(candidate),
   };
   return deepFreeze(scenario);
@@ -75,6 +76,7 @@ export async function createStudy(input: CreateStudyInput): Promise<StudyDocumen
     id: input.id,
     ownerSub: input.ownerSub,
     name: checkedName(input.name),
+    ...(input.studyType === undefined ? {} : { studyType: input.studyType }),
     revision: 1,
     baseScenarioId: baseScenario.id,
     scenarios: [baseScenario],
@@ -185,6 +187,65 @@ export async function appendScenario(
   });
 }
 
+/** Add a composition batch as one edit, without retaining a full study per draft. */
+export async function appendScenarios(
+  study: StudyDocument,
+  drafts: readonly ScenarioDraft[],
+  now: string,
+): Promise<StudyDocument> {
+  if (drafts.length === 0) return study;
+  const updatedAt = checkedInstant(now);
+  const ids = new Set(study.scenarios.map((scenario) => scenario.id));
+  for (const draft of drafts) {
+    if (ids.has(draft.id)) throw new Error('ID de cenário já existe no estudo.');
+    ids.add(draft.id);
+  }
+  const scenarios: ScenarioDocument[] = [];
+  for (const draft of drafts) {
+    scenarios.push(await materializeScenario({ ...draft, revision: 1 }));
+  }
+  return finalize({
+    ...study,
+    scenarios: [...study.scenarios, ...scenarios],
+    revision: study.revision + 1,
+    updatedAt,
+  });
+}
+
+/**
+ * Substitui um lote interno de cenários em uma única revisão. Execuções ligadas a
+ * cenários descartados saem junto; execuções dos cenários preservados continuam.
+ */
+export async function replaceScenarioBatch(
+  study: StudyDocument,
+  retainedScenarioIds: ReadonlySet<string>,
+  drafts: readonly ScenarioDraft[],
+  now: string,
+): Promise<StudyDocument> {
+  if (!retainedScenarioIds.has(study.baseScenarioId)) {
+    throw new Error('O cenário base precisa ser preservado.');
+  }
+  const retained = study.scenarios.filter((scenario) => retainedScenarioIds.has(scenario.id));
+  if (retained.length !== retainedScenarioIds.size) {
+    throw new Error('Cenário preservado não encontrado no estudo.');
+  }
+  const ids = new Set(retained.map((scenario) => scenario.id));
+  const materialized: ScenarioDocument[] = [];
+  for (const draft of drafts) {
+    if (ids.has(draft.id)) throw new Error('ID de cenário já existe no lote.');
+    ids.add(draft.id);
+    materialized.push(await materializeScenario({ ...clone(draft), revision: 1 }));
+  }
+  return finalize({
+    ...clone(study),
+    scenarios: [...retained.map(clone), ...materialized],
+    executions: study.executions
+      .filter((execution) => retainedScenarioIds.has(execution.scenarioId))
+      .map(clone),
+    revision: study.revision + 1,
+    updatedAt: checkedInstant(now),
+  });
+}
 export async function appendCompositionHypothesis(
   study: StudyDocumentV3,
   input: Readonly<{
@@ -233,6 +294,23 @@ export async function appendCompositionHypothesis(
   }) as Promise<StudyDocumentV3>;
 }
 
+/** Apaga um cenário que não é o base, junto com as execuções dele. */
+export async function removeScenario(
+  study: StudyDocument,
+  scenarioId: string,
+  now: string,
+): Promise<StudyDocument> {
+  if (scenarioId === study.baseScenarioId) throw new Error('O cenário base não pode ser apagado.');
+  if (!study.scenarios.some((scenario) => scenario.id === scenarioId)) throw new Error('Cenário não encontrado no estudo.');
+  return finalize({
+    ...clone(study),
+    scenarios: study.scenarios.filter((scenario) => scenario.id !== scenarioId).map(clone),
+    executions: study.executions.filter((execution) => execution.scenarioId !== scenarioId).map(clone),
+    revision: study.revision + 1,
+    updatedAt: checkedInstant(now),
+  });
+}
+
 export async function renameStudy(
   study: StudyDocument,
   name: string,
@@ -254,11 +332,15 @@ export async function duplicateStudy(
   const duplicatedAt = checkedInstant(now);
   const id = ids();
   const scenarioIds = new Map(study.scenarios.map((scenario) => [scenario.id, ids()]));
-  const scenarios = study.scenarios.map((scenario) => ({
-    ...clone(scenario),
-    id: scenarioIds.get(scenario.id)!,
-    revision: 1,
-  }));
+  const scenarios = study.scenarios.map((scenario) => {
+    const { derivation, ...rest } = clone(scenario);
+    const copy = { ...rest, id: scenarioIds.get(scenario.id)!, revision: 1 };
+    // O vínculo acompanha a base copiada; se a base não está no estudo, o vínculo cai.
+    const baseId = derivation === undefined ? undefined : scenarioIds.get(derivation.baseScenarioId);
+    return derivation === undefined || baseId === undefined
+      ? copy
+      : { ...copy, derivation: { ...derivation, baseScenarioId: baseId } };
+  });
   return finalize({
     ...clone(study),
     id,
@@ -298,6 +380,27 @@ export async function updateScenario(
   return finalize({
     ...clone(study),
     scenarios,
+    revision: study.revision + 1,
+    updatedAt: checkedInstant(now),
+  });
+}
+
+/**
+ * Troca só o nome do cenário. O nome não entra na identidade da entrada, então a revisão do
+ * cenário e os diagnósticos atuais continuam válidos (updateScenario invalidaria todos).
+ */
+export async function renameScenario(
+  study: StudyDocument,
+  scenarioId: string,
+  name: string,
+  now: string,
+): Promise<StudyDocument> {
+  if (!study.scenarios.some((scenario) => scenario.id === scenarioId)) throw new Error('Cenário não encontrado.');
+  const checked = checkedName(name);
+  return finalize({
+    ...clone(study),
+    scenarios: study.scenarios.map((scenario) => scenario.id === scenarioId
+      ? { ...clone(scenario), name: checked } : clone(scenario)),
     revision: study.revision + 1,
     updatedAt: checkedInstant(now),
   });

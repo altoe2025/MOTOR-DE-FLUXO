@@ -24,8 +24,8 @@ export function DiagnosticDistribution({ statistics, repetitions, economics }: D
     points: repetitions.map((item, index) => ({ label: `R${index + 1}`, value: item.savings_brl })),
   };
   const summaries = [
-    ['Baseline', economics.baseline_brl, 'BRL' as const],
-    ['Custo netado', economics.netted_brl, 'BRL' as const],
+    ['Custo sem pool', economics.baseline_brl, 'BRL' as const],
+    ['Custo com pool', economics.netted_brl, 'BRL' as const],
     ['Economia', economics.savings_brl, 'BRL' as const],
     ['Netabilidade', economics.netability_fraction, 'FRACTION' as const],
   ] as const;

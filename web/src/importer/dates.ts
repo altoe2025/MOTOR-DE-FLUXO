@@ -5,7 +5,7 @@ const CIVIL_DATE = /^(\d{2})\/(\d{2})\/(\d{4})$/;
 const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
 const DAY = 86_400_000;
 
-function invalid(): never { throw new ImportValidationError('INVALID_FORMAT', 'data civil inválida'); }
+function invalid(): never { throw new ImportValidationError('INVALID_FORMAT', 'Data inválida. Use AAAA-MM-DD ou DD/MM/AAAA, com dia e mês existentes (ex.: 2026-10-01 ou 01/10/2026).'); }
 
 function utcTimestamp(year: number, month: number, day: number): number {
   if (year < 1 || year > 9999) return invalid();

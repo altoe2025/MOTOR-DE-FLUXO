@@ -6,9 +6,12 @@ const TOKEN_B = 'mot32-controlled-e2e-token-b';
 async function createStudy(page: Page, synthetic = true): Promise<string> {
   await page.goto('/estudos');
   await page.getByRole('button', { name: 'Novo estudo', exact: true }).click();
+  await page.getByRole('radio', { name: 'Carteira gerada (exemplo)' }).check();
+  await page.getByRole('button', { name: 'Criar com carteira gerada' }).click();
   await expect(page).toHaveURL(/\/carteira\/[0-9a-f-]+$/);
   if (!synthetic) {
-    await page.getByRole('radio', { name: 'Autoria manual' }).check();
+    await page.getByRole('button', { name: 'Trocar origem' }).click();
+    await page.getByRole('radio', { name: 'Montar à mão (avançado)' }).check();
     await page.getByRole('button', { name: 'Preparar carteira manual' }).click();
   }
   return page.url().split('/').at(-1)!;
@@ -80,7 +83,8 @@ test('fixed input has no distribution and a failed generated repetition publishe
   const fixedStudy = await createStudy(page, false);
   await page.evaluate((id) => window.__MOTOR_E2E__!.freezeStudyInput(id), fixedStudy);
   await page.goto(`/estudos/${fixedStudy}/diagnostico`);
-  await expect(page.getByText(/entrada fixa.*execução individual.*não uma distribuição/i)).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Diagnóstico', exact: true })).toBeVisible();
+  await expect(page.getByLabel('Repetições')).toHaveCount(0);
   await page.getByRole('button', { name: 'Executar diagnóstico' }).click();
   await release(page);
   await expect(page.getByRole('heading', { name: 'Resultado do motor' })).toBeVisible();
@@ -132,7 +136,7 @@ test('robust diagnostic remains keyboard accessible at 200 percent zoom', async 
   for (let index = 0; index < 10; index += 1) await release(page);
   await expect(page.getByRole('heading', { name: 'Resultado do motor' })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Resultado do motor' }).getByTestId('economia-brl')).toBeVisible();
-  await expect(page.getByRole('table', { name: 'Custos informados pela prévia canônica.' })).toBeVisible();
+  await expect(page.getByRole('table', { name: 'Custo sem pool: cada ordem remetendo sozinha. Custo com pool: depois do netting.' })).toBeVisible();
 
   const diagnosticScrollAreas = page.locator('.diagnostic-page .table-scroll');
   expect(await diagnosticScrollAreas.count()).toBeGreaterThan(0);

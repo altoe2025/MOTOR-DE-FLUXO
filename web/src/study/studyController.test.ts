@@ -205,10 +205,12 @@ describe('StudyController', () => {
     await expect(subject.confirmImportedCase(review, 'stable-id')).rejects.toBeInstanceOf(StudyControllerSessionError);
   });
 
-  it('instala automaticamente a demonstração na primeira sessão vazia', async () => {
+  it('primeira sessão vazia começa sem estudo nem empresas de demonstração', async () => {
     const demo = await makeStudy(FIXTURE_OWNER, 'demo');
     const repository = new RepositoryDouble(FIXTURE_OWNER);
+    let installs = 0;
     repository.installDemoImplementation = async () => {
+      installs += 1;
       repository.studies = [demo];
       return demo;
     };
@@ -216,8 +218,35 @@ describe('StudyController', () => {
 
     await subject.switchSession(FIXTURE_OWNER);
 
-    expect(await subject.listStudies()).toEqual([demo]);
+    expect(installs).toBe(0);
+    expect(await subject.listStudies()).toEqual([]);
     expect(subject.snapshot).toMatchObject({ status: 'IDLE', document: null, error: null });
+    subject.close();
+  });
+
+  it('aguarda o reset local publicado ao abrir a sessão sem carregar demonstração', async () => {
+    const repository = new RepositoryDouble(FIXTURE_OWNER);
+    const reset = deferred<boolean>();
+    const resetAllLocalDataOnce = vi.fn(() => reset.promise);
+    const compatibleRepository = Object.assign(repository, {
+      resetAllLocalDataOnce,
+    });
+    const loadPackage = vi.fn(async () => generatedDemo as unknown as DemoStudyPackageV1);
+    const subject = new StudyController({
+      repositoryFactory: () => compatibleRepository,
+      demoPackageLoader: loadPackage,
+    });
+
+    let sessionReady = false;
+    const switching = subject.switchSession(FIXTURE_OWNER).then(() => { sessionReady = true; });
+    await vi.waitFor(() => expect(resetAllLocalDataOnce).toHaveBeenCalledOnce());
+    expect(sessionReady).toBe(false);
+    reset.resolve(true);
+    await switching;
+
+    expect(sessionReady).toBe(true);
+    expect(loadPackage).not.toHaveBeenCalled();
+    expect(subject.snapshot).toMatchObject({ ownerSub: FIXTURE_OWNER, status: 'IDLE', document: null });
     subject.close();
   });
 
@@ -227,6 +256,7 @@ describe('StudyController', () => {
     repository.installDemoImplementation = async () => { throw failure; };
     const subject = controller({ repositories: [repository] });
     await subject.switchSession(FIXTURE_OWNER);
+    await expect(subject.restoreDemoStudy()).rejects.toBe(failure);
     expect(subject.snapshot).toMatchObject({ status: 'STORAGE_FAILURE', error: failure });
 
     const demo = await makeStudy(FIXTURE_OWNER, 'demo');
@@ -251,7 +281,8 @@ describe('StudyController', () => {
       repositoryFactory: (owner) => owner === FIXTURE_OWNER ? repositoryA : repositoryB,
       demoPackageLoader: () => { loading = true; return packageLoad.promise; },
     });
-    const previous = subject.switchSession(FIXTURE_OWNER);
+    await subject.switchSession(FIXTURE_OWNER);
+    const previous = subject.restoreDemoStudy().catch(() => null);
     await vi.waitFor(() => expect(loading).toBe(true));
     await subject.switchSession(OWNER_B);
     packageLoad.resolve(generatedDemo as unknown as DemoStudyPackageV1);
@@ -269,7 +300,8 @@ describe('StudyController', () => {
     let installing = false;
     repositoryA.installDemoImplementation = () => { installing = true; return installation.promise; };
     const subject = controller({ repositories: [repositoryA, repositoryB] });
-    const previous = subject.switchSession(FIXTURE_OWNER);
+    await subject.switchSession(FIXTURE_OWNER);
+    const previous = subject.restoreDemoStudy().catch(() => null);
     await vi.waitFor(() => expect(installing).toBe(true));
     await subject.switchSession(OWNER_B);
     installation.resolve(await makeStudy(FIXTURE_OWNER, 'demo'));
@@ -331,7 +363,7 @@ describe('StudyController', () => {
     const document = await profile();
 
     await expect(subject.appendOperationalProfileVersion(document)).resolves.toEqual(document);
-    expect(repository.appendProfileCalls[0]).toEqual({ operationId: 'operation-2', document });
+    expect(repository.appendProfileCalls[0]).toEqual({ operationId: 'operation-1', document });
     expect(await subject.listOperationalProfileVersions(document.companyId)).toEqual([document]);
   });
 

@@ -10,6 +10,7 @@ import { isProfileMvpScenario } from '../hypotheses/hypothesis';
 import type { DiagnosticExecutionRecord, ScenarioDocument, StudyDocument } from '../study/model';
 import { Button } from '../ui/Button';
 import { InlineNotice } from '../ui/InlineNotice';
+import { observedVariationLabel } from '../study/observedVariation';
 
 function current(execution: DiagnosticExecutionRecord, scenario: ScenarioDocument): boolean {
   return execution.scenarioRevision === scenario.revision
@@ -21,7 +22,7 @@ function sourceLabel(scenario: ScenarioDocument | undefined): string | null {
   if (scenario.sourceSnapshot.source.kind === 'OBSERVED_CASE') return 'Dados observados';
   if (isProfileMvpScenario(scenario)) return 'Simulação baseada em Perfil';
   return scenario.sourceSnapshot.source.kind === 'SYNTHETIC'
-    ? 'Simulação sintética legada' : 'Carteira autoral legada';
+    ? 'Simulação sintética legada' : observedVariationLabel(scenario) ?? 'Carteira autoral legada';
 }
 
 export function StudyComparisonPage() {

@@ -8,7 +8,7 @@ import type { CanonicalAuthoredOrder, CostPremises, PreviewEnvelope } from '../s
 //
 // IOF, carry e espera são exatos por alocação, como em motor/custo.py. Spread e custo fixo
 // do netado são cobrados por remessa agregada, sem dono; aqui são repartidos na
-// proporção do volume REMETIDO de cada empresa.
+// proporção do volume REMETIDO de cada empresa em cada ciclo, como no ledger técnico.
 
 export type CompanyBreakdown = Readonly<{
   group: string;
@@ -48,6 +48,7 @@ type Accumulator = {
 
 export function breakdownByCompany(
   envelope: PreviewEnvelope,
+  companyOf: (orderId: string) => string = groupOf,
 ): Breakdown {
   const { ordens: orders, custo: costs } = envelope.input_snapshot.cenario;
   const aggregate = envelope.result.agregado;
@@ -55,7 +56,7 @@ export function breakdownByCompany(
   const orderById = new Map(orders.map((order) => [order.id, order]));
   const groups = new Map<string, Accumulator>();
   const bucket = (orderId: string) => {
-    const key = groupOf(orderId);
+    const key = companyOf(orderId);
     let value = groups.get(key);
     if (value === undefined) {
       value = { volume: new Decimal(0), matchedOwn: new Decimal(0), matchedOthers: new Decimal(0),
@@ -78,9 +79,9 @@ export function breakdownByCompany(
     baselineTotal = baselineTotal.plus(cost);
   }
 
-  let exactTotal = new Decimal(0);
-  let remittedTotal = new Decimal(0);
   for (const cycle of aggregate.execucao_completa.ciclos) {
+    const cycleRemitted = cycle.alocacoes.reduce((sum, allocation) => allocation.tipo === 'REMETIDO'
+      ? sum.plus(allocation.valor_brl) : sum, new Decimal(0));
     for (const allocation of cycle.alocacoes) {
       const order = orderById.get(allocation.ordem_id);
       if (order === undefined || !measured.has(order.id)) continue;
@@ -89,28 +90,24 @@ export function breakdownByCompany(
       const wait = value.times(allocation.dia - order.dia_conhecida)
         .times(costs.custo_oportunidade_aa).div(365);
       target.nettedExact = target.nettedExact.plus(wait);
-      exactTotal = exactTotal.plus(wait);
       if (allocation.tipo === 'REMETIDO') {
         const iof = value.times(iofRate(costs, order));
+        const rail = value.times(costs.spread_rail_bps).div(BPS)
+          .plus(cycleRemitted.isZero() ? 0 : new Decimal(costs.custo_fixo_remessa).times(value).div(cycleRemitted));
         target.remitted = target.remitted.plus(value);
-        target.nettedExact = target.nettedExact.plus(iof);
-        exactTotal = exactTotal.plus(iof);
-        remittedTotal = remittedTotal.plus(value);
+        target.nettedExact = target.nettedExact.plus(iof).plus(rail);
       } else {
         const carry = value.times(costs.carry_cnr);
         if (allocation.origem_casamento === 'INTRA_CLIENTE') target.matchedOwn = target.matchedOwn.plus(value);
         else target.matchedOthers = target.matchedOthers.plus(value);
         target.nettedExact = target.nettedExact.plus(carry);
-        exactTotal = exactTotal.plus(carry);
       }
     }
   }
 
   const nettedTotal = new Decimal(aggregate.netado_periodo.total);
-  const shared = nettedTotal.minus(exactTotal);
   const companies = [...groups.entries()].map(([group, value]) => {
-    const share = remittedTotal.isZero() ? new Decimal(0) : shared.times(value.remitted).div(remittedTotal);
-    const netted = value.nettedExact.plus(share);
+    const netted = value.nettedExact;
     return {
       group,
       volume: value.volume.toFixed(),
@@ -124,7 +121,7 @@ export function breakdownByCompany(
   }).sort((left, right) => left.group.localeCompare(right.group));
 
   const reconciled = baselineTotal.minus(aggregate.baseline_periodo.total).abs().lte(TOLERANCE)
-    && shared.gte(TOLERANCE.negated())
-    && (remittedTotal.isZero() ? shared.abs().lte(TOLERANCE) : true);
+    && companies.reduce((sum, company) => sum.plus(company.netted), new Decimal(0))
+      .minus(nettedTotal).abs().lte(TOLERANCE);
   return { companies, reconciled };
 }

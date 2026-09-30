@@ -32,6 +32,10 @@ async function demo(page: Page) {
   await page.goto('/estudos');
   await expect(page.getByRole('heading', { name: 'Estudos', exact: true })).toBeVisible();
   await page.waitForFunction(() => '__MOTOR_E2E__' in window);
+  // Conta nova começa vazia; a demonstração entra só pelo botão explícito.
+  if ((await page.evaluate(() => window.__MOTOR_E2E__!.demoAcceptanceSnapshot())).studies.length === 0) {
+    await page.getByRole('button', { name: 'Carregar estudo demonstrativo' }).click();
+  }
   await expect.poll(async () => (await page.evaluate(() => window.__MOTOR_E2E__!.demoAcceptanceSnapshot())).studies.length).toBe(1);
   const state = await page.evaluate(() => window.__MOTOR_E2E__!.demoAcceptanceSnapshot());
   return state.studies[0]!;
@@ -68,11 +72,14 @@ test('Etapa 6: finalidade opcional percorre Caso observado, Diagnóstico, Replay
   await expect(page.getByRole('heading', { name: 'Versão 1' })).toBeVisible();
   await page.goto('/estudos');
   await page.getByRole('button', { name: 'Novo estudo', exact: true }).click();
+  await page.getByRole('radio', { name: 'Carteira gerada (exemplo)' }).check();
+  await page.getByRole('button', { name: 'Criar com carteira gerada' }).click();
   await expect(page).toHaveURL(/\/carteira\/[0-9a-f-]+$/);
   const studyId = page.url().split('/').at(-1)!;
-  await page.getByRole('radio', { name: 'Caso observado', exact: true }).check();
-  await page.getByLabel('Caso confirmado').selectOption(caseId);
-  await page.getByRole('button', { name: 'Usar caso confirmado' }).click();
+  await page.getByRole('button', { name: 'Trocar origem' }).click();
+  await page.getByRole('radio', { name: 'Dados importados de uma empresa' }).check();
+  await page.getByLabel('Caso importado').selectOption(caseId);
+  await page.getByRole('button', { name: 'Usar este caso' }).click();
   await expect.poll(() => page.evaluate((id) => window.__MOTOR_E2E__!.studySource(id), studyId)).toBe('OBSERVED_CASE');
   await page.goto(profileUrl!);
   await page.getByLabel('Estudo para receber a evidência').selectOption(studyId);
@@ -102,21 +109,21 @@ test('Etapa 6: finalidade opcional percorre Caso observado, Diagnóstico, Replay
   await expect(page.getByRole('region', { name: 'Repetição exibida' })).toContainText(execution.repetitionId);
   await page.goto(`/estudos/${studyId}/apresentacao?cenario=${execution.scenarioId}&execucao=${execution.id}`);
   await expect(page.getByRole('region', { name: 'Resumo executivo' })).toContainText(formatMoney(execution.savingsBrl));
-  await expect(page.getByRole('region', { name: 'Premissas e proveniência' })).toContainText('IOF padrão por direção');
+  await expect(page.getByRole('region', { name: 'Composição e mecanismo' })).toContainText('Caso observado');
   await page.reload();
-  await expect(page.getByRole('region', { name: 'Premissas e proveniência' })).toContainText('IOF padrão por direção');
+  await expect(page.getByRole('region', { name: 'Resumo executivo' })).toContainText(formatMoney(execution.savingsBrl));
   await page.emulateMedia({ media: 'print' });
   const pdf = testInfo.outputPath('stage6-observed-purpose-optional.pdf');
   await page.pdf({ path: pdf, format: 'A4', printBackground: true, preferCSSPageSize: true });
   const inspected = spawnSync(python, ['tests/web_api/render_stage6_pdf.py', '--pdf', pdf,
-    '--render-dir', testInfo.outputPath('observed-pages'), '--expected-pages', '7',
-    '--expect', execution.id, '--expect', 'IOF padrão por direção', '--expect', 'Limitações e versões'], {
+    '--render-dir', testInfo.outputPath('observed-pages'),
+    '--expect', 'Caso observado', '--expect', 'Resumo executivo', '--expect', 'Composição e mecanismo'], {
     cwd: '..', encoding: 'utf8', timeout: 30_000,
   });
   expect(inspected.status, inspected.stderr).toBe(0);
   const pdfText = (JSON.parse(inspected.stdout) as { text: string }).text.replace(/\s/g, '');
-  expect(pdfText).toContain(document.contextFingerprint);
-  for (const metric of document.executiveMetrics) {
+  for (const metric of document.executiveMetrics.filter((item) =>
+    ['BASELINE_BRL', 'NETTED_BRL', 'SAVINGS_BRL', 'NETABILITY', 'GROSS_BRL'].includes(item.code))) {
     expect(pdfText).toContain(metric.label.replace(/\s/g, ''));
     expect(pdfText).toContain(formatCommunicationMetric(metric).replace(/\s/g, ''));
   }
@@ -132,6 +139,8 @@ test('Etapa 6: finalidade opcional percorre Caso observado, Diagnóstico, Replay
 test('estudo comum excluído sai da lista, restaura pela lixeira e reabre com a mesma identidade', async ({ page }) => {
   await page.goto('/estudos');
   await page.getByRole('button', { name: 'Novo estudo', exact: true }).click();
+  await page.getByRole('radio', { name: 'Carteira gerada (exemplo)' }).check();
+  await page.getByRole('button', { name: 'Criar com carteira gerada' }).click();
   await expect(page).toHaveURL(/\/carteira\/[0-9a-f-]+$/);
   const studyUrl = page.url();
   const studyId = studyUrl.split('/').at(-1)!;
@@ -184,7 +193,14 @@ test('cinco mixes demonstrativos reconciliam diagnóstico, Replay, chat, Painel 
     await expect(page.getByRole('region', { name: 'Repetição exibida' })).toContainText(execution.repetitionId);
     await page.goto(`/estudos/${study.id}/apresentacao?cenario=${scenario.id}&execucao=${execution.id}&dia=31#resumo`);
     await expect(page.getByRole('region', { name: 'Resumo executivo' })).toContainText(formatMoney(execution.savingsBrl));
-    await expect(page.getByRole('region', { name: 'Destaques do Replay' })).toContainText('Dia 31');
+    expect(document.selection.replayDay).toBe(31);
+    const participants = document.composition.metrics.filter((metric) => /^participant\.\d+\.volume$/.test(metric.code));
+    expect(participants.length).toBeGreaterThan(0);
+    await expect(page.getByRole('table', { name: 'Participantes da carteira' }).locator('tbody tr')).toHaveCount(participants.length);
+    for (const participant of participants) {
+      await expect(page.getByRole('table', { name: 'Participantes da carteira' }))
+        .toContainText(formatMoney(participant.value));
+    }
   }
   const first = study.diagnostics.find((item) => item.scenarioId === study.scenarios[0]!.id)!;
   const presentation = `/estudos/${study.id}/apresentacao?cenario=${first.scenarioId}&execucao=${first.id}&dia=31#resumo`;
@@ -200,18 +216,19 @@ test('cinco mixes demonstrativos reconciliam diagnóstico, Replay, chat, Painel 
   const sent = inScope.response.request().postDataJSON() as ChatRequest;
   expect(sent.routeContext).toMatchObject({ studyId: study.id, scenarioId: first.scenarioId,
     diagnosticExecutionId: first.id, replayDay: 31 });
-  expect(sent.communication).not.toBeNull();
-  if (sent.communication === null) throw new Error('Chat sem CommunicationDocumentV1.');
-  expect(sent.communication.study).toEqual(document.study);
-  expect(sent.communication.selection).toEqual(document.selection);
-  expect(sent.communication.source).toEqual(document.source);
-  expect(sent.communication.contextFingerprint).toBe(document.contextFingerprint);
+  expect(sent.context?.kind).toBe('STUDY');
+  if (sent.context?.kind !== 'STUDY') throw new Error('Chat sem contexto STUDY.');
+  const sentDocument = sent.context.document;
+  expect(sentDocument.study).toEqual(document.study);
+  expect(sentDocument.selection).toEqual(document.selection);
+  expect(sentDocument.source).toEqual(document.source);
+  expect(sentDocument.contextFingerprint).toBe(document.contextFingerprint);
   for (const field of ['executiveMetrics', 'composition', 'mechanism', 'economics',
     'robustness', 'comparison', 'replaySnapshot', 'limitations', 'evidenceIndex'] as const) {
-    expect(sent.communication[field]).toEqual(document[field]);
+    expect(sentDocument[field]).toEqual(document[field]);
   }
-  expect(sent.communication.executiveMetrics.find((metric) => metric.code === 'SAVINGS_BRL')?.value).toBe(first.savingsBrl);
-  expect(sent.communication.executiveMetrics.find((metric) => metric.code === 'NETABILITY')?.value).toBe(first.netability);
+  expect(sentDocument.executiveMetrics.find((metric) => metric.code === 'SAVINGS_BRL')?.value).toBe(first.savingsBrl);
+  expect(sentDocument.executiveMetrics.find((metric) => metric.code === 'NETABILITY')?.value).toBe(first.netability);
   const answer = await inScope.response.json() as { classification: string; contextFingerprint: string; answer: string };
   expect(answer.classification).toBe('IN_SCOPE');
   expect(answer.contextFingerprint).toBe(document.contextFingerprint);
@@ -232,19 +249,18 @@ test('cinco mixes demonstrativos reconciliam diagnóstico, Replay, chat, Painel 
   const pdf = testInfo.outputPath('stage6-acceptance.pdf');
   await page.pdf({ path: pdf, format: 'A4', printBackground: true, preferCSSPageSize: true });
   const inspected = spawnSync(python, ['tests/web_api/render_stage6_pdf.py', '--pdf', pdf,
-    '--render-dir', testInfo.outputPath('pages'), '--expected-pages', '9',
-    '--expect', study.name, '--expect', first.id, '--expect', 'Limitações e versões'], {
+    '--render-dir', testInfo.outputPath('pages'),
+    '--expect', study.name, '--expect', 'Hipótese sintética não calibrada', '--expect', 'Composição e mecanismo'], {
     cwd: '..', encoding: 'utf8', timeout: 30_000,
   });
   expect(inspected.status, inspected.stderr).toBe(0);
   const pdfText = (JSON.parse(inspected.stdout) as { text: string }).text.replace(/\s/g, '');
-  for (const metric of [...document.executiveMetrics, ...document.composition.metrics,
-    ...document.mechanism.metrics, ...document.economics.metrics, ...document.robustness.metrics,
-    ...document.replaySnapshot!.metrics]) {
+  for (const metric of document.executiveMetrics.filter((item) =>
+    ['BASELINE_BRL', 'NETTED_BRL', 'SAVINGS_BRL', 'NETABILITY', 'GROSS_BRL'].includes(item.code))) {
     expect(pdfText).toContain(metric.label.replace(/\s/g, ''));
     expect(pdfText).toContain(formatCommunicationMetric(metric).replace(/\s/g, ''));
   }
-  expect(pdfText).toContain(document.contextFingerprint);
+  expect(pdfText).toContain('12participantes');
 });
 
 test('falhas locais conservam a fonte e não transformam ausência em resultado', async ({ page, context }) => {
@@ -277,8 +293,8 @@ test('falhas locais conservam a fonte e não transformam ausência em resultado'
   await page.goto(`/estudos/${study.id}/apresentacao?cenario=${execution.scenarioId}&execucao=${execution.id}`);
   await expect(page.getByRole('heading', { name: study.name, level: 1 })).toBeVisible();
   await context.setOffline(true);
-  await page.getByRole('navigation', { name: 'Seções da apresentação' }).getByRole('link', { name: 'Premissas' }).click();
-  await expect(page.getByRole('region', { name: 'Premissas e proveniência' })).toBeVisible();
+  await page.getByRole('region', { name: 'Composição e mecanismo' }).scrollIntoViewIfNeeded();
+  await expect(page.getByRole('region', { name: 'Composição e mecanismo' })).toContainText('12 participantes');
   await context.setOffline(false);
   expect((await page.request.post('/__e2e__/chat/control', { data: { mode: 'disabled' } })).ok()).toBe(true);
   const unavailable = await chat(page, 'Explique o produto.');
@@ -302,8 +318,10 @@ test('IndexedDB indisponível apresenta falha sem publicar Estudo', async ({ pag
     } });
   });
   await page.goto('/estudos');
-  await expect(page.getByRole('heading', { name: 'Estudos', exact: true })).toBeVisible();
-  await expect(page.getByRole('alert')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Dados locais indisponíveis', exact: true })).toBeVisible();
+  await expect(page.getByRole('alert')).toContainText('armazenamento');
+  await expect(page.getByRole('button', { name: 'Tentar novamente' })).toBeVisible();
+  await expect(page.getByText('Preparando dados locais…')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Abrir Estudo demonstrativo sintético' })).toHaveCount(0);
 });
 

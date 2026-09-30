@@ -4,10 +4,12 @@ import type { DiagnosticEnvelope, DiagnosticRequest, JobSnapshot } from '../api/
 import observedSource from '../../../contracts/fixtures/communication/observed-source.json';
 import { ApiError } from '../api/errors';
 import { fictionalCatalog } from '../importer/__fixtures__/catalog';
+import { currentDiagnostic } from '../levers/savingsOrigin';
 import { createStudy } from '../study/domain';
 import { makeScenarioDraft } from '../study/fixtures';
 import type { StudyDocument } from '../study/model';
 import { buildDiagnosticRequest } from './buildDiagnosticRequest';
+import * as diagnosticDomain from './domain';
 import {
   cancelStudyDiagnostic,
   executeStudyDiagnostic,
@@ -91,18 +93,30 @@ class AuthorityDouble implements DiagnosticStudyAuthority {
   readonly edits: StudyDocument[] = [];
   readonly detached: StudyDocument[] = [];
   readonly abort = new AbortController();
+  readonly persistedRevisions = new Map<string, number>();
 
   constructor(document: StudyDocument) {
     this.snapshot = { ownerSub: document.ownerSub, sessionEpoch: 1, document };
+    this.persistedRevisions.set(document.id, document.revision);
   }
 
   async flush(): Promise<StudyDocument | null> { return this.snapshot.document; }
   edit(document: StudyDocument): void {
+    const current = this.snapshot.document;
+    if (current === null || current.id !== document.id || document.revision !== current.revision + 1) {
+      throw new Error('A edição deve suceder a última revisão enfileirada.');
+    }
     this.edits.push(document);
+    this.persistedRevisions.set(document.id, document.revision);
     this.snapshot = { ...this.snapshot, document };
   }
-  async saveDetachedStudy(document: StudyDocument): Promise<StudyDocument | null> {
+  async saveDetachedStudy(document: StudyDocument, expectedRevision: number): Promise<StudyDocument | null> {
+    if (this.persistedRevisions.get(document.id) !== expectedRevision
+      || document.revision !== expectedRevision + 1) {
+      throw new Error('Conflito de revisão no estudo destacado.');
+    }
     this.detached.push(document);
+    this.persistedRevisions.set(document.id, document.revision);
     return document;
   }
   async runForCurrentSession<T>(
@@ -200,6 +214,110 @@ describe('executeStudyDiagnostic', () => {
     expect(authority.edits).toHaveLength(2);
     expect(authority.edits[0]!.executions.map((item) => item.status)).toEqual(['QUEUED']);
     expect(authority.edits[1]!.executions.map((item) => item.status)).toEqual(['QUEUED', 'FAILED']);
+  });
+
+  it('persiste a falha concreta quando o servidor recusa o envio', async () => {
+    const { study, request } = await studyFixture();
+    const authority = new AuthorityDouble(study);
+
+    const result = await executeStudyDiagnostic({
+      authority,
+      scenarioId: SCENARIO_ID,
+      buildRequest: async () => request,
+      api: {
+        submitDiagnostic: vi.fn().mockRejectedValue(new ApiError({
+          status: 403,
+          code: 'ACESSO_NAO_PERMITIDO',
+          message: 'Usuário fora da allowlist.',
+        })),
+        getDiagnosticJob: vi.fn(),
+        getDiagnosticResult: vi.fn(),
+      },
+      nextId: vi.fn(idFactory(ATTEMPT_ID, RESERVATION_ID, TERMINAL_ID)),
+      now: () => NOW,
+    });
+
+    expect(result).toMatchObject({
+      status: 'FAILED',
+      attemptId: ATTEMPT_ID,
+      error: { code: 'ACESSO_NAO_PERMITIDO', message: 'Usuário fora da allowlist.' },
+    });
+    expect(authority.edits).toHaveLength(2);
+    expect(authority.edits.at(-1)?.executions.at(-1)).toMatchObject({
+      status: 'FAILED',
+      error: { code: 'ACESSO_NAO_PERMITIDO' },
+    });
+  });
+
+  it('adia a reserva no lote e persiste a tentativa completa em uma única gravação terminal', async () => {
+    const { study, request } = await studyFixture();
+    const authority = new AuthorityDouble(study);
+    const envelope = structuredClone(observedSource.envelope) as DiagnosticEnvelope;
+    envelope.job_id = request.idempotency_key;
+    envelope.request_fingerprint = request.input_fingerprint;
+    envelope.selected_execution.study_id = request.study_id;
+    envelope.selected_execution.scenario_id = request.scenario_id;
+    envelope.selected_execution.scenario_revision = request.scenario_revision;
+    const appendSingle = vi.spyOn(diagnosticDomain, 'appendDiagnosticExecution');
+    const appendAtomic = vi.spyOn(diagnosticDomain, 'appendDiagnosticAttemptAtomically');
+
+    const result = await executeStudyDiagnostic({
+      authority,
+      scenarioId: SCENARIO_ID,
+      buildRequest: async () => request,
+      api: {
+        submitDiagnostic: vi.fn().mockResolvedValue(snapshot('QUEUED', request)),
+        getDiagnosticJob: vi.fn().mockResolvedValue(snapshot('SUCCEEDED', request)),
+        getDiagnosticResult: vi.fn().mockResolvedValue(envelope),
+      },
+      persistence: 'TERMINAL_ONLY',
+      nextId: vi.fn(idFactory(ATTEMPT_ID, RESERVATION_ID, TERMINAL_ID)),
+      now: () => NOW,
+      waitForNextPoll: async () => undefined,
+    });
+
+    expect(result.status).toBe('SUCCEEDED');
+    expect(authority.edits).toHaveLength(1);
+    expect(authority.edits[0]!.executions.map((item) => item.status)).toEqual(['QUEUED', 'SUCCEEDED']);
+    expect(authority.snapshot.document?.revision).toBe(study.revision + 1);
+    expect(currentDiagnostic(authority.snapshot.document!, study.scenarios[0]!))
+      .toMatchObject({ status: 'SUCCEEDED', envelope: expect.any(Object) });
+    expect(appendSingle).not.toHaveBeenCalled();
+    expect(appendAtomic).toHaveBeenCalledOnce();
+    appendSingle.mockRestore();
+    appendAtomic.mockRestore();
+  });
+
+  it('persiste lote terminal em estudo destacado contra a revisão realmente armazenada', async () => {
+    const { study, request } = await studyFixture();
+    const authority = new AuthorityDouble(study);
+    const other = await createStudy({
+      id: '00000000-0000-4000-8000-000000000499', ownerSub: OWNER, name: 'Outro',
+      baseScenario: makeScenarioDraft({ id: '00000000-0000-4000-8000-000000000498' }), now: NOW,
+    });
+
+    const result = await executeStudyDiagnostic({
+      authority,
+      scenarioId: SCENARIO_ID,
+      buildRequest: async () => request,
+      api: {
+        submitDiagnostic: vi.fn().mockResolvedValue(snapshot('QUEUED', request)),
+        getDiagnosticJob: vi.fn().mockImplementation(async () => {
+          authority.snapshot = { ...authority.snapshot, document: other };
+          return snapshot('FAILED', request);
+        }),
+        getDiagnosticResult: vi.fn(),
+      },
+      persistence: 'TERMINAL_ONLY',
+      nextId: vi.fn(idFactory(ATTEMPT_ID, RESERVATION_ID, TERMINAL_ID)),
+      now: () => NOW,
+      waitForNextPoll: async () => undefined,
+    });
+
+    expect(result.status).toBe('FAILED');
+    expect(authority.detached).toHaveLength(1);
+    expect(authority.detached[0]?.revision).toBe(study.revision + 1);
+    expect(authority.detached[0]?.executions.map((item) => item.status)).toEqual(['QUEUED', 'FAILED']);
   });
 
   it('retoma reserva persistida pelo jobId sem repetir POST', async () => {

@@ -71,12 +71,17 @@ def test_pacote_tem_cinco_composicoes_e_repeticoes_reconciliadas() -> None:
         assert request.sampling.count == envelope.statistics.count == 10
         assert len(request.sampling.repetitions) == len(envelope.repetitions) == 10
         assert request.selected_repetition_id == request.sampling.repetitions[0].repetition_id
-        assert envelope.statistics.selected_repetition_id == request.selected_repetition_id
+        # Detalhe e Replay vêm da repetição mediana da economia, não da indicada no pedido.
+        p50 = envelope.axes.economic_robustness.savings_brl.value.p50
+        median_id = next(
+            item.repetition_id for item in envelope.repetitions if item.savings_brl == p50
+        )
+        assert envelope.statistics.selected_repetition_id == median_id
         replay = ReplayDocumentV1.model_validate(package["replays"][scenario["id"]])
         expected_motor_version = f"0.1.0+{package['motorBuildSha']}"
         assert envelope.selected_execution.result.manifesto.versao_motor == expected_motor_version
         assert replay.motor_version == expected_motor_version
-        assert replay.repetition_id == request.selected_repetition_id
+        assert replay.repetition_id == envelope.statistics.selected_repetition_id
         assert replay.execution_fingerprint == envelope.selected_execution.execution_fingerprint
         assert len(replay.orders) <= 98
         assert replay.period.settlement_end_day <= 365

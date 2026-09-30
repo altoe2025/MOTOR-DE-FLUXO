@@ -33,12 +33,18 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-09-25, durante a consolidação das Etapas 5 e 6.
+Atualizada em 2026-09-30, durante a integração da versão Live na main.
 
 | Branch | Situação | Dono |
 |---|---|---|
+| `codex/main-render-sync` | PR #59 draft; candidato final integra o Live, corrige armazenamento/janela/teto/contexto do chat e aguarda apenas CI integral; revisão visual Linux concluída, sem novo deploy | Codex |
+| `codex/chat-front-context` | `29d955c` publicado no Render (Live); referência preservada da integração | Codex |
+| `codex/replay-production-fix` | `cb81781` incorporado no Live `29d955c`, incluindo reset local e Replay | Codex |
+| `codex/frontend-performance-fixes` | Integra as correções de travamento e `feat/estudo-vs-combinacao` sobre o release `829d224`; publicação no Render em preparação | Codex |
+| `codex/carteira-criterios` | Integra estudo separado de combinações, últimas melhorias de `feat/bancada-exploracao` e chat já publicado do PR #57; deploy aguardando comando do Gabriel | Codex |
+| `codex/chat-interface-render` | PR #57 aberto (draft, base `feat/bancada-exploracao`); código `8d43695` publicado no Render com status Live em 2026-09-28; sem merge na `main` | Codex |
 | `codex/integracao-etapas-5-6` | Consolida `feat/bancada-exploracao` e `codex/finalidade-verificacao`, incluindo histórico de `origin/main`; publicação/CI em preparação, sem deploy | Codex |
-| `main` | Autonetting preferencial e integração final incorporados até o PR #37 (`c2ad175`); grade histórica não regenerada | os dois |
+| `main` | Base remota `3342059` (Etapas 5/6 e bancada); integração dos 52 commits até o Live `29d955c` em andamento | os dois |
 | `netting/p1` | spike do P1, **NÃO MERGEAR** — dominado, e agora sabemos que a folga é zero em N ≥ 50. Só local, nunca foi pro GitHub | Felipe |
 | `fix/semantica-remessa-p0` | PR #11, mergeada | Felipe |
 | `fix/previsao-temporal-e-colunas-csv` | PR #12, mergeada | Gabriel |
@@ -74,6 +80,171 @@ Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. 
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+## 2026-09-30 — Integração da versão Live na main (MOT-99)
+
+- **Retomada autorizada:** Gabriel autorizou corrigir os bloqueios encontrados e concluir a integração, sem deploy. `ApplicationProviders` trata falha do IndexedDB com retry; `StudyEditor` captura o valor da janela antes do updater; o diagnóstico limita cada lado medido pela capacidade oposta da execução completa; e o chat não envia uma seleção antes de seu contexto `STUDY` ficar pronto. Os guards continuam ativos e nenhuma seed, skip ou regra do motor foi alterada para esconder falha.
+- **Referências visuais:** a primeira captura Linux temporária foi inspecionada e incorporada. A correção do teto mudou somente três valores derivados no demonstrativo; as duas baselines Windows afetadas foram revisadas pixel a pixel e atualizadas. A captura Linux final `36787589692` confirmou e atualizou somente `presentation` e `print-page-02`; as outras cinco imagens ficaram idênticas por hash. O workflow temporário foi removido. Main e Render permanecem intactos.
+- **Evidências finais locais:** Python normal e `-O`: 1.270 passed / 3 skipped cada; Ruff, mypy, contratos/validadores, scanner, typecheck, lint e build PASS. Front unitário: 1.240 testes antes do último guard, mais 32 focados do chat depois. E2E: 7/7 Stage4/5, 7/7 demo/apresentação, 17/17 chat e 2/2 visuais Windows após as correções. A rodada integral teve 63/66 antes dessas últimas correções e identificou, sem mascarar, a corrida de contexto e as duas imagens com números antigos. Revisão Linux concluída; resta somente a CI integral do candidato sem workflow temporário. Detalhes no plano.
+- **Marco histórico, já superado pela retomada acima:** quando o PR #59 foi aberto, a CI 36779719966 aprovou Python normal e otimizado (1.264/1 skip), mas parou no alias de regex do teste, corrigido sem efeito runtime. Naquele ponto, o front unitário tinha 1.236/1.236 e o E2E acabara de revelar a rejeição do reset IndexedDB; a integração aguardava autorização e os patches E2E ainda eram parciais. A autorização, as correções e os gates vigentes são os três bullets anteriores.
+- **Sintoma:** o Render servia `29d955c`, enquanto a main permanecia em `3342059`, 52 commits atrás. Um deploy manual da ponta antiga da main poderia republicar a interface anterior.
+- **Causa:** os deploys específicos de commits avançaram em branches de desenvolvimento sem concluir a integração na main. Auto-Deploy está Off no serviço.
+- **O que foi feito:** Gabriel autorizou integrar toda a versão Live, sem novas mudanças de produto. `codex/main-render-sync` parte exatamente de `29d955c`; a auditoria confirmou 243 arquivos diferentes da main e nenhum em `motor/`, Dockerfile, render.yaml, dependências ou Supabase. Entram estudos/combinações, importação e backup, quadro/apresentação, diagnóstico P50, Replay, perfil/primeiro acesso e chat contextual. O ambiente unitário ganha IndexedDB simulado já disponível nas dependências, e o teste de sessão passa a verificar o reset publicado, em lugar da limpeza seletiva removida. Plano e gates em `docs/superpowers/plans/2026-09-30-main-render-sync.md`. A integração segue por PR protegido, sem novo deploy e sem mudança de runtime em relação ao Live.
+- **O que isso invalida:** a main antiga deixa de ser referência do front publicado após o merge. O reset único de todas as stores locais já existente no Live é preservado, não repetido por esta integração; não se altera seu marcador. As falhas históricas de Playwright continuam sendo limitações até validação atual, não aprovações presumidas. Abas antigas devem ser recarregadas para usar o contrato atual do chat. Nenhuma regra financeira ou dado de produção é alterado por esta tarefa.
+
+## 2026-09-30 — Ajuda do chat sincronizada com o front atual (MOT-99)
+
+- **Sintoma:** ao perguntar pelo botão “Nova combinação de carteiras”, o chat não encontrava o controle e podia pedir informações que já estavam na interface.
+- **Causa:** o catálogo de ajuda não continha os fluxos novos; o inventário enviado ao chat despejava todos os controles sem priorizar a rota atual ou o nome perguntado.
+- **O que foi feito:** em `codex/chat-front-context`, as fichas de controles novos foram adicionadas e os fluxos alterados foram corrigidos; os botões receberam IDs observáveis; o inventário prioriza controles da tela, controles globais e nomes citados, mantendo consulta direta aos demais. Contrato OpenAPI e validador do front foram regenerados. Testes focados de chat/API, typecheck e build passaram.
+- **O que isso invalida:** a orientação anterior de que o botão de combinação não está documentado no chat. Não altera dados, cálculos, autenticação nem o deploy do Render.
+
+## 2026-09-29 — Controles e acumulados reposicionados no Replay (MOT-99)
+
+- **Sintoma:** o controle compacto de pausa aparecia na régua superior em vez do centro da Fronteira Viva, a bolinha do dia misturava `D+n` com a data civil e os três acumulados ficavam abaixo da cena.
+- **Causa:** a integração anterior colocou o novo controle em `ReplayControls`, anexou `dateOf` ao indicador central e inverteu a ordem histórica entre `ReplayMetrics` e `ReplayStage`.
+- **O que foi feito:** o controle `Tocar/Pausar/Recomeçar` ocupa o centro da Fronteira Viva, no lugar do rótulo de fechamento; a bolinha exibe apenas `D+n`; e os cards de casado, remetido e netabilidade voltam para cima da cena. Testes focados do Replay, typecheck e build aprovados.
+- **O que isso invalida:** capturas visuais com o botão na régua, data civil dentro da bolinha ou acumulados abaixo da cena. Não altera dados, cálculos ou regras do motor.
+
+## 2026-09-29 — Reset total do estado local anterior (MOT-99)
+
+- **Sintoma:** contas e navegadores usados durante o desenvolvimento ainda exibiam empresas, casos, perfis, estudos, execuções, Replay e chats anteriores, sintéticos ou não.
+- **Causa:** as versões anteriores preservavam o IndexedDB por usuário; a limpeza seletiva do demo não atendia ao requisito de começar a operação real sem qualquer histórico.
+- **O que foi feito:** em `codex/replay-production-fix`, o primeiro acesso após este release limpa uma única vez todos os stores locais da conta — empresas, casos, importações, perfis, estudos, execuções, operações, Replay e chats. A conta começa vazia e, depois do reset, volta a persistir normalmente apenas o que o usuário criar.
+- **O que isso invalida:** todo histórico local anterior a este release será descartado no próximo acesso. Não remove usuários do Supabase nem altera a allowlist do servidor.
+
+## 2026-09-29 — Resíduos do demo antigo e falha opaca do diagnóstico corrigidos (MOT-99)
+
+- **Sintoma:** contas que já tinham recebido o demo automático ainda viam “Empresa sintética 10/11/12” ao criar carteira; falhas antes de o job diagnóstico ser aceito apareciam como tentativa “não persistida”, escondendo inclusive recusa de autorização.
+- **Causa:** retirar a instalação automática não migrou as empresas, casos e perfis já gravados no IndexedDB; o `submitDiagnostic` ficava fora do fechamento terminal local e a página substituía qualquer exceção por uma mensagem genérica.
+- **O que foi feito:** em `codex/replay-production-fix`, o login reconhece pelo marcador/operação e remove uma única vez apenas o pacote demo legado, inclusive resíduos de um estudo demo já purgado, preservando registros e estudos do usuário; instalações explícitas continuam disponíveis. Recusas no envio agora viram tentativa terminal persistida e `ACESSO_NAO_PERMITIDO` informa que a conta ainda não está autorizada no servidor.
+- **O que isso invalida:** invalida a expectativa de que apenas remover o auto-install deixaria navegadores que já abriram versões antigas sem dados sintéticos; não altera resultados do motor, estudos reais nem a política de allowlist do piloto.
+
+## 2026-09-29 — Perfil, primeiro acesso vazio e composição simplificada integrados (MOT-99)
+
+- **Sintoma:** a barra lateral não identificava o e-mail da conta, o primeiro login instalava dados sintéticos automaticamente e a composição oferecia quatro modos concorrentes para a mesma tarefa.
+- **Causa:** o contrato de autenticação não propagava o e-mail, `switchSession` tratava a demonstração como bootstrap obrigatório e o `LeverBuilder` expunha presets e seleção manual separados.
+- **O que foi feito:** `codex/replay-production-fix` avançou sobre `c26bf98` com os três commits de `feat/front-perfil-replay`: `334611d` adiciona o perfil com e-mail, `6dcda20` deixa contas novas vazias e torna a demonstração explícita nos E2E, e `a5820ca` centraliza a composição em `compositionSubsets`, com etiquetas clicáveis e limite de oito empresas. Os commits originais permanecem separados. A corrida de navegação encontrada ao executar o novo E2E de primeiro acesso foi removida reutilizando `loadDemoIfEmpty`; esse fluxo passou isoladamente. A suíte unitária passou com 1.230 testes e o typecheck passou. Uma execução ampliada dos Playwright teve 27 aprovações, 11 falhas e 1 skip: por decisão explícita do Gabriel, essas 11 expectativas anteriores da base `c26bf98` sobre Painel A, Replay e controles já removidos não bloqueiam esta publicação. As seis baselines Windows afetadas foram regeneradas e o spec visual passou 2/2. O deploy manual do commit final desta integração foi autorizado, com o Replay de `c26bf98` preservado; o smoke real do Render será executado após a publicação.
+- **O que isso invalida:** invalida testes e capturas que assumiam demonstração automática ou a barra lateral anterior, além do contrato de `combinationPreset` e dos quatro controles antigos de composição. As baselines Windows anteriores foram substituídas; as baselines Linux continuam independentes. As 11 falhas Playwright conhecidas não podem ser citadas como aprovadas, apenas como aceitas para esta publicação. Não altera o motor nem as métricas financeiras.
+
+## 2026-09-29 — Replay reintegrado sem regredir estudos persistidos (MOT-99)
+
+- **Sintoma:** após publicar `9f78d3b`, a tela Estudos passou a rejeitar documentos já salvos com `StudyDocument persistido inválido: INVALID_STRUCTURE`.
+- **Causa:** `9f78d3b` estava em uma linha divergente e anterior à release `7818ed1`; publicá-lo como release completa removeu contratos de persistência que os estudos existentes já utilizavam.
+- **O que foi feito:** a branch `codex/replay-production-fix` parte de `7818ed1` e transplanta somente a atualização visual e de pausa do Replay, com regressões específicas do Replay e da persistência verificadas.
+- **O que isso invalida:** `9f78d3b` deixa de ser um candidato de release completo; ele só pode ser usado como origem das mudanças isoladas do Replay. Não altera números nem regras do motor.
+
+## 2026-09-29 — Estudo comum e combinação de carteiras integrados (MOT-99)
+
+1. **Sintoma.** O estudo comum e a combinação de carteiras ainda dividiam controles de forma confusa; a versão com alavancas na combinação estava separada das correções de desempenho.
+2. **Causa.** O trabalho de `feat/estudo-vs-combinacao` partiu do release anterior e mantinha lotes internos antigos ao alterar a carteira, permitindo que cenários e diagnósticos ocultos crescessem a cada nova rodada.
+3. **O que foi feito.** A branch `codex/frontend-performance-fixes` integra `24e2349`: o estudo comum volta a criar variações, enquanto a combinação aplica alavancas à carteira-base e apresenta somente recomendação e alternativas. Alavanca neutra não altera o estudo. Ao preparar uma nova rodada, cenários internos e diagnósticos obsoletos são removidos em uma única revisão, preservando a base, combinações ainda atuais e seus resultados. A geração exaustiva no estudo comum permanece na área avançada. O bloqueio contra criação concorrente foi preservado.
+4. **O que isso invalida.** Invalida a retenção deliberada de combinações pertencentes a bases antigas e qualquer contagem que incluísse esses cenários ocultos. Não altera o motor, as métricas financeiras nem resultados de diagnósticos preservados.
+
+## 2026-09-29 — Correções de travamento na bancada publicada (MOT-99)
+
+1. **Sintoma.** A bancada ficava lenta conforme estudos e diagnósticos se acumulavam; o Replay engasgava ao trocar de dia e o diagnóstico de combinações podia aparentar travamento em carteiras grandes. Cliques repetidos também podiam iniciar duas criações de estudo.
+2. **Causa.** A lista de estudos associava cada estudo a todas as execuções com filtros repetidos e reagia a estados intermediários com novas leituras integrais. O Replay recalculava estados já reconciliados e reconstruía o contexto do chat mesmo fechado. O lote de combinações persistia reserva e resultado separadamente para cada cenário e não oferecia cancelamento. A criação de combinações não tinha guarda síncrona.
+3. **O que foi feito.** Na branch `codex/frontend-performance-fixes`, execuções são agrupadas por estudo em uma passagem e os refreshes da lista são serializados e protegidos pelo ciclo de vida. A criação concorrente foi bloqueada. O Replay só publica contexto com o chat aberto, invalida publicações antigas, agrupa mudanças rápidas de dia e reutiliza estados de documentos profundamente imutáveis. O lote de combinações ganhou cancelamento após a execução atual e persiste reserva e terminal atomicamente em uma única revisão por cenário. Foram adicionados testes de regressão para os quatro fluxos.
+4. **O que isso invalida.** Invalida a expectativa de duas persistências do estudo por diagnóstico no modo em lote e medições de desempenho feitas sobre a implementação publicada em `829d224`. O fluxo de diagnóstico individual, o motor, as métricas financeiras e os resultados calculados não mudaram.
+
+## 2026-09-29 — Apresentação acessível e referências visuais atualizadas (MOT-99)
+
+1. **Sintoma.** A auditoria do navegador encontrou marcação inválida na lista de métricas; a nota do cabeçalho impresso tinha contraste insuficiente. Referências visuais ainda mostravam as telas anteriores.
+2. **Causa.** O texto explicativo era um parágrafo solto dentro de uma lista de definições, e a cor clara do cabeçalho em tela era mantida sobre o fundo claro do PDF.
+3. **O que foi feito.** A explicação usa uma definição sem alterar seu estilo; a nota ganha cor legível na impressão. Teste visual acompanha as seções atuais, preservando comparação de pixels e inspeção do PDF. Workflow temporário captura referências Linux para revisão; será removido após coleta. Tipos, lint e validadores aprovados; suíte unitária integrada com 1.174 testes aprovados. Sem deploy.
+4. **O que isso invalida.** Referências das telas antigas e expectativa de nove páginas para a apresentação resumida; não altera métricas nem fontes.
+
+## 2026-09-29 — Integração das atualizações para publicação posterior (MOT-99)
+
+1. **Sintoma.** As melhorias de carteiras, bancada e chat estavam em branches diferentes; publicar só a branch de carteiras retiraria melhorias do chat já em produção.
+2. **Causa.** O Render foi publicado por SHA específico do PR #57, enquanto a bancada recebeu novas mudanças posteriormente.
+3. **O que foi feito.** `codex/carteira-criterios` integra `codex/chat-interface-render` e `feat/bancada-exploracao` até `666a71d`. Resolução preserva criação em lote sem crash, estudo separado, presets e proveniência das combinações, comparação exata das operações executadas, bps no Quadro e contexto do chat. Validadores foram regenerados a partir do schema combinado. Python: 1.239 testes aprovados e 3 opt-in ignorados. Gabriel pediu concluir a preparação, mas aguardar novo comando para publicar: nenhum deploy foi acionado.
+4. **O que isso invalida.** As branches isoladas deixam de ser candidatas completas para a próxima publicação. Nenhuma regra do motor mudou. O deploy ativo permanece o já registrado em 2026-09-28.
+
+## 2026-09-29 — Combinação de carteiras como estudo separado (MOT-99)
+
+- **Sintoma:** as combinações ocupavam a carteira com centenas de cenários e operações, dificultando o uso e pesando a interface.
+- **Causa:** a exploração de subconjuntos usava a mesma tela de edição dos estudos comuns.
+- **O que foi feito:** na branch local `codex/carteira-criterios`, Estudos ganhou “Nova combinação de carteiras”. Gabriel confirmou que a entrada continua sendo empresas selecionadas, não estudos salvos. O novo tipo mostra empresas e premissas, prepara as combinações internamente e abre um diagnóstico compacto com recomendação e até cinco alternativas. Composições e resultados anteriores são preservados; somente as composições compatíveis com a carteira atual entram no lote. O marcador opcional do documento mantém compatibilidade com estudos existentes. Verificação: 32 testes focados, build com tipos e lint aprovados; fluxo local com três empresas e sete composições concluído no navegador. Sem publicação no Render ou integração à main.
+- **O que isso invalida:** o caminho de uso das combinações passa a ter uma entrada própria. Nada nos cálculos do motor; a suíte Playwright histórica ainda requer a atualização já registrada abaixo.
+
+## 2026-09-28 — Criação de combinações em lote sem queda da página
+
+1. **Sintoma.** Gerar 254 combinações de oito empresas interrompia a página com `Maximum update depth exceeded`, deixando um lote parcial.
+2. **Causa.** Cada combinação clonava e validava todo o estudo, publicava uma atualização React e enfileirava outra revisão completa para salvar, sem ceder à interface durante a sequência.
+3. **O que foi feito.** `appendScenarios` materializa o lote em uma única revisão e validação do estudo; a página faz uma única edição/gravação, mostra progresso e cede à interface a cada oito preparações. A orientação para acessar combinações aparece quando a origem ainda é sintética. Teste no navegador local com oito empresas: 254 combinações, 255 cenários contando o original, estado “Alterações salvas” e nenhum alerta. Typecheck/lint passaram; testes do domínio cobrem lote de 254, histórico preservado e rejeição atômica de entradas inválidas. Configuração de SHA do motor corrigida apenas no ambiente local ignorado pelo Git.
+4. **O que isso invalida.** A criação não gera mais uma revisão por combinação nem preserva lotes parciais novos em caso de falha de preparação. Cenários anteriores não foram apagados. Nenhuma regra do motor ou publicação no Render mudou.
+
+## 2026-09-28 — Escolher composição por economia e limite de espera
+
+1. **Sintoma.** A bancada mostrava combinações, mas exigia comparar manualmente a economia e a espera para escolher uma composição.
+2. **Causa.** Faltava uma recomendação por critério explícito. O rateio visual de tarifa por volume do período também transferia custo entre empresas que remetiam em ciclos diferentes; a comparação com empresas isoladas aceitava operações alteradas.
+3. **O que foi feito.** Em `codex/carteira-criterios`, a comparação indica a maior economia entre composições executadas e comparáveis, com limite opcional de espera média ponderada, alternativas e diferença para a próxima elegível. Reutiliza cenários salvos, sem novo contrato de armazenamento ou mudança no motor. Só compara subconjuntos completos de empresas com as mesmas ordens, custos, calendário e versão do motor; resultados ausentes, obsoletos e regenerados ficam explicados fora da recomendação. Spread/tarifa visual são distribuídos por ciclo. O comparador de empresas isoladas usa a mesma verificação; diferença de volume casado passou a ser descrita como comparação contrafactual, não partição efetiva entre empresas.
+4. **O que isso invalida.** Ficam superados o rateio visual global de tarifas, a escolha de qualquer cenário com uma única empresa como comparador e a interpretação da diferença entre rodadas como casamento efetivo entre empresas. Nada muda nas regras ou nos totais do motor. Sensibilidade avançada, recuperação integral dos E2Es antigos e publicação no Render não fazem parte desta entrega.
+
+Validação: build de produção, typecheck e lint dos arquivos alterados passaram. Os testes focados da comparação passaram; a suíte unitária completa terminou com 1.109 testes aprovados e 5 falhas em dois arquivos de rotas/editor. Esses dois arquivos passaram isoladamente (70/70), com um worker, sem alterar timeouts ou expectativas. Os E2Es antigos não foram reexecutados.
+
+## 2026-09-28 — Chat publicado no Render (MOT-95)
+
+1. **Sintoma.** Deploy anterior `3342059` continuava sem as melhorias recentes do chat.
+2. **Causa.** O deploy precisava usar explicitamente o commit da branch já enviada, não o último commit da `main`.
+3. **O que foi feito.** Push de `codex/chat-interface-render` e PR #57 (draft, base `feat/bancada-exploracao`). Deploy específico de `8d4369588f2e41afda4b64b5dd209e4ab112c671` no `motor-de-fluxo-piloto`, confirmado pelo Render como `Deploy succeeded | Live` (`dep-datbjo49v7es738370og`; 54,4 s). Health `ok`, página inicial HTTP 200 e asset `index-Cx3giTPZ` confirmados. OpenAPI publicado expõe `ChatRequestV1.context`, `BoardChatContextV1` e `RouteChatContext.uiControls`. Nenhuma variável, allowlist, credencial, configuração de serviço ou regra de simulação alterada. Este registro é posterior ao deploy e não requer republicação do código.
+4. **O que isso invalida.** A afirmação de que as melhorias ainda são apenas locais fica superada. A confirmação de publicação/contrato não equivale a teste universal da qualidade semântica do modelo real. `main` não foi alterada: um novo deploy de “latest commit” da `main` pode voltar a uma versão sem estas mudanças até a integração da branch.
+
+## 2026-09-28 — Candidato de publicação do chat integrado à bancada (MOT-95)
+
+1. **Sintoma.** O deploy manual da `main` em `3342059` não incluía as correções locais do chat.
+2. **Causa.** A branch do chat ainda não havia sido enviada; o front mais recente também mudou os redirecionamentos e removeu o comparador antigo.
+3. **O que foi feito.** `codex/chat-interface-render` reúne as correções do chat, `origin/feat/bancada-exploracao` (`de35df0`) e o ajuste visual `21c4478`, preservando a `main` existente. Catálogo distingue o comparador legado e a navegação atual do diagnóstico. Os E2Es de chat acompanham os redirecionamentos e a invalidação das citações do Quadro após mudança de seleção/reload. Verificação final: Python 1.237 passed/3 skipped; front 1.082 passed; types/lint verdes; 17 E2Es de chat verdes. Push/PR e deploy do commit específico autorizados pelo Gabriel; resultado do Render será confirmado separadamente. Nenhuma configuração, credencial, usuário autorizado ou regra do motor alterada.
+4. **O que isso invalida.** Deploy de `3342059` não prova disponibilidade das melhorias do chat. O teste do comparador base/hipótese removido é substituído pelo fluxo real do Quadro. As demais specs históricas do front mencionadas abaixo continuam fora desta validação; não se declara a suíte integral de navegador verde nem qualidade universal do provider real.
+
+## 2026-09-28 — Ajuda de interface e respostas parciais do ORKE AI (MOT-95)
+
+1. **Sintoma.** Perguntas sobre botões/campos não tinham fonte específica; respostas úteis eram substituídas por recusa genérica mesmo quando uma parte estava fundamentada.
+2. **Causa.** Catálogo de apenas 18 itens, sem observações dos controles renderizados; política server-side descartava toda resposta `INSUFFICIENT_EVIDENCE`.
+3. **O que foi feito.** Catálogo ampliado para 200 IDs com descrição baseada nos handlers, efeitos, bloqueios possíveis e recuperação. Snapshot por envio transmite exclusivamente IDs conhecidos e contagens de controles habilitados/desabilitados, sem valores ou texto arbitrário de formulário. Ferramenta de interface separa regras gerais de estado observado. Respostas parciais com citações validadas são preservadas; sem fontes, o fallback pede nome/tela do controle ou seleção de resultados. Histórico e contexto do Quadro do trabalho anterior foram preservados. MOT-92/94/95 consultadas no Linear, sem alteração das issues. Ver `docs/frontend/chat-interface-coverage.md` e `docs/testing.md` para cobertura e verificação.
+4. **O que isso invalida.** Ajuda de uso não exige documento financeiro; falta parcial de contexto não exige recusa de toda a pergunta. O catálogo não demonstra causa exata de bloqueio nem garante respostas universais do modelo. Motor e autenticação não foram alterados. Gabriel autorizou commit, push, PR e publicação no Render em 2026-09-28; o resultado publicado será registrado após confirmação do serviço. Esta correção segue o escopo da MOT-95 já consultada, sem criação ou reescrita de issue.
+
+## 2026-09-26 — Contexto conversacional e Quadro no ORKE AI (sem MOT/commit)
+
+1. **Sintoma.** Continuações curtas como “E por quê?” podiam perder o assunto, perguntas pertinentes podiam ser recusadas antes da leitura das fontes e o chat aberto em `/quadro` não recebia as linhas escolhidas pela pessoa.
+2. **Causa.** O classificador via só a pergunta e a rota, misturava pertinência temática com suficiência de evidência, e `/quadro` era rotulado como uma tela genérica de Estudos. O request aceitava apenas um documento de Estudo; não existia projeção ou ferramenta de leitura para a seleção do Quadro. O fallback estático também não aceitava o deep link `/quadro`.
+3. **O que foi feito.** No worktree isolado `chat-context-quality`, baseado no commit local `1bd7654` de `feat/bancada-exploracao`, o classificador passa a receber o histórico validado e decide somente `IN_SCOPE`, `OUT_OF_SCOPE` ou `MIXED`. A suficiência fica na resposta fundamentada. O request ganhou contexto discriminado `STUDY | BOARD`, fingerprint e evidências estritas; `consultar_quadro` lê somente as linhas marcadas. O cliente publica a seleção, valida respostas e resolve citações para `/quadro`; rotas desconhecidas usam `general`. Catálogo, OpenAPI, tipos, validadores, provider/E2E controlado e smoke real opt-in foram atualizados. Nenhuma regra ou métrica do motor mudou. Não houve commit, push, PR ou deploy porque não foi fornecido `MOT-N`.
+4. **O que isso invalida.** Requests de chat com o campo legado `communication`, a interpretação de `/quadro` como `studies` e testes que permitiam `INSUFFICIENT_EVIDENCE` no classificador ficam superados. Não se declara qualidade semântica universal do modelo: o provider real permanece teste manual opt-in. Números simulados, aceites do motor e conclusões de negócio não mudam.
+## 2026-09-28 — Bancada, nível 1 de usabilidade: %, modelo de importação, mediana, presets e bps
+
+1. **Sintoma.** Premissas pediam fração com ponto (IOF `0.035`) e o ticket se chamava "médio", mas era mediana. A importação não tinha modelo, e o erro de cabeçalho era genérico ("headers fora da ordem canônica"), com o código técnico repetido na tela. O diagnóstico mostrava só a execução detalhada, escolhida como a primeira do plano e chamada de "representativa", sem a distribuição. "Todas as combinações" gerava 254 variações com 8 empresas. A origem da economia podia usar "A volume ×2" como "A sozinha". O quadro comparava R$ de períodos e volumes diferentes.
+2. **Causa.** Os campos gravavam o texto digitado direto na fração. A lista de colunas estava duplicada no preflight e no parser, e o worker reserializava a mensagem já prefixada. A repetição de detalhe era fixada no pedido, antes de rodar. As variações não guardavam de qual base vieram, e o quadro não tinha métrica relativa ao volume.
+3. **O que foi feito.** Branch `feat/bancada-exploracao`, commits `72138e4` a `ae96db5`.
+   - Premissas em % e R$ com vírgula (`study/numberInput.ts`), armazenamento ainda em fração e "Ticket mediano".
+   - `importer/layout.ts` como fonte única, modelo `.xlsx` gerado no navegador (passa no próprio preflight) e mensagens que dizem como corrigir.
+   - Servidor: em entrada gerada, `aggregate_diagnostic` detalha a repetição com economia igual ao P50 (posto mais próximo; em empate, a primeira do plano). Nenhuma regra do motor mudou. Pacote demo regenerado com o mesmo SHA e critério `MEDIAN_SAVINGS_REPETITION`.
+   - Topo do resultado com P10/P50/P90, amplitude, repetições e qual execução vai para o Replay.
+   - Presets "Cada empresa sozinha" e "Retirar uma por vez", mais seleção manual e "todas" como opção avançada com contagem. Campo opcional `derivation` no cenário (schema do estudo e validadores regenerados). `savingsOrigin` só usa "sozinha" da mesma base, versão, premissas e período.
+   - Quadro com economia em bps (economia ÷ `volume_bruto_periodo_brl` × 10.000, ordenação padrão), período e volume medidos, e aviso de premissas diferentes.
+   - Apagar estudo pelo quadro, feito em sessão paralela, commitado à parte.
+   - Verificação: `tsc`, `eslint`, 1.121 testes unitários e 675 testes de `tests/web_api` passam.
+4. **O que isso invalida.**
+   - Diagnósticos gerados novos detalham a repetição mediana, não a primeira: Replay, apresentação e comunicação de diagnósticos novos mostram outra carteira que a da regra anterior. Diagnósticos antigos seguem válidos e exibem o critério antigo.
+   - O pacote demo mudou (outras repetições selecionadas), então snapshots visuais e specs Playwright do demo podem precisar de revisão; não foram rodados.
+   - Bug conhecido, anterior e não corrigido: com aquecimento, `analyze_diagnostic_repetitions` falha ("volume casado excede o potencial estrutural") quando a repetição selecionada tem ordens medidas casando com ordens do aquecimento, porque o teto usa só as medidas. Reproduzido em 6 de 10 repetições do demo com seeds deslocadas; a correção muda a regra do eixo e aguarda decisão.
+   - Com algumas seeds, o motor lança "taxas por mecanismo não reconciliam com netabilidade" (visto com seeds do demo +7919); não investigado.
+   - `router.test.tsx › offers the global chat…` é instável já no commit `f1c6f04`.
+   - Nenhum deploy.
+## 2026-09-28 — Atalhos do caso importado, Replay mais direto e cópia de segurança do estudo
+
+1. **Sintoma.** Depois de importar um caso, chegar ao cálculo exigia ir a Estudos, criar um estudo (que gerava uma carteira sintética via API mesmo para quem queria dados importados) e trocar a origem. No Replay, o bloco de ID/critério da repetição empurrava a cena para baixo da primeira dobra (cena em 922 px num desktop 1366×768), não havia como achar o dia de maior resíduo nem filtrar por empresa, e os dias apareciam só como D+n. O IndexedDB é o único armazenamento: limpar o navegador apagava todo o trabalho sem aviso.
+2. **Causa.** A criação de estudo tinha um só caminho (sintético). O Replay não usava o calendário dos casos nem o remetido por fechamento que já carrega. Não existia exportação.
+3. **O que foi feito.** Branch `feat/atalhos-replay-backup`, a partir de `feat/bancada-exploracao` (`72138e4`), sem mudança no motor Python. Após confirmar um caso: "Analisar este caso" (estudo com o caso como origem, abre nas premissas) e "Adicionar a uma carteira" (junta o caso ao cenário original de um estudo com dados importados; uma empresa por caso). "Novo estudo" pergunta a origem antes (caso importado, carteira de empresas ou gerada); só a gerada chama a API (`web/src/study/newStudy.ts`). Replay: repetição resumida numa linha recolhível, acumulados depois da cena (cena em 645 px), filtro de cartões por empresa, "Ir ao maior resíduo" (maior remetido OUT + IN num fechamento) e data real ao lado de D+n quando a origem vem de casos ainda no navegador (`web/src/replay/navigation.ts`). Estudos: aviso "Salvo neste navegador", "Exportar" por estudo e "Importar estudo" (`web/src/study/studyTransfer.ts`, formato `motor-de-fluxo/estudo` versão 1 com build SHA). Id repetido entra como cópia sem resultados, como o "Duplicar". A origem deixou de ser perguntada duas vezes: o Passo 1 do estudo mostra um resumo de uma linha ("Dados importados de uma empresa · AstroPay · ago/2026 · 12 ordens · R$ …") e o seletor só abre em "Trocar origem"; os nomes das opções são os mesmos no "Novo estudo", no seletor e na lista de estudos (`web/src/study/sourceSummary.ts`). Dez specs Playwright que criavam estudo sintético passam a escolher "Carteira gerada (exemplo)". `tsc`, `eslint` e 1.114 testes unitários passam. Playwright local (rodado no Edge, sem navegador do Playwright instalado nesta máquina): a base `72138e4` tem 36 ok / 28 falhas; esta branch fica com as mesmas 28 falhas herdadas da bancada e nenhuma nova — o spec de duas abas do caso passa isolado e só estoura o limite de 30 s na suíte cheia.
+4. **O que isso invalida.** O fluxo "Novo estudo → carteira sintética imediata" deixa de existir; roteiros ou specs que dependem dele precisam escolher a origem. Arquivos exportados guardam o estudo como estava; importar num app com outra versão do motor mantém os resultados como foram calculados. Números do motor: nada. Nenhum push nem deploy.
+
+## 2026-09-28 — Bancada: carteira de várias empresas, combinações e front mais claro
+
+1. **Sintoma.** Testar composição exigia montar uma planilha por combinação, com a empresa marcada só pelo prefixo do ID; o netting entre linhas da mesma empresa (ex.: AstroPay Foreign PIX × Multimoedas) aparecia como "entre clientes", misturado ao ganho que a carteira traz; a apresentação não abria para carteiras de casos juntos; a tela do estudo misturava caminhos antigos (prévia, hipótese, comparar) com o fluxo novo.
+2. **Causa.** O motor só conhece `cliente_id`; o front não tinha o nível "empresa" nem juntava casos de empresas diferentes num cenário. O documento de comunicação citava a origem inteira (todas as ordens) e passava do limite de 20 mil caracteres.
+3. **O que foi feito.** Branch `feat/bancada-exploracao` (commits `402815f` a `70cb94e`), sem mudança no motor Python. Origem "Juntar casos de empresas": um caso por empresa, calendário comum (dia 0 = data inicial mais antiga), `companyByOrder`/`sourceCases` no schema do estudo e validadores regenerados. Empresa vem do cadastro; prefixo do ID fica como alternativa para caso único. "Gerar todas as combinações" (até 8 empresas) e tabela "De onde vem a economia de cada empresa" (sozinha × carteira, mesma linha × entre linhas). Apagar cenários (execuções removidas só junto com o cenário). Replay sem códigos, com empresa e prazo em destaque. Apresentação com nomes de empresa, "Carteira com N empresas", separação entre linhas da mesma empresa e entre empresas, e seção "Original × variações". Estudo em caminho único; `/premissas`, `/replay`, `/carteira` redirecionam para `/estudos` e `/comparar` para `/quadro`; aba Perfis fora da navegação; nomes automáticos e renomear cenário sem invalidar diagnóstico; rótulos "custo sem pool/com pool". `tsc`, `eslint` e 1.067 testes unitários passam.
+4. **O que isso invalida.** Treze specs Playwright (`stage4-*`, `stage6-demo-communication`, `stage6-presentation`, `study-*`, `foundation`, `real-auth` e outros) ainda esperam as telas escondidas e não foram rodadas nem reescritas: a CI de navegador deve falhar até serem ajustadas. Expectativas sobre "Executar cenário atual", "Criar hipótese", `/comparar` e textos "baseline/netado" ficam superadas. A partição "entre linhas × entre empresas" depende das variações "só X" rodadas; o número que vai para frente (qual camada é valor do produto) segue como decisão de negócio aberta. Nenhum deploy.
 
 ## 2026-09-25 — Compatibilidade dos E2Es históricos e navegação com zoom (MOT-99)
 

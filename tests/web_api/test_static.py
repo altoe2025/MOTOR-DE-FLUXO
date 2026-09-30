@@ -74,6 +74,7 @@ def static_client(tmp_path: Path):
         "/carteira/00000000-0000-4000-8000-000000000020",
         "/diagnostico",
         "/comparar",
+        "/quadro",
         "/estudos",
         "/estudos/00000000-0000-4000-8000-000000000020",
         "/estudos/00000000-0000-4000-8000-000000000020/diagnostico",

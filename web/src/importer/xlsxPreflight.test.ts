@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { strToU8, zipSync } from 'fflate';
 import { describe, expect, it } from 'vitest';
 
-import { preflightXlsx } from './xlsxPreflight';
+import { ImportFileError, preflightXlsx } from './xlsxPreflight';
 
 async function fixture(name: string): Promise<ArrayBuffer> {
   const bytes = await readFile(new URL(`./__fixtures__/${name}`, import.meta.url));
@@ -75,5 +75,41 @@ describe('preflightXlsx', () => {
 
   it('rejects a sparse cell reference when its row omits the r attribute', async () => {
     await expect(preflightXlsx(sparseWorkbook(true))).rejects.toMatchObject({ code: 'ROW_LIMIT_EXCEEDED' });
+  });
+});
+
+describe('mensagens acionáveis do preflight', () => {
+  const required = ['operacao_id', 'cliente_nome', 'classificacao_perfil', 'direcao', 'data_conhecida', 'data_limite', 'valor_brl'];
+
+  async function failure(buffer: ArrayBuffer): Promise<ImportFileError> {
+    try { await preflightXlsx(buffer); } catch (error) { if (error instanceof ImportFileError) return error; throw error; }
+    throw new Error('preflight deveria falhar');
+  }
+
+  it('diz qual coluna falta, em que posição e o que foi achado', async () => {
+    const error = await failure(sparseWorkbook(false, [...required.slice(0, 5), 'prazo', required[6]!], false));
+    expect(error.code).toBe('HEADER_INVALID');
+    expect(error.detail).toBe("Coluna 'data_limite' não encontrada na posição 6 (coluna F); achado: 'prazo'. Os cabeçalhos devem seguir exatamente o modelo. Baixe o modelo.");
+  });
+
+  it('aponta coluna sobrando depois das oito do modelo', async () => {
+    const error = await failure(sparseWorkbook(false, [...required, 'finalidade_codigo', 'observacao'], false));
+    expect(error.detail).toContain("Coluna a mais na posição 9 (coluna I): 'observacao'");
+  });
+
+  it('aponta coluna faltando no fim', async () => {
+    const error = await failure(sparseWorkbook(false, required.slice(0, 6), false));
+    expect(error.detail).toContain("Coluna 'valor_brl' não encontrada na posição 7 (coluna G)");
+  });
+
+  it('não repete o código no texto para a pessoa', async () => {
+    const error = await failure(sparseWorkbook(false, [...required, 'unknown'], false));
+    expect(error.detail).not.toMatch(/HEADER_INVALID/);
+    expect(error.message).toMatch(/^HEADER_INVALID: /);
+  });
+
+  it('explica nome de aba e limite de linhas', async () => {
+    expect((await failure(await fixture('wrong-sheet-name.xlsx'))).detail).toMatch(/A aba deve se chamar 'operacoes'.*achada: '.+'/);
+    expect((await failure(sparseWorkbook())).detail).toMatch(/até 1\.000 operações.*Divida/);
   });
 });

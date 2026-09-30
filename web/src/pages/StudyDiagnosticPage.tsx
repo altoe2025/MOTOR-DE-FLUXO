@@ -11,6 +11,8 @@ import { DiagnosticControls } from '../diagnostics/components/DiagnosticControls
 import { DiagnosticEngineResult } from '../diagnostics/components/DiagnosticEngineResult';
 import { DiagnosticStatus, type DiagnosticViewState } from '../diagnostics/components/DiagnosticStatus';
 import { currentDiagnostic, VariationComparison } from '../levers/VariationComparison';
+import { PortfolioRecommendation } from '../levers/PortfolioRecommendationPanel';
+import { isCurrentCombinationScenario } from '../levers/prepareCombinationStudy';
 import {
   cancelStudyDiagnostic,
   executeStudyDiagnostic,
@@ -18,6 +20,7 @@ import {
 } from '../diagnostics/diagnosticExecutionService';
 import { buildPreviewRequest, type PreviewRequestProvenance } from '../preparation/buildPreviewRequest';
 import type { DiagnosticExecutionRecord, ScenarioDocument, StudyDocument } from '../study/model';
+import { Button } from '../ui/Button';
 
 function requestProvenance(study: StudyDocument, scenario: ScenarioDocument): PreviewRequestProvenance {
   const fallback: FieldProvenance = {
@@ -46,6 +49,13 @@ function transientState(snapshot: JobSnapshot): DiagnosticViewState {
       total: snapshot.progress.total, phase: snapshot.progress.phase,
     },
   };
+}
+
+export function diagnosticFailureMessage(error: Readonly<{ code: string; message: string }> | null): string {
+  if (error?.code === 'ACESSO_NAO_PERMITIDO') {
+    return 'Esta conta entrou, mas ainda não está autorizada a executar diagnósticos no servidor.';
+  }
+  return error?.message ?? 'Não foi possível concluir o diagnóstico.';
 }
 
 function persistedState(execution: DiagnosticExecutionRecord | null): DiagnosticViewState | null {
@@ -86,7 +96,10 @@ export function latestDiagnostic(
 
 export function StudyDiagnosticPage() {
   const { studyId } = useParams();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const runAllRequested = searchParams.get('runAll') === '1';
+  const autoRunIdentities = useRef(new Set<string>());
+  const batchToken = useRef<number | null>(null);
   const requestedScenarioId = searchParams.get('scenarioId');
   const rawExecutionId = searchParams.get('executionId');
   const requestedExecutionId = selectionId(rawExecutionId);
@@ -105,7 +118,9 @@ export function StudyDiagnosticPage() {
   const [runInProgress, setRunInProgress] = useState(false);
   const [cancelInFlight, setCancelInFlight] = useState(false);
   const [runAllProgress, setRunAllProgress] = useState<string | null>(null);
+  const [comparisonOpen, setComparisonOpen] = useState(false);
   const cancelInFlightRef = useRef(false);
+  const batchCancelRequested = useRef(false);
   const identityToken = useRef(0);
   const activeIdentity = useRef(screenIdentity);
 
@@ -115,6 +130,8 @@ export function StudyDiagnosticPage() {
     activeIdentity.current = screenIdentity;
     mounted.current = true;
     resumedAttempts.current = new Set();
+    batchToken.current = null;
+    batchCancelRequested.current = false;
     setViewState(null);
     setRunInProgress(false);
     setRunAllProgress(null);
@@ -157,6 +174,8 @@ export function StudyDiagnosticPage() {
 
   const selectedScenarioId = requestedScenarioId ?? study?.baseScenarioId;
   const scenario = study?.scenarios.find((item) => item.id === selectedScenarioId) ?? null;
+  const combinationStudy = study?.studyType === 'PORTFOLIO_COMBINATIONS';
+  const combinationOverview = combinationStudy && requestedScenarioId === null && rawExecutionId === null;
   const generated = scenario?.sourceSnapshot.generationInputSnapshot !== undefined;
   const effectiveCount = generated ? count : 1;
 
@@ -174,7 +193,11 @@ export function StudyDiagnosticPage() {
     if (!mounted.current || activeIdentity.current !== screenIdentity) return;
     const current = controller.snapshot.document;
     if (current !== null) setStudy(current);
-    if (attempt.status === 'FAILED') setViewState({ kind: 'FAILED', attemptId: attempt.attemptId, publicMessage: 'Não foi possível concluir o diagnóstico. A tentativa anterior foi preservada no histórico.' });
+    if (attempt.status === 'FAILED') {
+      const publicMessage = diagnosticFailureMessage(attempt.error);
+      setViewState({ kind: 'FAILED', attemptId: attempt.attemptId,
+        publicMessage: `${publicMessage} A tentativa foi preservada no histórico.` });
+    }
     else setViewState({ kind: attempt.status, attemptId: attempt.attemptId });
   }, [controller, screenIdentity]);
 
@@ -210,22 +233,25 @@ export function StudyDiagnosticPage() {
   }, [complete, controller, effectiveCount, runInProgress, scenario, study, trackedApi]);
 
   useEffect(() => {
-    if (study === null || scenario === null || runInProgress || rawExecutionId !== null) return;
+    if (study === null || scenario === null || combinationStudy || runInProgress || rawExecutionId !== null) return;
     const latest = latestDiagnostic(study, scenario);
     if (latest?.status !== 'QUEUED' || resumedAttempts.current.has(latest.attemptId)) return;
     resumedAttempts.current.add(latest.attemptId);
     void run();
-  }, [run, runInProgress, scenario, study, rawExecutionId]);
+  }, [combinationStudy, run, runInProgress, scenario, study, rawExecutionId]);
 
-  const runAll = async () => {
-    if (study === null || runInProgress || runAllProgress !== null) return;
+  const runAll = useCallback(async () => {
+    if (study === null || study.id !== studyId || runInProgress || runAllProgress !== null || batchToken.current !== null) return;
     const token = identityToken.current;
+    batchToken.current = token;
+    batchCancelRequested.current = false;
     const isActive = () => mounted.current && identityToken.current === token;
-    const pending = study.scenarios.filter((item) => currentDiagnostic(study, item) === null);
+    const pending = study.scenarios.filter((item) => currentDiagnostic(study, item) === null
+      && (!combinationStudy || isCurrentCombinationScenario(study, item)));
     setRunInProgress(true);
     try {
       for (const [index, item] of pending.entries()) {
-        if (!isActive()) return;
+        if (!isActive() || batchCancelRequested.current) return;
         setRunAllProgress(`Rodando ${index + 1} de ${pending.length}…`);
         const itemCount = item.sourceSnapshot.generationInputSnapshot !== undefined ? count : 1;
         const attempt = await executeStudyDiagnostic({
@@ -243,8 +269,10 @@ export function StudyDiagnosticPage() {
               scenario: currentScenario, count: itemCount, baseSeed: attemptId, previewRequest: preview,
             });
           },
+          ...(combinationStudy ? { persistence: 'TERMINAL_ONLY' as const } : {}),
         });
         if (!isActive()) return;
+        if (batchCancelRequested.current) return;
         if (attempt.status !== 'SUCCEEDED') {
           complete(attempt);
           return;
@@ -255,8 +283,29 @@ export function StudyDiagnosticPage() {
     } catch {
       if (isActive()) setViewState({ kind: 'FAILED', attemptId: 'não persistida', publicMessage: 'Não foi possível rodar todas as variações. As que terminaram ficaram salvas.' });
     } finally {
-      if (isActive()) { setRunAllProgress(null); setRunInProgress(false); }
+      if (batchToken.current === token) batchToken.current = null;
+      if (isActive()) {
+        batchCancelRequested.current = false;
+        setRunAllProgress(null);
+        setRunInProgress(false);
+      }
     }
+  }, [client, combinationStudy, complete, controller, count, runAllProgress, runInProgress, study, studyId]);
+
+  useEffect(() => {
+    if (!runAllRequested || !combinationOverview || study?.id !== studyId || runInProgress
+      || activeIdentity.current !== screenIdentity || autoRunIdentities.current.has(screenIdentity)) return;
+    autoRunIdentities.current.add(screenIdentity);
+    const next = new URLSearchParams(searchParams);
+    next.delete('runAll');
+    setSearchParams(next, { replace: true });
+    void runAll();
+  }, [combinationOverview, runAll, runAllRequested, runInProgress, screenIdentity, searchParams, setSearchParams, study, studyId]);
+
+  const cancelBatch = () => {
+    if (!runInProgress || runAllProgress === null) return;
+    batchCancelRequested.current = true;
+    setRunAllProgress('Cancelando após a combinação atual…');
   };
 
   const cancel = async () => {
@@ -308,11 +357,44 @@ export function StudyDiagnosticPage() {
   }, [publishCommunication, study, scenario, terminal]);
   return <article className="diagnostic-page">
     <p className="eyebrow">Estudo {study?.name ?? ''}</p>
-    <h1 ref={heading} tabIndex={-1}>Diagnóstico robusto</h1>
-    <p className="page-introduction">Múltiplas repetições quando a origem é gerável; uma execução individual quando a entrada já está fixa.</p>
-    {study === null || scenario === null ? <DiagnosticStatus state={viewState ?? { kind: 'UNAVAILABLE', reason: 'Carregando estudo…' }} /> : <>
+    <h1 ref={heading} tabIndex={-1}>{combinationOverview ? 'Recomendação de carteira' : generated ? 'Diagnóstico robusto' : 'Diagnóstico'}</h1>
+    <p className="page-introduction">{combinationOverview
+      ? 'Compare a economia das composições da carteira e escolha o limite de espera que faz sentido para você.'
+      : generated
+        ? 'A carteira é gerada; o diagnóstico roda várias repetições, mostra a distribuição da economia e detalha a repetição mediana.'
+        : `Cenário: ${scenario?.name ?? '…'}. Custo sem pool é cada ordem remetendo sozinha; custo com pool é o que sobra depois do netting.`}</p>
+    {study === null || scenario === null ? <DiagnosticStatus state={viewState ?? { kind: 'UNAVAILABLE', reason: 'Carregando estudo…' }} /> : combinationStudy ? <>
+      {combinationOverview ? <>
+        <p><Link to={`/carteira/${encodeURIComponent(study.id)}`}>Alterar empresas, premissas e alavancas</Link></p>
+        <Button data-chat-help-id="control.diagnostico.combinacoes" onClick={() => void runAll()} disabled={runInProgress || controller.snapshot.status === 'STORAGE_FAILURE'}>
+          Diagnosticar combinações
+        </Button>
+        {runAllProgress === null ? null : <Button variant="secondary" data-chat-help-id="control.diagnostico.cancelar-lote" onClick={cancelBatch}>
+          Cancelar lote
+        </Button>}
+        <p className="field-hint">{study.scenarios.filter((item) => isCurrentCombinationScenario(study, item)).length} composições preparadas. Os diagnósticos atuais são reaproveitados.</p>
+        {runAllProgress === null ? null : <p role="status" aria-live="polite">{runAllProgress}</p>}
+        {viewState === null || viewState.kind === 'SUCCEEDED' ? null : <DiagnosticStatus state={viewState} />}
+        <PortfolioRecommendation study={study} />
+      </> : <>
+        <Link to={`/estudos/${study.id}/diagnostico`}>Voltar à recomendação</Link>
+        {viewState === null || viewState.kind === 'SUCCEEDED' ? null : <DiagnosticStatus state={viewState} />}
+        {envelope === null ? null : <>
+          <DiagnosticEngineResult envelope={envelope} />
+          {hasIofFallback ? <p><strong>IOF padrão por direção</strong>: ordens sem regra específica para a combinação de finalidade e direção usam as premissas da simulação por direção, sem classificação regulatória inferida ou cotação.</p> : null}
+          <Link className="button-link" to={`/estudos/${study.id}/apresentacao?cenario=${encodeURIComponent(scenario.id)}&execucao=${encodeURIComponent(terminal!.id)}`}>Apresentar esta execução</Link>
+        </>}
+      </>}
+    </> : <>
       <DiagnosticControls generated={generated} count={effectiveCount} onCountChange={setCount} onRun={() => void run()} disabled={runInProgress || controller.snapshot.status === 'STORAGE_FAILURE'} />
-      <VariationComparison study={study} selectedScenarioId={scenario.id} running={runInProgress} progress={runAllProgress} onRunAll={() => void runAll()} />
+      {study.scenarios.length < 2 ? null : <Button variant="secondary" data-chat-help-id="control.diagnostico.mostrar-quadros" className="comparison-toggle"
+        aria-expanded={comparisonOpen} aria-controls="variation-comparison-panel" onClick={() => setComparisonOpen((open) => !open)}>
+        {comparisonOpen ? 'Ocultar quadros comparativos' : 'Abrir quadros comparativos'}
+      </Button>}
+      {study.scenarios.length > 1 ? <p className="field-hint">Nos quadros comparativos, escolha a carteira com maior economia dentro do seu limite de espera.</p> : null}
+      {comparisonOpen ? <div id="variation-comparison-panel">
+        <VariationComparison study={study} selectedScenarioId={scenario.id} running={runInProgress} progress={runAllProgress} onRunAll={() => void runAll()} />
+      </div> : null}
       {viewState === null || viewState.kind === 'SUCCEEDED' ? null : <DiagnosticStatus state={viewState} {...(cancelInFlight ? {} : { onCancel: () => void cancel() })} onRetry={(attemptId) => void retry(attemptId)} />}
       {envelope === null ? null : <>
         <Link className="button-link replay-cta" to={`/estudos/${study.id}/replay?executionId=${encodeURIComponent(terminal!.id)}`}>Abrir Replay · Fronteira Viva</Link>
@@ -323,4 +405,3 @@ export function StudyDiagnosticPage() {
     </>}
   </article>;
 }
-

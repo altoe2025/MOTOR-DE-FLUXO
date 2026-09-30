@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from time import perf_counter_ns
 from typing import Literal
@@ -25,6 +25,7 @@ from servidor.contracts.primitives import OrigemValor
 from servidor.diagnostics.analysis import (
     RepetitionInput,
     analyze_diagnostic_repetitions,
+    median_repetition_index,
     summarize_repetition,
 )
 from servidor.diagnostics.consequences import (
@@ -216,7 +217,19 @@ def aggregate_diagnostic(
     request: DiagnosticRequest,
     results: tuple[RepetitionResult, ...],
 ) -> DiagnosticEnvelope:
-    """Monta o único envelope publicado depois de todas as repetições."""
+    """Monta o único envelope publicado depois de todas as repetições.
+
+    Em entrada gerada, a execução detalhada (e levada ao Replay) é a da mediana da
+    economia, não a indicada no pedido; em entrada fixa há uma só execução.
+    """
+    sampling = request.sampling
+    if isinstance(sampling, GeneratedInputPlan):
+        chosen = median_repetition_index(
+            tuple(result.envelope.result.agregado.economia_periodo_brl for result in results)
+        )
+        results = tuple(
+            replace(result, selected=index == chosen) for index, result in enumerate(results)
+        )
     repetitions = tuple(
         RepetitionInput(
             request=result.request,
@@ -230,7 +243,7 @@ def aggregate_diagnostic(
     )
     axes = analyze_diagnostic_repetitions(repetitions)
     selected = next(result for result in results if result.selected)
-    sampling = request.sampling
+    selected_repetition_id = selected.envelope.statistics.repetition_id
     statistics = (
         SingleExecutionStatistics(
             kind="SINGLE_EXECUTION",
@@ -242,7 +255,7 @@ def aggregate_diagnostic(
         else DistributionStatistics(
             kind="DISTRIBUTION",
             count=sampling.count,
-            selected_repetition_id=request.selected_repetition_id,
+            selected_repetition_id=selected_repetition_id,
             percentile_method="EMPIRICAL_NEAREST_RANK",
         )
     )

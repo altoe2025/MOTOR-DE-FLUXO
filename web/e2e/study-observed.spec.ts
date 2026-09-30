@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { expectCanonicalPreview, persistedPreviews } from './helpers/persistedPreview';
+import { runCanonicalDiagnostic, persistedDiagnostics } from './helpers/persistedDiagnostic';
 
 const OWNER = '00000000-0000-4000-8000-000000000021';
 const NOW = '2026-09-19T12:00:00Z';
@@ -30,41 +30,43 @@ test('confirmed observed case becomes an immutable study snapshot and survives r
   }, { owner: OWNER, now: NOW });
   await page.reload();
   await page.getByRole('button', { name: 'Novo estudo' }).click();
+  await page.getByRole('radio', { name: 'Carteira gerada (exemplo)' }).check();
+  await page.getByRole('button', { name: 'Criar com carteira gerada' }).click();
   await expect(page).toHaveURL(/\/carteira\/[0-9a-f-]+$/);
-  await page.getByRole('radio', { name: 'Caso observado' }).check();
-  await page.getByLabel('Caso confirmado').selectOption('case-e2e');
+  await page.getByRole('button', { name: 'Trocar origem' }).click();
+  await page.getByRole('radio', { name: 'Dados importados de uma empresa' }).check();
+  await page.getByLabel('Caso importado').selectOption('case-e2e');
   await expect(page.getByRole('heading', { name: 'Empresa anonimizada' })).toBeVisible();
-  await page.getByRole('button', { name: 'Usar caso confirmado' }).click();
+  await page.getByRole('button', { name: 'Usar este caso' }).click();
   const studyId = page.url().split('/').at(-1)!;
   await expect.poll(() => page.evaluate((id) => window.__MOTOR_E2E__!.studySource(id), studyId))
     .toBe('OBSERVED_CASE');
 
-  await page.getByRole('button', { name: 'Executar cenário atual' }).click();
-  await expect.poll(() => page.evaluate((id) => window.__MOTOR_E2E__!.studyExecutionStatuses(id), studyId))
-    .toContain('SUCCEEDED');
-  const observed = await expectCanonicalPreview(page, studyId);
+  const observed = await runCanonicalDiagnostic(page, studyId);
   expect(observed.sourceSnapshot?.source.kind).toBe('OBSERVED_CASE');
-  expect(observed.observedComparison?.rows).toContainEqual(expect.objectContaining({
-    code: 'GROSS_OUT_BRL', status: 'MATCHED', observedValue: '100', difference: '0',
-  }));
-  expect(Number(observed.envelope!.result.agregado.volume_bruto_periodo_brl)).toBe(100);
+  // Diagnostics preserve the observed evidence in the immutable source snapshot.
+  const grossOut = observed.sourceSnapshot.observedOutcome!.metrics.find((metric) => metric.code === 'GROSS_OUT_BRL')!;
+  expect(grossOut.value).toBe('100');
+  expect(Number(observed.envelope!.selected_execution.result.agregado.volume_bruto_periodo_brl)).toBe(Number(grossOut.value));
 
+  await page.goto(`/carteira/${studyId}`);
   await page.reload();
-  await expect(page.getByRole('radio', { name: 'Caso observado' })).toBeChecked();
-  await expect(page.getByLabel('Caso confirmado')).toHaveValue('case-e2e');
-  expect(await persistedPreviews(page, studyId)).toEqual([observed]);
+  await page.getByRole('button', { name: 'Trocar origem' }).click();
+  await expect(page.getByRole('radio', { name: 'Dados importados de uma empresa' })).toBeChecked();
+  await expect(page.getByLabel('Caso importado')).toHaveValue('case-e2e');
+  expect(await persistedDiagnostics(page, studyId)).toEqual([observed]);
 
-  await page.getByRole('button', { name: 'Converter para autoria manual' }).click();
+  await page.getByRole('button', { name: 'Editar as ordens à mão' }).click();
   await expect.poll(() => page.evaluate((id) => window.__MOTOR_E2E__!.studySource(id), studyId))
     .toBe('AUTHORED');
   await expect.poll(() => page.evaluate((id) => window.__MOTOR_E2E__!.studyExecutionStatuses(id), studyId))
-    .toEqual(['RUNNING', 'SUCCEEDED']);
-  await expect.poll(async () => (await persistedPreviews(page, studyId)).length).toBe(1);
-  expect((await persistedPreviews(page, studyId))[0]!.status).toBe('SUCCEEDED');
+    .toEqual(['QUEUED', 'SUCCEEDED']);
+  await expect.poll(async () => (await persistedDiagnostics(page, studyId)).length).toBe(1);
+  expect((await persistedDiagnostics(page, studyId))[0]!.status).toBe('SUCCEEDED');
 
   await page.evaluate(() => { document.documentElement.style.zoom = '200%'; });
-  await expect(page.getByRole('heading', { name: 'Resultado do estudo', exact: true })).toBeVisible();
-  expect(await persistedPreviews(page, studyId)).toEqual([observed]);
+  await expect(page.getByLabel('Nome do estudo')).toBeVisible();
+  expect(await persistedDiagnostics(page, studyId)).toEqual([observed]);
   await page.screenshot({ path: testInfo.outputPath('observed-study-zoom-200.png'), fullPage: true });
   const network = JSON.stringify(requests);
   expect(network).not.toContain('arquivo-bruto-secreto.xlsx');

@@ -1,38 +1,12 @@
 import Decimal from 'decimal.js';
 import { Link } from 'react-router-dom';
 
-import { breakdownByCompany, type Breakdown } from '../pages/comparisonBoardBreakdown';
 import { formatFraction, formatMoney, formatSignedMoney } from '../presentation/format';
-import type { DiagnosticExecutionRecord, PreviewEnvelope, ScenarioDocument, StudyDocument } from '../study/model';
+import type { ScenarioDocument, StudyDocument } from '../study/model';
 import { Button } from '../ui/Button';
+import { interClientSplit, savingsOrigin, scenarioRow } from './savingsOrigin';
 
-type Row = Readonly<{
-  scenario: ScenarioDocument;
-  execution: DiagnosticExecutionRecord | null;
-  envelope: PreviewEnvelope | null;
-  breakdown: Breakdown | null;
-}>;
-
-export function currentDiagnostic(study: StudyDocument, scenario: ScenarioDocument): DiagnosticExecutionRecord | null {
-  return [...study.executions].reverse().find((item): item is DiagnosticExecutionRecord =>
-    item.kind === 'DIAGNOSTIC' && item.scenarioId === scenario.id && item.status === 'SUCCEEDED'
-    && item.envelope !== null && item.scenarioRevision === scenario.revision
-    && item.inputFingerprint === scenario.inputFingerprint) ?? null;
-}
-
-function rowFor(study: StudyDocument, scenario: ScenarioDocument): Row {
-  const execution = currentDiagnostic(study, scenario);
-  const envelope = (execution?.envelope?.selected_execution ?? null) as PreviewEnvelope | null;
-  let breakdown: Breakdown | null = null;
-  if (execution !== null && envelope !== null) {
-    try {
-      breakdown = breakdownByCompany(envelope);
-    } catch {
-      breakdown = null;
-    }
-  }
-  return { scenario, execution, envelope, breakdown };
-}
+export { currentDiagnostic } from './savingsOrigin';
 
 export function VariationComparison({ study, selectedScenarioId, running, progress, onRunAll }: Readonly<{
   study: StudyDocument;
@@ -42,7 +16,7 @@ export function VariationComparison({ study, selectedScenarioId, running, progre
   onRunAll(): void;
 }>) {
   if (study.scenarios.length < 2) return null;
-  const rows = study.scenarios.map((scenario) => rowFor(study, scenario));
+  const rows = study.scenarios.map((scenario) => scenarioRow(study, scenario));
   const base = rows.find((row) => row.scenario.id === study.baseScenarioId) ?? rows[0]!;
   const mixedSampling = base.execution?.requestSnapshot.sampling.kind === 'GENERATED_INPUT'
     && rows.some((row) => row !== base && row.execution?.requestSnapshot.sampling.kind === 'FIXED_INPUT');
@@ -50,6 +24,9 @@ export function VariationComparison({ study, selectedScenarioId, running, progre
   const groups = [...new Set(rows.flatMap((row) => row.breakdown?.companies.map((item) => item.group) ?? []))].sort();
   const delta = (value: string | undefined, reference: string | undefined) =>
     value === undefined || reference === undefined ? null : new Decimal(value).minus(reference).toFixed();
+  const origin = savingsOrigin(rows, base);
+  const split = interClientSplit(origin);
+  const hasSolo = origin.some((entry) => entry.solo !== undefined);
   const link = (scenario: ScenarioDocument) => `/estudos/${encodeURIComponent(study.id)}/diagnostico?scenarioId=${encodeURIComponent(scenario.id)}`;
 
   return <section className="variation-comparison" aria-labelledby="variation-comparison-title">
@@ -59,14 +36,14 @@ export function VariationComparison({ study, selectedScenarioId, running, progre
       a diferença de economia não isola o efeito da alavanca.
     </p> : null}
     <div className="source-actions">
-      <span className="field-hint">{pending === 0 ? 'Todos os cenários têm diagnóstico atual.' : `${pending} cenário(s) sem diagnóstico atual.`}</span>
-      <Button disabled={running || pending === 0} onClick={onRunAll}>{running ? progress ?? 'Rodando…' : 'Rodar todas'}</Button>
+      <span className="field-hint">{pending === 0 ? 'Todos os cenários têm diagnóstico atual.' : `${pending} cenário(s) sem diagnóstico atual.`} Netabilidade é a parte do volume que não cruzou a fronteira.</span>
+      <Button data-chat-help-id="control.diagnostico.rodar-todas" disabled={running || pending === 0} onClick={onRunAll}>{running ? progress ?? 'Rodando…' : 'Rodar todas'}</Button>
     </div>
     <div className="table-scroll" role="region" tabIndex={0} aria-label="Comparação dos cenários">
       <table className="company-table">
         <caption>Diferença sempre contra “{base.scenario.name}”</caption>
         <thead><tr>
-          <th scope="col">Cenário</th><th scope="col">Ordens</th><th scope="col">Netabilidade</th>
+          <th scope="col">Cenário</th><th scope="col">Ordens</th><th scope="col" title="Parte do volume que não cruzou a fronteira">Netabilidade</th>
           <th scope="col">Custo sem pool</th><th scope="col">Custo com pool</th><th scope="col">Economia</th><th scope="col">Δ economia</th>
         </tr></thead>
         <tbody>{rows.map((row) => {
@@ -87,7 +64,7 @@ export function VariationComparison({ study, selectedScenarioId, running, progre
     </div>
     {groups.length === 0 ? null : <div className="table-scroll" role="region" tabIndex={0} aria-label="Economia por empresa nos cenários">
       <table className="company-table">
-        <caption>Economia por empresa (prefixo do ID da operação)</caption>
+        <caption>Economia por empresa</caption>
         <thead><tr><th scope="col">Cenário</th>{groups.map((group) => <th scope="col" key={group}>{group}</th>)}</tr></thead>
         <tbody>{rows.map((row) => <tr key={row.scenario.id}>
           <th scope="row">{row.scenario.name}
@@ -103,5 +80,32 @@ export function VariationComparison({ study, selectedScenarioId, running, progre
         </tr>)}</tbody>
       </table>
     </div>}
+    {origin.length < 2 ? null : <section className="savings-origin" aria-labelledby="savings-origin-title">
+      <h3 id="savings-origin-title">De onde vem a economia de cada empresa</h3>
+      {!hasSolo ? <p className="field-hint">No estudo, use “Fazer composição” a partir do original e rode todas para comparar o que cada empresa faria sozinha com sua participação na carteira.</p> : <>
+        <p className="field-hint">“Sozinha” usa as mesmas operações e premissas, sem as outras empresas. A diferença mostra como a economia atribuída à empresa muda na carteira; não é a contribuição total dela para o conjunto.</p>
+        <div className="table-scroll" role="region" tabIndex={0} aria-label="Origem da economia por empresa">
+          <table className="company-table">
+            <caption>Contra “{base.scenario.name}”</caption>
+            <thead><tr>
+              <th scope="col">Empresa</th><th scope="col">Casou sozinha · mesma linha</th><th scope="col">Casou sozinha · entre linhas da empresa</th>
+              <th scope="col">Economia sozinha</th><th scope="col">Economia na carteira</th><th scope="col">Ganho da carteira</th>
+            </tr></thead>
+            <tbody>{origin.map(({ item, solo }) => <tr key={item.group}>
+              <th scope="row">{item.group}</th>
+              <td>{solo === undefined ? '—' : formatMoney(solo.matchedOwn)}</td>
+              <td>{solo === undefined ? '—' : formatMoney(solo.matchedOthers)}</td>
+              <td>{solo === undefined ? '—' : formatMoney(solo.savings)}</td>
+              <td>{formatMoney(item.savings)}</td>
+              <td>{solo === undefined ? <small>rode “só {item.group}”</small> : formatSignedMoney(new Decimal(item.savings).minus(solo.savings).toFixed())}</td>
+            </tr>)}</tbody>
+          </table>
+        </div>
+        {split === null ? null : <p className="field-hint">
+          Volume casado entre clientes na carteira: {formatMoney(split.total)}. Nas rodadas isoladas, a soma é {formatMoney(split.sameCompany)}.
+          Diferença: {formatSignedMoney(split.betweenCompanies)}. Essa comparação não identifica quanto casou entre empresas na carteira.
+        </p>}
+      </>}
+    </section>}
   </section>;
 }

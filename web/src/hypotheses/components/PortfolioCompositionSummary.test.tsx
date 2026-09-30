@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest';
 
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -40,7 +40,11 @@ describe('resumo da composição', () => {
       </div>
     </>);
     expect(screen.getByText(/1 participante/i)).toBeVisible();
-    expect(screen.getByText('Exportador', { selector: 'strong' })).toBeVisible();
+    const roster = screen.getAllByRole('list')[0]!;
+    expect(within(roster).getByText('Exportador', { selector: 'strong' })).toBeVisible();
+    expect(within(roster).queryByText(/participant-a|profile-a/)).not.toBeInTheDocument();
+    expect(screen.getByText(/Perfil profile-a/i)).not.toBeVisible();
+    await userEvent.setup().click(screen.getByText('Ver identificadores técnicos'));
     expect(screen.getByText(/Perfil profile-a/i)).toBeVisible();
     await userEvent.setup().click(screen.getByRole('button', { name: 'Criar hipótese / alterar carteira' }));
     expect(screen.getByLabelText('Editor de hipóteses')).toHaveFocus();

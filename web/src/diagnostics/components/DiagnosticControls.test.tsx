@@ -15,9 +15,10 @@ describe('controles do diagnóstico', () => {
     expect(onCountChange).toHaveBeenCalledWith(30);
   });
 
-  it('explica que entrada fixa produz apenas execução individual', () => {
+  it('esconde as repetições quando a entrada é fixa', () => {
     render(<DiagnosticControls generated={false} count={1} onCountChange={vi.fn()} onRun={vi.fn()} />);
     expect(screen.queryByLabelText('Repetições')).not.toBeInTheDocument();
-    expect(screen.getByText(/entrada fixa.*uma execução individual/i)).toBeVisible();
+    expect(screen.queryByText(/repeti/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Executar diagnóstico' })).toBeVisible();
   });
 });

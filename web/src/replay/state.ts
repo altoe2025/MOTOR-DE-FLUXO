@@ -46,8 +46,23 @@ function reconcile(label: string, actual: Decimal, published: string, day: numbe
   }
 }
 
+const stateCache = new WeakMap<ReplayDocument, Map<number, ReplayState>>();
+const verifiedFrozenDocuments = new WeakSet<ReplayDocument>();
+
+function isDeepFrozen(value: unknown, visited = new WeakSet<object>()): boolean {
+  if (value === null || typeof value !== 'object') return true;
+  if (visited.has(value)) return true;
+  if (!Object.isFrozen(value)) return false;
+  visited.add(value);
+  return Object.values(value).every((child) => isDeepFrozen(child, visited));
+}
+
 export function replayStateAt(document: ReplayDocument, day: number): ReplayState {
   assertDay(document, day);
+  const cacheable = verifiedFrozenDocuments.has(document) || isDeepFrozen(document);
+  if (cacheable) verifiedFrozenDocuments.add(document);
+  const cached = cacheable ? stateCache.get(document)?.get(day) : undefined;
+  if (cached !== undefined) return cached;
   const orders = new Map(document.orders.map((order) => [order.id, order]));
   const balances = new Map<string, Decimal>();
   let matchedPosition = new Decimal(0);
@@ -99,7 +114,7 @@ export function replayStateAt(document: ReplayDocument, day: number): ReplayStat
     if (value.isZero()) return [];
     const order = orders.get(orderId);
     if (order === undefined) return [];
-    return [{
+    return [Object.freeze({
       orderId: order.id,
       clientId: order.client_id,
       direction: order.direction,
@@ -108,16 +123,22 @@ export function replayStateAt(document: ReplayDocument, day: number): ReplayStat
       deadlineDay: order.deadline_day,
       originalValueBrl: order.value_brl,
       openValueBrl: decimalText(value),
-    }];
+    })];
   });
   const selectedDay = document.days[day]!;
-  return Object.freeze({
+  const state = Object.freeze({
     day,
     phase: phaseAt(document, day),
     openOrders: Object.freeze(openOrders),
     closing: selectedDay.closing,
     endState: selectedDay.end_state,
   });
+  if (cacheable) {
+    const documentCache = stateCache.get(document) ?? new Map<number, ReplayState>();
+    documentCache.set(day, state);
+    stateCache.set(document, documentCache);
+  }
+  return state;
 }
 
 export function sortOpenOrders(orders: readonly OpenReplayOrder[], sort: ReplaySort): readonly OpenReplayOrder[] {

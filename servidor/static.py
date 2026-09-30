@@ -19,6 +19,7 @@ _SPA_PATHS = {
     "carteira",
     "diagnostico",
     "comparar",
+    "quadro",
     "replay",
     "premissas",
     "estudos",

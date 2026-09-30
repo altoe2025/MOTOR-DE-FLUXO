@@ -24,6 +24,8 @@ test('two tabs expose CAS conflict while a second account stays isolated', async
   const pageB = await contextA.newPage();
   await pageA.goto('/estudos');
   await pageA.getByRole('button', { name: 'Novo estudo' }).click();
+  await pageA.getByRole('radio', { name: 'Carteira gerada (exemplo)' }).check();
+  await pageA.getByRole('button', { name: 'Criar com carteira gerada' }).click();
   await expect(pageA).toHaveURL(/\/carteira\/[0-9a-f-]+$/);
   const studyUrl = pageA.url();
   const studyId = studyUrl.split('/').at(-1)!;
@@ -56,7 +58,7 @@ test('two tabs expose CAS conflict while a second account stays isolated', async
   await pageB.evaluate(() => localStorage.setItem('motor-fluxo:e2e-account', 'b'));
   await pageB.reload();
   await pageB.goto('/estudos');
-  await expect(pageB.getByRole('button', { name: 'Abrir Estudo demonstrativo sintético' })).toBeVisible();
+  await expect(pageB.getByRole('heading', { name: 'Estudos', exact: true })).toBeVisible();
   await expect(pageB.getByText(/Edição da aba [AB]/)).toHaveCount(0);
 
   await pageB.evaluate(() => localStorage.setItem('motor-fluxo:e2e-account', 'a'));

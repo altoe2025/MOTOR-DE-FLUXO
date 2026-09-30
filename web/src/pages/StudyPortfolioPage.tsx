@@ -1,113 +1,77 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { useApiClient, useStudyController } from '../app/providers';
-import type { PreparationRequest } from '../api/client';
-import { validatePreparationRequest } from '../api/validators';
 import type { CompanyRecord, FieldProvenance, ObservedCase } from '../cases/domain';
-import { HypothesisBuilder } from '../hypotheses/components/HypothesisBuilder';
+import { isProfileMvpScenario } from '../hypotheses/hypothesis';
 import type { Levers } from '../levers/applyLevers';
 import { LeverBuilder } from '../levers/LeverBuilder';
-import { buildLeverScenario } from '../levers/leverScenario';
-import { PortfolioCompositionSummary } from '../hypotheses/components/PortfolioCompositionSummary';
-import { ProfileScenarioBuilder } from '../hypotheses/components/ProfileScenarioBuilder';
-import {
-  buildCompositionScenarioDraft,
-  buildCompositionSourceSnapshot,
-  materializeCompositionDraft,
-  type CompositionHypothesisDraft,
-} from '../hypotheses/composition';
-import {
-  applyProfileHypothesis,
-  buildHypothesisScenarioDraft,
-  isProfileMvpScenario,
-  PROFILE_MVP_EXAMPLE_ID,
-  type MvpHypothesisDraft,
-} from '../hypotheses/hypothesis';
-import {
-  buildProfileMvpPreparationRequest,
-  type ProfileMvpParticipantDraft,
-} from '../hypotheses/profileMvp';
-import type { OperationalProfileVersion } from '../profiles/domain';
-import { buildPreviewRequest, type PreviewRequestProvenance } from '../preparation/buildPreviewRequest';
+import { NEUTRAL_LEVERS } from '../levers/applyLevers';
+import { buildLeverScenario, derivationKind, periodCovering } from '../levers/leverScenario';
+import { currentDiagnostic } from '../levers/savingsOrigin';
+import { applyLeversToCombinationBase, prepareCombinationStudy } from '../levers/prepareCombinationStudy';
 import { resolvePortfolioSource } from '../preparation/resolvePortfolioSource';
 import { StudyEditor } from '../study/components/StudyEditor';
 import type { PortfolioSourceDraft } from '../study/components/PortfolioSourceSelector';
-import { appendCompositionHypothesis, appendScenario, createProfileStudy, duplicateStudy, renameStudy, updateScenario } from '../study/domain';
-import { executeStudyScenario } from '../study/executionService';
-import type { DeepMutable, EffectiveInput, ExecutionRecord, PreviewExecutionRecord, ScenarioDocument, ScenarioDraft, StudyDocument } from '../study/model';
-import { requiredBuildSha } from '../study/sourceConfiguration';
+import { appendScenario, appendScenarios, duplicateStudy, removeScenario, renameScenario, renameStudy, updateScenario } from '../study/domain';
+import type { ScenarioDocument, ScenarioDraft, StudyDocument } from '../study/model';
+import { combinationName, DEFAULT_STUDY_NAME, suggestStudyName, uniqueName, variationName } from '../study/naming';
+import { observedVariationLabel } from '../study/observedVariation';
 import type { StudyControllerStatus } from '../study/studyController';
 import { Button } from '../ui/Button';
 import { InlineNotice } from '../ui/InlineNotice';
-import { StudyResultPage } from './StudyResultPage';
 
-function executionProvenance(study: StudyDocument, scenario: ScenarioDocument): PreviewRequestProvenance {
-  const defaults: FieldProvenance = {
-    kind: 'SYNTHETIC_DEFAULT',
-    source: 'configuração inicial do estudo',
-    version: study.schemaVersion,
-    recordedAt: study.createdAt,
-    rule: 'study-defaults-v1',
-  };
-  const costs = {
-    iof_out: defaults, iof_in: defaults, carry_cnr: defaults,
-    custo_fixo_remessa: defaults, custo_oportunidade_aa: defaults,
-    spread_rail_bps: defaults, ptax: defaults,
-  };
-  return scenario.inputProvenance
-    ?? { premises: { windowDays: defaults, costs }, period: { horizonDays: defaults } };
-}
-
-function periodHorizon(scenario: ScenarioDocument): number {
-  if (scenario.period.httpPeriod.modo === 'NATURAL') {
-    return scenario.period.httpPeriod.periodo_medicao_dias;
-  }
-  if (!('executableHorizonDays' in scenario.period)) throw new Error('Horizonte executável ausente.');
-  return scenario.period.executableHorizonDays;
-}
-
-function generationChanged(draft: MvpHypothesisDraft): boolean {
-  return draft.kind === 'PROFILE_SIMULATION'
-    && (draft.volumeMultiplier !== '1' || draft.ticketMultiplier !== '1'
-      || draft.outFractionDelta !== '0' || draft.deadline.mode !== 'KEEP');
-}
-
-function profileHypothesisRequest(
-  study: StudyDocument,
-  base: ScenarioDocument,
-  draft: Extract<MvpHypothesisDraft, { kind: 'PROFILE_SIMULATION' }>,
-  scenarioId: string,
-  recordedAt: string,
-): PreparationRequest {
-  if (!isProfileMvpScenario(base)
-      || base.sourceSnapshot.source.kind !== 'SYNTHETIC'
-      || base.sourceSnapshot.generationInputSnapshot === undefined) {
-    throw new Error('VERSAO_INCOMPATIVEL: a base não contém recipe e entrada de geração por Perfil.');
-  }
-  if (base.sourceSnapshot.source.recipe.preparationVersion !== '1.0.0') {
-    throw new Error('VERSAO_INCOMPATIVEL: versão da preparação não suportada.');
-  }
-  const request: PreparationRequest = {
-    preparation_version: '1.0.0',
-    request_id: crypto.randomUUID(),
-    study_id: study.id,
-    scenario_id: scenarioId,
-    scenario_revision: 1,
-    expected_build_sha: requiredBuildSha(undefined, base.sourceSnapshot.source.recipe.motorBuildSha),
-    input: structuredClone(applyProfileHypothesis(
-      base.sourceSnapshot.generationInputSnapshot, draft, recordedAt,
-    )) as DeepMutable<EffectiveInput>,
-  };
-  if (!validatePreparationRequest(request)) throw new Error('Request de hipótese por Perfil inválido.');
-  return request;
-}
+/** Nome da carteira de uma combinação sem alavancas; com alavancas, o nome as descreve. */
+const COMBINATION_BASE_NAME = 'Cenário base';
 
 function sourceLabel(scenario: ScenarioDocument): string {
   if (scenario.sourceSnapshot.source.kind === 'OBSERVED_CASE') return 'Dados observados';
   if (isProfileMvpScenario(scenario)) return 'Simulação baseada em Perfil';
   if (scenario.sourceSnapshot.source.kind === 'SYNTHETIC') return 'Simulação sintética legada';
-  return 'Carteira autoral legada';
+  return observedVariationLabel(scenario) ?? 'Carteira autoral legada';
+}
+
+/** Casos observados por trás da origem escolhida, para sugerir o nome do estudo. */
+function casesBehind(source: PortfolioSourceDraft, cases: readonly ObservedCase[]): ObservedCase[] {
+  if (source.kind === 'OBSERVED_CASE') return cases.filter((item) => item.id === source.caseId);
+  if (source.kind === 'AUTHORED' && source.definition.kind === 'EXPLICIT_ORDERS') {
+    const ids = new Set((source.definition.sourceCases ?? []).map((item) => item.caseId));
+    return cases.filter((item) => ids.has(item.id));
+  }
+  return [];
+}
+
+function ScenarioItem({ study, scenario, selected, onSelect, onRename, onDiagnose, onDelete }: Readonly<{
+  study: StudyDocument;
+  scenario: ScenarioDocument;
+  selected: boolean;
+  onSelect(): void;
+  onRename(name: string): Promise<void>;
+  onDiagnose(): void;
+  onDelete(): void;
+}>) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const isBase = scenario.id === study.baseScenarioId;
+  const diagnosed = currentDiagnostic(study, scenario) !== null;
+  const submit = async () => {
+    if (draft === null) return;
+    const name = draft.trim();
+    if (name !== '' && name !== scenario.name) await onRename(name);
+    setDraft(null);
+  };
+  return <li>
+    {draft === null
+      ? <label><input type="radio" name="lever-base" checked={selected} onChange={onSelect} /> <strong>{scenario.name}</strong></label>
+      : <form className="scenario-rename" onSubmit={(event) => { event.preventDefault(); void submit(); }}>
+        <label>Novo nome<input value={draft} maxLength={120} autoFocus onChange={(event) => setDraft(event.target.value)} /></label>
+        <Button type="submit" disabled={draft.trim() === ''}>Salvar</Button>
+        <Button variant="secondary" onClick={() => setDraft(null)}>Cancelar</Button>
+      </form>}
+    <span>{sourceLabel(scenario)}{isBase ? ' · original' : ' · variação'}{diagnosed ? ' · diagnóstico atual' : ' · sem diagnóstico'}</span>
+    <Button data-chat-help-id="control.carteira.diagnostico" variant="secondary" onClick={onDiagnose}>{diagnosed ? 'Abrir diagnóstico' : 'Executar diagnóstico'}</Button>
+    {draft === null ? <Button variant="secondary" className="button--compact" aria-label={`Renomear cenário ${scenario.name}`} onClick={() => setDraft(scenario.name)}>Renomear</Button> : null}
+    {isBase ? null : <Button variant="secondary" className="button--danger" aria-label={`Apagar cenário ${scenario.name}`} onClick={onDelete}>Apagar</Button>}
+  </li>;
 }
 
 export function StudyPortfolioPage() {
@@ -119,25 +83,16 @@ export function StudyPortfolioPage() {
   const [error, setError] = useState<string | null>(null);
   const [cases, setCases] = useState<ObservedCase[]>([]);
   const [companies, setCompanies] = useState<CompanyRecord[]>([]);
-  const [availableProfiles, setAvailableProfiles] = useState<OperationalProfileVersion[]>([]);
   const [status, setStatus] = useState<StudyControllerStatus>(controller.snapshot.status);
-  const [selectedExecution, setSelectedExecution] = useState<ExecutionRecord | null>(null);
-  const [executing, setExecuting] = useState(false);
   const [selectedBaseId, setSelectedBaseId] = useState<string | null>(null);
-  const [pendingHypothesisId, setPendingHypothesisId] = useState<string | null>(null);
-  const hypothesisAnchor = useRef<HTMLDivElement>(null);
+  const [combinationProgress, setCombinationProgress] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
-    void Promise.all([
-      controller.loadStudy(id), controller.listObservedCases(), controller.listCompanies(),
-      controller.listOperationalProfileVersions(),
-    ])
-      .then(([loaded, observed, companyRecords, profiles]) => {
+    void Promise.all([controller.loadStudy(id), controller.listObservedCases(), controller.listCompanies()])
+      .then(([loaded, observed, companyRecords]) => {
         setStudy(loaded); setCases(observed); setCompanies(companyRecords); setError(null);
-        setAvailableProfiles(profiles);
         setSelectedBaseId(loaded?.baseScenarioId ?? null);
-        setSelectedExecution(loaded === null ? null : [...loaded.executions].reverse().find((item): item is PreviewExecutionRecord => item.kind === 'PREVIEW' && item.status === 'SUCCEEDED') ?? null);
       })
       .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : 'Não foi possível abrir o estudo.'));
     return controller.subscribe(() => {
@@ -150,11 +105,15 @@ export function StudyPortfolioPage() {
   const scenario = study.scenarios.find((item) => item.id === study.baseScenarioId);
   if (scenario === undefined) throw new Error('Estudo sem cenário base.');
   const selectedBase = study.scenarios.find((item) => item.id === selectedBaseId) ?? scenario;
-  const attachedProfiles = study.evidenceSnapshots.map((item) => item.profile);
+  const combinationStudy = study.studyType === 'PORTFOLIO_COMBINATIONS';
   const save = (next: StudyDocument) => { controller.edit(next); setStudy(next); };
-  const displayedExecution = selectedExecution
-    ?? [...study.executions].reverse().find((item): item is PreviewExecutionRecord => item.kind === 'PREVIEW' && item.status === 'SUCCEEDED')
-    ?? null;
+  const persist = async (next: StudyDocument, failure: string) => {
+    controller.edit(next);
+    setStudy(next);
+    const saved = await controller.flush();
+    if (saved === null || saved.id !== study.id) throw new Error(failure);
+    setStudy(saved);
+  };
   const applySource = async (source: PortfolioSourceDraft) => {
     try {
       if (api.preparePortfolio === undefined) throw new Error('A preparação de carteira não está disponível.');
@@ -171,172 +130,90 @@ export function StudyPortfolioPage() {
               preparation: await api.preparePortfolio(source.preparation!),
             }, dependencies)
         : await resolvePortfolioSource(source, dependencies);
-      save(await updateScenario(study, scenario.id, { sourceSnapshot: snapshot }, new Date().toISOString()));
+      const horizonDays = snapshot.orders.length === 0 ? 1 : Math.max(...snapshot.orders.map((order) => order.dia_limite)) + 1;
+      const now = new Date().toISOString();
+      // Na combinação, trocar as empresas volta a carteira ao original: as alavancas aplicadas saem.
+      const updated = await updateScenario(study, scenario.id, { sourceSnapshot: snapshot, period: periodCovering(scenario.period, horizonDays),
+        ...(combinationStudy ? { name: COMBINATION_BASE_NAME } : {}) }, now);
+      save(updated);
+      // Estudo ainda com o nome padrão ganha um nome a partir da origem (empresas + período).
+      const suggestion = study.name === DEFAULT_STUDY_NAME ? suggestStudyName(casesBehind(source, cases), companies) : null;
+      if (suggestion !== null) save(await renameStudy(updated, suggestion, now));
       setError(null);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Não foi possível preparar a origem.');
     }
   };
-  const execute = async () => {
-    setExecuting(true);
-    setError(null);
-    try {
-      const result = await executeStudyScenario({
-        controller,
-        scenarioId: scenario.id,
-        buildRequest: (context) => buildPreviewRequest(
-          context.scenario.sourceSnapshot,
-          context.scenario.premises,
-          context.scenario.period,
-          {
-            requestId: context.requestId,
-            studyId: context.study.id,
-            scenarioId: context.scenario.id,
-            scenarioRevision: context.scenario.revision,
-          },
-          executionProvenance(context.study, context.scenario),
-        ),
-        runPreview: (input, signal) => api.runPreview(input, signal),
-      });
-      const current = controller.snapshot.document;
-      if (current !== null) setStudy(current);
-      const terminal = current === null
-        ? null
-        : [...current.executions].reverse().find((item): item is PreviewExecutionRecord => item.kind === 'PREVIEW' && item.status === 'SUCCEEDED') ?? null;
-      if (terminal !== null) setSelectedExecution(terminal);
-      if (result.persistenceError instanceof Error) {
-        setError(result.persistenceError.message);
-      } else if (result.status !== 'SUCCEEDED') {
-        setError(result.error instanceof Error ? result.error.message : 'A execução não foi concluída.');
-      }
-    } finally {
-      setExecuting(false);
-    }
-  };
-  const prepareDependencies = () => {
-    if (api.preparePortfolio === undefined) throw new Error('A preparação de carteira não está disponível.');
-    return {
-      getObservedCase: (caseId: string) => controller.getObservedCase(caseId),
-      preparePortfolio: (input: PreparationRequest) => api.preparePortfolio!(input),
-      now: () => new Date().toISOString(),
-    };
-  };
-  const createProfileSimulation = async (
-    participants: readonly ProfileMvpParticipantDraft[],
-    profiles: readonly OperationalProfileVersion[],
-  ) => {
-    const before = JSON.stringify(study);
+  const takenNames = () => study.scenarios.map((item) => item.name);
+  const applyLeversToBase = async (levers: Levers) => {
     const recordedAt = new Date().toISOString();
-    const studyId = crypto.randomUUID();
-    const scenarioId = crypto.randomUUID();
-    const request = buildProfileMvpPreparationRequest({
-      identity: { studyId, scenarioId, scenarioRevision: 1 }, scenario,
-      participants, requestId: crypto.randomUUID(),
-      expectedBuildSha: requiredBuildSha(import.meta.env.VITE_MOTOR_BUILD_SHA, undefined),
-      recordedAt,
-    });
-    const snapshot = await resolvePortfolioSource({
-      kind: 'SYNTHETIC', exampleId: PROFILE_MVP_EXAMPLE_ID, preparation: request,
-    }, prepareDependencies());
-    const baseScenario: ScenarioDraft = {
-      id: scenarioId, revision: 1, name: 'Cenário base por Perfil', sourceSnapshot: snapshot,
-      premises: structuredClone(scenario.premises), period: structuredClone(scenario.period),
-      ...(scenario.inputProvenance === undefined ? {} : { inputProvenance: structuredClone(scenario.inputProvenance) }),
-    };
-    const created = await createProfileStudy({
-      id: studyId, ownerSub: study.ownerSub, name: `${study.name} — simulação por Perfil`,
-      baseScenario, profiles, now: recordedAt,
-    });
-    const saved = await controller.saveDetachedStudy(created, 0);
-    if (saved === null) throw new Error('A sessão mudou antes de salvar a simulação.');
-    if (JSON.stringify(study) !== before) throw new Error('O estudo observado foi alterado durante a preparação.');
-    navigate(`/carteira/${saved.id}`);
-  };
-  const createHypothesis = async (draft: MvpHypothesisDraft | CompositionHypothesisDraft) => {
-    if (pendingHypothesisId !== null) {
-      const retried = await controller.flush();
-      if (retried === null || retried.id !== study.id) throw new Error('A sessão mudou antes de salvar a hipótese.');
-      setPendingHypothesisId(null);
-      setStudy(retried);
-      navigate(`/estudos/${retried.id}/diagnostico?scenarioId=${pendingHypothesisId}`);
-      return;
-    }
-    const hypothesisId = crypto.randomUUID();
-    const recordedAt = new Date().toISOString();
-    if (draft.kind === 'PROFILE_COMPOSITION') {
-      const materialized = await materializeCompositionDraft({
-        base: selectedBase, evidenceProfiles: availableProfiles, draft, recordedAt,
-      });
-      let compositionSnapshot;
-      if (materialized.requiresPreparation) {
-        if (selectedBase.sourceSnapshot.source.kind !== 'SYNTHETIC') {
-          throw new Error('Hipótese de composição exige origem sintética por Perfil.');
-        }
-        if (selectedBase.sourceSnapshot.source.recipe.preparationVersion !== '1.0.0') {
-          throw new Error('VERSAO_INCOMPATIVEL: versão da preparação não suportada.');
-        }
-        const request: PreparationRequest = {
-          preparation_version: '1.0.0',
-          request_id: crypto.randomUUID(), study_id: study.id, scenario_id: hypothesisId,
-          scenario_revision: 1,
-          expected_build_sha: requiredBuildSha(undefined, selectedBase.sourceSnapshot.source.recipe.motorBuildSha),
-          input: structuredClone(materialized.input) as DeepMutable<EffectiveInput>,
-        };
-        if (!validatePreparationRequest(request)) throw new Error('Request de composição inválido.');
-        compositionSnapshot = await resolvePortfolioSource({
-          kind: 'SYNTHETIC', exampleId: PROFILE_MVP_EXAMPLE_ID, preparation: request,
-        }, prepareDependencies());
-      } else {
-        compositionSnapshot = await buildCompositionSourceSnapshot(
-          selectedBase.sourceSnapshot, materialized, recordedAt,
-        );
-      }
-      const hypothesis = buildCompositionScenarioDraft({
-        base: selectedBase, hypothesis: draft, sourceSnapshot: compositionSnapshot,
-        id: hypothesisId, recordedAt,
-      });
-      const next = await appendCompositionHypothesis(study, {
-        scenario: hypothesis, profiles: materialized.profilesToAttach, recordedAt,
-      });
-      controller.edit(next); setStudy(next); setPendingHypothesisId(hypothesisId);
-      const saved = await controller.flush();
-      if (saved === null || saved.id !== study.id) throw new Error('A sessão mudou antes de salvar a hipótese.');
-      setPendingHypothesisId(null); setStudy(saved);
-      navigate(`/estudos/${saved.id}/diagnostico?scenarioId=${hypothesisId}`);
-      return;
-    }
-    let sourceSnapshot = structuredClone(selectedBase.sourceSnapshot);
-    if (generationChanged(draft)) {
-      if (draft.kind !== 'PROFILE_SIMULATION') throw new Error('Hipótese incompatível com a origem.');
-      const request = profileHypothesisRequest(study, selectedBase, draft, hypothesisId, recordedAt);
-      sourceSnapshot = await resolvePortfolioSource({
-        kind: 'SYNTHETIC', exampleId: PROFILE_MVP_EXAMPLE_ID, preparation: request,
-      }, prepareDependencies());
-    }
-    const hypothesis = buildHypothesisScenarioDraft({
-      base: selectedBase, draft, sourceSnapshot, id: hypothesisId, recordedAt,
-    });
-    const next = await appendScenario(study, hypothesis, recordedAt);
-    controller.edit(next);
-    setStudy(next);
-    setPendingHypothesisId(hypothesisId);
-    const saved = await controller.flush();
-    if (saved === null || saved.id !== study.id) throw new Error('A sessão mudou antes de salvar a hipótese.');
-    setPendingHypothesisId(null);
-    setStudy(saved);
-    navigate(`/estudos/${saved.id}/diagnostico?scenarioId=${hypothesisId}`);
+    const next = await applyLeversToCombinationBase(study, levers, recordedAt);
+    if (next !== study) await persist(next, 'A sessão mudou antes de aplicar a alavanca.');
   };
   const createLeverVariation = async (levers: Levers) => {
     const recordedAt = new Date().toISOString();
     const draft = await buildLeverScenario({
       base: selectedBase, levers, id: crypto.randomUUID(), authoredPortfolioId: crypto.randomUUID(), recordedAt,
+      name: uniqueName(variationName(levers, selectedBase.name, selectedBase.id === study.baseScenarioId), takenNames()),
     });
-    const next = await appendScenario(study, draft, recordedAt);
-    controller.edit(next);
-    setStudy(next);
-    const saved = await controller.flush();
-    if (saved === null || saved.id !== study.id) throw new Error('A sessão mudou antes de salvar a variação.');
-    setStudy(saved);
+    await persist(await appendScenario(study, draft, recordedAt), 'A sessão mudou antes de salvar a variação.');
+  };
+  const createCombinations = async (subsets: readonly (readonly string[])[], groups: readonly string[]) => {
+    const recordedAt = new Date().toISOString();
+    const taken = takenNames();
+    const drafts: ScenarioDraft[] = [];
+    setCombinationProgress(`Preparando 0 de ${subsets.length} combinações…`);
+    try {
+      for (const [index, subset] of subsets.entries()) {
+        const removed = groups.filter((company) => !subset.includes(company));
+        const name = uniqueName(combinationName(subset), taken);
+        taken.push(name);
+        const draft = await buildLeverScenario({
+          base: selectedBase, id: crypto.randomUUID(), authoredPortfolioId: crypto.randomUUID(), recordedAt,
+          levers: removed.map((company) => ({ ...NEUTRAL_LEVERS, group: company, removeCompany: true })),
+          name,
+          derivation: {
+            kind: derivationKind(subset, groups), baseScenarioId: selectedBase.id,
+            baseSourceFingerprint: selectedBase.sourceSnapshot.sourceFingerprint, companies: [...subset],
+          },
+        });
+        drafts.push(draft);
+        if ((index + 1) % 8 === 0 || index + 1 === subsets.length) {
+          setCombinationProgress(`Preparando ${index + 1} de ${subsets.length} combinações…`);
+          await new Promise<void>((resolve) => setTimeout(resolve, 0));
+        }
+      }
+      if (controller.snapshot.document?.id !== study.id || controller.snapshot.document.revision !== study.revision) {
+        throw new Error('O estudo mudou durante a criação. Tente gerar as combinações novamente.');
+      }
+      setCombinationProgress('Salvando as combinações…');
+      const next = await appendScenarios(study, drafts, recordedAt);
+      await persist(next, 'A sessão mudou antes de salvar as combinações.');
+    } finally {
+      setCombinationProgress(null);
+    }
+  };
+  const rename = async (target: ScenarioDocument, name: string) => {
+    try {
+      const unique = uniqueName(name, takenNames().filter((item) => item !== target.name));
+      await persist(await renameScenario(study, target.id, unique, new Date().toISOString()), 'A sessão mudou antes de renomear o cenário.');
+      setError(null);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Não foi possível renomear o cenário.');
+    }
+  };
+  const deleteScenario = async (target: ScenarioDocument) => {
+    if (!window.confirm(`Apagar o cenário "${target.name}"?
+
+Os diagnósticos dele também serão apagados. Não dá para desfazer.`)) return;
+    try {
+      const next = await removeScenario(study, target.id, new Date().toISOString());
+      if (selectedBase.id === target.id) setSelectedBaseId(study.baseScenarioId);
+      await persist(next, 'A sessão mudou antes de apagar o cenário.');
+      setError(null);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Não foi possível apagar o cenário.');
+    }
   };
   const navigateAfterFlush = async (path: string) => {
     try {
@@ -346,6 +223,26 @@ export function StudyPortfolioPage() {
     } catch (reason) {
       setError(reason instanceof Error ? `${reason.message} Tente novamente.` : 'Não foi possível salvar antes de navegar.');
     }
+  };
+  const diagnosticPath = (target: ScenarioDocument) => {
+    const execution = currentDiagnostic(study, target);
+    return `/estudos/${study.id}/diagnostico?scenarioId=${target.id}${execution === null ? '' : `&executionId=${execution.id}`}`;
+  };
+  const diagnoseCombinations = async () => {
+    if (combinationProgress !== null) return;
+    setCombinationProgress('Preparando combinações…');
+    setError(null);
+    try {
+      await controller.flush();
+      const next = await prepareCombinationStudy(study, setCombinationProgress);
+      if (controller.snapshot.document?.id !== study.id || controller.snapshot.document.revision !== study.revision) {
+        throw new Error('O estudo mudou durante a preparação. Tente novamente.');
+      }
+      if (next !== study) await persist(next, 'Não foi possível salvar as combinações.');
+      navigate(`/estudos/${study.id}/diagnostico?runAll=1`);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Não foi possível preparar as combinações.');
+    } finally { setCombinationProgress(null); }
   };
   return <><StudyEditor study={study} observedCases={cases} companies={companies} status={status} error={error} onRename={async (name) => save(await renameStudy(study, name, new Date().toISOString()))} onDuplicate={async () => { const copy = await duplicateStudy(study, new Date().toISOString(), () => crypto.randomUUID()); controller.startNewStudy(); controller.edit(copy); await controller.flush(); navigate(`/estudos/${copy.id}`); }} onSourceChange={applySource} onConvertObserved={() => setError(null)} onScenarioChange={async (update) => {
     const recordedAt = new Date().toISOString();
@@ -366,26 +263,27 @@ export function StudyPortfolioPage() {
     };
     save(await updateScenario(study, scenario.id, { ...update, inputProvenance }, recordedAt));
   }} />
-  <section className="source-actions" aria-label="Execução do cenário"><Button disabled={executing} onClick={() => void execute()}>{executing ? 'Executando cenário…' : 'Executar cenário atual'}</Button></section>
   {error === null ? null : <InlineNotice tone="error">{error}</InlineNotice>}
-  <ProfileScenarioBuilder profiles={attachedProfiles} ownerSub={study.ownerSub} horizonDays={periodHorizon(scenario)} onPrepare={createProfileSimulation} />
+  {combinationStudy ? <>
+  <p className="eyebrow">Passo 3</p>
+  {scenario.name === COMBINATION_BASE_NAME ? null : <p className="inline-notice" role="status">Alavancas aplicadas à carteira: {scenario.name}</p>}
+  <LeverBuilder key={`${scenario.id}:${scenario.sourceSnapshot.sourceFingerprint}`} base={scenario} applyToBase onCreate={applyLeversToBase} />
+  <p className="eyebrow">Passo 4</p>
+  <section aria-labelledby="combination-diagnosis-title">
+    <h2 id="combination-diagnosis-title">Diagnóstico das combinações</h2>
+    <p>As combinações são calculadas internamente. O diagnóstico mostra a recomendação e as principais alternativas.</p>
+    <Button data-chat-help-id="control.carteira.diagnosticar-combinacoes" disabled={combinationProgress !== null} onClick={() => void diagnoseCombinations()}>Diagnosticar combinações</Button>
+    {combinationProgress === null ? null : <p role="status">{combinationProgress}</p>}
+  </section></> : <>
   <section className="scenario-workspace" aria-labelledby="scenario-list-title">
+    <p className="eyebrow">Passo 3</p>
     <h2 id="scenario-list-title">Cenários do estudo</h2>
-    <ul className="scenario-list">{study.scenarios.map((item) => <li key={item.id}>
-      <label><input type="radio" name="hypothesis-base" checked={selectedBase.id === item.id} onChange={() => setSelectedBaseId(item.id)} /> <strong>{item.name}</strong></label>
-      <span>{sourceLabel(item)}{item.id === study.baseScenarioId ? ' · base' : ' · hipótese'}</span>
-      <Button variant="secondary" onClick={() => void navigateAfterFlush(`/estudos/${study.id}/diagnostico?scenarioId=${item.id}`)}>Executar diagnóstico</Button>
-    </li>)}</ul>
-    <PortfolioCompositionSummary scenario={selectedBase} onEdit={() => {
-      hypothesisAnchor.current?.focus();
-      hypothesisAnchor.current?.scrollIntoView?.({ block: 'start', behavior: 'smooth' });
-    }} />
-    <Button variant="secondary" onClick={() => void navigateAfterFlush(`/comparar?studyId=${study.id}`)}>Comparar resultados</Button>
+    <p className="field-hint">O original usa a origem e as premissas acima. Rode o diagnóstico de cada cenário; o cenário marcado é a base das alavancas abaixo.</p>
+    <ul className="scenario-list">{study.scenarios.map((item) => <ScenarioItem key={item.id} study={study} scenario={item}
+      selected={selectedBase.id === item.id} onSelect={() => setSelectedBaseId(item.id)}
+      onRename={(name) => rename(item, name)} onDiagnose={() => void navigateAfterFlush(diagnosticPath(item))}
+      onDelete={() => void deleteScenario(item)} />)}</ul>
   </section>
-  <LeverBuilder key={`${selectedBase.id}:${selectedBase.sourceSnapshot.sourceFingerprint}`} base={selectedBase} onCreate={createLeverVariation} />
-  <div ref={hypothesisAnchor} id="composition-editor" tabIndex={-1} aria-label="Editor de hipóteses">
-    <HypothesisBuilder key={selectedBase.id} baseScenario={selectedBase}
-      availableProfiles={availableProfiles} onCreate={createHypothesis} />
-  </div>
-  {displayedExecution === null ? null : <StudyResultPage study={study} execution={displayedExecution} />}</>;
+  <p className="eyebrow">Passo 4</p>
+  <LeverBuilder key={`${selectedBase.id}:${selectedBase.sourceSnapshot.sourceFingerprint}`} base={selectedBase} progress={combinationProgress} onCreate={createLeverVariation} onCreateCombinations={createCombinations} /></>}</>;
 }
