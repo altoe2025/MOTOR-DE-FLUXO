@@ -1991,7 +1991,10 @@
             "type": "string"
           },
           "rule_version": {
-            "const": "1.0.0",
+            "enum": [
+              "1.0.0",
+              "1.1.0"
+            ],
             "title": "Rule Version",
             "type": "string"
           },

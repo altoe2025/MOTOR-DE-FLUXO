@@ -13,7 +13,7 @@ Git/GitHub, Render Docker, Python/pytest, React/TypeScript/Vitest/Playwright.
 Referência Live conferida no dashboard; main inicial `3342059edddf1daaa881943a645a26dadd614139`, 52 commits atrás e nenhum exclusivo. Não incorporar branches posteriores ou alheias ao Live.
 
 ## Global Constraints
-- Preservar comportamento publicado, exceto correção pontual de abertura com IndexedDB indisponível, autorizada explicitamente após o bloqueio. Não alterar motor, credenciais ou configurações do Render.
+- Preservar comportamento publicado, exceto as correções explicitamente autorizadas durante o gate: abertura com IndexedDB indisponível, edição da janela, teto diagnóstico da coorte com aquecimento e prontidão do contexto do chat. Não alterar motor, credenciais ou configurações do Render.
 - Preservar o checkout original e o commit Live; trabalhar em `codex/main-render-sync`.
 - Ajustes de testes precisam refletir o comportamento já publicado, sem esconder falhas.
 - Respeitar checks e proteção da main; não usar force push ou bypass.
@@ -22,8 +22,8 @@ Referência Live conferida no dashboard; main inicial `3342059edddf1daaa881943a6
 ## Tasks
 - [x] Conferir referência Live, estado remoto e divergência.
 - [x] Auditar escopo e registrar inventário funcional e riscos.
-- [ ] Investigar testes incompatíveis com o Live e validar sem mudanças de runtime.
-- [ ] Atualizar diário e mapa; publicar PR para main e revisar.
+- [x] Investigar testes incompatíveis com o Live e corrigir os defeitos autorizados.
+- [x] Atualizar diário e mapa; publicar PR para main e revisar.
 - [ ] Aguardar checks, integrar e verificar ancestralidade/paridade final.
 
 ## Evidência inicial
@@ -49,3 +49,15 @@ Testes migrados já validados: foundation + stage2 (4), importação/diagnostic-
 - Fixture `helpers/windowScenario.ts` prepara uma janela pelo domínio real para testar publicação/comparação; não substitui aceite de criação pela UI. O teste de UI que detecta o crash continua presente.
 - Captura Linux 36782323685 aprovada; 7 imagens inspecionadas, 6 divergiam das referências antigas e foram copiadas com hash conferido. Login permaneceu idêntico. Workflow temporário removido. Essa captura atualiza referências revisadas, não equivale à execução final da CI comparando-as.
 - Suíte completa do front após correção: 144 arquivos / 1.239 testes aprovados (192s); validadores atuais. Typecheck e lint aprovados após migração. Revisão independente dos testes não encontrou falsa aprovação material. Main e Render ainda não alterados; PR permanece draft até correção das falhas reais e gates completos.
+
+## Correções finais autorizadas
+- A edição de `Janela em dias` capturava `event.currentTarget.value` dentro de um updater de estado; o evento já podia estar inválido. O valor agora é capturado antes do updater. A regressão falhou antes e passou depois; 22 testes do editor e 7 E2E das Etapas 4/5 passaram.
+- O teto estrutural da coorte medida usava `2 * min(OUT medido, IN medido)`, embora ordens medidas possam casar com estoque do aquecimento. O teto agora é `min(OUT medido, IN total) + min(IN medido, OUT total)`. O numerador continua restrito à coorte, a checagem `casado <= teto` foi preservada e a fórmula reduz à anterior numa coorte fechada. A consequência de direção oposta ausente passou a depender de teto zero, sob a regra `1.1.0`; contratos `1.0.0` continuam aceitos.
+- O pacote demonstrativo versionado foi regenerado, porque os valores derivados do teto mudaram. As baselines Windows divergiram somente em teto, potencial não capturado e fração capturada; os pixels foram inspecionados e as duas imagens afetadas foram atualizadas. A captura Linux final será feita no runner da própria CI e o workflow temporário será removido antes do merge.
+- O gate integral revelou uma corrida adicional no chat do Replay: o formulário permitia envio durante os 75 ms de debounce e a construção assíncrona do documento, produzindo `context: null`. Rotas com estudo, cenário e execução selecionados agora só habilitam envio quando o contexto `STUDY` correspondente à seleção está pronto; `send` repete o guard defensivamente. Quatro regressões falharam antes e passaram depois; 17/17 E2E de chat passaram sem sleeps.
+
+## Gate local do candidato final
+- Python normal: 1.270 passed / 3 skipped; Python com `-O`: 1.270 passed / 3 skipped.
+- Ruff, mypy, contratos/validadores, scanner de credenciais, typecheck, lint e build de produção: PASS. O aviso conhecido de chunks Vite acima de 500 kB permanece.
+- Front unitário antes do último guard do chat: 144 arquivos / 1.240 testes; mais 32 testes focados do chat após o guard, incluindo quatro regressões novas.
+- Playwright integral: 63/66 na primeira rodada final; as três falhas eram a corrida do chat e duas referências visuais com os valores derivados antigos. Após as correções, 17/17 do chat e 2/2 visuais Windows passaram. O check integral publicado e a revisão visual Linux permanecem os últimos gates antes do merge.

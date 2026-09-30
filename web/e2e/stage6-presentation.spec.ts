@@ -3,7 +3,10 @@ import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 
 import { formatMoney } from '../src/presentation/format';
-import { seedWindowScenario, useDemoSamplingSeed } from './helpers/windowScenario';
+import { readStoredStudy, seedWindowScenario, useDemoSamplingSeed } from './helpers/windowScenario';
+import { buildCommunicationDocument } from '../src/communication/buildCommunicationDocument';
+import { compareMvpDiagnostics } from '../src/hypotheses/comparison';
+import type { ReplayDocument } from '../src/replay/domain';
 import { formatCommunicationMetric, PRIMARY_EXECUTIVE_METRIC_CODES } from '../src/presentation/domain';
 import type { ChatRequest, ChatResponse } from '../src/api/client';
 import { HELP_IDS } from '../src/help/helpIds';
@@ -144,10 +147,24 @@ test('comparação e Replay conservam a seleção publicada e rejeitam seleçõe
   ]) {
     const suffix = (selection.comparisonExecutionId === undefined ? '' : `&comparacao=${base.id}`)
       + (selection.replayDay === null ? '' : '&dia=31');
+    const replayResponse = selection.replayDay === null ? null : page.waitForResponse((response) =>
+      response.url().endsWith('/api/v1/replays') && response.request().method() === 'POST');
     await page.goto(`/estudos/${study.id}/apresentacao?cenario=${scenarioId}&execucao=${hypothesis.id}${suffix}`);
     await expect(page.getByRole('heading', { name: study.name, level: 1 })).toBeVisible();
-    const projected = await page.evaluate((input) => window.__MOTOR_E2E__!.projectDemoCommunication(input), {
-      studyId: study.id, scenarioId, diagnosticExecutionId: hypothesis.id, ...selection,
+    const storedStudy = await readStoredStudy(page, study.id);
+    const baseRecord = storedStudy.executions.find((item) => item.id === base.id)!;
+    const hypothesisRecord = storedStudy.executions.find((item) => item.id === hypothesis.id)!;
+    if (baseRecord.kind !== 'DIAGNOSTIC' || hypothesisRecord.kind !== 'DIAGNOSTIC') throw new Error('Diagnostic fixtures missing');
+    const compared = compareMvpDiagnostics(baseRecord, hypothesisRecord);
+    expect(compared.ok).toBe(true);
+    if (!compared.ok) throw new Error(compared.reason);
+    const replay = replayResponse === null ? null : await (await replayResponse).json() as ReplayDocument;
+    const projected = await buildCommunicationDocument({
+      study: storedStudy, scenarioId, diagnosticExecutionId: hypothesis.id,
+      comparisonExecutionId: selection.comparisonExecutionId ?? null,
+      comparison: selection.comparisonExecutionId === undefined ? null : {
+        baseExecutionId: base.id, hypothesisExecutionId: hypothesis.id, value: compared.value,
+      }, replay, replayDay: selection.replayDay,
     });
     expect(projected.selection.replayDay).toBe(selection.replayDay);
     expect(projected.selection.comparisonExecutionId).toBe(selection.comparisonExecutionId ?? null);

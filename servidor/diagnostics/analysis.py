@@ -274,7 +274,27 @@ def analyze_diagnostic_repetitions(
         Decimal(0),
     )
     gross = gross_out + gross_in
-    ceiling = Decimal(2) * min(gross_out, gross_in)
+    # O numerador conta apenas ordens medidas, mas elas podem casar com ordens do
+    # aquecimento. Limite cada lado medido pela capacidade oposta da execução
+    # completa, sem contar as alocações do aquecimento no teto. O cálculo continua
+    # estrutural (ignora timing) e reduz a 2*min(OUT, IN) numa coorte fechada.
+    total_out = sum(
+        (
+            Decimal(order.valor_brl)
+            for order in chosen.request.cenario.ordens
+            if order.direcao == "OUT"
+        ),
+        Decimal(0),
+    )
+    total_in = sum(
+        (
+            Decimal(order.valor_brl)
+            for order in chosen.request.cenario.ordens
+            if order.direcao == "IN"
+        ),
+        Decimal(0),
+    )
+    ceiling = min(gross_out, total_in) + min(gross_in, total_out)
     matched = aggregate.volume_casado_periodo_brl
     uncaptured = ceiling - matched
     if uncaptured < 0:
@@ -292,7 +312,8 @@ def analyze_diagnostic_repetitions(
                 "/selected_execution/input_snapshot/cenario/ordens",
             ),
             "ceiling_brl": _available(
-                ceiling, "/selected_execution/input_snapshot/cenario/ordens"
+                ceiling, "/selected_execution/input_snapshot/cenario/ordens",
+                "/selected_execution/result/agregado/ids_ordens_medidas",
             ),
         }
     )

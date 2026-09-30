@@ -3,8 +3,8 @@ import { appendScenario } from '../../src/study/domain';
 import type { StudyDocument } from '../../src/study/model';
 
 /** Test arrangement for the retired wizard; execution/publication still use the real UI. */
-export async function seedWindowScenario(page: Page, studyId: string, windowDays = 8) {
-  const study = await page.evaluate(async (id) => {
+export async function readStoredStudy(page: Page, studyId: string) {
+  return page.evaluate(async (id) => {
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       const request = indexedDB.open('motor-fluxo:app:v2:local:00000000-0000-4000-8000-000000000021');
       request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error);
@@ -24,6 +24,10 @@ export async function seedWindowScenario(page: Page, studyId: string, windowDays
         .sort((a, b) => a.sequence - b.sequence).map((item) => item.document) } as StudyDocument;
     } finally { db.close(); }
   }, studyId);
+}
+
+export async function seedWindowScenario(page: Page, studyId: string, windowDays = 8) {
+  const study = await readStoredStudy(page, studyId);
   const base = study.scenarios.find((item) => item.id === study.baseScenarioId)!;
   const id = crypto.randomUUID();
   const updated = await appendScenario(study, {

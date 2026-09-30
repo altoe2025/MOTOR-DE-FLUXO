@@ -96,7 +96,10 @@ function ScenarioSettings({
     {error ? <p role="alert" className="field-error">{error}</p> : null}
     <div className="parameter-grid">
       {COST_FIELDS.map((field) => <TextField key={field.key} id={`premise-${field.key}`} label={field.label} hint={field.hint} inputMode="decimal" value={texts[field.key]} {...(fieldErrors[field.key] === undefined ? {} : { error: fieldErrors[field.key] })} onChange={(event) => { const value = event.currentTarget.value; setTexts((current) => ({ ...current, [field.key]: value })); }} />)}
-      <TextField id="premise-window-days" label="Janela em dias" inputMode="numeric" value={String(draftPremises.windowDays)} onChange={(event) => setDraftPremises((current) => ({ ...current, windowDays: Number(event.currentTarget.value) }))} />
+      <TextField id="premise-window-days" label="Janela em dias" inputMode="numeric" value={String(draftPremises.windowDays)} onChange={(event) => {
+        const windowDays = Number(event.currentTarget.value);
+        setDraftPremises((current) => ({ ...current, windowDays }));
+      }} />
       {draftPeriod.httpPeriod.modo === 'NATURAL' ? <>
         <TextField id="period-warmup-days" label="Aquecimento em dias" inputMode="numeric" value={String(draftPeriod.httpPeriod.dias_aquecimento)} onChange={(event) => setDraftPeriod({ httpPeriod: { modo: 'NATURAL', dias_aquecimento: Number(event.currentTarget.value), periodo_medicao_dias: draftPeriod.httpPeriod.modo === 'NATURAL' ? draftPeriod.httpPeriod.periodo_medicao_dias : 0 } })} />
         <TextField id="period-measurement-days" label="Período de medição em dias" inputMode="numeric" value={String(draftPeriod.httpPeriod.periodo_medicao_dias)} onChange={(event) => setDraftPeriod({ httpPeriod: { modo: 'NATURAL', dias_aquecimento: draftPeriod.httpPeriod.modo === 'NATURAL' ? draftPeriod.httpPeriod.dias_aquecimento : 0, periodo_medicao_dias: Number(event.currentTarget.value) } })} />

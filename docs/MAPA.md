@@ -7,7 +7,9 @@ front-end atualizados em 2026-09-22.
 
 **Integração do Live (2026-09-30):** referência publicada `29d955c`, com 52 commits
 posteriores à main `3342059`. A integração autorizada em `codex/main-render-sync`
-preserva o runtime do Render; plano e evidências em
+preserva o deploy do Render e acrescenta correções verificadas para falha do
+IndexedDB, edição da janela, teto da coorte com aquecimento e prontidão do contexto
+do chat. Plano e evidências em
 `docs/superpowers/plans/2026-09-30-main-render-sync.md`. Consulte o diário e o PR
 para o resultado dos gates e do merge. Os estados históricos abaixo são datados.
 

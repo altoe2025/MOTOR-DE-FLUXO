@@ -1,5 +1,30 @@
 # Testes
 
+## Candidato de integração do Live — 2026-09-30
+
+O PR #59 leva a referência publicada `29d955c` para a `main` sem acionar deploy e
+inclui as correções autorizadas encontradas pelo gate: recuperação do IndexedDB,
+edição da janela, teto estrutural coerente com ordens de aquecimento e espera pelo
+contexto selecionado antes de enviar o chat.
+
+| Verificação local | Resultado |
+|---|---|
+| `pytest -q` | 1.270 passed, 3 skipped |
+| `python -O -m pytest -q` | 1.270 passed, 3 skipped |
+| Ruff / mypy / contratos / validadores / scanner | PASS |
+| Vitest integral antes do último guard | 1.240 passed em 144 arquivos |
+| Testes focados do chat após o guard | 32 passed, incluindo 4 regressões novas |
+| Typecheck / ESLint / build de produção | PASS |
+| Playwright Stage4/5 + demo/apresentação + chat | 7/7 + 7/7 + 17/17 |
+| Playwright visual Windows após revisão | 2/2 |
+
+A primeira rodada Playwright integral passou 63/66. As três falhas eram duas
+referências visuais com os valores antigos do teto e uma corrida real que enviava o
+chat do Replay com `context: null`; as três passaram nos arquivos completos após as
+correções, sem sleeps. O pacote demonstrativo foi regenerado e reconciliado byte a
+byte. CI integral e revisão das imagens Linux são os gates publicados restantes.
+O Render não foi alterado.
+
 ## Chat orientado à interface — 2026-09-28 (local)
 
 Base `1bd7654`, worktree `chat-context-quality`, preservando as mudanças locais de

@@ -212,6 +212,23 @@ describe('StudyEditor', () => {
     }));
   });
 
+  it('reedita a janela e salva o valor final sem perder as demais premissas', async () => {
+    const document = await study();
+    const { onScenarioChange } = await subject({ study: document }, { openSource: false });
+    const user = userEvent.setup();
+    const windowDays = screen.getByLabelText('Janela em dias');
+    await user.clear(windowDays);
+    await user.type(windowDays, '3');
+    await user.clear(windowDays);
+    await user.type(windowDays, '12');
+    expect(windowDays).toHaveValue('12');
+    await user.click(screen.getByRole('button', { name: 'Salvar premissas e período' }));
+    expect(onScenarioChange).toHaveBeenCalledExactlyOnceWith({
+      premises: { ...document.scenarios[0]!.premises, windowDays: 12 },
+      period: document.scenarios[0]!.period,
+    });
+  });
+
   it('mostra o erro de premissa junto ao campo, com exemplo', async () => {
     const onScenarioChange = vi.fn();
     await subject({ onScenarioChange }); const user = userEvent.setup();

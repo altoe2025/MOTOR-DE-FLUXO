@@ -244,7 +244,7 @@ test('variação de janela preserva Perfis; publicação compara diagnóstico co
     expect(metric.evidenceRefs.length).toBeGreaterThan(0);
     for (const ref of metric.evidenceRefs) expect(comparedDocument.evidenceIndex[ref]).toBeDefined();
   }
-  await page.goto(`/estudos/${study.id}/apresentacao?cenario=${base.scenarioId}&execucao=${base.id}&comparacao=${comparable.id}`);
+  await page.goto(`/estudos/${study.id}/apresentacao?cenario=${comparableScenarioId}&execucao=${comparable.id}&comparacao=${base.id}`);
   await expect(page.getByRole('heading', { name: study.name, level: 1 })).toBeVisible();
   const variations = page.getByRole('table', { name: 'Comparação entre o original e as variações' });
   await expect(variations.getByRole('row').filter({ hasText: 'Janela 8 dias' })).toContainText(formatMoney(comparable.savingsBrl));
