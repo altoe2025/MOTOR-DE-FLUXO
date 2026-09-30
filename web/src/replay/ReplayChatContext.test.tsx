@@ -34,8 +34,9 @@ describe('replay communication context', () => {
     await screen.findByRole('heading', { name: 'Fronteira Viva' });
     expect(Object.isFrozen(replay)).toBe(true);
     expect(Object.isFrozen(replay.days[0])).toBe(true);
+    // A publicação sai de um efeito da página, que roda logo depois do render: espera por ela.
+    await waitFor(() => expect(mocks.publishCommunication).toHaveBeenLastCalledWith(null));
     expect(mocks.publishCommunication).not.toHaveBeenCalledWith(expect.objectContaining({ replayDay: 0 }));
-    expect(mocks.publishCommunication).toHaveBeenLastCalledWith(null);
 
     mocks.chat.open = true;
     view.rerender(<MemoryRouter initialEntries={[route]}>

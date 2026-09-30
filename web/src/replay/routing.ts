@@ -87,7 +87,8 @@ export function routeFlows(scene: RouteScene): readonly RoutedFlow[] {
   for (let guard = 0; guard <= simple.length && conflict.size > 0; guard++) {
     routed = orthogonal([...conflict], ends, simple, center, lane);
     let grew = false;
-    for (const index of conflict) for (let other = 0; other < simple.length; other++) {
+    // Percorre uma cópia: quem entra agora só ganha trilho na próxima rodada.
+    for (const index of [...conflict]) for (let other = 0; other < simple.length; other++) {
       if (!conflict.has(other) && crossings(routed.get(index)!.points, simple[other]!.points) > 0) { conflict.add(other); grew = true; }
     }
     if (!grew) break;
@@ -148,7 +149,7 @@ function orthogonal(
     lines.forEach((line, a) => {
       for (let b = a + 1; b < lines.length; b++) score += crossings(line, lines[b]!) * 1000 + overlaps(line, lines[b]!) * 5000;
       for (const other of others) score += crossings(line, other) * 1000;
-      score += Math.abs(line[1]!.x - center) * 0.01;
+      score += Math.abs((line[1] ?? line[0]!).x - center) * 0.01;
     });
     if (score < bestScore) { bestScore = score; best = lines; }
   }
@@ -219,6 +220,7 @@ export function labelAnchor(flow: RoutedFlow, width: number): Point {
   if (flow.toGateway) return { x: flow.end.x, y: flow.end.y - 30 };
   if (flow.style === 'ORTHOGONAL') {
     const flats = flow.points.slice(1).map((point, index) => [flow.points[index]!, point] as const).filter(([a, b]) => a.y === b.y);
+    if (flats.length === 0) return { x: flow.start.x, y: Math.round((flow.start.y + flow.end.y) / 2) };
     const [a, b] = flats.reduce((best, item) => Math.abs(item[1].x - item[0].x) > Math.abs(best[1].x - best[0].x) ? item : best);
     const low = Math.min(a.x, b.x), high = Math.max(a.x, b.x);
     const x = high - low < 2 * half ? (low + high) / 2 : Math.min(high - half, Math.max(low + half, (low + high) / 2));

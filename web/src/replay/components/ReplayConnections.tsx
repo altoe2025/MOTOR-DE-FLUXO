@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect, useState, type CSSProperties, type RefObject } from 'react';
+import { useCallback, useEffect, useState, type CSSProperties, type RefObject } from 'react';
 
 import { formatMoney } from '../../presentation/format';
 import type { ReplayDocument } from '../domain';
@@ -113,7 +113,9 @@ export function ReplayConnections({ stageRef, flows, active, fading, animate, sp
     setDrawn(routed.map((route) => ({ flow: byId.get(route.id)!, path: route.path, label: labelById.get(route.id)! })));
   }, [active, flows, stageRef]);
 
-  useLayoutEffect(() => {
+  // Efeito comum, não de layout: este componente fica dentro do palco, e o efeito de layout
+  // de um filho roda antes de a ref do palco ser ligada — a primeira medição sairia vazia.
+  useEffect(() => {
     measure();
     const stage = stageRef.current;
     if (stage === null || typeof ResizeObserver === 'undefined') return undefined;
@@ -146,7 +148,8 @@ export function ReplayConnections({ stageRef, flows, active, fading, animate, sp
           : flow.matchingOrigin === 'INTER_CLIENTE' ? ' replay-connection--inter-client' : '';
         const dots = Math.max(2, Math.round(2 + 3 * (Number(flow.valueBrl) || 0) / largest));
         const firstDot = (animate ? (index * STAGGER_MS + DRAW_MS) / speed : 0) / 1_000;
-        return <g key={pathId(flow)} className={`replay-flow replay-flow--${tone(flow)}${focused(flow) ? ' is-focus' : ''}`} style={timing(index)}>
+        return <g key={pathId(flow)} className={`replay-flow replay-flow--${tone(flow)}${focused(flow) ? ' is-focus' : ''}`} style={timing(index)}
+          data-flow={flow.id} data-from={flow.from} data-to={flow.to}>
           <path
             id={pathId(flow)}
             d={path}
@@ -166,6 +169,7 @@ export function ReplayConnections({ stageRef, flows, active, fading, animate, sp
       {drawn.map(({ flow, label }, index) => label === null ? null : <g
         key={`${pathId(flow)}-label`}
         className={`replay-connection-label replay-connection-label--${tone(flow)}${focused(flow) ? ' is-focus' : ''}`}
+        data-flow={flow.id}
         transform={`translate(${Math.round(label.x)} ${Math.round(label.y)})`}
         style={timing(index)}
       >

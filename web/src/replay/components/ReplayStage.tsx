@@ -72,8 +72,7 @@ export function ReplayStage({ document, state, sort, transitionMode, transitionK
   frozen?: boolean;
 }>) {
   const stageRef = useRef<HTMLDivElement>(null);
-  const [departing, setDeparting] = useState<readonly OpenReplayOrder[]>([]);
-  const [phase, setPhase] = useState<Phase>('IDLE');
+  const [progress, setProgress] = useState<Readonly<{ key: string; phase: Phase }>>({ key: '', phase: 'IDLE' });
   const [focusId, setFocusId] = useState<string | null>(null);
   const speed = playback.speed ?? 1;
   const view = presentReplayDay(document, state.day);
@@ -81,30 +80,28 @@ export function ReplayStage({ document, state, sort, transitionMode, transitionK
   const animate = transitionMode === 'ANIMATE' && view.hasOperationalEvent && !reducedMotion();
   const hold = frozen && view.hasOperationalEvent;
 
+  // A etapa sai do próprio render: o primeiro quadro de um dia animado já é MOVE,
+  // com o saldo de abertura e as ordens que vão liquidar, sem piscar o estado final.
+  const runKey = `${transitionKey}:${state.day}`;
+  const phase: Phase = hold ? 'SETTLED' : !animate ? 'IDLE' : progress.key === runKey ? progress.phase : 'MOVE';
+  const dayDeparting = useMemo(() => departingOrders(document, state.day), [document, state.day]);
+  const departing = phase === 'IDLE' ? [] : dayDeparting;
+
   useEffect(() => {
-    if (hold) {
-      setPhase('SETTLED');
-      setDeparting(departingOrders(document, state.day));
-      return undefined;
-    }
-    if (!animate) {
-      setPhase('IDLE');
-      setDeparting([]);
-      return undefined;
-    }
-    setPhase('MOVE');
-    setDeparting(departingOrders(document, state.day));
+    if (hold || !animate) return undefined;
+    const set = (next: Phase) => setProgress({ key: runKey, phase: next });
+    set('MOVE');
     const settleAt = REPLAY_TIMING.flowAt + REPLAY_TIMING.draw + REPLAY_TIMING.stagger * Math.max(0, flows.length - 1);
     const at = (ms: number, run: () => void) => globalThis.setTimeout(run, ms / speed);
     const timers = [
-      at(REPLAY_TIMING.flowAt, () => setPhase('FLOW')),
-      at(settleAt, () => setPhase('SETTLED')),
-      at(REPLAY_TIMING.leaveAt, () => setPhase('LEAVING')),
-      at(REPLAY_TIMING.clearAt, () => { setPhase('IDLE'); setDeparting([]); }),
+      at(REPLAY_TIMING.flowAt, () => set('FLOW')),
+      at(settleAt, () => set('SETTLED')),
+      at(REPLAY_TIMING.leaveAt, () => set('LEAVING')),
+      at(REPLAY_TIMING.clearAt, () => set('IDLE')),
     ];
     return () => timers.forEach((timer) => globalThis.clearTimeout(timer));
     // speed fica de fora: mudar a velocidade no meio do dia não reinicia a animação.
-  }, [animate, hold, document, state.day, transitionKey, flows.length]);
+  }, [animate, hold, runKey, flows.length]);
 
   const visible = useMemo(() => {
     const currentIds = new Set(state.openOrders.map((order) => order.orderId));

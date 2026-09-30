@@ -16,10 +16,11 @@ function useCountedValue(value: string, enabled: boolean): string {
       setShown(value);
       return undefined;
     }
+    // Um relógio só (performance.now) no início e em cada quadro.
     const startedAt = performance.now();
     let frame = 0;
-    const step = (now: number) => {
-      const progress = Math.min(1, (now - startedAt) / VALUE_TWEEN_MS);
+    const step = () => {
+      const progress = Math.min(1, (performance.now() - startedAt) / VALUE_TWEEN_MS);
       if (progress >= 1) { setShown(value); return; }
       setShown((from + (to - from) * (1 - (1 - progress) ** 3)).toFixed(2));
       frame = requestAnimationFrame(step);

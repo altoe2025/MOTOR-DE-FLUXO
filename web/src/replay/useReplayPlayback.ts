@@ -4,7 +4,7 @@ import type { ReplayDocument } from './domain';
 import { presentReplayDay } from './presentation';
 import { nextClosingDay } from './state';
 
-export type ReplaySpeed = 1 | 2 | 4;
+export type ReplaySpeed = 0.5 | 1 | 2 | 4;
 export type ReplayPrimaryAction = 'PLAY' | 'PAUSE' | 'RESTART';
 
 export type ReplayPlayback = Readonly<{
