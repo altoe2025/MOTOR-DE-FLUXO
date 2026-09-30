@@ -84,7 +84,7 @@ test('Replay observado reconstrói controles, parcial, gatilhos, vazio, OUT e re
   await expect(dayValue(page, 'Ainda aberto')).not.toContainText('R$ 0,00');
   await page.getByRole('button', { name: 'Repetir evento' }).click();
   await expect.poll(() => page.locator('.replay-connection').count()).toBeGreaterThan(0);
-  await expect(page.locator('.replay-connection-label')).toContainText(['Netting multilateral']);
+  await expect(page.locator('.replay-connection-label').first()).toContainText('R$');
   await expect(page.getByLabel('Legenda')).toContainText('Autonetting intracliente');
   await expect(page.getByLabel('Legenda')).toContainText('Netting multilateral');
   expect(await page.locator('.replay-connection').evaluateAll((paths) => paths.every((path) => {

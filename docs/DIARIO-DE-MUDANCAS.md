@@ -79,6 +79,13 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-09-30 — Cena do Replay com setas roteadas, ritmo mais lento e visual de console (MOT-99)
+
+- **Sintoma:** na Fronteira Viva as setas saíam todas do meio do cartão e se cruzavam no centro, os rótulos de origem ficavam empilhados no mesmo ponto, as remessas atravessavam a faixa IN e o dia passava rápido demais (4 s) para acompanhar.
+- **Causa:** cada seta era uma curva independente de borda a borda, sem noção das outras; o rótulo ia sempre 58 px acima do ponto médio; e o intervalo da reprodução era fixo, sem distinguir dia com evento de dia vazio.
+- **O que foi feito:** novo `web/src/replay/routing.ts` (puro, com testes): cada seta ganha uma porta própria no cartão, ordenada pela altura do destino, e usa o traçado mais simples (reta ou uma curva); só as que se chocariam passam para trilhos em ângulo reto dentro da CNR, na ordem com menos cruzamentos. As remessas descem até um portão "Remessa · câmbio" no pé da CNR. Os rótulos mostram o valor do fluxo, no trecho reto mais longo, e se afastam quando colidem. A cena anima em etapas: os cartões deslizam, as setas se desenham uma a uma com pontos de luz, os saldos contam até o novo valor, e as liquidadas saem aos 7 s. O ritmo passa a 8 s por dia com evento e 2 s por dia vazio em 1×, e as etapas escalam com a velocidade. Passar o mouse numa ordem isola o caminho dela. O visual da cena (só ela) virou um console escuro. Arquivos: `ReplayStage.tsx`, `ReplayConnections.tsx`, `ReplayOrderCard.tsx`, `useReplayPlayback.ts`, `global.css`, testes do Replay e uma asserção de `e2e/stage5-replay.spec.ts`. Branch `feat/replay-visual`, a partir de `codex/replay-production-fix`.
+- **O que isso invalida:** capturas visuais da cena anterior (fundo claro, rótulo "Autonetting/Netting" sobre a seta) e a expectativa de 4 s por dia. Não altera dados, cálculos ou regras do motor. Verificado: 58 testes do Replay, typecheck, lint e build aprovados; conferido em navegador com um cenário de 3 setas cruzadas. Falhas já existentes na base e não tratadas aqui: 11 testes unitários de rotas/login/`studyController` (`indexedDB is not defined`) e duas asserções antigas de `stage5-replay.spec.ts` (`Dia N de M`, `.replay-frontier__status`) que não batem mais com os controles atuais.
+
 ## 2026-09-29 — Controles e acumulados reposicionados no Replay (MOT-99)
 
 - **Sintoma:** o controle compacto de pausa aparecia na régua superior em vez do centro da Fronteira Viva, a bolinha do dia misturava `D+n` com a data civil e os três acumulados ficavam abaixo da cena.

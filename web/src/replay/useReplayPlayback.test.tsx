@@ -19,14 +19,24 @@ describe('useReplayPlayback', () => {
     expect(result.current.day).toBe(0);
   });
 
-  it('mantém o dia por 4 segundos na velocidade padrão', () => {
+  it('segura 8 segundos num dia com fechamento para dar tempo de acompanhar as setas', () => {
     const { result } = renderHook(() => useReplayPlayback(replayDocumentFixture()));
 
     act(() => result.current.togglePlaying());
-    act(() => vi.advanceTimersByTime(3_999));
+    act(() => vi.advanceTimersByTime(7_999));
     expect(result.current.day).toBe(0);
     act(() => vi.advanceTimersByTime(1));
     expect(result.current.day).toBe(1);
+  });
+
+  it('passa por um dia sem evento em 2 segundos', () => {
+    const { result } = renderHook(() => useReplayPlayback(replayDocumentFixture(), { initialDay: 1 }));
+
+    act(() => result.current.togglePlaying());
+    act(() => vi.advanceTimersByTime(1_999));
+    expect(result.current.day).toBe(1);
+    act(() => vi.advanceTimersByTime(1));
+    expect(result.current.day).toBe(2);
   });
 
   it('toca, pausa e respeita velocidades 1×/2×/4×', () => {
