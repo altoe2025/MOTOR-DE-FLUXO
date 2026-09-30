@@ -90,7 +90,7 @@ def test_controle_real_consultavel_sem_documento_financeiro(help_id, label, rout
 
 def test_ids_publicados_pelo_frontend_resolvem_no_catalogo_real(product_help_client):
     frontend = Path(__file__).resolve().parents[2] / "web/src/help/helpIds.ts"
-    help_ids = re.findall(r"^\s+[A-Z_]+:\s*'([^']+)'", frontend.read_text(encoding="utf-8"), re.M)
+    help_ids = re.findall(r"^\s+[A-Z_]+:\s*'([^']+)'", frontend.read_text(encoding="utf-8"), re.MULTILINE)
     items = product_help_client.get("/api/v1/catalogos/ajuda", headers=auth()).json()["items"]
     published = {item["id"] for item in items}
 
