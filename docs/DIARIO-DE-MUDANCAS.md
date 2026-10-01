@@ -33,12 +33,13 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-10-01, com a abertura da melhoria de diagnóstico recolhível.
+Atualizada em 2026-10-01, após a publicação do diagnóstico recolhível no Render.
 
 | Branch | Situação | Dono |
 |---|---|---|
-| `codex/diagnostico-recolhivel` | Recolhe os cenários por estudo na aba Diagnóstico; PR #65 aberto, sem merge ou deploy | Codex |
-| `codex/replay-timeline-deploy-record` | registra o deploy de `d4fec2f` e o smoke da nova régua; PR de documentação em preparação | Codex |
+| `codex/diagnostico-deploy-record` | Registra merge, CIs e deploy de `5483fab`; PR #67 aberto | Codex |
+| `codex/diagnostico-recolhivel` | PR #65 mergeado na `main`; merge `5483fab` publicado no Render | Codex |
+| `codex/replay-timeline-deploy-record` | PR #64 mergeado; registro do deploy de `d4fec2f` incorporado à `main` | Codex |
 | `feat/replay-linha-do-tempo` | PR #63 mergeado na `main`; merge `d4fec2f` publicado no Render | Codex |
 | `codex/replay-deploy-record` | PR #62 mergeado; registro do deploy anterior incorporado à `main` | Codex |
 | `feat/replay-visual` | PR #60 mergeado na `main`; merge `f70769c` publicado no Render | Codex |
@@ -49,7 +50,7 @@ Atualizada em 2026-10-01, com a abertura da melhoria de diagnóstico recolhível
 | `codex/carteira-criterios` | Integra estudo separado de combinações, últimas melhorias de `feat/bancada-exploracao` e chat já publicado do PR #57; deploy aguardando comando do Gabriel | Codex |
 | `codex/chat-interface-render` | PR #57 aberto (draft, base `feat/bancada-exploracao`); código `8d43695` publicado no Render com status Live em 2026-09-28; sem merge na `main` | Codex |
 | `codex/integracao-etapas-5-6` | Consolida `feat/bancada-exploracao` e `codex/finalidade-verificacao`, incluindo histórico de `origin/main`; publicação/CI em preparação, sem deploy | Codex |
-| `main` | `d4fec2f`: PR #63 mergeado e nova régua do Replay publicada no Render | os dois |
+| `main` | `5483fab`: PR #65 mergeado e diagnóstico recolhível publicado no Render | os dois |
 | `netting/p1` | spike do P1, **NÃO MERGEAR** — dominado, e agora sabemos que a folga é zero em N ≥ 50. Só local, nunca foi pro GitHub | Felipe |
 | `fix/semantica-remessa-p0` | PR #11, mergeada | Felipe |
 | `fix/previsao-temporal-e-colunas-csv` | PR #12, mergeada | Gabriel |
@@ -85,6 +86,28 @@ Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. 
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+## 2026-10-01 — Diagnóstico recolhível publicado no Render (MOT-99)
+
+1. **Sintoma** — o PR #65 estava pronto, mas a `main` e o serviço público ainda
+   serviam a aba Diagnóstico com todos os cenários expandidos de uma vez.
+2. **Causa** — a proteção da `main` e o Auto-Deploy desligado exigem merge e
+   publicação manual separados.
+3. **O que foi feito** — o PR #65 foi mergeado com commit
+   `5483fab85a9e7c53552fe904ed0d6fa3d87fe4a2`. A primeira tentativa da CI do PR
+   (run `36896483420`) teve um timeout isolado no E2E antigo
+   `foundation.spec.ts`, fora dos arquivos alterados; sua repetição passou inteira
+   em 12m24s, inclusive os 66 testes de navegador. A CI pós-merge da `main` (run
+   `36899893188`) também passou inteira em 12m31s. O commit foi publicado
+   manualmente no `motor-de-fluxo-piloto` pelo deploy
+   `dep-dav9nhl9fdbs73betopg`, concluído como **Deploy succeeded** em 2026-10-01
+   às 14:43:34 GMT-3, em 57,9s, sem alterar configuração ou variáveis. Smoke
+   público: `GET /api/v1/health` respondeu `200 {"status":"ok"}`; `/login` e
+   `/diagnostico` responderam HTTP 200 com HTML.
+4. **O que isso invalida** — a afirmação de que o PR #65 ainda estava aberto e sem
+   deploy. O release anterior `d4fec2f` (`dep-dauv9a0jo6nc73ep9980`) passa a ser
+   a referência imediata de rollback. Nada em métricas, regras do motor,
+   autenticação, Supabase ou configuração do Render mudou.
 
 ## 2026-10-01 — Diagnóstico recolhível por estudo (MOT-99)
 
