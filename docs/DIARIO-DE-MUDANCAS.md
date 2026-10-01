@@ -37,7 +37,7 @@ Atualizada em 2026-10-01, após a publicação do diagnóstico recolhível no Re
 
 | Branch | Situação | Dono |
 |---|---|---|
-| `codex/diagnostico-deploy-record` | Registra merge, CIs e deploy de `5483fab`; PR documental em preparação | Codex |
+| `codex/diagnostico-deploy-record` | Registra merge, CIs e deploy de `5483fab`; PR #67 aberto | Codex |
 | `codex/diagnostico-recolhivel` | PR #65 mergeado na `main`; merge `5483fab` publicado no Render | Codex |
 | `codex/replay-timeline-deploy-record` | PR #64 mergeado; registro do deploy de `d4fec2f` incorporado à `main` | Codex |
 Atualizada em 2026-10-05, durante o ajuste do contorno dos cartões de Estudos (MOT-99).
