@@ -86,6 +86,13 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-10-01 — Duplo clique em "Executar diagnóstico" podia sumir com o resultado (MOT-99)
+
+- **Sintoma:** o E2E `foundation.spec.ts` ("browser executes a generated study… exactly once") passou a falhar de forma intermitente no CI: depois do diagnóstico concluído, a tela ficava só com "Configuração", sem progresso nem "Resultado do motor". Falhou no PR #66 (`feat/front-visual`) e, no mesmo dia, em `codex/diagnostico-recolhivel`, que não tem nada em comum com o PR #66. Localmente: 2 em 5 rodadas na `feat/front-visual`, 0 em 6 na `main`.
+- **Causa:** `StudyDiagnosticPage.run` se protegia de execuções simultâneas com o estado `runInProgress`, que só muda no próximo render. Dois cliques no mesmo instante (o teste faz isso de propósito) iniciavam duas execuções. A segunda encontrava a reserva gravada pela primeira e consultava o job antes de o `POST /api/v1/diagnosticos` chegar ao servidor. O `404` virava um registro `INTERRUPTED` (`SERVER_RESTART_OR_JOB_EXPIRED`) e a tela não mostrava o resultado. Quem chega primeiro é questão de milissegundos; o visual novo (fontes, animação) só mudou o tempo e deixou a corrida mais frequente. Traces: só a rodada que falha tem `GET …/diagnosticos/{id}` 404 antes do `POST` 202.
+- **O que foi feito:** trava síncrona `runInFlightRef` em `run`, liberada no `finally`, além do `runInProgress` que continua controlando a tela. Teste novo `web/src/pages/StudyDiagnosticDoubleClick.test.tsx`, que falhava (2 execuções) antes da correção. Verificado: E2E `foundation` 12/12 seguidas, suíte E2E local completa 66/66, front 1284/1284, typecheck e lint.
+- **O que isso invalida:** nada nos números nem no motor. Falhas desse teste em outras branches de hoje (ex.: `codex/diagnostico-recolhivel`) têm esta causa e somem quando a branch incorporar a correção.
+
 ## 2026-10-01 — Visual do app inteiro no sistema do Replay (MOT-99)
 
 - **Sintoma:** depois do novo Replay (console escuro), o resto do front continuava no visual antigo — fundo creme, títulos serifados, cartões com bordas fortes, chat com cara de WhatsApp e um cabeçalho fixo "Estudo · Ainda não iniciado" que não dizia nada. O Gabriel achou o conjunto desorganizado e pediu a mesma suavidade e modernidade do Replay em todas as telas, **sem mudar nenhuma funcionalidade**.
