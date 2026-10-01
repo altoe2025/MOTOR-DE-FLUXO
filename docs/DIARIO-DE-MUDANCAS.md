@@ -33,18 +33,20 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-09-30, durante a integração da versão Live na main.
+Atualizada em 2026-09-30, após a publicação do novo Replay no Render.
 
 | Branch | Situação | Dono |
 |---|---|---|
-| `codex/main-render-sync` | PR #59 draft; candidato final integra o Live, corrige armazenamento/janela/teto/contexto do chat e aguarda apenas CI integral; revisão visual Linux concluída, sem novo deploy | Codex |
+| `codex/replay-deploy-record` | registra o deploy de `f70769c` e o smoke público; PR de documentação em preparação | Codex |
+| `feat/replay-visual` | PR #60 mergeado na `main`; merge `f70769c` publicado no Render | Codex |
+| `codex/main-render-sync` | PR #59 mergeado; base funcional incorporada pela `main` antes do PR #60 | Codex |
 | `codex/chat-front-context` | `29d955c` publicado no Render (Live); referência preservada da integração | Codex |
 | `codex/replay-production-fix` | `cb81781` incorporado no Live `29d955c`, incluindo reset local e Replay | Codex |
 | `codex/frontend-performance-fixes` | Integra as correções de travamento e `feat/estudo-vs-combinacao` sobre o release `829d224`; publicação no Render em preparação | Codex |
 | `codex/carteira-criterios` | Integra estudo separado de combinações, últimas melhorias de `feat/bancada-exploracao` e chat já publicado do PR #57; deploy aguardando comando do Gabriel | Codex |
 | `codex/chat-interface-render` | PR #57 aberto (draft, base `feat/bancada-exploracao`); código `8d43695` publicado no Render com status Live em 2026-09-28; sem merge na `main` | Codex |
 | `codex/integracao-etapas-5-6` | Consolida `feat/bancada-exploracao` e `codex/finalidade-verificacao`, incluindo histórico de `origin/main`; publicação/CI em preparação, sem deploy | Codex |
-| `main` | Base remota `3342059` (Etapas 5/6 e bancada); integração dos 52 commits até o Live `29d955c` em andamento | os dois |
+| `main` | `f70769c`: PR #60 mergeado, CI integral verde e novo Replay publicado no Render | os dois |
 | `netting/p1` | spike do P1, **NÃO MERGEAR** — dominado, e agora sabemos que a folga é zero em N ≥ 50. Só local, nunca foi pro GitHub | Felipe |
 | `fix/semantica-remessa-p0` | PR #11, mergeada | Felipe |
 | `fix/previsao-temporal-e-colunas-csv` | PR #12, mergeada | Gabriel |
@@ -80,6 +82,13 @@ Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. 
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+## 2026-09-30 — Novo Replay publicado no Render (MOT-99)
+
+- **Sintoma:** o PR #60 estava pronto e aprovado, mas o serviço `motor-de-fluxo-piloto` continuava no deploy anterior `dep-dauqcqu0tbcc73c9gpd0` (`61bc193`), porque o Auto-Deploy está desligado.
+- **Causa:** a publicação do Render é manual e o merge na `main` não altera o serviço sozinho.
+- **O que foi feito:** o PR #60 (`feat/replay-visual`) foi mergeado com commit de merge `f70769caa64906970a81b7416ffa8ec491eec049`. A CI integral pós-merge, run `36804337810`, passou. O commit foi publicado manualmente no serviço `motor-de-fluxo-piloto` pelo deploy `dep-daus8cvpn0mc738v07a0`, concluído como **Live** em 2026-09-30 às 23:23:48 GMT-3 (57,8 s), sem alterar configuração ou variáveis. Smoke público: `GET /api/v1/health` respondeu `200 {"status":"ok"}` e `/login` carregou via HTTPS. O smoke autenticado de estudos, diagnóstico, Replay, apresentação e chat não foi concluído porque a credencial efêmera guardada no navegador foi recusada; precisa ser repetido com uma credencial de smoke vigente.
+- **O que isso invalida:** o deploy `61bc193` deixa de ser a versão ativa e passa a ser a referência imediata de rollback. Capturas e expectativas do Replay claro anterior deixam de representar o site publicado. Nada nos números, nas regras do motor, na autenticação, no Supabase ou na configuração do Render mudou.
 
 ## 2026-09-30 — Fronteira Viva conferida contra o motor; controles e acumulados no mesmo visual (MOT-99)
 
