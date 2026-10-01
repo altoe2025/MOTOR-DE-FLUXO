@@ -55,7 +55,7 @@ describe('cena Fronteira Viva', () => {
     expect(screen.getByText(/ordem in-2.*remetida IN/i)).toBeInTheDocument();
   });
 
-  it('mantém cartões liquidados e conexões visíveis por 2,6 segundos', () => {
+  it('anima o dia em etapas: cartões andam, setas entram, saldos baixam e liquidadas saem', () => {
     vi.useFakeTimers();
     const document = replayDocumentWithBothRemittancesFixture();
     const { container } = render(<ReplayStage
@@ -67,15 +67,49 @@ describe('cena Fronteira Viva', () => {
       playback={stagePlayback}
     />);
 
+    expect(screen.getByRole('article', { name: /OUT out-1/i })).toHaveTextContent('R$ 60,00');
+    expect(screen.getByRole('article', { name: /IN in-2/i })).toHaveTextContent('R$ 20,00');
+    expect(container.querySelector('.replay-connections')).not.toBeInTheDocument();
+
+    act(() => vi.advanceTimersByTime(1_000));
+    expect(container.querySelectorAll('.replay-connection')).toHaveLength(2);
+    expect(screen.getByRole('article', { name: /OUT out-1/i })).toHaveTextContent('R$ 60,00');
+
+    act(() => vi.advanceTimersByTime(1_700));
     expect(screen.getByRole('article', { name: /OUT out-1/i })).toHaveTextContent('Liquidada');
     expect(screen.getByRole('article', { name: /IN in-2/i })).toHaveTextContent('Liquidada');
-    expect(container.querySelector('.replay-connections')).toBeInTheDocument();
-    act(() => vi.advanceTimersByTime(1_900));
-    expect(screen.getByRole('article', { name: /OUT out-1/i })).toBeInTheDocument();
-    expect(container.querySelector('.replay-connections')).toBeInTheDocument();
-    act(() => vi.advanceTimersByTime(1_900));
+    expect(container.querySelector('.replay-gateway--live')).toBeInTheDocument();
+
+    act(() => vi.advanceTimersByTime(4_300));
     expect(screen.queryByRole('article', { name: /OUT out-1/i })).not.toBeInTheDocument();
     expect(container.querySelector('.replay-connections')).not.toBeInTheDocument();
+  });
+
+  it('acelera as etapas junto com a velocidade escolhida', () => {
+    vi.useFakeTimers();
+    const document = replayDocumentWithBothRemittancesFixture();
+    const { container } = render(<ReplayStage document={document} state={replayStateAt(document, 2)} sort="ARRIVAL"
+      transitionMode="ANIMATE" transitionKey={1} playback={{ ...stagePlayback, speed: 2 }} />);
+
+    act(() => vi.advanceTimersByTime(500));
+    expect(container.querySelector('.replay-connections')).toBeInTheDocument();
+    act(() => vi.advanceTimersByTime(3_000));
+    expect(screen.queryByRole('article', { name: /OUT out-1/i })).not.toBeInTheDocument();
+  });
+
+  it('isola o caminho de uma ordem ao passar o mouse sobre ela', () => {
+    const document = replayDocumentWithBothRemittancesFixture();
+    const { container } = render(<ReplayStage document={document} state={replayStateAt(document, 2)} sort="ARRIVAL"
+      transitionMode="ANIMATE" transitionKey={1} frozen playback={stagePlayback} />);
+
+    fireEvent.mouseOver(screen.getByRole('article', { name: /IN in-2/i }));
+    expect(container.querySelector('.replay-stage--focus')).toBeInTheDocument();
+    expect(screen.getByRole('article', { name: /IN in-2/i })).toHaveClass('replay-order--focus');
+    expect(screen.getByRole('article', { name: /OUT out-1/i })).not.toHaveClass('replay-order--focus');
+    expect(container.querySelectorAll('.replay-connection.is-focus')).toHaveLength(1);
+
+    fireEvent.mouseOut(screen.getByRole('article', { name: /IN in-2/i }));
+    expect(container.querySelector('.replay-stage--focus')).not.toBeInTheDocument();
   });
 
   it('congela cartões liquidados e setas enquanto pausado', () => {
@@ -84,7 +118,7 @@ describe('cena Fronteira Viva', () => {
     const props = { document, state: replayStateAt(document, 2), sort: 'ARRIVAL' as const, transitionKey: 1 };
     const { container, rerender } = render(<ReplayStage {...props} transitionMode="ANIMATE" frozen={false} playback={stagePlayback} />);
 
-    act(() => vi.advanceTimersByTime(3_800));
+    act(() => vi.advanceTimersByTime(7_000));
     expect(screen.queryByRole('article', { name: /OUT out-1/i })).not.toBeInTheDocument();
 
     rerender(<ReplayStage {...props} transitionMode="ANIMATE" frozen playback={stagePlayback} />);
@@ -96,7 +130,7 @@ describe('cena Fronteira Viva', () => {
     expect(container.querySelector('.replay-connections')).toBeInTheDocument();
   });
 
-  it('rotula cada seta casada como autonetting ou netting multilateral', () => {
+  it('rotula cada seta com o valor do fluxo e pinta pela origem do casamento', () => {
     const document = replayDocumentFixture();
     document.days[0]!.closing!.flow_segments = [
       {
@@ -111,11 +145,13 @@ describe('cena Fronteira Viva', () => {
       sort="ARRIVAL"
       transitionMode="ANIMATE"
       transitionKey={1}
+      frozen
       playback={stagePlayback}
     />);
 
     const labels = [...container.querySelectorAll('.replay-connection-label')].map((item) => item.textContent);
-    expect(labels).toEqual(['Autonetting intracliente', 'Netting multilateral']);
+    expect(labels).toEqual(['R$ 10,00', 'R$ 40,00']);
+    expect(container.querySelector('.replay-connection-label--intra')?.textContent).toBe('R$ 10,00');
     expect(container.querySelector('.replay-connection--intra-client')).toBeInTheDocument();
     expect(container.querySelector('.replay-connection--inter-client')).toBeInTheDocument();
   });

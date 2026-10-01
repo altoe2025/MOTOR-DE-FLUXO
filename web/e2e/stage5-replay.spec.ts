@@ -84,7 +84,7 @@ test('Replay observado reconstrói controles, parcial, gatilhos, vazio, OUT e re
   await expect(dayValue(page, 'Ainda aberto')).not.toContainText('R$ 0,00');
   await page.getByRole('button', { name: 'Repetir evento' }).click();
   await expect.poll(() => page.locator('.replay-connection').count()).toBeGreaterThan(0);
-  await expect(page.locator('.replay-connection-label')).toContainText(['Netting multilateral']);
+  await expect(page.locator('.replay-connection-label').first()).toContainText('R$');
   await expect(page.getByLabel('Legenda')).toContainText('Autonetting intracliente');
   await expect(page.getByLabel('Legenda')).toContainText('Netting multilateral');
   expect(await page.locator('.replay-connection').evaluateAll((paths) => paths.every((path) => {
@@ -116,10 +116,10 @@ test('Replay observado reconstrói controles, parcial, gatilhos, vazio, OUT e re
   const nextClosing = document.days.find((day) => day.day > emptyDay && day.closing !== null)!;
   await expect(page.getByLabel('Selecionar dia')).toHaveValue(String(nextClosing.day));
   await page.getByRole('button', { name: 'Anterior' }).click();
-  await page.getByRole('button', { name: 'Seguinte →' }).click();
-  await page.getByRole('button', { name: '▶ Tocar' }).click();
-  await expect(page.getByRole('button', { name: 'Ⅱ Pausar' })).toBeVisible();
-  await page.getByRole('button', { name: 'Ⅱ Pausar' }).click();
+  await page.getByRole('button', { name: 'Seguinte', exact: true }).click();
+  await page.getByRole('button', { name: 'Reproduzir' }).click();
+  await expect(page.getByRole('button', { name: 'Pausar reprodução' })).toBeVisible();
+  await page.getByRole('button', { name: 'Pausar reprodução' }).click();
 
   const firstDayText = await page.getByLabel('Selecionar dia').inputValue();
   await page.reload();
@@ -159,7 +159,7 @@ test('Replay do cenário sintético publicado preserva a origem e mostra remessa
   await page.waitForTimeout(800);
   await page.screenshot({ path: evidencePath('mot89-sintetico-remessa-in.png'), fullPage: true });
   await selectDay(page, document.period.settlement_end_day);
-  await expect(page.getByRole('button', { name: '↺ Recomeçar' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Recomeçar do início' })).toBeVisible();
   await expect(dayValue(page, 'Ainda aberto')).toContainText('R$ 0,00');
   await page.screenshot({ path: evidencePath('mot89-sintetico-final.png'), fullPage: true });
   expect(await page.evaluate(() => window.__MOTOR_E2E__!.demoAcceptanceSnapshot())).toEqual(before);

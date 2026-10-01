@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import type { ReplayDocument } from './domain';
+import { presentReplayDay } from './presentation';
 import { nextClosingDay } from './state';
 
-export type ReplaySpeed = 1 | 2 | 4;
+export type ReplaySpeed = 0.5 | 1 | 2 | 4;
 export type ReplayPrimaryAction = 'PLAY' | 'PAUSE' | 'RESTART';
 
 export type ReplayPlayback = Readonly<{
@@ -27,7 +28,13 @@ export type ReplayPlayback = Readonly<{
 
 export function useReplayPlayback(
   document: ReplayDocument,
-  { intervalMs = 4_000, initialDay = 0 }: Readonly<{ intervalMs?: number; initialDay?: number }> = {},
+  { intervalMs = 8_000, quietIntervalMs = 2_000, initialDay = 0 }: Readonly<{
+    /** Tempo de um dia com fechamento ou chegada, em 1×: cartões andam, setas desenham, saldos baixam. */
+    intervalMs?: number;
+    /** Tempo de um dia sem evento; nunca maior que o de um dia com evento. */
+    quietIntervalMs?: number;
+    initialDay?: number;
+  }> = {},
 ): ReplayPlayback {
   const lastDay = document.period.settlement_end_day;
   const routeDay = Number.isSafeInteger(initialDay) && initialDay >= 0 && initialDay <= lastDay ? initialDay : 0;
@@ -55,6 +62,7 @@ export function useReplayPlayback(
       setPlaying(false);
       return undefined;
     }
+    const hold = presentReplayDay(document, day).hasOperationalEvent ? intervalMs : Math.min(quietIntervalMs, intervalMs);
     const timeout = globalThis.setTimeout(() => {
       setTransitionMode('ANIMATE');
       setTransitionKey((current) => current + 1);
@@ -63,9 +71,9 @@ export function useReplayPlayback(
         if (nextDay === lastDay) setPlaying(false);
         return nextDay;
       });
-    }, intervalMs / speed);
+    }, hold / speed);
     return () => globalThis.clearTimeout(timeout);
-  }, [day, intervalMs, lastDay, playing, speed]);
+  }, [day, document, intervalMs, lastDay, playing, quietIntervalMs, speed]);
 
   const pauseAndMove = useCallback((target: number, mode: 'ANIMATE' | 'INSTANT' = 'INSTANT') => {
     if (playing) setPaused(true);

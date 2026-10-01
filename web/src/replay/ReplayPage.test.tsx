@@ -126,8 +126,9 @@ describe('ReplayPage', () => {
       </ChatProvider>
     </MemoryRouter>);
     await screen.findByRole('heading', { name: 'Fronteira Viva' });
-    expect(screen.getByTestId('chat-day')).toHaveTextContent('0');
-    expect(screen.getByTestId('chat-scenario')).toHaveTextContent(persistedStudy().scenarios[0]!.id);
+    // Dia e cenário chegam ao chat por efeitos da página, logo depois do render.
+    await waitFor(() => expect(screen.getByTestId('chat-day')).toHaveTextContent('0'));
+    await waitFor(() => expect(screen.getByTestId('chat-scenario')).toHaveTextContent(persistedStudy().scenarios[0]!.id));
     const range = screen.getByRole('slider', { name: 'Selecionar dia' });
     fireEvent.change(range, { target: { value: '1' } });
     await waitFor(() => expect(screen.getByTestId('chat-day')).toHaveTextContent('1'));
