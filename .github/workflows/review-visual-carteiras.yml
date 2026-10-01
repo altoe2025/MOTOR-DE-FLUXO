@@ -1,7 +1,7 @@
-name: Review carteira visual references
+﻿name: Review carteira visual references
 on:
   push:
-    branches: [codex/carteira-criterios]
+    branches: [codex/carteira-criterios, feat/front-visual]
     paths: [.github/workflows/review-visual-carteiras.yml]
 permissions:
   contents: read
