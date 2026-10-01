@@ -37,7 +37,8 @@ Atualizada em 2026-10-01, com a abertura da melhoria de diagnóstico recolhível
 
 | Branch | Situação | Dono |
 |---|---|---|
-| `codex/diagnostico-recolhivel` | Recolhe os cenários por estudo na aba Diagnóstico; PR #65 aberto, sem merge ou deploy | Codex |
+| `feat/front-visual` | visual do app inteiro no sistema do Replay; aprovado pelo Gabriel na prévia local; PR para a `main`, deploy com o Codex | Claude |
+| `codex/diagnostico-recolhivel` | Recolhe os cenários por estudo na aba Diagnóstico; PR #65 mergeado na `main` (`5483fab`), sem deploy próprio | Codex |
 | `codex/replay-timeline-deploy-record` | registra o deploy de `d4fec2f` e o smoke da nova régua; PR de documentação em preparação | Codex |
 | `feat/replay-linha-do-tempo` | PR #63 mergeado na `main`; merge `d4fec2f` publicado no Render | Codex |
 | `codex/replay-deploy-record` | PR #62 mergeado; registro do deploy anterior incorporado à `main` | Codex |
@@ -85,6 +86,20 @@ Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. 
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+## 2026-10-01 — Duplo clique em "Executar diagnóstico" podia sumir com o resultado (MOT-99)
+
+- **Sintoma:** o E2E `foundation.spec.ts` ("browser executes a generated study… exactly once") passou a falhar de forma intermitente no CI: depois do diagnóstico concluído, a tela ficava só com "Configuração", sem progresso nem "Resultado do motor". Falhou no PR #66 (`feat/front-visual`) e, no mesmo dia, em `codex/diagnostico-recolhivel`, que não tem nada em comum com o PR #66. Localmente: 2 em 5 rodadas na `feat/front-visual`, 0 em 6 na `main`.
+- **Causa:** `StudyDiagnosticPage.run` se protegia de execuções simultâneas com o estado `runInProgress`, que só muda no próximo render. Dois cliques no mesmo instante (o teste faz isso de propósito) iniciavam duas execuções. A segunda encontrava a reserva gravada pela primeira e consultava o job antes de o `POST /api/v1/diagnosticos` chegar ao servidor. O `404` virava um registro `INTERRUPTED` (`SERVER_RESTART_OR_JOB_EXPIRED`) e a tela não mostrava o resultado. Quem chega primeiro é questão de milissegundos; o visual novo (fontes, animação) só mudou o tempo e deixou a corrida mais frequente. Traces: só a rodada que falha tem `GET …/diagnosticos/{id}` 404 antes do `POST` 202.
+- **O que foi feito:** trava síncrona `runInFlightRef` em `run`, liberada no `finally`, além do `runInProgress` que continua controlando a tela. Teste novo `web/src/pages/StudyDiagnosticDoubleClick.test.tsx`, que falhava (2 execuções) antes da correção. Verificado: E2E `foundation` 12/12 seguidas, suíte E2E local completa 66/66, front 1284/1284, typecheck e lint.
+- **O que isso invalida:** nada nos números nem no motor. Falhas desse teste em outras branches de hoje (ex.: `codex/diagnostico-recolhivel`) têm esta causa e somem quando a branch incorporar a correção.
+
+## 2026-10-01 — Visual do app inteiro no sistema do Replay (MOT-99)
+
+- **Sintoma:** depois do novo Replay (console escuro), o resto do front continuava no visual antigo — fundo creme, títulos serifados, cartões com bordas fortes, chat com cara de WhatsApp e um cabeçalho fixo "Estudo · Ainda não iniciado" que não dizia nada. O Gabriel achou o conjunto desorganizado e pediu a mesma suavidade e modernidade do Replay em todas as telas, **sem mudar nenhuma funcionalidade**.
+- **Causa:** o Replay ganhou um sistema visual próprio (`--rp-*`) isolado em `.replay-page`; os tokens globais (`tokens.css`) e o `global.css` eram da etapa 1 e muitos componentes usavam cores literais.
+- **O que foi feito:** branch `feat/front-visual` (worktree `.worktrees/front-visual`, a partir de `c4ec0c9`), **só local, sem push**. `tokens.css` reescrito com a paleta do Replay como padrão escuro e um tema claro em `data-theme="light"`, mantendo os nomes antigos (`--canvas`, `--surface`, `--ink`…) para não tocar em cada componente; acrescenta `--space-5`, que era usado sem existir. `global.css` reescrito seletor a seletor (mesmas classes, nenhuma removida): cartões, botões, campos, tabelas, métricas em fonte mono, abas das empresas, importação e chat, sem cores literais fora do console do Replay. Fontes Geist e Geist Mono empacotadas pelo `@fontsource-variable` (a CSP `style-src 'self'` bloqueia Google Fonts). `AppShell` ganhou ícones na navegação, marca do produto, botão de tema (preferência em `localStorage`, escuro por padrão) e uma barra de contexto derivada só da rota (ex.: "Estudos / Diagnóstico") no lugar do texto fixo; links, nomes acessíveis, região "Perfil" e botão "Sair" iguais. `EChart` lê as cores do tema e acompanha a troca. `print.css` força tokens claros na impressão, então o PDF da apresentação continua em papel branco. As telas, o login e o chat não têm animação de entrada: um esmaecimento derrubava o contraste medido pelo axe, e um deslize deixava capturas e PDF dependentes do instante exato (no CI, o login saiu 7 px abaixo da referência). Ficam as transições de hover e foco. Na impressão, animações e transições também são desligadas. Verificado: front 1283/1283, typecheck, lint e build; e2e local 64/66 na primeira rodada completa, e as 2 falhas eram só as comparações de captura com o visual antigo; depois de regenerar as referências Windows, `stage6-visual` passou 3 vezes seguidas e `stage6-accessibility` (axe WCAG 2.2 AA) passou 3/3. Conferido no navegador em 1440 px e 375 px (sem rolagem lateral), nos temas escuro e claro: estudos, carteira, diagnóstico, Replay, apresentação, empresas, importação, quadro e chat.
+- **O que isso invalida:** todas as capturas de tela do front, inclusive as referências de `e2e/stage6-visual.spec.ts-snapshots` (Windows regeneradas localmente; `-linux` geradas no Ubuntu do GitHub Actions, run `36896314121`, com gatilho temporário do workflow já revertido). Não altera dados, cálculos, regras do motor, rotas, contratos, autenticação nem configuração do Render.
 
 ## 2026-10-01 — Diagnóstico recolhível por estudo (MOT-99)
 

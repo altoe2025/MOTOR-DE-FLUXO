@@ -120,6 +120,8 @@ export function StudyDiagnosticPage() {
   const [runAllProgress, setRunAllProgress] = useState<string | null>(null);
   const [comparisonOpen, setComparisonOpen] = useState(false);
   const cancelInFlightRef = useRef(false);
+  // Trava síncrona: dois cliques no mesmo instante chegam antes de `runInProgress` re-renderizar.
+  const runInFlightRef = useRef(false);
   const batchCancelRequested = useRef(false);
   const identityToken = useRef(0);
   const activeIdentity = useRef(screenIdentity);
@@ -202,7 +204,8 @@ export function StudyDiagnosticPage() {
   }, [controller, screenIdentity]);
 
   const run = useCallback(async () => {
-    if (study === null || scenario === null || runInProgress) return;
+    if (study === null || scenario === null || runInProgress || runInFlightRef.current) return;
+    runInFlightRef.current = true;
     setRunInProgress(true);
     try {
       const result = await executeStudyDiagnostic({
@@ -229,7 +232,10 @@ export function StudyDiagnosticPage() {
       if (mounted.current) setViewState(controller.snapshot.status === 'STORAGE_FAILURE'
         ? { kind: 'STORAGE_FAILURE', message: 'O resultado não pôde ser salvo. Nenhum novo cálculo foi iniciado.' }
         : { kind: 'FAILED', attemptId: 'não persistida', publicMessage });
-    } finally { if (mounted.current) setRunInProgress(false); }
+    } finally {
+      runInFlightRef.current = false;
+      if (mounted.current) setRunInProgress(false);
+    }
   }, [complete, controller, effectiveCount, runInProgress, scenario, study, trackedApi]);
 
   useEffect(() => {
