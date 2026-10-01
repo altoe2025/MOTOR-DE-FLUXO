@@ -33,6 +33,13 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
+Atualizada em 2026-10-01, após a publicação do diagnóstico recolhível no Render.
+
+| Branch | Situação | Dono |
+|---|---|---|
+| `codex/diagnostico-deploy-record` | Registra merge, CIs e deploy de `5483fab`; PR documental em preparação | Codex |
+| `codex/diagnostico-recolhivel` | PR #65 mergeado na `main`; merge `5483fab` publicado no Render | Codex |
+| `codex/replay-timeline-deploy-record` | PR #64 mergeado; registro do deploy de `d4fec2f` incorporado à `main` | Codex |
 Atualizada em 2026-10-05, durante o ajuste do contorno dos cartões de Estudos (MOT-99).
 
 | Branch | Situação | Dono |
@@ -59,6 +66,7 @@ Atualizada em 2026-10-05, durante o ajuste do contorno dos cartões de Estudos (
 | `codex/carteira-criterios` | Integra estudo separado de combinações, últimas melhorias de `feat/bancada-exploracao` e chat já publicado do PR #57; deploy aguardando comando do Gabriel | Codex |
 | `codex/chat-interface-render` | PR #57 aberto (draft, base `feat/bancada-exploracao`); código `8d43695` publicado no Render com status Live em 2026-09-28; sem merge na `main` | Codex |
 | `codex/integracao-etapas-5-6` | Consolida `feat/bancada-exploracao` e `codex/finalidade-verificacao`, incluindo histórico de `origin/main`; publicação/CI em preparação, sem deploy | Codex |
+| `main` | `5483fab`: PR #65 mergeado e diagnóstico recolhível publicado no Render | os dois |
 | `main` | `77ceea2`: PR #75 mergeado e publicado no Render; otimização das combinações Live | os dois |
 | `netting/p1` | spike do P1, **NÃO MERGEAR** — dominado, e agora sabemos que a folga é zero em N ≥ 50. Só local, nunca foi pro GitHub | Felipe |
 | `fix/semantica-remessa-p0` | PR #11, mergeada | Felipe |
@@ -96,6 +104,27 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-10-01 — Diagnóstico recolhível publicado no Render (MOT-99)
+
+1. **Sintoma** — o PR #65 estava pronto, mas a `main` e o serviço público ainda
+   serviam a aba Diagnóstico com todos os cenários expandidos de uma vez.
+2. **Causa** — a proteção da `main` e o Auto-Deploy desligado exigem merge e
+   publicação manual separados.
+3. **O que foi feito** — o PR #65 foi mergeado com commit
+   `5483fab85a9e7c53552fe904ed0d6fa3d87fe4a2`. A primeira tentativa da CI do PR
+   (run `36896483420`) teve um timeout isolado no E2E antigo
+   `foundation.spec.ts`, fora dos arquivos alterados; sua repetição passou inteira
+   em 12m24s, inclusive os 66 testes de navegador. A CI pós-merge da `main` (run
+   `36899893188`) também passou inteira em 12m31s. O commit foi publicado
+   manualmente no `motor-de-fluxo-piloto` pelo deploy
+   `dep-dav9nhl9fdbs73betopg`, concluído como **Deploy succeeded** em 2026-10-01
+   às 14:43:34 GMT-3, em 57,9s, sem alterar configuração ou variáveis. Smoke
+   público: `GET /api/v1/health` respondeu `200 {"status":"ok"}`; `/login` e
+   `/diagnostico` responderam HTTP 200 com HTML.
+4. **O que isso invalida** — a afirmação de que o PR #65 ainda estava aberto e sem
+   deploy. O release anterior `d4fec2f` (`dep-dauv9a0jo6nc73ep9980`) passa a ser
+   a referência imediata de rollback. Nada em métricas, regras do motor,
+   autenticação, Supabase ou configuração do Render mudou.
 ## 2026-10-05 — Contorno turquesa nos cartões de Estudos (MOT-99)
 
 1. **Sintoma.** O Gabriel pediu que os boxes de Estudos ganhassem, ao passar o mouse, o mesmo acabamento de borda do ícone ativo no menu Trabalho.
