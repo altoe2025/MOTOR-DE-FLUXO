@@ -38,7 +38,7 @@ Atualizada em 2026-10-01, com a publicação do visual unificado no Render.
 | Branch | Situação | Dono |
 |---|---|---|
 | `feat/front-visual` | PR #66 mergeado na `main`; merge `c3620bf` publicado no Render | Claude |
-| `codex/front-visual-deploy-record` | registra o deploy de `c3620bf` e os smokes públicos; PR de documentação em preparação | Codex |
+| `codex/front-visual-deploy-record` | registra o deploy de `c3620bf` e os smokes públicos; PR #68 aberto | Codex |
 | `codex/diagnostico-recolhivel` | Recolhe os cenários por estudo na aba Diagnóstico; PR #65 mergeado na `main` (`5483fab`), sem deploy próprio | Codex |
 | `codex/replay-timeline-deploy-record` | registra o deploy de `d4fec2f` e o smoke da nova régua; PR de documentação em preparação | Codex |
 | `feat/replay-linha-do-tempo` | PR #63 mergeado na `main`; merge `d4fec2f` publicado no Render | Codex |
