@@ -33,11 +33,12 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-10-01, com a abertura da melhoria de diagnóstico recolhível.
+Atualizada em 2026-10-01, com a publicação do visual unificado no Render.
 
 | Branch | Situação | Dono |
 |---|---|---|
-| `feat/front-visual` | visual do app inteiro no sistema do Replay; aprovado pelo Gabriel na prévia local; PR para a `main`, deploy com o Codex | Claude |
+| `feat/front-visual` | PR #66 mergeado na `main`; merge `c3620bf` publicado no Render | Claude |
+| `codex/front-visual-deploy-record` | registra o deploy de `c3620bf` e os smokes públicos; PR #68 aberto | Codex |
 | `codex/diagnostico-recolhivel` | Recolhe os cenários por estudo na aba Diagnóstico; PR #65 mergeado na `main` (`5483fab`), sem deploy próprio | Codex |
 | `codex/replay-timeline-deploy-record` | registra o deploy de `d4fec2f` e o smoke da nova régua; PR de documentação em preparação | Codex |
 | `feat/replay-linha-do-tempo` | PR #63 mergeado na `main`; merge `d4fec2f` publicado no Render | Codex |
@@ -50,7 +51,7 @@ Atualizada em 2026-10-01, com a abertura da melhoria de diagnóstico recolhível
 | `codex/carteira-criterios` | Integra estudo separado de combinações, últimas melhorias de `feat/bancada-exploracao` e chat já publicado do PR #57; deploy aguardando comando do Gabriel | Codex |
 | `codex/chat-interface-render` | PR #57 aberto (draft, base `feat/bancada-exploracao`); código `8d43695` publicado no Render com status Live em 2026-09-28; sem merge na `main` | Codex |
 | `codex/integracao-etapas-5-6` | Consolida `feat/bancada-exploracao` e `codex/finalidade-verificacao`, incluindo histórico de `origin/main`; publicação/CI em preparação, sem deploy | Codex |
-| `main` | `d4fec2f`: PR #63 mergeado e nova régua do Replay publicada no Render | os dois |
+| `main` | `c3620bf`: PR #66 mergeado e visual unificado publicado no Render | os dois |
 | `netting/p1` | spike do P1, **NÃO MERGEAR** — dominado, e agora sabemos que a folga é zero em N ≥ 50. Só local, nunca foi pro GitHub | Felipe |
 | `fix/semantica-remessa-p0` | PR #11, mergeada | Felipe |
 | `fix/previsao-temporal-e-colunas-csv` | PR #12, mergeada | Gabriel |
@@ -86,6 +87,13 @@ Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. 
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+## 2026-10-01 — Visual unificado do app publicado no Render (MOT-99)
+
+- **Sintoma:** o PR #66 estava mergeado e aprovado, mas o serviço `motor-de-fluxo-piloto` ainda servia o merge do PR #65 (`5483fab`), porque o Auto-Deploy está desligado. Assim, o tema escuro no sistema visual do Replay, o tema claro opcional, as fontes Geist empacotadas, os ícones e a barra de contexto ainda não estavam no site; a correção que impede duas execuções por duplo clique em "Executar diagnóstico" também aguardava publicação.
+- **Causa:** o merge na `main` não publica o serviço; cada release exige selecionar manualmente no Render o commit autorizado.
+- **O que foi feito:** confirmado que o PR #66 (`feat/front-visual`) foi mergeado em `c3620bfad15b8bb20562268c6a9340af7e193c64` e que a CI pós-merge da `main` passou (run `36916440730`). O commit exato foi publicado manualmente no serviço `motor-de-fluxo-piloto` pelo deploy `dep-davc5enavr4c73bdok3g`, iniciado em 2026-10-01 às 17:29:46 GMT-3 e concluído como **Live** às 17:30:45 (59,0 s), sem alterar configuração, variáveis, plano ou Blueprint. Smoke público: `GET /api/v1/health` respondeu `200 {"status":"ok"}` e `/login` respondeu 200 por HTTPS, com fundo e cartão escuros e botão verde-água. A credencial de smoke preenchida no navegador foi recusada; por isso Estudos, execução de diagnóstico, grupos recolhíveis da aba Diagnóstico, Replay, apresentação/PDF, chat e troca de tema ficaram cobertos pela CI verde do PR, não por um novo percurso autenticado no Render.
+- **O que isso invalida:** o deploy anterior `dep-dav9nhl9fdbs73betopg` (`5483fab85a9e7c53552fe904ed0d6fa3d87fe4a2`) deixa de ser a versão ativa e passa a ser a referência imediata de rollback. Capturas do visual claro antigo deixam de representar o site publicado. Nada no Python, motor, API, autenticação, Supabase, variáveis de ambiente, `render.yaml` ou `Dockerfile` mudou.
 
 ## 2026-10-01 — Duplo clique em "Executar diagnóstico" podia sumir com o resultado (MOT-99)
 
