@@ -33,10 +33,11 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-10-01, após a publicação da nova régua do Replay no Render.
+Atualizada em 2026-10-01, com a abertura da melhoria de diagnóstico recolhível.
 
 | Branch | Situação | Dono |
 |---|---|---|
+| `codex/diagnostico-recolhivel` | Recolhe os cenários por estudo na aba Diagnóstico; PR em preparação, sem merge ou deploy | Codex |
 | `codex/replay-timeline-deploy-record` | registra o deploy de `d4fec2f` e o smoke da nova régua; PR de documentação em preparação | Codex |
 | `feat/replay-linha-do-tempo` | PR #63 mergeado na `main`; merge `d4fec2f` publicado no Render | Codex |
 | `codex/replay-deploy-record` | PR #62 mergeado; registro do deploy anterior incorporado à `main` | Codex |
@@ -84,6 +85,25 @@ Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. 
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+## 2026-10-01 — Diagnóstico recolhível por estudo (MOT-99)
+
+1. **Sintoma** — a aba Diagnóstico exibia de imediato todos os cenários de todos os
+   estudos. Em carteiras grandes, isso criava uma lista extensa de combinações e
+   montava conteúdo que a pessoa talvez nem quisesse consultar.
+2. **Causa** — cada estudo renderizava incondicionalmente sua tabela completa e
+   percorria todos os cenários assim que a página era aberta.
+3. **O que foi feito** — na branch `codex/diagnostico-recolhivel`, cada estudo passa
+   a iniciar recolhido e informa quantos cenários possui. O botão acessível expande
+   somente o estudo escolhido, momento em que a tabela é montada; um segundo clique
+   recolhe e desmonta o conteúdo. O acesso direto ao estudo foi preservado. Foi
+   acrescentado teste de regressão para o comportamento, além de validação visual,
+   teste focado, lint, typecheck e build. A falha de timeout já observada no teste de
+   rota `/importar` da suíte completa foi autorizada pelo Gabriel como não bloqueante
+   para esta publicação.
+4. **O que isso invalida** — fica superada a expectativa visual de que todos os
+   estudos apareçam expandidos ao entrar na aba. Nenhuma métrica, regra do motor,
+   persistência ou publicação no Render foi alterada.
 
 ## 2026-10-01 — Nova régua do Replay publicada no Render (MOT-99)
 
