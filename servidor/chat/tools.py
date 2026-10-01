@@ -6,6 +6,8 @@ Identifiers select within the supplied snapshot, never fetch another resource.
 
 from __future__ import annotations
 
+import re
+import unicodedata
 from typing import Annotated, Any
 
 from pydantic import Field
@@ -51,6 +53,38 @@ _TOOLS: dict[str, tuple[type[StrictModel], str]] = {
 }
 Item = CommunicationMetric | CommunicationFact | CommunicationLimitation
 
+_ROUTES_BY_ID: dict[str, frozenset[str]] = {
+    "companies": frozenset({"/empresas", "/empresas/:companyId", "/empresas/:companyId/casos"}),
+    "profiles": frozenset({"/empresas/:companyId/perfis"}),
+    "import": frozenset({"/importar", "/empresas/:companyId/importar"}),
+    "studies": frozenset({"/estudos", "/empresas/:companyId/estudos"}),
+    "portfolio": frozenset({"/carteira/:id", "/carteira"}),
+    "diagnostic": frozenset({"/estudos/:studyId/diagnostico", "/diagnostico"}),
+    "replay": frozenset({"/estudos/:studyId/replay", "/replay"}),
+    "presentation": frozenset({"/estudos/:studyId/apresentacao"}),
+    "comparison": frozenset({"/comparar"}),
+    "board": frozenset({"/quadro"}),
+    "premises": frozenset({"/premissas"}),
+}
+_GENERIC_HELP_WORDS = frozenset({
+    "ajuda", "botao", "campo", "essa", "esse", "fazer", "funciona", "funcionar",
+    "menu", "para", "qual", "quais", "tela", "usar", "quando",
+})
+
+
+def _help_words(value: str) -> set[str]:
+    plain = "".join(char for char in unicodedata.normalize("NFKD", value.casefold())
+                    if not unicodedata.combining(char))
+    return {word[:-1] if len(word) > 4 and word.endswith("s") else word
+            for word in re.findall(r"[a-z0-9]+", plain)
+            if len(word) >= 4 and word not in _GENERIC_HELP_WORDS}
+
+
+def _named_control(question_words: set[str], label: str) -> bool:
+    label_words = _help_words(label)
+    overlap = question_words & label_words
+    return bool(overlap) if len(label_words) == 1 or len(question_words) == 1 else len(overlap) >= 2
+
 
 class ReadOnlyTools:
     def __init__(self, chat: ChatRequestV1, catalog: ProductHelpCatalogV1):
@@ -83,10 +117,26 @@ class ReadOnlyTools:
         doc = self.study_document()
         board = (self.chat.context.document
                  if isinstance(self.chat.context, BoardChatContextV1) else None)
+        route_patterns = _ROUTES_BY_ID.get(self.chat.routeContext.routeId, frozenset())
+        observed_ids = {state.helpId for state in self.chat.routeContext.uiControls}
+        if self.chat.routeContext.helpId is not None:
+            observed_ids.add(self.chat.routeContext.helpId)
+        question_words = _help_words(self.chat.message)
+        help_items = [item for item in self.catalog.items
+                      if item.id in observed_ids or item.routePattern in route_patterns
+                      or item.routePattern == "/:route"
+                      or item.elementKind != "CONTROL"
+                      or _named_control(question_words, item.label)]
+        help_items.sort(key=lambda item: (
+            0 if item.id in observed_ids else 1 if item.routePattern in route_patterns
+            or item.routePattern == "/:route"
+            else 2 if _named_control(question_words, item.label) else 3,
+            item.id,
+        ))
         return {
             "catalogVersion": self.catalog.catalogVersion,
             "help": [{"id": item.id, "label": item.label, "routePattern": item.routePattern,
-                      "elementKind": item.elementKind} for item in self.catalog.items],
+                      "elementKind": item.elementKind} for item in help_items],
             "metrics": [{"code": item.code, "label": item.label} for item in self.metrics()],
             "facts": [{"code": item.code, "label": item.label} for item in self.facts()],
             "hasCommunication": doc is not None,

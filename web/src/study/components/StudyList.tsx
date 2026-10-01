@@ -24,11 +24,11 @@ export function StudyList({ studies, selectedId, onCreate, onCreateCombinations,
   return <>
     {showTrash ? null : <div className="create-options">
       <div className="create-option">
-        <Button onClick={onCreate}>Novo estudo</Button>
+        <Button data-chat-help-id="control.estudos.novo" onClick={onCreate}>Novo estudo</Button>
         <p className="field-hint">Rode o que quiser: escolha as empresas, mexa nas alavancas e compare os cenários.</p>
       </div>
       {onCreateCombinations === undefined ? null : <div className="create-option">
-        <Button variant="secondary" disabled={createCombinationsDisabled} onClick={onCreateCombinations}>Nova combinação de carteiras</Button>
+        <Button variant="secondary" data-chat-help-id="control.estudos.nova-combinacao" disabled={createCombinationsDisabled} onClick={onCreateCombinations}>Nova combinação de carteiras</Button>
         <p className="field-hint">Escolha as empresas e ajuste as alavancas; todas as combinações entre elas são testadas e a tela diz qual carteira atende melhor.</p>
       </div>}
     </div>}
@@ -53,7 +53,7 @@ export function StudyList({ studies, selectedId, onCreate, onCreateCombinations,
               ? <Button variant="secondary" aria-label={`Restaurar ${study.name}`} onClick={() => onRestore(study)}>Restaurar</Button>
               : <><Button variant="secondary" aria-label={`Renomear ${study.name}`} onClick={() => onRename(study)}>Renomear</Button>
                 <Button variant="secondary" aria-label={`Duplicar ${study.name}`} onClick={() => onDuplicate(study)}>Duplicar</Button>
-                {onExport === undefined ? null : <Button variant="secondary" aria-label={`Exportar ${study.name}`} onClick={() => onExport(study)}>Exportar</Button>}
+                {onExport === undefined ? null : <Button variant="secondary" data-chat-help-id="control.estudos.exportar" aria-label={`Exportar ${study.name}`} onClick={() => onExport(study)}>Exportar</Button>}
                 <Button variant="secondary" aria-label={`Excluir ${study.name}`} onClick={() => onDelete(study)}>Excluir</Button></>}
           </div>
         </li>)}

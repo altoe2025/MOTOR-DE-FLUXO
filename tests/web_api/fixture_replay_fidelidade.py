@@ -24,8 +24,10 @@ def documentos() -> list[dict[str, object]]:
     items = []
     for seed in SEEDS:
         document = construir_replay(replay_request(cenario_aleatorio(seed))).model_dump(mode="json")
-        # A identidade do resultado inclui o horário da execução; o conteúdo, não.
+        # Identidade do resultado (horário da execução) e versão instalada do pacote variam
+        # com o ambiente; o conteúdo do Replay, não.
         document["result_fingerprint"] = "f" * 64
+        document["motor_version"] = "fixture"
         items.append({"seed": seed, "document": document})
     return items
 

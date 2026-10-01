@@ -45,7 +45,7 @@ export function NewStudyChooser({ cases, companies, busy, onCreateFromCases, onC
       <select id="new-study-case" value={caseId} onChange={(event) => setCaseId(event.currentTarget.value)}>
         {confirmed.map((item) => <option key={item.id} value={item.id}>{caseLabel(item, companies)}</option>)}
       </select>
-      <div className="source-actions"><Button disabled={busy || caseId === ''} onClick={() => onCreateFromCases([caseId])}>Criar estudo</Button><Button variant="secondary" onClick={onCancel}>Cancelar</Button></div>
+      <div className="source-actions"><Button data-chat-help-id="control.estudos.criar-caso" disabled={busy || caseId === ''} onClick={() => onCreateFromCases([caseId])}>Criar estudo</Button><Button variant="secondary" onClick={onCancel}>Cancelar</Button></div>
     </>) : null}
     {origin === 'COMPANIES' ? (confirmed.length === 0 ? noCases : <>
       <fieldset className="new-study-cases"><legend>Casos que entram na carteira</legend>
@@ -53,11 +53,11 @@ export function NewStudyChooser({ cases, companies, busy, onCreateFromCases, onC
           onChange={(event) => { const checked = event.currentTarget.checked; setPicked((current) => checked ? [...current, item.id] : current.filter((id) => id !== item.id)); }} /> {caseLabel(item, companies)}</label>)}
       </fieldset>
       {combineError === null ? null : <p className="field-hint">{combineError}</p>}
-      <div className="source-actions"><Button disabled={busy || combineError !== null} onClick={() => onCreateFromCases(picked)}>Criar carteira</Button><Button variant="secondary" onClick={onCancel}>Cancelar</Button></div>
+      <div className="source-actions"><Button data-chat-help-id="control.estudos.criar-carteira" disabled={busy || combineError !== null} onClick={() => onCreateFromCases(picked)}>Criar carteira</Button><Button variant="secondary" onClick={onCancel}>Cancelar</Button></div>
     </>) : null}
     {origin === 'SYNTHETIC' ? <>
       <p className="field-hint">Gera no servidor uma carteira de exemplo equilibrada. Dá para trocar a origem depois, na página do estudo.</p>
-      <div className="source-actions"><Button disabled={busy} onClick={onCreateSynthetic}>Criar com carteira gerada</Button><Button variant="secondary" onClick={onCancel}>Cancelar</Button></div>
+      <div className="source-actions"><Button data-chat-help-id="control.estudos.criar-gerada" disabled={busy} onClick={onCreateSynthetic}>Criar com carteira gerada</Button><Button variant="secondary" onClick={onCancel}>Cancelar</Button></div>
     </> : null}
   </section>;
 }

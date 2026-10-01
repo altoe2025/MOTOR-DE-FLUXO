@@ -152,7 +152,7 @@ export function LeverBuilder({ base, progress, applyToBase = false, onCreate, on
       </div>
       {tooMany ? <p className="field-hint">A composição aceita no máximo {MAX_COMPOSITION_COMPANIES} empresas; tire {included.length - MAX_COMPOSITION_COMPANIES} para continuar.</p> : null}
       <div className="source-actions">
-        <Button disabled={busy || composition.length === 0} onClick={() => void compose()}>
+        <Button data-chat-help-id="control.alavancas.combinacoes" disabled={busy || composition.length === 0} onClick={() => void compose()}>
           Fazer composição ({composition.length} {composition.length === 1 ? 'combinação' : 'combinações'})
         </Button>
       </div>
@@ -161,7 +161,7 @@ export function LeverBuilder({ base, progress, applyToBase = false, onCreate, on
     {error === null ? null : <p role="alert" className="field-error">{error}</p>}
     <div className="source-actions">
       <span className="field-hint">{applyToBase ? 'Alteração' : 'Variação'}: {describeLevers(levers)}</span>
-      <Button data-chat-help-id="control.alavancas.criar" disabled={busy || (applyToBase && neutral)} onClick={() => void create()}>{busy ? (applyToBase ? 'Aplicando…' : 'Criando…') : applyToBase ? 'Aplicar à carteira' : 'Criar variação'}</Button>
+      <Button data-chat-help-id={applyToBase ? 'control.alavancas.aplicar-carteira' : 'control.alavancas.criar'} disabled={busy || (applyToBase && neutral)} onClick={() => void create()}>{busy ? (applyToBase ? 'Aplicando…' : 'Criando…') : applyToBase ? 'Aplicar à carteira' : 'Criar variação'}</Button>
     </div>
   </section>;
 }

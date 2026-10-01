@@ -3,6 +3,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { strToU8, unzipSync, zipSync } from 'fflate';
+import { runCanonicalDiagnostic } from './helpers/persistedDiagnostic';
 
 const OWNER = '00000000-0000-4000-8000-000000000021';
 const OWNER_B = '00000000-0000-4000-8000-000000000022';
@@ -95,7 +96,7 @@ async function readAndConfirm(page: Page, buffer = workbook(), companyId?: strin
   return { companyId: url.pathname.split('/')[2]!, caseId: url.searchParams.get('caseId')!, profileUrl: url.pathname + url.search };
 }
 
-test('Caso observado: finalidade opcional preserva privacidade até prévia e diagnóstico após reload', async ({ page }, testInfo) => {
+test('Caso observado: finalidade opcional preserva privacidade no diagnóstico após reload', async ({ page }, testInfo) => {
   test.setTimeout(90_000);
   const requests = captureRequests(page);
   await page.goto('/importar');
@@ -138,22 +139,14 @@ test('Caso observado: finalidade opcional preserva privacidade até prévia e di
   await expect(page.getByText(/Perfil v1 anexado/)).toBeVisible();
   await page.reload();
   expect(await page.evaluate((id) => window.__MOTOR_E2E__!.profileSnapshot(id), studyId)).toEqual({ attachedVersions: [1], availableVersions: [1] });
-  await page.goto(`/carteira/${studyId}`);
-  await page.getByRole('button', { name: 'Executar cenário atual' }).click();
-  await expect.poll(() => page.evaluate((id) => window.__MOTOR_E2E__!.studyExecutionStatuses(id), studyId)).toEqual(['RUNNING', 'SUCCEEDED']);
-  const snapshot = await page.evaluate((id) => window.__MOTOR_E2E__!.stage4Snapshot(id), studyId);
-  await page.goto(`/estudos/${studyId}/diagnostico?scenarioId=${snapshot.baseScenarioId}`);
-  await page.getByRole('button', { name: 'Executar diagnóstico', exact: true }).click();
-  await expect.poll(async () => (await page.request.get('/__e2e__/diagnostics/state')).json()).toMatchObject({ pending: 1 });
-  expect((await page.request.post('/__e2e__/diagnostics/release', { data: { fail: false } })).ok()).toBe(true);
-  await expect(page.getByRole('heading', { name: 'Resultado do motor' })).toBeVisible();
+  await runCanonicalDiagnostic(page, studyId);
   await expect(page.getByRole('link', { name: 'Abrir Replay · Fronteira Viva' })).toBeVisible();
-  expect(await page.evaluate((id) => window.__MOTOR_E2E__!.studyExecutionStatuses(id), studyId)).toEqual(['RUNNING', 'SUCCEEDED', 'QUEUED', 'SUCCEEDED']);
-  expect(requests.filter((request) => /\/(?:previas|diagnosticos)$/.test(request.url) && request.body !== null)).toHaveLength(2);
+  expect(await page.evaluate((id) => window.__MOTOR_E2E__!.studyExecutionStatuses(id), studyId)).toEqual(['QUEUED', 'SUCCEEDED']);
+  expect(requests.filter((request) => /\/(?:previas|diagnosticos)$/.test(request.url) && request.body !== null)).toHaveLength(1);
   const canonicalBodies = requests.filter((request) => /\/(?:previas|diagnosticos)$/.test(request.url)).map((request) => request.body ?? '');
   for (const body of canonicalBodies) expect(body).toContain('"finalidade":null');
   await page.reload();
-  await expect(page.getByRole('heading', { name: 'Diagnóstico robusto' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Diagnóstico', exact: true, level: 1 })).toBeVisible();
   await assertPrivate(page, requests);
   const privacyPath = testInfo.outputPath('import-privacy-summary.json');
   writeFileSync(privacyPath, JSON.stringify({ requests: requests.map(({ url, contentType, body }) => ({ path: new URL(url).pathname, contentType, bodyBytes: Buffer.byteLength(body ?? '') })), caseId: imported.caseId, studyId }, null, 2));
@@ -190,11 +183,11 @@ test('Caso observado: ancestralidade XLSX permite autoria com finalidade sem reg
   await page.reload();
   await page.getByRole('button', { name: 'Trocar origem' }).click();
   await expect(page.getByLabel('ID da operação edited-E2E-IN', { exact: true })).toHaveValue('edited-E2E-IN');
-  await page.getByRole('button', { name: 'Executar cenário atual' }).click();
-  await expect.poll(() => page.evaluate((id) => window.__MOTOR_E2E__!.studyExecutionStatuses(id), studyId)).toEqual(['RUNNING', 'SUCCEEDED']);
-  const previews = requests.filter((request) => /\/previas$/.test(request.url) && request.body !== null);
-  expect(previews).toHaveLength(1);
-  expect(previews[0]!.body).toContain('FINALIDADE_FICTICIA_EDITADA');
+  await runCanonicalDiagnostic(page, studyId);
+  await expect.poll(() => page.evaluate((id) => window.__MOTOR_E2E__!.studyExecutionStatuses(id), studyId)).toEqual(['QUEUED', 'SUCCEEDED']);
+  const diagnostics = requests.filter((request) => /\/diagnosticos$/.test(request.url) && request.body !== null);
+  expect(diagnostics).toHaveLength(1);
+  expect(diagnostics[0]!.body).toContain('FINALIDADE_FICTICIA_EDITADA');
   await assertPrivate(page, requests);
 });
 

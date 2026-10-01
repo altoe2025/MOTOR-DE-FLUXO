@@ -2,8 +2,8 @@ import { expect, test, type Page } from '@playwright/test';
 import { writeFileSync } from 'node:fs';
 
 import type { ReplayDocument } from '../src/replay/domain';
+import { loadDemoIfEmpty } from './helpers/demo';
 
-const PROFILE_SEED_STUDY = '00000000-0000-4000-8000-000000000902';
 // Fresh acceptance evidence belongs to this run; never overwrite accepted MOT-89 artifacts.
 const evidencePath = (name: string) => test.info().outputPath(name);
 
@@ -39,7 +39,7 @@ async function openReplay(page: Page): Promise<ReplayDocument> {
 
 async function selectDay(page: Page, day: number) {
   await page.getByLabel('Selecionar dia').fill(String(day));
-  await expect(page.getByText(new RegExp(`Dia ${day} de \\d+`)).first()).toBeVisible();
+  await expect(page.locator('.replay-live')).toContainText(`D${day} ·`);
 }
 
 function dayValue(page: Page, label: string) {
@@ -98,7 +98,8 @@ test('Replay observado reconstrói controles, parcial, gatilhos, vazio, OUT e re
   await page.screenshot({ path: evidencePath('mot89-observado-fechamento-parcial.png'), fullPage: true });
 
   await selectDay(page, simultaneousDay);
-  await expect(page.locator('.replay-frontier__status')).toContainText('+');
+  await expect(page.locator('.replay-journal__day').filter({ has: page.getByRole('heading', { name: `Dia ${simultaneousDay}`, exact: true }) }))
+    .toContainText(/Fechamento acionado por .* \+ /);
   await selectDay(page, remittedOutDay);
   await expect(dayValue(page, 'Remetido OUT')).not.toContainText('R$ 0,00');
   await page.getByRole('button', { name: 'Repetir evento' }).click();
@@ -112,7 +113,8 @@ test('Replay observado reconstrói controles, parcial, gatilhos, vazio, OUT e re
   await expect(page.getByText(new RegExp(`Ordem .* chegou e entrou na fila aberta`)).first()).toBeVisible();
   await expect(page.locator('.replay-stage--animating')).toHaveCount(0);
   await page.getByRole('button', { name: 'Próximo fechamento' }).click();
-  await expect(page.locator('.replay-frontier__status')).not.toContainText('Sem fechamento');
+  const nextClosing = document.days.find((day) => day.day > emptyDay && day.closing !== null)!;
+  await expect(page.getByLabel('Selecionar dia')).toHaveValue(String(nextClosing.day));
   await page.getByRole('button', { name: 'Anterior' }).click();
   await page.getByRole('button', { name: 'Seguinte', exact: true }).click();
   await page.getByRole('button', { name: 'Reproduzir' }).click();
@@ -135,29 +137,19 @@ test('Replay observado reconstrói controles, parcial, gatilhos, vazio, OUT e re
   expect(consoleErrors).toEqual([]);
 });
 
-test('Replay da hipótese sintética preserva a origem e mostra remessa IN', async ({ page }) => {
+test('Replay do cenário sintético publicado preserva a origem e mostra remessa IN', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto('/estudos');
   await page.waitForFunction(() => '__MOTOR_E2E__' in window);
-  await page.evaluate(() => window.__MOTOR_E2E__!.seedStage4('PROFILE_HYPOTHESIS'));
-  await page.goto(`/carteira/${PROFILE_SEED_STUDY}`);
-  const company = 'stage4-company-b';
-  await page.getByRole('checkbox', { name: new RegExp(company) }).check();
-  const group = page.getByRole('group', { name: company, exact: true });
-  await group.getByLabel('Finalidade OUT').fill('ANEXO_V_REMESSA_TERCEIRO');
-  await group.getByLabel('Finalidade IN').fill('ANEXO_V_DISPONIBILIDADE');
-  await page.getByRole('button', { name: 'Preparar simulação por Perfil' }).click();
-  await expect.poll(() => page.url()).not.toContain(PROFILE_SEED_STUDY);
-  const studyId = page.url().split('/').at(-1)!;
-  const builder = page.getByRole('region', { name: 'Criar hipótese de composição' });
-  await builder.getByLabel('Nome da hipótese').fill('Hipótese sintética IN');
-  await builder.getByLabel(`Fração OUT — ${company}`).fill('0');
-  await builder.getByRole('button', { name: 'Criar hipótese' }).click();
-  await expect(page).toHaveURL(new RegExp(`/estudos/${studyId}/diagnostico\\?scenarioId=`));
-  const persisted = await page.evaluate((id) => window.__MOTOR_E2E__!.stage4Snapshot(id), studyId);
-  expect(persisted.sourceLabels).toEqual(['Simulação baseada em Perfil', 'Simulação baseada em Perfil']);
-  const hypothesis = persisted.scenarios.find((scenario) => scenario.name === 'Hipótese sintética IN')!;
-  await runDiagnostic(page, studyId, hypothesis.id, 10);
+  // Profile creation is retired in Live; exercise its persisted synthetic successor.
+  await loadDemoIfEmpty(page);
+  const before = await page.evaluate(() => window.__MOTOR_E2E__!.demoAcceptanceSnapshot());
+  const study = before.studies[0]!;
+  const source = await page.evaluate((id) => window.__MOTOR_E2E__!.stage4Snapshot(id), study.id);
+  expect(source.sourceLabels).toEqual(Array(5).fill('Simulação baseada em Perfil'));
+  const scenario = study.scenarios.find((item) => item.name === 'PSP dominante')!;
+  const diagnostic = study.diagnostics.find((item) => item.scenarioId === scenario.id)!;
+  await page.goto(`/estudos/${study.id}/diagnostico?scenarioId=${diagnostic.scenarioId}&executionId=${diagnostic.id}`);
   const document = await openReplay(page);
   const remittedInDay = dayWith(document, (day) => Number(day.closing?.remitted_in_brl ?? 0) > 0);
   await selectDay(page, remittedInDay);
@@ -170,6 +162,7 @@ test('Replay da hipótese sintética preserva a origem e mostra remessa IN', asy
   await expect(page.getByRole('button', { name: 'Recomeçar do início' })).toBeVisible();
   await expect(dayValue(page, 'Ainda aberto')).toContainText('R$ 0,00');
   await page.screenshot({ path: evidencePath('mot89-sintetico-final.png'), fullPage: true });
+  expect(await page.evaluate(() => window.__MOTOR_E2E__!.demoAcceptanceSnapshot())).toEqual(before);
 });
 
 test('limite efetivo 98 × 365 declara o teto 1.000 inalcançável e permanece navegável', async ({ page }) => {

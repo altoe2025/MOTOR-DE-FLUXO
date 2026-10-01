@@ -24,7 +24,7 @@ function TemplateInstructions() {
       até {IMPORT_LIMIT_ROWS.toLocaleString('pt-BR')} operações (uma por linha). Sem fórmulas, células mescladas ou macros.
     </p>
     <ol className="import-columns">{IMPORT_COLUMNS.map((column) => <li key={column.name}><code>{column.name}</code>{column.required ? '' : ' (opcional)'} — {column.format}</li>)}</ol>
-    <button className="button" type="button" onClick={() => void downloadTemplate()}>Baixar modelo (.xlsx)</button>
+    <button className="button" type="button" data-chat-help-id="control.importacao.modelo" onClick={() => void downloadTemplate()}>Baixar modelo (.xlsx)</button>
   </section>;
 }
 

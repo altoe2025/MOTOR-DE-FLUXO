@@ -5,6 +5,14 @@ front-end atualizados em 2026-09-22.
 
 ## Comece por aqui
 
+**Integração do Live (2026-09-30):** referência publicada `29d955c`, com 52 commits
+posteriores à main `3342059`. A integração autorizada em `codex/main-render-sync`
+preserva o deploy do Render e acrescenta correções verificadas para falha do
+IndexedDB, edição da janela, teto da coorte com aquecimento e prontidão do contexto
+do chat. Plano e evidências em
+`docs/superpowers/plans/2026-09-30-main-render-sync.md`. Consulte o diário e o PR
+para o resultado dos gates e do merge. Os estados históricos abaixo são datados.
+
 **Consolidação em andamento (2026-09-25):** `codex/integracao-etapas-5-6`
 reúne as Etapas 5/6, finalidade opcional e a bancada do Claude
 (`feat/bancada-exploracao`). Inclui quadro `/quadro`, alavancas por empresa e

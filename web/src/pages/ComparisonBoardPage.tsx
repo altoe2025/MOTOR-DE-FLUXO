@@ -269,7 +269,7 @@ export function ComparisonBoardPage() {
           <input type="checkbox" checked={selected.has(row.key)} onChange={() => toggle(row.key)} />
           {' '}{row.studyName} · {row.scenarioName} — {row.origin}
         </label>
-        <Button variant="secondary" onClick={() => void removeStudy(row)} aria-label={`Apagar o estudo ${row.studyName}`}>Apagar estudo</Button>
+        <Button variant="secondary" data-chat-help-id="control.quadro.apagar-estudo" onClick={() => void removeStudy(row)} aria-label={`Apagar o estudo ${row.studyName}`}>Apagar estudo</Button>
       </li>)}</ul>
     </fieldset> : null}
 
@@ -327,7 +327,7 @@ export function ComparisonBoardPage() {
             <td>{row.savingsBps === null ? '—' : `${new Decimal(row.savingsBps).toFixed(2).replace('.', ',')} bps`}</td>
             <td>
               <Button variant="secondary" onClick={() => toggle(row.key)} aria-label={`Remover ${row.studyName} · ${row.scenarioName} do quadro`}>Remover</Button>
-              <Button variant="secondary" onClick={() => void removeStudy(row)} aria-label={`Apagar o estudo ${row.studyName}`}>Apagar estudo</Button>
+              <Button variant="secondary" data-chat-help-id="control.quadro.apagar-estudo" onClick={() => void removeStudy(row)} aria-label={`Apagar o estudo ${row.studyName}`}>Apagar estudo</Button>
             </td>
           </tr>)}</tbody>
         </table>

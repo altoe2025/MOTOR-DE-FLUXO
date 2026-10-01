@@ -366,10 +366,10 @@ export function StudyDiagnosticPage() {
     {study === null || scenario === null ? <DiagnosticStatus state={viewState ?? { kind: 'UNAVAILABLE', reason: 'Carregando estudo…' }} /> : combinationStudy ? <>
       {combinationOverview ? <>
         <p><Link to={`/carteira/${encodeURIComponent(study.id)}`}>Alterar empresas, premissas e alavancas</Link></p>
-        <Button onClick={() => void runAll()} disabled={runInProgress || controller.snapshot.status === 'STORAGE_FAILURE'}>
+        <Button data-chat-help-id="control.diagnostico.combinacoes" onClick={() => void runAll()} disabled={runInProgress || controller.snapshot.status === 'STORAGE_FAILURE'}>
           Diagnosticar combinações
         </Button>
-        {runAllProgress === null ? null : <Button variant="secondary" onClick={cancelBatch}>
+        {runAllProgress === null ? null : <Button variant="secondary" data-chat-help-id="control.diagnostico.cancelar-lote" onClick={cancelBatch}>
           Cancelar lote
         </Button>}
         <p className="field-hint">{study.scenarios.filter((item) => isCurrentCombinationScenario(study, item)).length} composições preparadas. Os diagnósticos atuais são reaproveitados.</p>
@@ -387,7 +387,7 @@ export function StudyDiagnosticPage() {
       </>}
     </> : <>
       <DiagnosticControls generated={generated} count={effectiveCount} onCountChange={setCount} onRun={() => void run()} disabled={runInProgress || controller.snapshot.status === 'STORAGE_FAILURE'} />
-      {study.scenarios.length < 2 ? null : <Button variant="secondary" className="comparison-toggle"
+      {study.scenarios.length < 2 ? null : <Button variant="secondary" data-chat-help-id="control.diagnostico.mostrar-quadros" className="comparison-toggle"
         aria-expanded={comparisonOpen} aria-controls="variation-comparison-panel" onClick={() => setComparisonOpen((open) => !open)}>
         {comparisonOpen ? 'Ocultar quadros comparativos' : 'Abrir quadros comparativos'}
       </Button>}

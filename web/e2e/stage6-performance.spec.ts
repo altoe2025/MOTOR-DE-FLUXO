@@ -85,7 +85,7 @@ test('20 warm samples stay inside presentation and interaction budgets', async (
     longTaskPhases.push(...openingTasks.map(() => 'opening'));
     const section = await page.evaluate(async (target) => {
       const started = performance.now();
-      document.querySelector<HTMLAnchorElement>(`a[href="#${target}"]`)!.click();
+      document.getElementById(target)!.scrollIntoView({ behavior: 'instant' });
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
       const ended = performance.now();
       return { duration: ended - started, started, ended };

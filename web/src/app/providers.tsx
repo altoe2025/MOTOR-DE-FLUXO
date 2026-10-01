@@ -69,6 +69,10 @@ export function ApplicationProviders({
   const sessionQueryClients = useRef(new Set([queryClient]));
   const storageProjectRef = projectRef ?? configuredProjectRef();
   const [controllerOwner, setControllerOwner] = useState<string | null | undefined>(undefined);
+  const [initializationAttempt, setInitializationAttempt] = useState(0);
+  const [initializationFailure, setInitializationFailure] = useState<{
+    controller: StudyController; owner: string | null;
+  } | null>(null);
   const controller = useMemo(() => new StudyController({
     repositoryFactory: repositoryFactory ?? ((ownerSub) => createBrowserApplicationRepository({
       projectRef: storageProjectRef,
@@ -97,11 +101,14 @@ export function ApplicationProviders({
     if (status === 'loading') return;
     let current = true;
     setControllerOwner(undefined);
+    setInitializationFailure(null);
     void controller.switchSession(userId).then(() => {
       if (current) setControllerOwner(userId);
+    }).catch(() => {
+      if (current) setInitializationFailure({ controller, owner: userId });
     });
     return () => { current = false; };
-  }, [controller, status, userId]);
+  }, [controller, status, userId, initializationAttempt]);
 
   useEffect(() => {
     const generation = lifecycle.current.generation + 1;
@@ -120,6 +127,18 @@ export function ApplicationProviders({
     () => client ?? createApiClient({ getAccessToken, onUnauthorized: expireSession }),
     [client, expireSession, getAccessToken],
   );
+
+  if (status !== 'loading' && initializationFailure?.controller === controller
+    && initializationFailure.owner === userId) {
+    return <section className="session-loading" aria-labelledby="storage-failure-title">
+      <h1 id="storage-failure-title">Dados locais indisponíveis</h1>
+      <p role="alert">Não foi possível abrir o armazenamento deste navegador. Verifique se ele permite salvar dados locais e tente novamente.</p>
+      <button type="button" onClick={() => {
+        setInitializationFailure(null);
+        setInitializationAttempt((attempt) => attempt + 1);
+      }}>Tentar novamente</button>
+    </section>;
+  }
 
   if (status === 'loading' || controllerOwner !== userId) {
     return <p className="session-loading" role="status">Preparando dados locais…</p>;

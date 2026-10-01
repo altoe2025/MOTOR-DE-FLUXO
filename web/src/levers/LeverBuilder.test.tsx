@@ -41,6 +41,8 @@ describe('LeverBuilder · composição', () => {
     expect(screen.queryByRole('button', { name: /Cada empresa sozinha/ })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Retirar uma por vez/ })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Criar com as marcadas/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Fazer composição (6 combinações)' }))
+      .toHaveAttribute('data-chat-help-id', 'control.alavancas.combinacoes');
     await user.click(screen.getByRole('button', { name: 'Fazer composição (6 combinações)' }));
     expect(onCreateCombinations).toHaveBeenCalledWith(
       [['A'], ['B'], ['C'], ['A', 'B'], ['A', 'C'], ['B', 'C']], ['A', 'B', 'C'],
@@ -83,6 +85,7 @@ describe('LeverBuilder · aplicar à carteira (combinação de carteiras)', () =
     const onCreate = vi.fn().mockResolvedValue(undefined);
     render(<LeverBuilder base={base(['A', 'B'])} applyToBase onCreate={onCreate} />);
     const apply = screen.getByRole('button', { name: 'Aplicar à carteira' });
+    expect(apply).toHaveAttribute('data-chat-help-id', 'control.alavancas.aplicar-carteira');
     expect(apply).toBeDisabled();
     await userEvent.setup().click(apply);
     expect(onCreate).not.toHaveBeenCalled();

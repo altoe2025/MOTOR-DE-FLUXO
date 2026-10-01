@@ -541,7 +541,7 @@
    ],
    "diagnostic_execution_id": "00000000-0000-4000-8000-000000000701",
    "execution_fingerprint": "1d0b52fc87686070887efc9fbe77e3efbfbc6e18b875d3db97e47a4199c9a62c",
-   "motor_version": "desconhecida+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "motor_version": "fixture",
    "orders": [
     {
      "client_id": "c1",
@@ -1315,7 +1315,7 @@
    ],
    "diagnostic_execution_id": "00000000-0000-4000-8000-000000000701",
    "execution_fingerprint": "b824ba8a0316b1d9e7b6e294947e47d11304c582f64416aff3d66add65b68f2f",
-   "motor_version": "desconhecida+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "motor_version": "fixture",
    "orders": [
     {
      "client_id": "c0",
@@ -2344,7 +2344,7 @@
    ],
    "diagnostic_execution_id": "00000000-0000-4000-8000-000000000701",
    "execution_fingerprint": "eacf738cfe58c646f19f95a4a691f366890198152d41d293ed911aeb609d3570",
-   "motor_version": "desconhecida+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "motor_version": "fixture",
    "orders": [
     {
      "client_id": "c1",
@@ -3488,7 +3488,7 @@
    ],
    "diagnostic_execution_id": "00000000-0000-4000-8000-000000000701",
    "execution_fingerprint": "a93da13d163c8c11a76f1d17e85420e6b9487c7b0d24922888496de4dfbb1d99",
-   "motor_version": "desconhecida+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "motor_version": "fixture",
    "orders": [
     {
      "client_id": "c2",

@@ -32,6 +32,64 @@ def test_exact_seven_strict_tools_no_optional_or_external_capabilities():
         assert set(schema["required"]) == set(schema["properties"])
 
 
+def test_help_inventory_prioritizes_current_screen_and_named_control_without_exposing_other_controls():
+    source = payload(False)
+    source["message"] = "O que faz Nova combinação de carteira?"
+    source["routeContext"]["routeId"] = "studies"
+    registry = import_module("servidor.chat.tools").ReadOnlyTools(
+        ChatRequestV1.model_validate(source), load_product_help_catalog(),
+    )
+
+    ids = {item["id"] for item in registry.inventory()["help"]}
+
+    assert "control.estudos.nova-combinacao" in ids
+    assert "page.estudos" in ids
+    assert "control.chat.abrir" in ids
+    assert "control.importacao.ler" not in ids
+    assert registry.execute("consultar_interface", '{"helpId":"control.importacao.ler"}')["available"] is True
+
+
+def test_help_inventory_finds_named_control_from_another_screen_without_dumping_full_catalog():
+    source = payload(False)
+    source["message"] = "Como funciona a nova combinação de carteira?"
+    source["routeContext"]["routeId"] = "board"
+    registry = import_module("servidor.chat.tools").ReadOnlyTools(
+        ChatRequestV1.model_validate(source), load_product_help_catalog(),
+    )
+
+    ids = {item["id"] for item in registry.inventory()["help"]}
+
+    assert "control.estudos.nova-combinacao" in ids
+    assert "control.quadro.limpar" in ids
+    assert "control.importacao.ler" not in ids
+
+
+def test_help_inventory_includes_company_cases_controls_on_their_screen():
+    source = payload(False)
+    source["message"] = "Como uso o filtro de qualidade?"
+    source["routeContext"]["routeId"] = "companies"
+    registry = import_module("servidor.chat.tools").ReadOnlyTools(
+        ChatRequestV1.model_validate(source), load_product_help_catalog(),
+    )
+
+    ids = {item["id"] for item in registry.inventory()["help"]}
+
+    assert "field.casos.qualidade" in ids
+
+
+def test_help_inventory_finds_single_word_control_label_on_another_screen():
+    source = payload(False)
+    source["message"] = "O que faz o botão Exportar estudo?"
+    source["routeContext"]["routeId"] = "board"
+    registry = import_module("servidor.chat.tools").ReadOnlyTools(
+        ChatRequestV1.model_validate(source), load_product_help_catalog(),
+    )
+
+    ids = {item["id"] for item in registry.inventory()["help"]}
+
+    assert "control.estudos.exportar" in ids
+
+
 def test_board_tool_serves_only_selected_rows_and_resolved_evidence():
     from servidor.contracts.chat import ChatCitation
 

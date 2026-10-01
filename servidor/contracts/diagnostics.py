@@ -403,7 +403,7 @@ DiagnosticStatistics = Annotated[
 
 class DiagnosticConsequence(StrictModel):
     rule_id: Annotated[str, Field(strict=True, min_length=1, max_length=100)]
-    rule_version: Literal["1.0.0"]
+    rule_version: Literal["1.0.0", "1.1.0"]
     axis: AxisCode
     statement_code: Annotated[str, Field(strict=True, min_length=1, max_length=100)]
     evidence_refs: Annotated[

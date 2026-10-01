@@ -60,7 +60,7 @@ function scene(container: HTMLElement) {
 
 /** Avança em passos curtos, como o navegador: cada etapa renderiza antes da seguinte começar. */
 function advance(ms: number) {
-  for (let elapsed = 0; elapsed < ms; elapsed += 50) act(() => vi.advanceTimersByTime(Math.min(50, ms - elapsed)));
+  for (let elapsed = 0; elapsed < ms; elapsed += 200) act(() => vi.advanceTimersByTime(Math.min(200, ms - elapsed)));
 }
 
 const openText = (document: ReplayDocument, day: number) => formatMoney(
