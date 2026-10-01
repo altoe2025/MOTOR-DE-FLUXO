@@ -37,7 +37,7 @@ Atualizada em 2026-10-01, com a abertura da melhoria de diagnóstico recolhível
 
 | Branch | Situação | Dono |
 |---|---|---|
-| `codex/diagnostico-recolhivel` | Recolhe os cenários por estudo na aba Diagnóstico; PR em preparação, sem merge ou deploy | Codex |
+| `codex/diagnostico-recolhivel` | Recolhe os cenários por estudo na aba Diagnóstico; PR #65 aberto, sem merge ou deploy | Codex |
 | `codex/replay-timeline-deploy-record` | registra o deploy de `d4fec2f` e o smoke da nova régua; PR de documentação em preparação | Codex |
 | `feat/replay-linha-do-tempo` | PR #63 mergeado na `main`; merge `d4fec2f` publicado no Render | Codex |
 | `codex/replay-deploy-record` | PR #62 mergeado; registro do deploy anterior incorporado à `main` | Codex |
