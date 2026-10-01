@@ -38,6 +38,7 @@ Atualizada em 2026-10-01, com a publicação do visual unificado no Render.
 | Branch | Situação | Dono |
 |---|---|---|
 | `feat/front-visual` | PR #66 mergeado na `main`; merge `c3620bf` publicado no Render | Claude |
+| `codex/front-visual-deploy-record` | registra o deploy de `c3620bf` e os smokes públicos; PR #68 aberto | Codex |
 | `codex/front-visual-deploy-record` | registra o deploy de `c3620bf` e os smokes públicos; PR de documentação em preparação | Codex |
 Atualizada em 2026-10-01, após a publicação do diagnóstico recolhível no Render.
 
