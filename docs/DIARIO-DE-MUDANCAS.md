@@ -33,11 +33,13 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-09-30, após a publicação do novo Replay no Render.
+Atualizada em 2026-10-01, após a publicação da nova régua do Replay no Render.
 
 | Branch | Situação | Dono |
 |---|---|---|
-| `codex/replay-deploy-record` | registra o deploy de `f70769c` e o smoke público; PR de documentação em preparação | Codex |
+| `codex/replay-timeline-deploy-record` | registra o deploy de `d4fec2f` e o smoke da nova régua; PR de documentação em preparação | Codex |
+| `feat/replay-linha-do-tempo` | PR #63 mergeado na `main`; merge `d4fec2f` publicado no Render | Codex |
+| `codex/replay-deploy-record` | PR #62 mergeado; registro do deploy anterior incorporado à `main` | Codex |
 | `feat/replay-visual` | PR #60 mergeado na `main`; merge `f70769c` publicado no Render | Codex |
 | `codex/main-render-sync` | PR #59 mergeado; base funcional incorporada pela `main` antes do PR #60 | Codex |
 | `codex/chat-front-context` | `29d955c` publicado no Render (Live); referência preservada da integração | Codex |
@@ -46,7 +48,7 @@ Atualizada em 2026-09-30, após a publicação do novo Replay no Render.
 | `codex/carteira-criterios` | Integra estudo separado de combinações, últimas melhorias de `feat/bancada-exploracao` e chat já publicado do PR #57; deploy aguardando comando do Gabriel | Codex |
 | `codex/chat-interface-render` | PR #57 aberto (draft, base `feat/bancada-exploracao`); código `8d43695` publicado no Render com status Live em 2026-09-28; sem merge na `main` | Codex |
 | `codex/integracao-etapas-5-6` | Consolida `feat/bancada-exploracao` e `codex/finalidade-verificacao`, incluindo histórico de `origin/main`; publicação/CI em preparação, sem deploy | Codex |
-| `main` | `f70769c`: PR #60 mergeado, CI integral verde e novo Replay publicado no Render | os dois |
+| `main` | `d4fec2f`: PR #63 mergeado e nova régua do Replay publicada no Render | os dois |
 | `netting/p1` | spike do P1, **NÃO MERGEAR** — dominado, e agora sabemos que a folga é zero em N ≥ 50. Só local, nunca foi pro GitHub | Felipe |
 | `fix/semantica-remessa-p0` | PR #11, mergeada | Felipe |
 | `fix/previsao-temporal-e-colunas-csv` | PR #12, mergeada | Gabriel |
@@ -82,6 +84,13 @@ Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. 
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+## 2026-10-01 — Nova régua do Replay publicada no Render (MOT-99)
+
+- **Sintoma:** o PR #63 estava pronto e aprovado, mas o serviço `motor-de-fluxo-piloto` ainda servia `f70769c`, porque o Auto-Deploy está desligado.
+- **Causa:** o merge na `main` não publica o serviço; cada release exige selecionar manualmente o commit autorizado no Render.
+- **O que foi feito:** o PR #63 (`feat/replay-linha-do-tempo`) foi mergeado com commit de merge `d4fec2fde99ef9bc37693077b87582eca4e8d9a6`, depois de CI verde no SHA da branch (run `36815613835`); a CI pós-merge da `main` também passou (run `36821633326`). O commit de merge foi publicado manualmente no serviço `motor-de-fluxo-piloto` pelo deploy `dep-dauv9a0jo6nc73ep9980`, concluído como **Live** em 2026-10-01 às 02:50:32 GMT-3 (57,0 s), sem alterar configuração ou variáveis. Smoke público: `GET /api/v1/health` respondeu `200 {"status":"ok"}` e `/login` carregou via HTTPS. Gabriel confirmou manualmente que entrou numa conta autorizada e conferiu no Replay publicado que a nova régua está correta. O Codex não repetiu no Render o percurso completo de apresentação e chat porque a credencial efêmera disponível foi recusada; esses fluxos permanecem cobertos pela CI verde do PR, não por um novo smoke autenticado automatizado.
+- **O que isso invalida:** o deploy `f70769c` deixa de ser a versão ativa e passa a ser a referência imediata de rollback (`dep-daus8cvpn0mc738v07a0`). Capturas da régua com um rótulo por dia deixam de representar o site publicado. Nada nos números, nas regras do motor, na autenticação, no Supabase ou na configuração do Render mudou.
 
 ## 2026-10-01 — Linha do tempo do Replay legível em qualquer número de dias (MOT-99)
 
