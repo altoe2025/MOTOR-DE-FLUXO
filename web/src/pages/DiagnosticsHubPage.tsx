@@ -14,10 +14,23 @@ function formatDate(iso: string | null): string {
 }
 
 function StudyDiagnostics({ study }: Readonly<{ study: StudyDocument }>) {
+  const [expanded, setExpanded] = useState(false);
   const base = `/estudos/${encodeURIComponent(study.id)}`;
+  const regionId = `hub-scenarios-${study.id}`;
+  const scenarioCount = `${study.scenarios.length} ${study.scenarios.length === 1 ? 'cenário' : 'cenários'}`;
   return <section className="diagnostics-hub__study" aria-labelledby={`hub-${study.id}`}>
-    <h2 id={`hub-${study.id}`}><Link to={`/carteira/${encodeURIComponent(study.id)}`}>{study.name}</Link></h2>
-    <div className="table-scroll" role="region" tabIndex={0} aria-label={`Cenários de ${study.name}`}>
+    <div className="diagnostics-hub__study-header">
+      <h2 id={`hub-${study.id}`}><button type="button" className="diagnostics-hub__toggle"
+        aria-expanded={expanded} aria-controls={expanded ? regionId : undefined}
+        aria-label={`${expanded ? 'Ocultar' : 'Mostrar'} diagnósticos de ${study.name}`}
+        onClick={() => setExpanded((current) => !current)}>
+        <span>{study.name}</span>
+        <small>{scenarioCount}</small>
+        <span className="diagnostics-hub__toggle-icon" aria-hidden="true">{expanded ? '−' : '+'}</span>
+      </button></h2>
+      <Link className="diagnostics-hub__study-link" to={`/carteira/${encodeURIComponent(study.id)}`}>Abrir estudo</Link>
+    </div>
+    {expanded ? <div id={regionId} className="table-scroll" role="region" tabIndex={0} aria-label={`Cenários de ${study.name}`}>
       <table className="company-table">
         <thead><tr>
           <th scope="col">Cenário</th><th scope="col" title="Parte do volume que não cruzou a fronteira">Netabilidade</th><th scope="col">Economia</th>
@@ -41,7 +54,7 @@ function StudyDiagnostics({ study }: Readonly<{ study: StudyDocument }>) {
           </tr>;
         })}</tbody>
       </table>
-    </div>
+    </div> : null}
   </section>;
 }
 
@@ -59,7 +72,7 @@ export function DiagnosticsHubPage() {
   }, [controller]);
   return <article className="destination-page diagnostics-hub">
     <h1 ref={heading} tabIndex={-1}>Diagnóstico</h1>
-    <p className="page-introduction">Todos os cenários dos seus estudos, com o diagnóstico mais recente de cada um. Escolha um cenário para abrir ou executar o diagnóstico. Netabilidade é a parte do volume que não cruzou a fronteira.</p>
+    <p className="page-introduction">Abra um estudo para ver seus cenários e o diagnóstico mais recente de cada um. Netabilidade é a parte do volume que não cruzou a fronteira.</p>
     {error === null ? null : <InlineNotice tone="error">{error}</InlineNotice>}
     {studies === null && error === null ? <p role="status">Carregando estudos…</p> : null}
     {studies !== null && studies.length === 0
