@@ -16,6 +16,7 @@ from motor.analise import (
     criar_manifesto,
     resultado_para_json,
 )
+from motor.analise.aritmetica import subtrair_exato
 from motor.dominio import Cenario, OrigemCasamento, TipoAlocacao
 from servidor.contracts.output import ResultadoCanonicoDTO
 
@@ -153,7 +154,9 @@ def _validar_conservacao_objeto(
     )
     if agregado.taxa_autonetting_periodo != taxa_autonetting_esperada:
         _falhar("taxa de autonetting diverge dos volumes medidos")
-    if agregado.taxa_netting_multilateral_periodo != taxa - taxa_autonetting_esperada:
+    if agregado.taxa_netting_multilateral_periodo != subtrair_exato(
+        taxa, taxa_autonetting_esperada,
+    ):
         _falhar("taxa multilateral diverge dos volumes medidos")
 
 
