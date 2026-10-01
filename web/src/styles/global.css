@@ -23,8 +23,7 @@ hr { border: 0; border-top: 1px solid var(--border); }
 details > summary { cursor: pointer; }
 .skip-link { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); left: var(--space-4); padding: var(--space-2) var(--space-3); position: fixed; top: -4rem; z-index: 80; }
 .skip-link:focus { top: var(--space-4); }
-/* Só deslocamento, sem transparência: o conteúdo fica legível (e auditável) desde o primeiro quadro. */
-@keyframes view-enter { from { transform: translateY(8px); } to { transform: none; } }
+/* Sem animação de entrada: posição e contraste ficam estáveis desde o primeiro quadro (capturas, PDF e axe). */
 
 /* Shell: trilho lateral + barra de contexto + área de trabalho */
 .app-shell { display: grid; grid-template-columns: 248px minmax(0, 1fr); min-height: 100vh; }
@@ -66,7 +65,6 @@ details > summary { cursor: pointer; }
 .workspace-header > button { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); color: var(--ink); cursor: pointer; margin-left: var(--space-3); padding: var(--space-2) var(--space-3); }
 .ask-about-this { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); color: var(--ink); cursor: pointer; font: inherit; margin: var(--space-2) 0; padding: var(--space-2) var(--space-3); transition: border-color var(--duration), background var(--duration); }
 .ask-about-this:hover { background: var(--hover); border-color: var(--control-border); }
-.workspace-content > * { animation: view-enter .45s var(--ease) both; }
 .workspace-content { margin: 0 auto; max-width: 1240px; padding: var(--space-8) var(--space-8) 96px; width: 100%; }
 
 /* Cabeçalhos de página */
@@ -130,7 +128,7 @@ h1:focus { outline: none; }
 
 /* Autenticação */
 .auth-page { align-items: center; background: radial-gradient(1200px 600px at 50% -10%, var(--accent-soft), transparent 60%), var(--canvas); display: flex; justify-content: center; min-height: 100vh; padding: var(--space-6); }
-.auth-card { animation: view-enter .5s var(--ease) both; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow); max-width: 420px; padding: 40px; width: 100%; }
+.auth-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow); max-width: 420px; padding: 40px; width: 100%; }
 .auth-card > p:not(.eyebrow) { color: var(--muted); line-height: 1.5; }
 .auth-card form { margin-top: var(--space-6); }
 .auth-card .button { width: 100%; }
@@ -416,7 +414,7 @@ h1:focus { outline: none; }
   .hypothesis-card, .scenario-workspace, .lever-builder, .comparison-selector, .comparison-limitations, .comparison-inputs, .comparison-axis, .diagnostic-controls, .diagnostic-status, .diagnostic-card, .diagnostic-axis { padding: var(--space-4); }
 }
 @media (max-width: 480px) { .destination-list { grid-template-columns: 1fr; } .source-selector { padding: var(--space-3); } .source-actions > .button, .study-list__actions > .button { flex: 1 1 100%; } }
-@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; } .workspace-content > *, .auth-card { animation: none; } .replay-order, .replay-connection, .replay-connection-label, .replay-connections { animation: none !important; transition: none !important; } .replay-flow__dot { display: none; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; } .replay-order, .replay-connection, .replay-connection-label, .replay-connections { animation: none !important; transition: none !important; } .replay-flow__dot { display: none; } }
 
 /* Importação */
 .import-flow > section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow); margin-block: var(--space-4); padding: var(--space-5) var(--space-6); }
@@ -456,8 +454,7 @@ h1:focus { outline: none; }
 .chat-launcher:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
 @media print { .chat-launcher, .chat-panel { display: none !important; } }
 .replay-cta, .replay-cta:hover { background: var(--inter); border-color: transparent; color: var(--canvas); }
-@keyframes chat-in { from { transform: translateY(12px) scale(.985); } to { transform: none; } }
-.chat-panel { animation: chat-in .32s var(--ease) both; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; bottom: 88px; box-shadow: 0 24px 70px rgb(0 0 0 / 45%); color: var(--ink); display: flex; flex-direction: column; height: min(640px, calc(100vh - 116px)); overflow: hidden; position: fixed; right: 24px; width: min(400px, calc(100vw - 32px)); z-index: 60; }
+.chat-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; bottom: 88px; box-shadow: 0 24px 70px rgb(0 0 0 / 45%); color: var(--ink); display: flex; flex-direction: column; height: min(640px, calc(100vh - 116px)); overflow: hidden; position: fixed; right: 24px; width: min(400px, calc(100vw - 32px)); z-index: 60; }
 .chat-panel-header { align-items: center; border-bottom: 1px solid var(--line-soft); color: var(--ink); display: flex; gap: 4px; padding: 12px 10px 12px 14px; }
 .chat-panel-header h2 { color: var(--ink); font-family: inherit; font-size: 0.95rem; font-weight: 600; margin: 0; }
 .chat-panel-title { display: grid; flex: 1; line-height: 1.25; margin-left: 6px; min-width: 0; }
