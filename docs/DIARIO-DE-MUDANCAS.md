@@ -37,6 +37,7 @@ Atualizada em 2026-10-01, após a publicação da nova régua do Replay no Rende
 
 | Branch | Situação | Dono |
 |---|---|---|
+| `feat/front-visual` | visual do app inteiro no sistema do Replay; só local, aguardando o Gabriel testar antes de PR/merge/deploy | Claude |
 | `codex/replay-timeline-deploy-record` | registra o deploy de `d4fec2f` e o smoke da nova régua; PR de documentação em preparação | Codex |
 | `feat/replay-linha-do-tempo` | PR #63 mergeado na `main`; merge `d4fec2f` publicado no Render | Codex |
 | `codex/replay-deploy-record` | PR #62 mergeado; registro do deploy anterior incorporado à `main` | Codex |
@@ -84,6 +85,13 @@ Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. 
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+## 2026-10-01 — Visual do app inteiro no sistema do Replay (MOT-99)
+
+- **Sintoma:** depois do novo Replay (console escuro), o resto do front continuava no visual antigo — fundo creme, títulos serifados, cartões com bordas fortes, chat com cara de WhatsApp e um cabeçalho fixo "Estudo · Ainda não iniciado" que não dizia nada. O Gabriel achou o conjunto desorganizado e pediu a mesma suavidade e modernidade do Replay em todas as telas, **sem mudar nenhuma funcionalidade**.
+- **Causa:** o Replay ganhou um sistema visual próprio (`--rp-*`) isolado em `.replay-page`; os tokens globais (`tokens.css`) e o `global.css` eram da etapa 1 e muitos componentes usavam cores literais.
+- **O que foi feito:** branch `feat/front-visual` (worktree `.worktrees/front-visual`, a partir de `c4ec0c9`), **só local, sem push**. `tokens.css` reescrito com a paleta do Replay como padrão escuro e um tema claro em `data-theme="light"`, mantendo os nomes antigos (`--canvas`, `--surface`, `--ink`…) para não tocar em cada componente; acrescenta `--space-5`, que era usado sem existir. `global.css` reescrito seletor a seletor (mesmas classes, nenhuma removida): cartões, botões, campos, tabelas, métricas em fonte mono, abas das empresas, importação e chat, sem cores literais fora do console do Replay. Fontes Geist e Geist Mono empacotadas pelo `@fontsource-variable` (a CSP `style-src 'self'` bloqueia Google Fonts). `AppShell` ganhou ícones na navegação, marca do produto, botão de tema (preferência em `localStorage`, escuro por padrão) e uma barra de contexto derivada só da rota (ex.: "Estudos / Diagnóstico") no lugar do texto fixo; links, nomes acessíveis, região "Perfil" e botão "Sair" iguais. `EChart` lê as cores do tema e acompanha a troca. `print.css` força tokens claros na impressão, então o PDF da apresentação continua em papel branco. A entrada das telas é só um deslocamento curto, sem transparência, para que o axe nunca meça contraste com o conteúdo semitransparente; na impressão, animações e transições ficam desligadas para não deslocar o PDF. Verificado: front 1283/1283, typecheck, lint e build; e2e local 64/66 na primeira rodada completa, e as 2 falhas eram só as comparações de captura com o visual antigo; depois de regenerar as referências Windows, `stage6-visual` passou 3 vezes seguidas e `stage6-accessibility` (axe WCAG 2.2 AA) passou 3/3. Conferido no navegador em 1440 px e 375 px (sem rolagem lateral), nos temas escuro e claro: estudos, carteira, diagnóstico, Replay, apresentação, empresas, importação, quadro e chat.
+- **O que isso invalida:** todas as capturas de tela do front, inclusive as referências de `e2e/stage6-visual.spec.ts-snapshots` (Windows regeneradas aqui; as `-linux` precisam do workflow `review-visual-carteiras.yml` antes do merge). Não altera dados, cálculos, regras do motor, rotas, contratos, autenticação nem configuração do Render.
 
 ## 2026-10-01 — Nova régua do Replay publicada no Render (MOT-99)
 

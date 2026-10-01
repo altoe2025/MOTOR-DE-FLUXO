@@ -7,6 +7,18 @@
 }
 
 @media print {
+  /* Papel é sempre claro: o tema escuro da tela não vai para a impressão. */
+  :root, :root[data-theme] {
+    color-scheme: light;
+    --canvas: #ffffff; --surface: #ffffff; --surface-alt: #f3f6f5; --hover: #f3f6f5; --input-bg: #ffffff;
+    --ink: #172a25; --muted: #4a5a54; --nav: #ffffff; --on-nav: #172a25;
+    --accent: #1d625a; --on-accent: #ffffff; --accent-soft: #edf4f0;
+    --border: #c9d3cf; --line-soft: #dde5e2; --control-border: #9fb0a9;
+    --error: #8a3631; --error-soft: #f8ecea; --warn: #8a5a00; --ok: #1f6f45; --inter: #3c4a9e;
+    --shadow: none; --glow: none;
+  }
+  /* A entrada animada das telas não pode deslocar o PDF. */
+  *, *::before, *::after { animation: none !important; transition: none !important; }
   html, body, #root { background: #fff !important; color: #172a25 !important; margin: 0 !important; min-width: 0 !important; }
   body { font-size: 9pt; line-height: 1.35; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
   .app-shell { display: block !important; min-height: 0 !important; }
