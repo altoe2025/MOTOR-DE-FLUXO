@@ -508,7 +508,7 @@ a { color: inherit; }
   .replay-frontier { background: var(--rp-bg); }
   .replay-lane { padding: 0 var(--space-3) var(--space-3); }
 }
-@media (prefers-reduced-motion: reduce) { .replay-order--arriving, .replay-connection-label { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .replay-order--arriving, .replay-connection-label { animation: none; } .replay-timeline__rail i, .replay-timeline__knob, .replay-timeline__now { transition: none; } }
 
 /* Controles e acumulados do Replay — mesmo console escuro da Fronteira Viva. */
 .replay-control-panel, .replay-metric { background: var(--rp-panel); border: 1px solid #1d2833; color: var(--rp-fg); }
@@ -522,23 +522,25 @@ a { color: inherit; }
 .replay-transport svg { fill: currentColor; height: 14px; width: 14px; }
 .replay-transport .replay-play { background: var(--rp-fg); border-color: var(--rp-fg); color: var(--rp-bg); width: 52px; }
 .replay-transport .replay-play:hover:not(:disabled) { background: #ffffff; }
-.replay-timeline { min-width: 0; position: relative; }
-.replay-ticks { display: grid; gap: 4px; grid-template-columns: repeat(var(--replay-days), minmax(0, 1fr)); }
-.replay-timeline--dense .replay-ticks { gap: 1px; }
-.replay-tick { border-radius: 7px; color: var(--rp-muted); display: grid; font-family: var(--rp-mono); font-size: 0.72rem; gap: 5px; justify-items: center; padding: 6px 0 4px; transition: background .2s, color .2s; }
-.replay-tick__marks { align-items: center; display: flex; gap: 3px; height: 9px; }
-.replay-tick__rail { background: var(--rp-line); border-radius: 2px; height: 4px; overflow: hidden; width: 100%; }
-.replay-tick__rail i { background: var(--rp-inter); display: block; height: 100%; transition: width .4s var(--rp-ease); width: 0; }
-.replay-tick.is-past .replay-tick__rail i { width: 100%; }
-.replay-tick.is-now { background: var(--rp-panel-2); color: var(--rp-fg); }
-.replay-tick.is-now .replay-tick__rail i { background: var(--rp-fg); width: 100%; }
-.replay-tick__label { white-space: nowrap; }
-.replay-timeline--dense .replay-tick { padding-inline: 0; }
-.replay-timeline--dense .replay-tick__label { font-size: 0.62rem; }
-.replay-mark { display: block; }
-.replay-mark--arrival { background: var(--rp-muted); border-radius: 50%; height: 4px; width: 4px; }
-.replay-mark--closing { border: 1.5px solid var(--rp-inter); height: 8px; transform: rotate(45deg); width: 8px; }
-.replay-mark--remit { background: var(--rp-remit); height: 8px; transform: rotate(45deg); width: 8px; }
+.replay-timeline { height: 74px; justify-self: stretch; min-width: 0; position: relative; user-select: none; width: 100%; }
+.replay-timeline__bars, .replay-timeline__marks, .replay-timeline__labels { inset-inline: 0; position: absolute; }
+.replay-timeline__bars { height: 18px; top: 0; }
+.replay-timeline__bar { background: color-mix(in srgb, var(--rp-muted) 55%, transparent); border-radius: 2px 2px 0 0; bottom: 0; position: absolute; transform: translateX(-50%); }
+.replay-timeline__bar.is-past { background: color-mix(in srgb, var(--rp-inter) 60%, transparent); }
+.replay-timeline__marks { height: 10px; top: 20px; }
+.replay-mark { height: 8px; position: absolute; top: 1px; transform: translateX(-50%) rotate(45deg); width: 8px; }
+.replay-mark--closing { border: 1.5px solid var(--rp-inter); }
+.replay-mark--remit { background: var(--rp-remit); }
+.replay-timeline__rail { background: var(--rp-line); border-radius: 2px; height: 4px; inset-inline: 0; overflow: hidden; position: absolute; top: 36px; }
+.replay-timeline__rail i { background: var(--rp-inter); display: block; height: 100%; transition: width .35s var(--rp-ease); }
+.replay-timeline__knob { background: var(--rp-fg); border-radius: 50%; box-shadow: 0 0 0 4px color-mix(in srgb, var(--rp-fg) 18%, transparent); height: 14px; pointer-events: none; position: absolute; top: 31px; transform: translateX(-50%); transition: left .35s var(--rp-ease); width: 14px; }
+.replay-timeline__labels { color: var(--rp-muted); font-family: var(--rp-mono); font-size: 0.7rem; height: 22px; top: 50px; }
+.replay-timeline__label, .replay-timeline__now { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+.replay-timeline__label { top: 4px; }
+.replay-timeline__now { background: var(--rp-fg); border-radius: 999px; color: var(--rp-bg); font-weight: 600; padding: 2px 8px; top: 0; transition: left .35s var(--rp-ease); }
+.replay-timeline__tip { background: var(--rp-bg); border: 1px solid var(--rp-line); border-radius: 8px; bottom: calc(100% + 8px); color: var(--rp-fg); font-family: var(--rp-mono); font-size: 0.7rem; opacity: 0; padding: 6px 10px; pointer-events: none; position: absolute; transform: translateX(-50%); transition: opacity .15s; white-space: nowrap; z-index: 5; }
+.replay-timeline__tip.is-visible { opacity: 1; }
+.replay-timeline__tip small { color: var(--rp-muted); display: block; font-size: inherit; }
 /* O deslizante invisível cobre a régua; o recuo de meio segmento alinha cada valor ao centro do seu dia. */
 .replay-scrub { cursor: pointer; height: 100%; inset: 0 calc(50% / var(--replay-days)); margin: 0; opacity: 0; position: absolute; width: calc(100% - 100% / var(--replay-days)); }
 .replay-timeline:has(.replay-scrub:focus-visible) { border-radius: 8px; outline: 2px solid var(--rp-inter); outline-offset: 3px; }

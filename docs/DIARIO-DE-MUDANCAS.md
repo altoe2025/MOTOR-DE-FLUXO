@@ -83,6 +83,13 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-10-01 — Linha do tempo do Replay legível em qualquer número de dias (MOT-99)
+
+- **Sintoma:** no Replay publicado, com 36 dias (D0–D35), a régua da barra de controles escrevia um rótulo por dia; com ~16 px por dia, "D10 D11 D12…" se sobrepunham e ficavam ilegíveis.
+- **Causa:** `ReplayControls` rotulava todos os dias em réguas de até 45 dias (`DETAILED_DAYS`), em células de largura igual, sem considerar a largura disponível.
+- **O que foi feito:** nova função pura `web/src/replay/timeline.ts` (com testes) escolhe o passo entre rótulos pela largura medida (1, 2, 5, 7, 10, 14, 30, 60 ou 90 dias, ≥ 42 px entre rótulos), mantém sempre o último dia e esconde rótulos que encostariam na etiqueta do dia atual ou no do último dia. A régua (`ReplayTimeline` dentro de `ReplayControls.tsx`) passou a camadas posicionadas pelo centro de cada dia: chegadas em barras proporcionais, fechamento em losango vazado, remessa em losango cheio, trilho com marcador, etiqueta "D14 · 09/01" no dia atual e resumo do dia ao passar o mouse. A largura é medida com `ResizeObserver` e recalculada também no `resize` da janela. O deslizante acessível "Selecionar dia", o transporte, a velocidade e os atalhos não mudaram. Protótipo aprovado pelo Gabriel em `entregaveis/prototipo-replay-fronteira-viva.html` (fora do repo). Verificado: front 1283/1283 em duas rodadas, lint, typecheck e build; e2e `stage5-replay`, `stage6-performance`, `stage6-visual`, `stage6-demo-communication`, `stage6-acceptance` e `stage6-chat` 34/34; conferido no navegador com 83 dias em 1400 px (passo 7) e 375 px (passo 14), sem sobreposição nem rolagem lateral.
+- **O que isso invalida:** capturas da régua anterior (um rótulo por dia, marcas de chegada em bolinhas). Não altera dados, cálculos, regras do motor, contratos nem configuração do Render.
+
 ## 2026-09-30 — Novo Replay publicado no Render (MOT-99)
 
 - **Sintoma:** o PR #60 estava pronto e aprovado, mas o serviço `motor-de-fluxo-piloto` continuava no deploy anterior `dep-dauqcqu0tbcc73c9gpd0` (`61bc193`), porque o Auto-Deploy está desligado.

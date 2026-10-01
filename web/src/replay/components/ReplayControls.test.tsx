@@ -1,13 +1,23 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { replayStateAt } from '../state';
 import { replayDocumentFixture, replayDocumentWithBothRemittancesFixture } from '../testFixtures';
+import type { ReplayDocument } from '../domain';
 import type { ReplayPlayback } from '../useReplayPlayback';
 import { ReplayControls } from './ReplayControls';
 import { ReplayMetrics } from './ReplayMetrics';
+
+/** Estende o fixture de 3 dias com dias vazios, como um Replay longo. */
+function longDocument(dayCount: number): ReplayDocument {
+  const document = replayDocumentWithBothRemittancesFixture();
+  const last = document.days.at(-1)!;
+  for (let day = document.days.length; day < dayCount; day++) document.days.push({ ...last, day, events: [], closing: null });
+  document.period = { ...document.period, settlement_end_day: dayCount - 1 };
+  return document;
+}
 
 function playback(overrides: Partial<ReplayPlayback> = {}): ReplayPlayback {
   return {
@@ -18,17 +28,56 @@ function playback(overrides: Partial<ReplayPlayback> = {}): ReplayPlayback {
 }
 
 describe('controles do Replay', () => {
-  it('mostra um segmento por dia com chegadas, fechamento e remessa, e marca o dia atual', () => {
+  it('mostra chegadas em barras, fechamento e remessa em losangos, e o dia atual numa etiqueta', () => {
     const { container } = render(<ReplayControls document={replayDocumentWithBothRemittancesFixture()} playback={playback()} sort="ARRIVAL" onSort={vi.fn()} />);
-    const ticks = [...container.querySelectorAll('.replay-tick')];
+    const dayOf = (selector: string) => [...container.querySelectorAll<HTMLElement>(selector)].map((item) => item.dataset.day);
 
-    expect(ticks.map((tick) => tick.querySelector('.replay-tick__label')?.textContent)).toEqual(['D0', 'D1', 'D2']);
-    expect(ticks[0]!.querySelectorAll('.replay-mark--arrival')).toHaveLength(2);
-    expect(ticks[0]!.querySelector('.replay-mark--closing')).toBeInTheDocument();
-    expect(ticks[1]!.querySelector('.replay-mark--closing, .replay-mark--remit')).not.toBeInTheDocument();
-    expect(ticks[2]!.querySelector('.replay-mark--remit')).toBeInTheDocument();
-    expect(ticks.map((tick) => tick.className.includes('is-now'))).toEqual([false, true, false]);
-    expect(ticks[0]).toHaveClass('is-past');
+    // Sem largura medida (jsdom), a régua assume 640 px: com 3 dias cabem todos, menos o que a etiqueta cobre.
+    expect([...container.querySelectorAll('.replay-timeline__label')].map((item) => item.textContent)).toEqual(['D0', 'D2']);
+    expect(container.querySelector('.replay-timeline__now')).toHaveTextContent('D1');
+    expect(dayOf('.replay-timeline__bar')).toEqual(['0', '2']);
+    expect(container.querySelector<HTMLElement>('.replay-timeline__bar[data-day="0"]')!.style.height).toBe('18px');
+    expect(dayOf('.replay-mark--closing')).toEqual(['0']);
+    expect(dayOf('.replay-mark--remit')).toEqual(['2']);
+    expect(container.querySelector('.replay-tick__label, .replay-ticks')).not.toBeInTheDocument();
+  });
+
+  it('em 36 dias rotula de 5 em 5 sem rótulos encostados, com data na etiqueta do dia atual', () => {
+    const document = longDocument(36);
+    const dateOf = (day: number) => new Date(Date.UTC(2025, 11, 26 + day)).toISOString().slice(0, 10).split('-').reverse().join('/');
+    const { container } = render(<ReplayControls document={document} playback={playback({ day: 14 })} sort="ARRIVAL" onSort={vi.fn()} dateOf={dateOf} />);
+
+    expect([...container.querySelectorAll('.replay-timeline__label')].map((item) => item.textContent)).toEqual(['D0', 'D5', 'D10', 'D20', 'D25', 'D30', 'D35']);
+    expect(container.querySelector('.replay-timeline__now')).toHaveTextContent('D14 · 09/01');
+    expect(screen.getByRole('slider', { name: 'Selecionar dia' })).toHaveAttribute('aria-valuetext', 'Dia 14 de 35, 09/01/2026');
+  });
+
+  it('recalcula os rótulos quando a janela muda de largura', () => {
+    let width = 1_200;
+    const spy = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(() => ({ width, height: 74, left: 0, top: 0, right: width, bottom: 74, x: 0, y: 0, toJSON: () => ({}) }) as DOMRect);
+    try {
+      const { container } = render(<ReplayControls document={longDocument(36)} playback={playback({ day: 14 })} sort="ARRIVAL" onSort={vi.fn()} />);
+      const labels = () => [...container.querySelectorAll('.replay-timeline__label')].map((item) => item.textContent);
+      expect(labels()).toContain('D2');
+      width = 300;
+      act(() => { window.dispatchEvent(new Event('resize')); });
+      expect(labels()).toEqual(['D0', 'D7', 'D21', 'D28', 'D35']);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('resume o dia sob o mouse', () => {
+    const { container } = render(<ReplayControls document={replayDocumentWithBothRemittancesFixture()} playback={playback()} sort="ARRIVAL" onSort={vi.fn()} />);
+    const ruler = container.querySelector('.replay-timeline')!;
+
+    fireEvent.mouseMove(ruler, { clientX: 100 });
+    expect(container.querySelector('.replay-timeline__tip')).toHaveTextContent('D0');
+    expect(container.querySelector('.replay-timeline__tip')).toHaveTextContent('2 chegadas · fechamento');
+    fireEvent.mouseMove(ruler, { clientX: 600 });
+    expect(container.querySelector('.replay-timeline__tip')).toHaveTextContent('1 chegada · fechamento com remessa');
+    fireEvent.mouseLeave(ruler);
+    expect(container.querySelector('.replay-timeline__tip')).not.toHaveClass('is-visible');
   });
 
   it('mantém o controle deslizante acessível sobre a linha do tempo', () => {
