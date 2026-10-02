@@ -24,10 +24,10 @@ function Icon({ name }: Readonly<{ name: keyof typeof ICONS }>) {
     strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d={ICONS[name]} /></svg>;
 }
 
+// Três destinos. Diagnóstico abre por estudo; o quadro comparativo é "Comparar estudos", em Estudos.
 const destinations = [
-  { to: '/empresas', label: 'Empresas', icon: 'companies' },
   { to: '/estudos', label: 'Estudos', icon: 'studies' },
-  { to: '/quadro', label: 'Quadro comparativo', icon: 'board' },
+  { to: '/empresas', label: 'Empresas', icon: 'companies' },
   { to: '/importar', label: 'Importar', icon: 'import' },
 ] as const;
 
@@ -44,7 +44,7 @@ function workspaceTrail(pathname: string): string[] {
     if (third === 'apresentacao') return ['Estudos', 'Apresentação'];
     return ['Estudos'];
   }
-  if (first === 'quadro') return ['Quadro comparativo'];
+  if (first === 'quadro') return ['Estudos', 'Comparar estudos'];
   if (first === 'importar') return ['Importar'];
   if (first === 'diagnostico') return ['Diagnóstico'];
   return ['Motor de Fluxo'];
@@ -62,11 +62,7 @@ export function AppShell() {
   const onPresentation = location.pathname.endsWith('/apresentacao');
   const scenarioId = selectionId(search.get(onPresentation ? 'cenario' : 'scenarioId'));
   const executionId = selectionId(search.get(onPresentation ? 'execucao' : 'executionId'));
-  const navigation: { to: string; label: string; icon: keyof typeof ICONS }[] = [...destinations, {
-    to: studyId === undefined ? '/diagnostico' : `/estudos/${studyId}/diagnostico`,
-    label: 'Diagnóstico',
-    icon: 'diagnostic',
-  }];
+  const navigation: { to: string; label: string; icon: keyof typeof ICONS }[] = [...destinations];
   if (studyId !== undefined && scenarioId !== null && executionId !== null
     && (onPresentation || location.pathname.endsWith('/diagnostico'))) navigation.push({
     to: `/estudos/${encodeURIComponent(studyId)}/apresentacao?cenario=${encodeURIComponent(scenarioId)}&execucao=${encodeURIComponent(executionId)}`,
@@ -74,6 +70,7 @@ export function AppShell() {
     icon: 'present',
   });
   const trail = workspaceTrail(location.pathname);
+  const studyArea = /^\/(?:estudos|carteira|quadro|diagnostico)(?:\/|$)/.test(location.pathname);
   return <ChatProvider key={userId} ownerSub={userId!} repository={chatRepository} client={apiClient} catalog={helpCatalog ?? null}>
     <div className="app-shell">
       <a className="skip-link" href="#main-content">Pular para o conteúdo</a>
@@ -91,7 +88,8 @@ export function AppShell() {
           <ul className="destination-list">
             {navigation.map((destination) => (
               <li key={destination.to}>
-                <NavLink to={destination.to} end={destination.to === '/empresas' || destination.to === '/estudos'} className="destination-link">
+                <NavLink to={destination.to} end={destination.to === '/empresas'} className={({ isActive }) => `destination-link${isActive || (destination.to === '/estudos' && studyArea) ? ' active' : ''}`}
+                  {...(destination.to === '/estudos' && studyArea ? { 'aria-current': 'page' as const } : {})}>
                   <Icon name={destination.icon} />
                   {destination.label}
                 </NavLink>

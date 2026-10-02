@@ -530,15 +530,10 @@ describe('application routes', () => {
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent(target));
   });
 
-  it('expõe Empresas, Estudos e Diagnóstico na navegação global', async () => {
+  it('expõe só Estudos, Empresas e Importar na navegação global', async () => {
     renderAppAt('/empresas', client(session('user-a')), new RepositoryDouble());
     const navigation = await screen.findByRole('navigation', { name: 'Navegação principal' });
-    expect(navigation).toHaveTextContent('Empresas');
-    expect(navigation).toHaveTextContent('Estudos');
-    expect(navigation).toHaveTextContent('Diagnóstico');
-    expect(navigation).toHaveTextContent('Importar');
-    expect(navigation).toHaveTextContent('Quadro comparativo');
-    expect(navigation.querySelectorAll('a')).toHaveLength(5);
+    expect([...navigation.querySelectorAll('a')].map((link) => link.textContent)).toEqual(['Estudos', 'Empresas', 'Importar']);
     expect(screen.getByRole('link', { name: 'Empresas' })).toHaveAttribute('aria-current', 'page');
   });
 

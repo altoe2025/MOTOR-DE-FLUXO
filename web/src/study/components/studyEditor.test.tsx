@@ -441,7 +441,10 @@ describe('StudyList', () => {
     const onCreate = vi.fn(); const onCreateCombinations = vi.fn();
     render(<StudyList studies={[document]} selectedId={null} onCreate={onCreate} onCreateCombinations={onCreateCombinations}
       onOpen={vi.fn()} onRename={vi.fn()} onDuplicate={vi.fn()} onRestore={vi.fn()} onDelete={vi.fn()} />);
-    await userEvent.click(screen.getByRole('button', { name: 'Nova combinação de carteiras' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Mais ações: criar' }));
+    const item = screen.getByRole('menuitem', { name: 'Nova combinação de carteiras' });
+    expect(item).toHaveAttribute('data-chat-help-id', 'control.estudos.nova-combinacao');
+    await userEvent.click(item);
     expect(onCreateCombinations).toHaveBeenCalledOnce();
     expect(onCreate).not.toHaveBeenCalled();
     expect(screen.getByRole('button', { name: 'Novo estudo' })).toBeInTheDocument();
@@ -453,9 +456,26 @@ describe('StudyList', () => {
     await userEvent.setup().click(screen.getByRole('button', { name: 'Novo estudo' }));
     expect(onCreate).toHaveBeenCalledOnce();
     expect(screen.getByRole('button', { name: 'Abrir Estudo teste' })).toBeVisible();
-    expect(screen.getByRole('button', { name: 'Renomear Estudo teste' })).toBeVisible();
-    expect(screen.getByRole('button', { name: 'Duplicar Estudo teste' })).toBeVisible();
-    expect(screen.getByRole('button', { name: 'Excluir Estudo teste' })).toBeVisible();
+    // As ações de cada estudo ficam no menu ⋯, fora da tela até alguém pedir.
+    expect(screen.queryByRole('button', { name: 'Renomear Estudo teste' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Mais ações: Estudo teste' }));
+    expect(screen.getByRole('menuitem', { name: 'Renomear Estudo teste' })).toBeVisible();
+    expect(screen.getByRole('menuitem', { name: 'Duplicar Estudo teste' })).toBeVisible();
+    expect(screen.getByRole('menuitem', { name: 'Excluir Estudo teste' })).toBeVisible();
+  });
+
+  it('leva cada ação do menu ao estudo certo', async () => {
+    const document = await study(); const onRename = vi.fn(); const onDelete = vi.fn(); const onExport = vi.fn();
+    render(<StudyList studies={[document]} selectedId={null} onCreate={vi.fn()} onOpen={vi.fn()} onRename={onRename}
+      onDuplicate={vi.fn()} onRestore={vi.fn()} onDelete={onDelete} onExport={onExport} />);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Mais ações: Estudo teste' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Exportar Estudo teste' }));
+    expect(onExport).toHaveBeenCalledWith(document);
+    await user.click(screen.getByRole('button', { name: 'Mais ações: Estudo teste' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Excluir Estudo teste' }));
+    expect(onDelete).toHaveBeenCalledWith(document);
+    expect(onRename).not.toHaveBeenCalled();
   });
 
   it('oculta da lista principal os estudos movidos para a lixeira', async () => {
@@ -481,7 +501,10 @@ describe('StudyList', () => {
     render(<StudyList studies={[active, deleted]} selectedId={null} onCreate={vi.fn()} onOpen={onOpen}
       onRename={vi.fn()} onDuplicate={vi.fn()} onRestore={onRestore} onDelete={vi.fn()} />);
     const user = userEvent.setup();
-    screen.getByRole('button', { name: 'Lixeira de estudos' }).focus();
+    screen.getByRole('button', { name: 'Mais ações: criar' }).focus();
+    await user.keyboard('{Enter}');
+    await user.keyboard('{End}');
+    expect(screen.getByRole('menuitem', { name: 'Lixeira de estudos' })).toHaveFocus();
     await user.keyboard('{Enter}');
     expect(screen.getByRole('list', { name: 'Lixeira de estudos' })).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Abrir Estudo excluído' })).not.toBeInTheDocument();
