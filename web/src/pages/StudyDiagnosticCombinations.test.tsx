@@ -111,7 +111,7 @@ describe('combination study diagnosis', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Diagnosticar combinações' }));
     expect(await screen.findByRole('button', { name: 'Cancelar lote' })).toBeEnabled();
     await userEvent.click(screen.getByRole('button', { name: 'Cancelar lote' }));
-    expect(screen.getByRole('status')).toHaveTextContent('Cancelando após a combinação atual');
+    expect(screen.getByText('Cancelando após a combinação atual…')).toHaveAttribute('role', 'status');
 
     await act(async () => finishCurrent({
       status: 'SUCCEEDED', attemptId: 'done', jobId: 'job', envelope: null, error: null, current: true,

@@ -38,7 +38,7 @@ vi.mock('../preparation/resolvePortfolioSource', async (importOriginal) => ({
   ...await importOriginal<typeof import('../preparation/resolvePortfolioSource')>(),
   resolvePortfolioSource: vi.fn(),
 }));
-afterEach(() => vi.unstubAllEnvs());
+afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); });
 
 function page() {
   return render(<MemoryRouter><Routes>
@@ -207,6 +207,51 @@ describe('StudiesPage demo recovery', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Carregar estudo demonstrativo' }));
     expect(controller.restoreDemoStudy).toHaveBeenCalledOnce();
     expect(await screen.findByRole('heading', { name: 'Demonstração aberta' })).toBeInTheDocument();
+  });
+});
+
+describe('StudiesPage carteira sintética local', () => {
+  beforeEach(() => {
+    controller.listStudies.mockResolvedValue([]);
+    controller.demoInstallationStatus.mockResolvedValue('INSTALLED');
+    controller.snapshot.error = null;
+    controller.snapshot.status = 'IDLE';
+    controller.edit.mockClear();
+    controller.flush.mockClear();
+  });
+
+  it('oculta o carregamento quando o bridge E2E não existe', async () => {
+    page();
+    await screen.findByText('Nenhum estudo salvo nesta conta.');
+    expect(screen.queryByRole('button', { name: 'Carregar empresas sintéticas para análise de carteiras' })).not.toBeInTheDocument();
+  });
+
+  it('carrega uma vez, bloqueia cliques concorrentes e orienta a abrir a combinação', async () => {
+    let finish!: (value: { companyIds: string[]; companyNames: string[] }) => void;
+    const seedPortfolioShowcase = vi.fn(() => new Promise<{ companyIds: string[]; companyNames: string[] }>((resolve) => { finish = resolve; }));
+    vi.stubGlobal('__MOTOR_E2E__', { seedPortfolioShowcase });
+    page();
+    const button = await screen.findByRole('button', { name: 'Carregar empresas sintéticas para análise de carteiras' });
+    expect(button).toHaveAttribute('data-local-preview-only', 'true');
+    await userEvent.click(button);
+    expect(button).toBeDisabled();
+    expect(seedPortfolioShowcase).toHaveBeenCalledOnce();
+    finish({ companyIds: ['a', 'b', 'c', 'd', 'e', 'f'], companyNames: ['A', 'B', 'C', 'D', 'E', 'F'] });
+    expect(await screen.findByRole('status')).toHaveTextContent('6 empresas sintéticas');
+    expect(screen.getByRole('status')).toHaveTextContent('Nova combinação de carteiras');
+    expect(button).toBeEnabled();
+    expect(controller.edit).not.toHaveBeenCalled();
+    expect(controller.flush).not.toHaveBeenCalled();
+  });
+
+  it('expõe falha do seed como aviso acessível e libera nova tentativa', async () => {
+    const seedPortfolioShowcase = vi.fn().mockRejectedValue(new Error('IndexedDB indisponível'));
+    vi.stubGlobal('__MOTOR_E2E__', { seedPortfolioShowcase });
+    page();
+    const button = await screen.findByRole('button', { name: 'Carregar empresas sintéticas para análise de carteiras' });
+    await userEvent.click(button);
+    expect(await screen.findByRole('alert')).toHaveTextContent('IndexedDB indisponível');
+    expect(button).toBeEnabled();
   });
 });
 

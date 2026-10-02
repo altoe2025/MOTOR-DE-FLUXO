@@ -33,10 +33,11 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-10-01, com a abertura da melhoria de diagnóstico recolhível.
+Atualizada em 2026-10-02, durante a preparação da publicação da análise de carteiras.
 
 | Branch | Situação | Dono |
 |---|---|---|
+| `codex/carteiras-analise` | Prévia aprovada; integra `main` em `c3620bf` com seis objetivos, filtros, alternativas e marginais; gates de publicação em execução | Codex |
 | `feat/front-visual` | visual do app inteiro no sistema do Replay; aprovado pelo Gabriel na prévia local; PR para a `main`, deploy com o Codex | Claude |
 | `codex/diagnostico-recolhivel` | Recolhe os cenários por estudo na aba Diagnóstico; PR #65 mergeado na `main` (`5483fab`), sem deploy próprio | Codex |
 | `codex/replay-timeline-deploy-record` | registra o deploy de `d4fec2f` e o smoke da nova régua; PR de documentação em preparação | Codex |
@@ -50,7 +51,7 @@ Atualizada em 2026-10-01, com a abertura da melhoria de diagnóstico recolhível
 | `codex/carteira-criterios` | Integra estudo separado de combinações, últimas melhorias de `feat/bancada-exploracao` e chat já publicado do PR #57; deploy aguardando comando do Gabriel | Codex |
 | `codex/chat-interface-render` | PR #57 aberto (draft, base `feat/bancada-exploracao`); código `8d43695` publicado no Render com status Live em 2026-09-28; sem merge na `main` | Codex |
 | `codex/integracao-etapas-5-6` | Consolida `feat/bancada-exploracao` e `codex/finalidade-verificacao`, incluindo histórico de `origin/main`; publicação/CI em preparação, sem deploy | Codex |
-| `main` | `d4fec2f`: PR #63 mergeado e nova régua do Replay publicada no Render | os dois |
+| `main` | `c3620bf`: PR #66 mergeado; Render confirmado Live nessa revisão antes da publicação MOT-100 | os dois |
 | `netting/p1` | spike do P1, **NÃO MERGEAR** — dominado, e agora sabemos que a folga é zero em N ≥ 50. Só local, nunca foi pro GitHub | Felipe |
 | `fix/semantica-remessa-p0` | PR #11, mergeada | Felipe |
 | `fix/previsao-temporal-e-colunas-csv` | PR #12, mergeada | Gabriel |
@@ -86,6 +87,51 @@ Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. 
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+## 2026-10-02 — Preparação de publicação da análise de carteiras aprovada (MOT-100)
+
+1. **Sintoma:** Gabriel aprovou a prévia visual e autorizou inspeção, commit, merge e deploy quando seguros.
+2. **Causa:** a funcionalidade estava apenas no worktree local; a revisão encontrou contagens incluindo combinações antigas, valores do objetivo ativo pouco explícitos e ausência de retorno direto à recomendação após selecionar uma alternativa.
+3. **O que foi feito:** análise de carteiras com seis objetivos, restrições independentes, alternativas e contribuição marginal; interface console clara/escura aprovada, sem o gráfico economia × espera nem a tabela extensa na tela principal. As três lacunas de revisão receberam testes de regressão. Preparação na branch `codex/carteiras-analise`; integração com a `main`, CI e publicação ainda serão verificadas antes do deploy.
+4. **O que isso invalida:** a restrição anterior de manter esta entrega somente local foi substituída pela autorização explícita de publicação. Nenhuma regra, premissa ou número do motor foi alterado.
+
+### Integração validada sobre `c3620bf`
+
+- Shell, fontes Geist, tema, Replay, grupos de Diagnóstico e proteções de concorrência da `main` preservados. O CSS temporário `frontConsole.css` foi removido; somente o estilo específico de carteiras permanece.
+- Python normal e `-O`: 1.397 passando, 3 pulados e 1 xfail; web: 1.373 passando. Ruff, mypy, typecheck e lint passaram; contratos regenerados sem diferença e wheel construído.
+- Build de produção e scanner de credenciais passaram. Smoke CSP repetido com a configuração pública sintética exigida pelo harness: login visível, zero violações e zero chamadas ao provider. Sem configuração pública, o build local não serve como teste de login; nenhum segredo real foi necessário.
+- Jornada real das 63 combinações passou em 3,7 minutos; os dois testes visuais passaram sem regenerar referências. Os demais fluxos exercitados na suíte E2E inicial passaram; o CI executará novamente a suíte completa no candidato de merge.
+- Integração dos testes: cancelamento distingue os dois avisos de status da página; teste do Replay aguarda publicação inicial do dia; seletor marginal compara nome literal contendo `+`; capturas ocultam somente o controle de seed exclusivo da prévia.
+- Prévia reconstruída com as mesmas seis empresas sintéticas após a limpeza única já herdada da `main`; nenhum reset adicional, schema, configuração de acesso ou regra do motor foi alterado. Verificação manual de objetivos, retorno à recomendação, claro/escuro e reflow de celular sem overflow horizontal.
+- Dois alertas npm preexistentes foram triados, sem caminho vulnerável identificado no fluxo publicado; a atualização do lock fica pendente (detalhes no roteiro de aceite). Merge/deploy dependem do CI do PR; não são declarados concluídos neste registro.
+
+## 2026-10-01 — Prévia visual de carteiras no tema console (MOT-100)
+
+1. **Sintoma.** A análise local ainda usava a aparência antiga, distante do console claro/escuro de `feat/front-visual`.
+2. **Causa.** A branch de análise precede o redesenho e os novos componentes tinham apresentação básica.
+3. **O que foi feito.** Tokens, tema persistido e base visual do shell reaproveitados de `feat/front-visual` (`209bdbe`), com CSS de carteiras separado. Empresas obrigatórias passam a cartões pesquisáveis e acessíveis por teclado; recomendação e alternativas têm métricas hierarquizadas; contribuição marginal usa cartões de impacto na mesma escala e tabela detalhada recolhida. Sem mudança de motor, dados persistidos, ranking ou filtros. Testes focados e navegação: 99 passando. Conferência manual com os 63 resultados existentes nos temas claro/escuro e em larguras de desktop/celular. O E2E que recalcula os 63 diagnósticos foi adaptado, mas não repetido nesta revisão visual.
+4. **O que isso invalida.** Capturas da aparência anterior e passos que supõem IDs sempre visíveis, tabela marginal aberta ou botão de tema ausente. Nada nos números simulados. Continua somente local, sem push, PR, main ou deploy.
+
+## 2026-10-01 — Interface compacta da análise de carteiras (MOT-100)
+
+1. **Sintoma.** No aceite manual, o gráfico de economia × espera ficou pouco útil e a tabela com as 63 composições tornou a página excessivamente longa.
+2. **Causa.** A tela expunha simultaneamente recomendação, destaques, gráfico, tabela completa, detalhes e contribuição marginal, repetindo caminhos de exploração.
+3. **O que foi feito.** `PortfolioRecommendationPanel` deixou de renderizar e carregar o gráfico/Pareto e a tabela completa. Objetivos, filtros, recomendação, alternativas, detalhes e contribuição marginal permanecem. Os testes unitários e o E2E focado foram ajustados para o fluxo compacto.
+4. **O que isso invalida.** Evidências e roteiro que orientavam selecionar, ordenar ou conferir carteiras pelo gráfico e pela tabela completa. Os módulos isolados continuam no código, mas não fazem parte da tela principal.
+
+## 2026-09-30 — Showcase sintético ampliado da análise de carteiras (MOT-100)
+
+1. **Sintoma.** A documentação de aceite ainda descrevia o exercício antigo com três empresas e sete carteiras, enquanto o showcase E2E atual cobre uma busca completa maior.
+2. **Causa.** O fixture de aceitação foi ampliado para seis empresas sintéticas e 14 ordens, produzindo 63 combinações não vazias.
+3. **O que foi feito.** A documentação em `docs/frontend/carteiras-analise-aceitacao.md` e o índice em `docs/MAPA.md` agora registram os números atuais e identificam explicitamente as empresas e ordens como sintéticas.
+4. **O que isso invalida.** A descrição anterior de três empresas e sete carteiras como escopo do E2E focado. AstroPay continua apenas uma referência de escala já existente no repositório; nenhum fluxo real da AstroPay é descrito ou representado pelo showcase.
+
+## 2026-09-30 — Análise ampliada de combinações de carteiras (MOT-100)
+
+1. **Sintoma.** A recomendação existente escolhia pela maior economia, com limite opcional de espera, e não permitia comparar as combinações por outros objetivos ou explorar suas diferenças.
+2. **Causa.** A tela apresentava uma recomendação e poucas alternativas, embora os diagnósticos comparáveis já estivessem disponíveis no estudo.
+3. **O que foi feito.** Na branch local `codex/carteiras-analise`, `portfolioAnalysis.ts` projeta métricas dos resultados existentes; `portfolioSelection.ts` aplica objetivos e filtros; `portfolioFrontier.ts` e `PortfolioTradeoffChart.tsx` apresentam o gráfico e Pareto; `portfolioMarginal.ts` e `PortfolioMarginalPanel.tsx` calculam e exibem diferenças por empresa. A interface inclui tabela e detalhes em `web/src/levers/`. A prévia local usa `scripts/preview_carteiras.py`; o E2E focado está em `web/e2e/study-portfolio-analysis.spec.ts`. Na validação inicial, o E2E passou com sete carteiras comparáveis; a validação atual do showcase sintético ampliado cobre seis empresas, 14 ordens e 63 combinações. O teste reconcilia a tabela com os envelopes e observa zero novos POSTs de diagnóstico/preparação durante a exploração, sem mudança do snapshot salvo. A suíte web passou com 1.287/1.287 testes no modo serial; após os ajustes finais, 40/40 testes focados, typecheck, lint e build passaram e o E2E foi revalidado. A prévia foi inspecionada a 1280×800 e em reflow equivalente a zoom de 200%. Apenas o aceite manual do Gabriel permanece pendente. A branch não recebeu push, PR, integração à `main` nem deploy.
+4. **O que isso invalida.** Nada na `main` ou na versão publicada: a branch permanece local e não altera os resultados dos diagnósticos. Os gates técnicos e o E2E não substituem a experimentação manual pendente.
 
 ## 2026-10-01 — Duplo clique em "Executar diagnóstico" podia sumir com o resultado (MOT-99)
 

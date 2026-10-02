@@ -35,7 +35,7 @@ export type MotorE2EBridge = Readonly<{
   demoAcceptanceSnapshot(): Promise<Readonly<{
     studies: readonly Readonly<{
       id: string; name: string; ownerSub: string; deletedAt: string | null;
-      scenarios: readonly Readonly<{ id: string; name: string; inputFingerprint: string; participantCount: number }>[];
+      scenarios: readonly Readonly<{ id: string; name: string; inputFingerprint: string; participantCount: number; companyIds: readonly string[] }>[];
       diagnostics: readonly Readonly<{ id: string; scenarioId: string; repetitionId: string; count: number; savingsBrl: string; netability: string }>[];
     }>[];
     profiles: readonly Readonly<{ id: string; documentFingerprint: string; version: number }>[];
@@ -51,6 +51,7 @@ export type MotorE2EBridge = Readonly<{
   studySource(studyId: string): Promise<string | null>;
   studyName(studyId: string): Promise<string | null>;
   studyExecutionStatuses(studyId: string): Promise<readonly string[]>;
+  studyDiagnosticStates(studyId: string): Promise<readonly Readonly<{ scenarioId: string; status: string; error: unknown }>[]>;
   profileVersions(companyId: string): Promise<readonly number[]>;
   profileSnapshot(studyId: string, ownerSub?: string): Promise<Readonly<{ attachedVersions: readonly number[]; availableVersions: readonly number[] }>>;
   previewAttemptShapes(studyId: string): Promise<readonly Readonly<{ reservation: number; terminal: number }>[]>;
@@ -64,6 +65,7 @@ export type MotorE2EBridge = Readonly<{
     | Readonly<{ stage: 'write'; event: 'abort'; requestEvent: 'success' | 'error'; errorName: string }>
   >;
   seedStage4(fixture: Stage4Fixture): Promise<void>;
+  seedPortfolioShowcase(): Promise<Readonly<{ companyIds: readonly string[]; companyNames: readonly string[] }>>;
   seedStage5Observed(): Promise<Readonly<{ studyId: string; scenarioId: string }>>;
   measureReplayState(document: ReplayDocument, day: number, iterations: number): Readonly<{ p50Ms: number; maxMs: number }>;
   stage4Snapshot(studyId: string): Promise<Stage4Snapshot>;
@@ -112,6 +114,52 @@ function stage4Case(companyId: string, suffix: string): ObservedCase {
   };
 }
 
+const PORTFOLIO_SHOWCASE = [
+  { key: 'a', name: 'PSP Inbound Sintética', direction: 'IN', purpose: 'ANEXO_V_DISPONIBILIDADE', efx: 'YES', orders: [[700000, 0, 25], [300000, 2, 27], [500000, 10, 35]] },
+  { key: 'b', name: 'Remessas Digitais Sintética', direction: 'OUT', purpose: 'ANEXO_V_REMESSA_TERCEIRO', efx: 'YES', orders: [[800000, 0, 5], [600000, 10, 15]] },
+  { key: 'c', name: 'Folha Global Sintética', direction: 'OUT', purpose: 'ANEXO_V_BENS_SERVICOS', efx: 'YES', orders: [[900000, 0, 10], [900000, 15, 25]] },
+  { key: 'd', name: 'Exportadora Sintética', direction: 'IN', purpose: 'ANEXO_V_RECEITA_EXPORTACAO', efx: 'NO', orders: [[1200000, 12, 30], [600000, 25, 40]] },
+  { key: 'e', name: 'Cripto Liquidação Sintética', direction: 'OUT', purpose: 'ANEXO_V_ATIVOS_VIRTUAIS', efx: 'YES', orders: [[500000, 1, 1], [500000, 12, 12], [100000, 20, 20]] },
+  { key: 'f', name: 'Tesouraria Sintética', direction: 'IN', purpose: 'ANEXO_V_DISPONIBILIDADE', efx: 'NO', orders: [[1500000, 0, 20], [1500000, 18, 38]] },
+] as const;
+
+function portfolioShowcaseCase(companyId: string, fixture: typeof PORTFOLIO_SHOWCASE[number]): ObservedCase {
+  const recordedAt = '2026-09-30T12:00:00Z';
+  const provenance = {
+    kind: 'SYNTHETIC_DEFAULT' as const, source: 'demonstração sintética de carteiras',
+    version: 'portfolio-showcase-v1', recordedAt, rule: 'ordens fixas reproduzíveis para E2E',
+  };
+  const dateAt = (offset: number) => new Date(Date.UTC(2026, 0, 1 + offset)).toISOString().slice(0, 10);
+  const gross = fixture.orders.reduce((total, [value]) => total + value, 0);
+  return {
+    schemaVersion: '2.0.0', id: `portfolio-showcase-v1-case-${fixture.key}`,
+    ownerSub: E2E_OWNER_SUB, companyId, status: 'CONFIRMED', revision: 1,
+    window: { startDate: '2026-01-01', endDate: '2026-02-10', closingDate: '2026-02-10' },
+    orders: fixture.orders.map(([value, known, deadline], index) => ({
+      id: `portfolio-showcase-v1-order-${fixture.key}-${index + 1}`, clientId: companyId,
+      direction: fixture.direction, knownDate: dateAt(known), deadlineDate: dateAt(deadline),
+      valueBrl: String(value), purposeCode: fixture.purpose, efxStatus: fixture.efx,
+      provenance: [provenance],
+    })),
+    controlTotals: [
+      { code: 'GROSS_OUT_BRL', valueBrl: String(fixture.direction === 'OUT' ? gross : 0), provenance },
+      { code: 'GROSS_IN_BRL', valueBrl: String(fixture.direction === 'IN' ? gross : 0), provenance },
+    ],
+    sourceManifest: { adapterId: 'portfolio-showcase-e2e', adapterVersion: '1', sourceKind: 'SYNTHETIC', files: [] },
+    normalization: { rulesetId: 'portfolio-showcase-e2e', rulesetVersion: '1', normalizedAt: recordedAt },
+    quality: { blockers: [], warnings: [] }, corrections: [], observedOutcome: null,
+    confirmedAt: recordedAt,
+  };
+}
+
+function registeredCompanyIds(scenario: StudyDocument['scenarios'][number]): readonly string[] {
+  const source = scenario.sourceSnapshot.source;
+  if (source.kind !== 'AUTHORED' || source.definition?.kind !== 'EXPLICIT_ORDERS'
+    || source.definition.companyByOrder === undefined) return [];
+  return [...new Set(Object.values(source.definition.companyByOrder)
+    .map((company) => company.companyId))].sort();
+}
+
 function stage5ObservedCase(companyId: string): ObservedCase {
   const recordedAt = '2026-09-20T12:00:00Z';
   const provenance = { kind: 'OBSERVED' as const, source: 'stage5-replay', version: '1', recordedAt };
@@ -158,10 +206,14 @@ export function installE2EBridge(): void {
         return {
           studies: studies.map((study) => ({
             id: study.id, name: study.name, ownerSub: study.ownerSub, deletedAt: study.deletedAt,
-            scenarios: study.scenarios.map((scenario) => ({
-              id: scenario.id, name: scenario.name, inputFingerprint: scenario.inputFingerprint,
-              participantCount: scenario.sourceSnapshot.generationInputSnapshot?.participants.length ?? 0,
-            })),
+            scenarios: study.scenarios.map((scenario) => {
+              const companyIds = registeredCompanyIds(scenario);
+              return {
+                id: scenario.id, name: scenario.name, inputFingerprint: scenario.inputFingerprint,
+                participantCount: companyIds.length || scenario.sourceSnapshot.generationInputSnapshot?.participants.length || 0,
+                companyIds,
+              };
+            }),
             diagnostics: study.executions.flatMap((execution) => execution.kind === 'DIAGNOSTIC'
               && execution.status === 'SUCCEEDED' && execution.envelope !== null ? [{
                 id: execution.id, scenarioId: execution.scenarioId,
@@ -256,6 +308,29 @@ export function installE2EBridge(): void {
           await repository.saveStudy({ expectedRevision: 0, operationId: crypto.randomUUID(), document: created });
         }
         return { studyId: STAGE5_OBSERVED_ID, scenarioId: STAGE5_OBSERVED_SCENARIO_ID };
+      } finally { repository.close(); }
+    },
+    async seedPortfolioShowcase() {
+      const repository = new IndexedDbApplicationRepository({ projectRef: 'local', ownerSub: E2E_OWNER_SUB });
+      try {
+        const now = '2026-09-30T12:00:00Z';
+        for (const fixture of PORTFOLIO_SHOWCASE) {
+          const company: CompanyRecord = {
+            id: `portfolio-showcase-v1-company-${fixture.key}`, ownerSub: E2E_OWNER_SUB,
+            displayName: fixture.name, aliases: [], createdAt: now, updatedAt: now, revision: 1,
+          };
+          const observedCase = portfolioShowcaseCase(company.id, fixture);
+          if (await repository.getObservedCase(observedCase.id) === null) {
+            await repository.confirmObservedCase({
+              expectedRevision: 0, operationId: crypto.randomUUID(), company, observedCase,
+              batches: [], events: [],
+            });
+          }
+        }
+        return {
+          companyIds: PORTFOLIO_SHOWCASE.map((fixture) => `portfolio-showcase-v1-company-${fixture.key}`),
+          companyNames: PORTFOLIO_SHOWCASE.map((fixture) => fixture.name),
+        };
       } finally { repository.close(); }
     },
     async seedStage4(fixture: Stage4Fixture) {
@@ -586,6 +661,25 @@ export function installE2EBridge(): void {
       });
       try {
         return (await repository.getStudy(studyId))?.executions.map((item) => item.status) ?? [];
+      } finally {
+        repository.close();
+      }
+    },
+    async studyDiagnosticStates(studyId: string) {
+      const repository = new IndexedDbApplicationRepository({
+        projectRef: 'local', ownerSub: E2E_OWNER_SUB,
+      });
+      try {
+        const study = await repository.getStudy(studyId);
+        const states = new Map<string, { scenarioId: string; status: string; error: unknown }>();
+        for (const execution of study?.executions ?? []) {
+          if (execution.kind === 'DIAGNOSTIC') {
+            states.set(execution.scenarioId, {
+              scenarioId: execution.scenarioId, status: execution.status, error: execution.error,
+            });
+          }
+        }
+        return [...states.values()];
       } finally {
         repository.close();
       }

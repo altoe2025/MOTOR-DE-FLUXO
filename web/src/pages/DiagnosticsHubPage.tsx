@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { useStudyController } from '../app/providers';
-import { currentDiagnostic } from '../levers/VariationComparison';
+import { currentDiagnostic } from '../levers/savingsOrigin';
 import { formatFraction, formatMoney } from '../presentation/format';
 import type { StudyDocument } from '../study/model';
 import { EmptyState } from '../ui/EmptyState';

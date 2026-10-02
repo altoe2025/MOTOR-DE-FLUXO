@@ -1,7 +1,7 @@
 # Mapa do repositório
 
 Índice para achar as coisas sem procurar. Estado técnico e planejamento do
-front-end atualizados em 2026-09-22.
+front-end atualizados em 2026-09-30.
 
 ## Comece por aqui
 
@@ -31,6 +31,20 @@ a Etapa 2 v2. A branch local `codex/frontend-etapa-3` chega ao candidato
 verde e o aceite técnico da Etapa 3 é **PASS**, incluindo prova browser específica
 de teclado e zoom a 200% na página nova de diagnóstico robusto. Não houve push, PR,
 CI publicado, aprovação de merge ou merge desta branch.
+
+**MOT-100 aprovada, em preparação de publicação:** a branch `codex/carteiras-analise` reúne a análise
+de combinações por objetivos e filtros, alternativas, detalhes, contribuição
+marginal e uma prévia local. Após o aceite visual de 2026-10-01, gráfico/Pareto e
+tabela completa deixaram de ser renderizados na tela principal. Métricas e seleção
+ficam em `web/src/levers/portfolioAnalysis.ts` e `portfolioSelection.ts`; diferenças
+marginais, em `portfolioMarginal.ts` e `PortfolioMarginalPanel.tsx`. A interface e
+a aceitação manual estão descritas em `docs/frontend/carteiras-analise-aceitacao.md`;
+o launcher é `scripts/preview_carteiras.py` e o aceite integrado está em
+`web/e2e/study-portfolio-analysis.spec.ts`, que exercita 6 empresas sintéticas,
+14 ordens e 63 combinações. Gabriel aprovou a interface em 2026-10-02 e autorizou
+commit, merge e deploy após validação. A integração preserva o shell/tema, Replay e
+proteções de concorrência da `main`; CI e publicação devem ser confirmados no PR
+e no registro de deploy, não inferidos do aceite visual.
 
 ```
 main
@@ -126,6 +140,7 @@ na ausência, aplicam-se os padrões da direção.
 
 | Pergunta | Arquivo |
 |---|---|
+| Escopo, dependências e execução local da análise de combinações (MOT-100) | `docs/superpowers/specs/2026-09-30-carteiras-analise-design.md`, `docs/superpowers/plans/2026-09-30-carteiras-analise.md`, `docs/frontend/carteiras-analise-aceitacao.md` |
 | Regras do repo, restrições, o que não mexer | `AGENTS.md` |
 | Onde a economia aparece (carteira, escala, prazo) | `docs/RELATORIO-VARREDURA.md` |
 | De que a economia é feita, e a que é sensível | `docs/RELATORIO-DECOMPOSICAO-CUSTO.md` |

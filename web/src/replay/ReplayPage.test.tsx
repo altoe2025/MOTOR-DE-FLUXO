@@ -106,6 +106,8 @@ describe('ReplayPage', () => {
       </ChatProvider>
     </MemoryRouter>);
     await screen.findByRole('heading', { name: 'Fronteira Viva' });
+    // READY renders before the mount effects publish the initial route day.
+    await waitFor(() => expect(screen.getByTestId('chat-day')).toHaveTextContent('0'));
     fireEvent.change(screen.getByRole('slider', { name: 'Selecionar dia' }), { target: { value: '1' } });
     await waitFor(() => expect(screen.getByTestId('chat-day')).toHaveTextContent('1'));
     expect(screen.getByTestId('chat-scenario')).toHaveTextContent(persistedStudy().scenarios[0]!.id);

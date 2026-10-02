@@ -10,6 +10,7 @@ import '@fontsource-variable/geist';
 import '@fontsource-variable/geist-mono';
 import './styles/tokens.css';
 import './styles/global.css';
+import './styles/portfolioConsole.css';
 import './styles/print.css';
 
 const root = document.getElementById('root');
