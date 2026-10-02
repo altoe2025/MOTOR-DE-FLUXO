@@ -37,6 +37,7 @@ Atualizada em 2026-10-02, durante a preparação da publicação da análise de 
 
 | Branch | Situação | Dono |
 |---|---|---|
+| `codex/perf-combinacoes` | Design aprovado para eliminar leituras integrais incidentais e a amplificação do lote de até 255 combinações; implementação ainda não iniciada | Codex |
 | `codex/carteiras-docker-fixture` | Corrige somente o empacotamento de um helper de testes após falha do build Render; versão Live anterior preservada | Codex |
 | `codex/carteiras-analise` | PR #69 mergeado em `9cc8b8e`, CI verde; primeiro deploy interrompido no build por helper de testes fora do padrão de exclusão | Codex |
 | `feat/front-visual` | visual do app inteiro no sistema do Replay; aprovado pelo Gabriel na prévia local; PR para a `main`, deploy com o Codex | Claude |
@@ -52,7 +53,7 @@ Atualizada em 2026-10-02, durante a preparação da publicação da análise de 
 | `codex/carteira-criterios` | Integra estudo separado de combinações, últimas melhorias de `feat/bancada-exploracao` e chat já publicado do PR #57; deploy aguardando comando do Gabriel | Codex |
 | `codex/chat-interface-render` | PR #57 aberto (draft, base `feat/bancada-exploracao`); código `8d43695` publicado no Render com status Live em 2026-09-28; sem merge na `main` | Codex |
 | `codex/integracao-etapas-5-6` | Consolida `feat/bancada-exploracao` e `codex/finalidade-verificacao`, incluindo histórico de `origin/main`; publicação/CI em preparação, sem deploy | Codex |
-| `main` | `c3620bf`: PR #66 mergeado; Render confirmado Live nessa revisão antes da publicação MOT-100 | os dois |
+| `main` | `09a979e`: PRs #69 e #70 mergeados; análise de carteiras publicada no Render com a correção de empacotamento | os dois |
 | `netting/p1` | spike do P1, **NÃO MERGEAR** — dominado, e agora sabemos que a folga é zero em N ≥ 50. Só local, nunca foi pro GitHub | Felipe |
 | `fix/semantica-remessa-p0` | PR #11, mergeada | Felipe |
 | `fix/previsao-temporal-e-colunas-csv` | PR #12, mergeada | Gabriel |
@@ -88,6 +89,10 @@ Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. 
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+## 2026-10-02 — Design de desempenho para 255 combinações (MOT-100)
+
+**Sintoma:** abrir Estudos, criar uma nova combinação e abrir Diagnóstico ficou lento em estudos grandes; o lote de oito empresas também mantém o navegador ocupado por muito tempo. **Causa:** as listas reconstroem e validam todos os envelopes salvos; cada terminal do lote repete clone, validação, serialização e comparação do estudo cumulativo; o agendamento usa só um dos dois workers; a recomendação é projetada a cada resultado. **O que foi feito:** criada na branch `codex/perf-combinacoes` a especificação `docs/superpowers/specs/2026-10-02-desempenho-combinacoes-design.md`, com catálogo leve, lazy load, preparação idempotente, append atômico, concorrência limitada a dois e gates para 255 composições. Nenhum código de produto foi alterado nesta entrada. **O que isso invalida:** nada nos números ou resultados atuais; medições futuras de desempenho devem separar leitura, persistência, projeção e tempo remoto conforme o novo protocolo.
 
 ## 2026-10-02 — Fixture de carteiras fora do contexto de produção (MOT-100)
 
