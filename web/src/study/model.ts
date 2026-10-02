@@ -241,10 +241,21 @@ export type StudyEvidenceSnapshot = DeepReadonly<{
   profile: OperationalProfileVersion;
 }>;
 
+/** Assinatura da matriz preparada; o fingerprint da base inclui origem, premissas e período. */
+export type PreparedCombinationCoverage = Readonly<{
+  baseScenarioId: string;
+  baseInputFingerprint: string;
+  /** Proveniência de entrada é copiada aos derivados, mas não integra inputFingerprint. */
+  baseInputProvenanceCanonical: string;
+  /** JSON canônico do array ordenado de IDs; string mantém a assinatura imutável. */
+  companyIdsCanonical: string;
+}>;
+
 export type StudyDocumentV3 = Readonly<
   Omit<StudyDocumentV2, 'schemaVersion' | 'executions'> & {
     schemaVersion: '3.0.0';
     studyType?: 'PORTFOLIO_COMBINATIONS';
+    preparedCombinationCoverage?: PreparedCombinationCoverage;
     evidenceSnapshots: readonly StudyEvidenceSnapshot[];
     executions: readonly ExecutionRecordV3[];
   }

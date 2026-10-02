@@ -1,19 +1,22 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import type { CompanyRecord } from '../cases/domain';
 import { resolvePortfolioSource } from '../preparation/resolvePortfolioSource';
-import { appendExecution, appendScenario, createStudy, duplicateStudy, updateScenario } from '../study/domain';
+import { appendExecution, appendScenario, createStudy, duplicateStudy, removeScenario, updateScenario } from '../study/domain';
 import { FIXTURE_NOW, FIXTURE_OWNER, makeObservedCase, makeScenarioDraft } from '../study/fixtures';
 import { validateStudyDocument } from '../study/validation';
-import type { DeepMutable, ExecutionRecord, StudyDocument } from '../study/model';
+import type { DeepMutable, ExecutionRecord, ScenarioInputProvenance, StudyDocument } from '../study/model';
 import { combineObservedCases } from './companies';
 import { NEUTRAL_LEVERS } from './applyLevers';
+import * as leverScenario from './leverScenario';
 import { recommendPortfolios } from './portfolioRecommendation';
 import { applyLeversToCombinationBase, isCurrentCombinationScenario, prepareCombinationStudy } from './prepareCombinationStudy';
 
-async function fixture() {
+async function fixture(duplicateNames = false) {
   const cases = [0, 1, 2].map((i) => ({ ...makeObservedCase(), id: `case-${i}`, companyId: `company-${i}` }));
-  const companies = cases.map((item, i) => ({ id: item.companyId, displayName: `Empresa ${i}` } as CompanyRecord));
+  const companies = cases.map((item, i) => ({
+    id: item.companyId, displayName: duplicateNames && i < 2 ? 'Empresa repetida' : `Empresa ${i}`,
+  } as CompanyRecord));
   const { definition } = combineObservedCases(cases, companies);
   const sourceSnapshot = await resolvePortfolioSource({ kind: 'AUTHORED', authoredPortfolioId: crypto.randomUUID(), definition }, {
     getObservedCase: async () => null, preparePortfolio: async () => { throw new Error('not used'); }, now: () => FIXTURE_NOW,
@@ -23,6 +26,14 @@ async function fixture() {
       sourceSnapshot: structuredClone(sourceSnapshot) as DeepMutable<typeof sourceSnapshot>,
     }), now: FIXTURE_NOW });
 }
+
+const inputProvenance: ScenarioInputProvenance = (() => {
+  const field = { kind: 'USER_ESTIMATE' as const, source: 'Teste', version: '1', recordedAt: FIXTURE_NOW };
+  return { premises: { windowDays: field, costs: {
+    iof_out: field, iof_in: field, carry_cnr: field, custo_fixo_remessa: field,
+    custo_oportunidade_aa: field, spread_rail_bps: field, ptax: field,
+  } }, period: { horizonDays: field } };
+})();
 
 function runningExecution(study: StudyDocument, scenarioId: string): ExecutionRecord {
   const scenario = study.scenarios.find((item) => item.id === scenarioId)!;
@@ -57,7 +68,108 @@ describe('combination study preparation', () => {
 
   it('reuses the existing scenarios and results on an unchanged retry', async () => {
     const study = await prepareCombinationStudy(await fixture(), () => {});
-    expect(await prepareCombinationStudy(study, () => {})).toBe(study);
+    expect(study.preparedCombinationCoverage).toEqual({
+      baseScenarioId: study.baseScenarioId,
+      baseInputFingerprint: study.scenarios[0]!.inputFingerprint,
+      baseInputProvenanceCanonical: 'null',
+      companyIdsCanonical: '["company-0","company-1","company-2"]',
+    });
+    const build = vi.spyOn(leverScenario, 'buildLeverScenario');
+    try {
+      expect(await prepareCombinationStudy(study, () => {})).toBe(study);
+      expect(build).not.toHaveBeenCalled();
+    } finally {
+      build.mockRestore();
+    }
+  });
+
+  it('rebuilds a missing combination even when the stored coverage matches the base', async () => {
+    const prepared = await prepareCombinationStudy(await fixture(), () => {});
+    const missing = await removeScenario(prepared, prepared.scenarios[1]!.id, FIXTURE_NOW);
+    const rebuilt = await prepareCombinationStudy(missing, () => {});
+    expect(rebuilt.scenarios).toHaveLength(7);
+    expect(rebuilt.preparedCombinationCoverage).toEqual(prepared.preparedCombinationCoverage);
+    expect(rebuilt.revision).toBe(missing.revision + 1);
+  });
+
+  it('reprepares when a company is removed and then added back', async () => {
+    const prepared = await prepareCombinationStudy(await fixture(), () => {});
+    const base = prepared.scenarios[0]!;
+    const reduced = await applyLeversToCombinationBase(
+      prepared, { ...NEUTRAL_LEVERS, group: 'Empresa 0', removeCompany: true }, FIXTURE_NOW,
+    );
+    const reducedPrepared = await prepareCombinationStudy(reduced, () => {});
+    expect(reducedPrepared.scenarios).toHaveLength(3);
+    expect(reducedPrepared.preparedCombinationCoverage?.companyIdsCanonical).toBe('["company-1","company-2"]');
+
+    const restored = await updateScenario(reducedPrepared, base.id, {
+      sourceSnapshot: base.sourceSnapshot,
+    }, FIXTURE_NOW);
+    const restoredPrepared = await prepareCombinationStudy(restored, () => {});
+    expect(restoredPrepared.scenarios).toHaveLength(7);
+    expect(restoredPrepared.preparedCombinationCoverage?.companyIdsCanonical).toBe('["company-0","company-1","company-2"]');
+  });
+
+  it('treats distinct company IDs with the same display name as distinct combinations', async () => {
+    const prepared = await prepareCombinationStudy(await fixture(true), () => {});
+    expect(prepared.scenarios).toHaveLength(7);
+    const combinations = prepared.scenarios.slice(1).map((scenario) => {
+      const source = scenario.sourceSnapshot.source;
+      if (source.kind !== 'AUTHORED' || source.definition?.kind !== 'EXPLICIT_ORDERS') throw new Error('Origem inesperada.');
+      const companyByOrder = source.definition.companyByOrder;
+      return [...new Set(scenario.sourceSnapshot.orders.map((order) =>
+        companyByOrder?.[order.id]?.companyId))].sort().join(',');
+    });
+    expect(combinations.sort()).toEqual([
+      'company-0', 'company-0,company-1', 'company-0,company-2',
+      'company-1', 'company-1,company-2', 'company-2',
+    ].sort());
+    expect(prepared.scenarios.filter((scenario) => scenario.name.includes('Empresa repetida'))).toHaveLength(5);
+  });
+
+  it('replaces derived scenarios and their results after sourceCases revision changes', async () => {
+    const prepared = await prepareCombinationStudy(await fixture(), () => {});
+    const oldDerived = prepared.scenarios[1]!;
+    const withResult = await appendExecution(prepared, runningExecution(prepared, oldDerived.id), FIXTURE_NOW);
+    const base = prepared.scenarios[0]!;
+    const sourceSnapshot = structuredClone(base.sourceSnapshot) as DeepMutable<typeof base.sourceSnapshot>;
+    if (sourceSnapshot.source.kind !== 'AUTHORED' || sourceSnapshot.source.definition?.kind !== 'EXPLICIT_ORDERS') {
+      throw new Error('Origem inesperada.');
+    }
+    sourceSnapshot.source.definition.sourceCases![0]!.caseRevision += 1;
+    const edited = await updateScenario(withResult, base.id, { sourceSnapshot }, FIXTURE_NOW);
+    const next = await prepareCombinationStudy(edited, () => {});
+    expect(next.scenarios).toHaveLength(7);
+    expect(next.scenarios.some((scenario) => scenario.id === oldDerived.id)).toBe(false);
+    expect(next.executions).toEqual([]);
+    expect(await prepareCombinationStudy(next, () => {})).toBe(next);
+  });
+
+  it('replaces derived scenarios after order provenance changes without changing orders', async () => {
+    const prepared = await prepareCombinationStudy(await fixture(), () => {});
+    const base = prepared.scenarios[0]!;
+    const sourceSnapshot = structuredClone(base.sourceSnapshot) as DeepMutable<typeof base.sourceSnapshot>;
+    if (sourceSnapshot.source.kind !== 'AUTHORED' || sourceSnapshot.source.definition?.kind !== 'EXPLICIT_ORDERS') {
+      throw new Error('Origem inesperada.');
+    }
+    const orderId = base.sourceSnapshot.orders[0]!.id;
+    sourceSnapshot.source.definition.provenanceByOrder[orderId]!.valor_brl.source = 'Proveniência revista';
+    sourceSnapshot.provenanceByOrder![orderId]!.valor_brl.source = 'Proveniência revista';
+    const edited = await updateScenario(prepared, base.id, { sourceSnapshot }, FIXTURE_NOW);
+    const next = await prepareCombinationStudy(edited, () => {});
+    expect(next.scenarios.some((scenario) => scenario.id === prepared.scenarios[1]!.id)).toBe(false);
+    expect(await prepareCombinationStudy(next, () => {})).toBe(next);
+  });
+
+  it('replaces derived scenarios when only input provenance changes', async () => {
+    const prepared = await prepareCombinationStudy(await fixture(), () => {});
+    const base = prepared.scenarios[0]!;
+    const edited = await updateScenario(prepared, base.id, { inputProvenance }, FIXTURE_NOW);
+    expect(edited.scenarios[0]!.inputFingerprint).toBe(base.inputFingerprint);
+    const next = await prepareCombinationStudy(edited, () => {});
+    expect(next.scenarios.some((scenario) => scenario.id === prepared.scenarios[1]!.id)).toBe(false);
+    expect(next.scenarios[1]!.inputProvenance).toEqual(inputProvenance);
+    expect(await prepareCombinationStudy(next, () => {})).toBe(next);
   });
 
   it('replaces an obsolete batch and its executions in one revision after the base fingerprint changes', async () => {

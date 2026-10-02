@@ -7,6 +7,7 @@ import { createStudy } from './domain';
 import { FIXTURE_NOW, FIXTURE_OWNER, makeScenarioDraft } from './fixtures';
 import { canonical } from './fingerprints';
 import type { StudyDocument } from './model';
+import { parseStudyV3, validateStudyDocument } from './validation';
 import {
   buildStudyExport, parseStudyExport, prepareStudyImport, STUDY_EXPORT_FORMAT, studyExportFileName,
 } from './studyTransfer';
@@ -40,6 +41,46 @@ describe('exportar e importar estudo', { timeout: 30_000 }, () => {
     const file = buildStudyExport(await plainStudy(), { now: FIXTURE_NOW, buildSha: SHA });
     expect(file).toMatchObject({ format: STUDY_EXPORT_FORMAT, formatVersion: 1, exportedAt: FIXTURE_NOW, buildSha: SHA });
     expect(studyExportFileName(file.study, FIXTURE_NOW)).toBe('estudo-carteira-astropay-2026-09-19.json');
+  });
+
+  it('preserva a cobertura opcional no round-trip e continua aceitando V3 antigo', async () => {
+    const legacy = await plainStudy();
+    const coverage = {
+      baseScenarioId: legacy.baseScenarioId,
+      baseInputFingerprint: legacy.scenarios[0]!.inputFingerprint,
+      baseInputProvenanceCanonical: 'null',
+      companyIdsCanonical: '["company-0","company-1"]',
+    };
+    const withCoverage: StudyDocument = {
+      ...legacy, studyType: 'PORTFOLIO_COMBINATIONS', preparedCombinationCoverage: coverage,
+    };
+    const parsed = await parseStudyExport(
+      JSON.stringify(buildStudyExport(withCoverage, { now: FIXTURE_NOW, buildSha: SHA })), FIXTURE_OWNER,
+    );
+    if (!parsed.ok) throw new Error(parsed.error);
+    expect(parsed.study.preparedCombinationCoverage).toEqual(coverage);
+    const imported = await prepareStudyImport(parsed.study, {
+      ownerSub: FIXTURE_OWNER, existing: [], now: FIXTURE_NOW, ids,
+    });
+    expect(imported.study.preparedCombinationCoverage).toEqual(coverage);
+    expect(parseStudyV3(legacy).preparedCombinationCoverage).toBeUndefined();
+    expect((await validateStudyDocument(legacy)).ok).toBe(true);
+  });
+
+  it('rejects malformed prepared coverage instead of silently dropping it', async () => {
+    const legacy = await plainStudy();
+    const coverage = {
+      baseScenarioId: legacy.baseScenarioId,
+      baseInputFingerprint: legacy.scenarios[0]!.inputFingerprint,
+      baseInputProvenanceCanonical: 'null',
+      companyIdsCanonical: '["company-1","company-0"]',
+      unexpected: true,
+    };
+    const malformed = { ...legacy, preparedCombinationCoverage: coverage };
+    expect(parseStudyV3.bind(null, malformed)).toThrow('Documento de estudo V3 inválido.');
+    const validation = await validateStudyDocument(malformed);
+    expect(validation.ok).toBe(false);
+    if (!validation.ok) expect(validation.issues[0]?.path).toBe('/preparedCombinationCoverage');
   });
 
   it('recusa arquivo que não é JSON, que não é estudo ou de versão futura, com mensagem clara', async () => {

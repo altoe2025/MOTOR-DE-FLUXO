@@ -90,6 +90,10 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-10-02 — Preparação idempotente das combinações (MOT-100)
+
+**Sintoma:** repetir “Diagnosticar combinações” reconstruía os 254 rascunhos mesmo quando a cobertura atual já estava completa; IDs diferentes com nomes iguais também podiam colapsar subconjuntos. **Causa:** não havia uma assinatura persistida da cobertura e a identidade de composição usava nome de empresa. **O que foi feito:** o estudo guarda cobertura opcional V3 validada; hit exato pula a construção, miss reconstrói todas as derivadas e descarta resultados obsoletos. Combinações usam IDs, nomes ficam só na apresentação e duplicatas são desambiguadas. Após corrigir dois achados da revisão, 27/27 testes e typecheck passaram. **O que isso invalida:** tempo anterior de um segundo clique já preparado; a cardinalidade por ID agora é rigorosamente `2^N - 1` mesmo com nomes repetidos.
+
 ## 2026-10-02 — Estudos e Diagnóstico carregam sob demanda (MOT-100)
 
 **Sintoma:** mesmo com os cenários visualmente recolhidos, entrar nas páginas aguardava documentos e envelopes completos. **Causa:** as páginas consumiam `listStudies` e o hub recebia todos os `StudyDocument` antes da primeira interação. **O que foi feito:** Estudos e o hub usam `StudySummary`; o hub carrega somente o estudo expandido, com estados locais de carregamento/erro e proteção contra respostas obsoletas. Rótulos e ações foram preservados, inclusive a distinção de carteira observada, sintética, multiempresa e manual. Testes focados 49/49 e typecheck verdes; revisão aprovada. **O que isso invalida:** medições antigas de abertura dessas rotas que incluíam leitura/validação de todos os envelopes; importação explícita ainda lê documentos completos por necessidade do fluxo.

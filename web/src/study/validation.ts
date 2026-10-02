@@ -22,6 +22,38 @@ import type {
   StudyValidationIssue,
 } from './model';
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+/** The generated V3 schema predates this optional additive field. Keep its closed-object check. */
+function schemaDocument(value: unknown): unknown {
+  if (!isRecord(value) || !Object.hasOwn(value, 'preparedCombinationCoverage')) return value;
+  const { preparedCombinationCoverage: _coverage, ...document } = value;
+  void _coverage;
+  return document;
+}
+
+function hasValidPreparedCoverage(value: unknown): boolean {
+  if (!isRecord(value) || !Object.hasOwn(value, 'preparedCombinationCoverage')) return true;
+  const coverage = value.preparedCombinationCoverage;
+  if (!isRecord(coverage) || Object.keys(coverage).length !== 4
+    || typeof coverage.baseScenarioId !== 'string' || coverage.baseScenarioId.length === 0
+    || typeof coverage.baseInputFingerprint !== 'string'
+    || !/^[0-9a-f]{64}$/.test(coverage.baseInputFingerprint)
+    || typeof coverage.baseInputProvenanceCanonical !== 'string'
+    || typeof coverage.companyIdsCanonical !== 'string') return false;
+  let inputProvenance: unknown;
+  try { inputProvenance = JSON.parse(coverage.baseInputProvenanceCanonical); } catch { return false; }
+  if (canonical(inputProvenance) !== coverage.baseInputProvenanceCanonical) return false;
+  let companyIds: unknown;
+  try { companyIds = JSON.parse(coverage.companyIdsCanonical); } catch { return false; }
+  if (!Array.isArray(companyIds) || companyIds.length < 2 || companyIds.length > 8
+    || JSON.stringify(companyIds) !== coverage.companyIdsCanonical) return false;
+  return companyIds.every((id, index) => typeof id === 'string'
+    && id.length > 0 && (index === 0 || companyIds[index - 1]! < id));
+}
+
 function structuralIssue(error: ErrorObject): StudyValidationIssue {
   return {
     path: error.instancePath === '' ? '/' : error.instancePath,
@@ -111,14 +143,17 @@ export function parseStudyV3(value: unknown): StudyDocumentV3 {
     if (!validateStudyV2Schema(value)) throw new Error('Documento de estudo V3 inválido.');
     candidate = migrateStudyDocumentV2(value);
   }
-  if (!validateStudyV3Schema(candidate)) throw new Error('Documento de estudo V3 inválido.');
+  if (!validateStudyV3Schema(schemaDocument(candidate)) || !hasValidPreparedCoverage(candidate)) {
+    throw new Error('Documento de estudo V3 inválido.');
+  }
+  const study = candidate as StudyDocumentV3;
 
   const terminalRequests = new Set<string>();
   const terminalAttempts = new Set<string>();
-  for (const execution of candidate.executions) {
+  for (const execution of study.executions) {
     const compatible = execution.kind === 'DIAGNOSTIC'
-      ? diagnosticEnvelopeIsCompatible(execution, candidate)
-      : envelopeIsCompatible(execution, candidate);
+      ? diagnosticEnvelopeIsCompatible(execution, study)
+      : envelopeIsCompatible(execution, study);
     if (!compatible) {
       throw new Error('Envelope incompatível com a execução.');
     }
@@ -133,12 +168,12 @@ export function parseStudyV3(value: unknown): StudyDocumentV3 {
     if (execution.kind === 'PREVIEW') terminalRequests.add(requestId);
     if (execution.attemptId !== undefined) terminalAttempts.add(execution.attemptId);
   }
-  for (const records of diagnosticAttempts(candidate.executions).values()) {
+  for (const records of diagnosticAttempts(study.executions).values()) {
     if (!diagnosticAttemptHasPersistedShape(records)) {
       throw new Error('Tentativa diagnóstica possui forma persistida inválida.');
     }
   }
-  return structuredClone(candidate);
+  return structuredClone(study);
 }
 
 function orderedOrders(
@@ -229,22 +264,28 @@ async function validateStudyDocumentCore(
   expectedOwnerSub?: string,
   yieldBeforeExecutions = false,
 ): Promise<StudyValidation<StudyDocument>> {
-  if (!validateStudyV3Schema(value)) {
+  if (!validateStudyV3Schema(schemaDocument(value))) {
     return { ok: false, issues: (validateStudyV3Schema.errors ?? []).map(structuralIssue) };
   }
+  if (!hasValidPreparedCoverage(value)) {
+    return { ok: false, issues: [issue(
+      '/preparedCombinationCoverage', 'INVALID_STRUCTURE', 'Assinatura de combinações inválida.',
+    )] };
+  }
+  const study = value as StudyDocumentV3;
   const issues: StudyValidationIssue[] = [];
-  if (expectedOwnerSub !== undefined && value.ownerSub !== expectedOwnerSub) {
+  if (expectedOwnerSub !== undefined && study.ownerSub !== expectedOwnerSub) {
     issues.push(issue('/ownerSub', 'OWNER_MISMATCH', 'Owner do documento diverge da conta ativa.'));
   }
-  const scenarioIds = value.scenarios.map((scenario) => scenario.id);
+  const scenarioIds = study.scenarios.map((scenario) => scenario.id);
   if (new Set(scenarioIds).size !== scenarioIds.length) {
     issues.push(issue('/scenarios', 'DUPLICATE_ID', 'Identificador de cenário repetido.'));
   }
-  if (!scenarioIds.includes(value.baseScenarioId)) {
+  if (!scenarioIds.includes(study.baseScenarioId)) {
     issues.push(issue('/baseScenarioId', 'BASE_SCENARIO_MISSING', 'Cenário base ausente.'));
   }
   const evidenceIds = new Map<string, string>();
-  for (const [index, evidence] of value.evidenceSnapshots.entries()) {
+  for (const [index, evidence] of study.evidenceSnapshots.entries()) {
     const profileValidation = await validateOperationalProfile(evidence.profile);
     if (!profileValidation.ok) {
       issues.push(issue(
@@ -253,7 +294,7 @@ async function validateStudyDocumentCore(
         'Perfil Operacional preservado é inválido.',
       ));
     }
-    if (evidence.profile.ownerSub !== value.ownerSub) {
+    if (evidence.profile.ownerSub !== study.ownerSub) {
       issues.push(issue(
         `/evidenceSnapshots/${index}/profile/ownerSub`,
         'OWNER_MISMATCH',
@@ -271,7 +312,7 @@ async function validateStudyDocumentCore(
     }
     evidenceIds.set(evidence.profile.id, evidence.profile.documentFingerprint);
   }
-  for (const [index, scenario] of value.scenarios.entries()) {
+  for (const [index, scenario] of study.scenarios.entries()) {
     if (scenario.sourceSnapshot.source.kind === 'SYNTHETIC') {
       for (const [seedIndex, seed] of scenario.sourceSnapshot.source.recipe.seeds.entries()) {
         if (BigInt(seed) > 9223372036854775807n) {
@@ -301,13 +342,13 @@ async function validateStudyDocumentCore(
     }
   }
   if (yieldBeforeExecutions) await new Promise<void>((resolve) => setTimeout(resolve, 0));
-  const executionIds = value.executions.map((execution) => execution.id);
+  const executionIds = study.executions.map((execution) => execution.id);
   if (new Set(executionIds).size !== executionIds.length) {
     issues.push(issue('/executions', 'DUPLICATE_ID', 'Identificador de execução repetido.'));
   }
   const terminalRequests = new Set<string>();
   const terminalAttempts = new Set<string>();
-  for (const execution of value.executions) {
+  for (const execution of study.executions) {
     if (!isTerminal(execution)) continue;
     const requestId = execution.requestSnapshot.request_id;
     const duplicateRequest = execution.kind === 'PREVIEW' && terminalRequests.has(requestId);
@@ -324,8 +365,8 @@ async function validateStudyDocumentCore(
     if (execution.kind === 'PREVIEW') terminalRequests.add(requestId);
     if (execution.attemptId !== undefined) terminalAttempts.add(execution.attemptId);
   }
-  for (const [index, execution] of value.executions.entries()) {
-    const scenario = value.scenarios.find((candidate) => candidate.id === execution.scenarioId);
+  for (const [index, execution] of study.executions.entries()) {
+    const scenario = study.scenarios.find((candidate) => candidate.id === execution.scenarioId);
     if (scenario === undefined || execution.scenarioRevision > scenario.revision) {
       issues.push(issue(
         `/executions/${index}/scenarioRevision`,
@@ -334,12 +375,12 @@ async function validateStudyDocumentCore(
       ));
       continue;
     }
-    const executionValidation = validateExecutionRecord(execution, value);
+    const executionValidation = validateExecutionRecord(execution, study);
     if (!executionValidation.ok) issues.push(...executionValidation.issues);
   }
-  for (const records of diagnosticAttempts(value.executions).values()) {
+  for (const records of diagnosticAttempts(study.executions).values()) {
     if (!diagnosticAttemptHasPersistedShape(records)) {
-      const index = value.executions.indexOf(records[0]!);
+      const index = study.executions.indexOf(records[0]!);
       issues.push(issue(
         `/executions/${index}`,
         'INCOMPATIBLE_DIAGNOSTIC_ATTEMPT',
@@ -347,7 +388,7 @@ async function validateStudyDocumentCore(
       ));
     }
   }
-  return issues.length === 0 ? { ok: true, value } : { ok: false, issues };
+  return issues.length === 0 ? { ok: true, value: study } : { ok: false, issues };
 }
 
 export function validateStudyDocument(
