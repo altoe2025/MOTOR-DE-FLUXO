@@ -2,7 +2,7 @@ import Decimal from 'decimal.js';
 import { observedInput } from '../communication/testFixtures';
 import type { DeepMutable, DiagnosticExecutionRecord, StudyDocument } from '../study/model';
 
-/** Hand-authored arithmetic fixtures, not evidence of a financial simulation. */
+/** Test-only arithmetic fixtures; excluded from the production Docker context. */
 export async function measuredStudyFixture() {
   const { study, execution: base } = await observedInput();
   study.executions = [base];

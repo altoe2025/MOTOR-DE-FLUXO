@@ -109,3 +109,35 @@ def test_production_lock_is_hashed_without_development_dependencies():
     for block in re.split(r"\n(?=[A-Za-z0-9_.-]+(?:\[|==))", source):
         if re.search(r"^[A-Za-z0-9_.-]+(?:\[[^\]]+\])?==", block, re.MULTILINE):
             assert "--hash=sha256:" in block
+
+
+def test_frontend_context_does_not_import_excluded_typescript_helpers():
+    """A normal checkout build must not hide missing Docker-context imports."""
+    included = set()
+    for rule in (ROOT / ".dockerignore").read_text().splitlines():
+        if not rule or rule.startswith("#"):
+            continue
+        if rule.startswith("!web/src/"):
+            pattern = rule[1:]
+            pattern = pattern + "/*" if pattern.endswith("**") else pattern
+            included.update(path for path in ROOT.glob(pattern) if path.is_file())
+        elif not rule.startswith("!") and included:
+            pattern = rule + "/*" if rule.endswith("**") else rule
+            included.difference_update(ROOT.glob(pattern))
+    assert ROOT / "web/src/main.tsx" in included
+    broken = []
+    for path in sorted(included):
+        if path.suffix not in {".ts", ".tsx"}:
+            continue
+        for module in re.findall(
+            r"(?:from\s*|import\s*\(\s*)['\"](\.[^'\"]+)['\"]",
+            path.read_text(encoding="utf-8"),
+        ):
+            target = path.parent / module
+            candidates = [Path(str(target) + ext) for ext in (".ts", ".tsx")]
+            candidates += [target / "index.ts", target / "index.tsx"]
+            for candidate in candidates:
+                candidate = candidate.resolve()
+                if candidate.is_file() and candidate not in included:
+                    broken.append(f"{path.relative_to(ROOT)} -> {candidate.relative_to(ROOT)}")
+    assert not broken, "Imports missing from Docker context:\n" + "\n".join(broken)

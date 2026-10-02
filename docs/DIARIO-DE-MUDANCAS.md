@@ -37,7 +37,8 @@ Atualizada em 2026-10-02, durante a preparação da publicação da análise de 
 
 | Branch | Situação | Dono |
 |---|---|---|
-| `codex/carteiras-analise` | Prévia aprovada; integra `main` em `c3620bf` com seis objetivos, filtros, alternativas e marginais; gates de publicação em execução | Codex |
+| `codex/carteiras-docker-fixture` | Corrige somente o empacotamento de um helper de testes após falha do build Render; versão Live anterior preservada | Codex |
+| `codex/carteiras-analise` | PR #69 mergeado em `9cc8b8e`, CI verde; primeiro deploy interrompido no build por helper de testes fora do padrão de exclusão | Codex |
 | `feat/front-visual` | visual do app inteiro no sistema do Replay; aprovado pelo Gabriel na prévia local; PR para a `main`, deploy com o Codex | Claude |
 | `codex/diagnostico-recolhivel` | Recolhe os cenários por estudo na aba Diagnóstico; PR #65 mergeado na `main` (`5483fab`), sem deploy próprio | Codex |
 | `codex/replay-timeline-deploy-record` | registra o deploy de `d4fec2f` e o smoke da nova régua; PR de documentação em preparação | Codex |
@@ -87,6 +88,28 @@ Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. 
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+## 2026-10-02 — Fixture de carteiras fora do contexto de produção (MOT-100)
+
+1. **Sintoma:** após o merge autorizado do PR #69 (`9cc8b8e`), o deploy Render
+   `dep-davj7lpsrm7s73c7hsng` falhou no typecheck: `portfolioAnalysisFixtures.ts`
+   importava `communication/testFixtures.ts`, ausente no contexto Docker. O build
+   falhou antes da troca de versão; `c3620bf` permaneceu Live.
+2. **Causa:** o novo helper tinha nome fora dos padrões `testFixtures.*` e
+   `fixtures.*` já excluídos pelo `.dockerignore`. O CI completo em checkout passou
+   (run `36963490425`: 1399 testes Python, 1373 web, 66 navegador), mas esse recorte
+   específico de fontes ainda não era conferido.
+3. **O que foi feito:** na branch `codex/carteiras-docker-fixture`, renomeado o
+   helper para `web/src/levers/testFixtures.ts` e ajustados seus dois importadores
+   de teste. Sem ampliar o contexto Docker, sem modificar a interface ou o motor.
+   Adicionado teste de regressão dos imports TypeScript no contexto permitido:
+   reproduziu o import ausente antes da correção e passou depois (5 contratos).
+   Os 41 testes consumidores passaram; typecheck e Vite build passaram em cópia
+   temporária sem os arquivos de teste/fixtures excluídos do Docker. Revisão
+   independente sem bloqueadores. Docker local indisponível (daemon parado);
+   o build real será novamente conferido no Render, após o CI verde.
+4. **O que isso invalida:** a suposição de que o build no checkout, sozinho,
+   garante o build com o contexto Docker restrito; nenhuma métrica financeira.
 
 ## 2026-10-02 — Preparação de publicação da análise de carteiras aprovada (MOT-100)
 

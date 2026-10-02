@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import Decimal from 'decimal.js';
 import { collectPortfolioMetrics } from './portfolioAnalysis';
-import { addPortfolioFixture, measuredStudyFixture, periodicWaitingStudyFixture, publishedSingletonWaitingStudyFixture } from './portfolioAnalysisFixtures';
+import { addPortfolioFixture, measuredStudyFixture, periodicWaitingStudyFixture, publishedSingletonWaitingStudyFixture } from './testFixtures';
 
 describe('portfolio metrics', () => {
   it('ignores obsolete combinations on direct opening without hiding ordinary-study scenarios', async () => {
