@@ -59,7 +59,7 @@ describe('StudyEditor', () => {
     expect(screen.getByRole('group', { name: 'Empresas da carteira' })).toBeInTheDocument();
     expect(screen.queryByRole('radio')).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Operações explícitas' })).not.toBeInTheDocument();
-    expect(screen.getByLabelText('Nome do estudo')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Mais ações: estudo' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Premissas e período' })).toBeInTheDocument();
     const user = userEvent.setup();
     await user.click(screen.getByRole('checkbox', { name: /Empresa Alfa/ }));
@@ -115,6 +115,9 @@ describe('StudyEditor', () => {
 
   it('salva nome com teclado', async () => {
     const { onRename } = await subject(); const user = userEvent.setup();
+    expect(screen.queryByLabelText('Nome do estudo')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Mais ações: estudo' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Renomear' }));
     await user.clear(screen.getByLabelText('Nome do estudo'));
     await user.type(screen.getByLabelText('Nome do estudo'), 'Novo estudo{enter}');
     expect(onRename).toHaveBeenCalledWith('Novo estudo');
@@ -195,9 +198,29 @@ describe('StudyEditor', () => {
     }));
   });
 
+  it('mostra as premissas num resumo e só abre o formulário em "Editar premissas"', async () => {
+    await subject({}, { openSource: false });
+    const summary = screen.getByRole('region', { name: 'Premissas e período' });
+    expect(summary).toHaveTextContent('IOF 3,5% / 0,38%');
+    expect(summary).toHaveTextContent('Carry 0,04%');
+    expect(summary).toHaveTextContent('PTAX 5,4');
+    expect(summary).toHaveTextContent(/Janela \d+ dias/);
+    expect(screen.queryByLabelText('IOF OUT')).not.toBeInTheDocument();
+    const edit = screen.getByRole('button', { name: 'Editar premissas' });
+    expect(edit).toHaveAttribute('aria-expanded', 'false');
+    fireEvent.click(edit);
+    expect(edit).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByLabelText('IOF OUT')).toHaveValue('3,5');
+    // Janela e período ficam no Avançado: o motor usa, mas raramente se mexe.
+    expect(screen.queryByLabelText('Janela em dias')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Avançado/ }));
+    expect(screen.getByLabelText('Janela em dias')).toBeInTheDocument();
+  });
+
   it('mostra premissas em % e R$, converte para fração e preserva o que não mudou', async () => {
     const onScenarioChange = vi.fn();
     await subject({ onScenarioChange }); const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Editar premissas' }));
     expect(screen.getByLabelText('IOF OUT')).toHaveValue('3,5');
     expect(screen.getByLabelText('Carry CNR')).toHaveValue('0,04');
     await user.clear(screen.getByLabelText('IOF OUT'));
@@ -216,6 +239,8 @@ describe('StudyEditor', () => {
     const document = await study();
     const { onScenarioChange } = await subject({ study: document }, { openSource: false });
     const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Editar premissas' }));
+    await user.click(screen.getByRole('button', { name: /Avançado/ }));
     const windowDays = screen.getByLabelText('Janela em dias');
     await user.clear(windowDays);
     await user.type(windowDays, '3');
@@ -232,6 +257,7 @@ describe('StudyEditor', () => {
   it('mostra o erro de premissa junto ao campo, com exemplo', async () => {
     const onScenarioChange = vi.fn();
     await subject({ onScenarioChange }); const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Editar premissas' }));
     await user.clear(screen.getByLabelText('Carry CNR'));
     await user.type(screen.getByLabelText('Carry CNR'), '0;04');
     await user.click(screen.getByRole('button', { name: 'Salvar premissas e período' }));
@@ -271,6 +297,8 @@ describe('StudyEditor', () => {
 
     expect(screen.getByLabelText('Nome do grupo')).toHaveValue('Grupo persistido');
     expect(screen.getByLabelText('Ticket mediano do grupo')).toHaveValue('1500.50');
+    await user.click(screen.getByRole('button', { name: 'Editar premissas' }));
+    await user.click(screen.getByRole('button', { name: /Avançado/ }));
     await user.clear(screen.getByLabelText('PTAX'));
     await user.type(screen.getByLabelText('PTAX'), '5,4500');
     await user.clear(screen.getByLabelText('Período de medição em dias'));
