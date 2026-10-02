@@ -104,6 +104,9 @@ pool, classificação de erro de resultado e limites de retenção por quantidad
 somente do diagnóstico, combina participantes preservados com premissas atuais,
 preserva histórico antigo sem considerá-lo atual quando divergente, recupera o pool,
 registra causa técnica sanitizada e permite retomada/reexecução no navegador.
+A revisão independente acrescentou a regressão do botão de repetir após falha local
+de download: esse caso cria um novo job, pois o job original terminou no servidor.
+O fixture de comparação passou a declarar a receita/período que pretende comparar.
 Terminais liberam intermediários; retenção máxima de 128 terminais/64 MiB, expulsando
 somente os mais antigos, e TTL máximo de 24 h. Operação documentada em
 `docs/deploy-render.md`; regressões incluem morte real de processo, callbacks tardios,

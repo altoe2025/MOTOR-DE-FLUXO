@@ -30,7 +30,8 @@ type DiagnosticCancellationApi = Pick<DiagnosticExecutionApi, 'getDiagnosticJob'
   cancelDiagnostic(jobId: string, signal?: AbortSignal): Promise<JobSnapshot>;
 }>;
 
-type DiagnosticRetryApi = Pick<DiagnosticExecutionApi, 'getDiagnosticJob' | 'getDiagnosticResult'> & Readonly<{
+type DiagnosticRetryApi = Pick<DiagnosticExecutionApi, 'getDiagnosticJob' | 'getDiagnosticResult'>
+  & Partial<Pick<DiagnosticExecutionApi, 'submitDiagnostic'>> & Readonly<{
   retryDiagnostic(jobId: string, idempotencyKey: string, signal?: AbortSignal): Promise<JobSnapshot>;
 }>;
 
@@ -294,10 +295,14 @@ export async function retryStudyDiagnostic(
       || original.jobId === null) {
       throw new Error('Execução diagnóstica não pode ser repetida.');
     }
+    const localResultFailure = original.error?.code === 'DIAGNOSTIC_RESULT_UNAVAILABLE';
+    if (localResultFailure && options.api.submitDiagnostic === undefined) {
+      throw new Error('Uma falha local de resultado exige iniciar uma nova tentativa.');
+    }
     if (!sessionIsCurrent(options.authority, ownerSub, epoch, signal)) return null;
     const attemptId = nextId();
     const request = {
-      ...structuredClone(original.requestSnapshot),
+      ...structuredClone(original.requestSnapshot) as DiagnosticRequest,
       idempotency_key: options.idempotencyKey,
     };
     const reservation: DiagnosticExecutionRecord = {
@@ -317,7 +322,11 @@ export async function retryStudyDiagnostic(
     options.authority.edit(withReservation);
     const stored = await options.authority.flush();
     if (stored === null || !sessionIsCurrent(options.authority, ownerSub, epoch, signal)) return null;
-    const snapshot = await options.api.retryDiagnostic(original.jobId, options.idempotencyKey, signal);
+    // The server succeeded; only the local download failed. Its retry endpoint
+    // deliberately rejects SUCCEEDED jobs, so issue a fresh command with a new key.
+    const snapshot = localResultFailure
+      ? await options.api.submitDiagnostic!(request, signal)
+      : await options.api.retryDiagnostic(original.jobId, options.idempotencyKey, signal);
     if (!sessionIsCurrent(options.authority, ownerSub, epoch, signal)) return null;
     assertJobIdentity(snapshot, reservation);
     return reservation;

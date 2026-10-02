@@ -682,3 +682,24 @@ it.each([0, 408, 429, 503])('retains TERMINAL_ONLY reservation after transient d
   expect(api.submitDiagnostic).toHaveBeenCalledOnce();
   expect(authority.snapshot.document?.executions).toHaveLength(2);
 });
+
+
+it('retry after a permanent local result failure submits a fresh server attempt', async () => {
+  const { study, request } = await studyFixture();
+  const authority = new AuthorityDouble(study);
+  await executeStudyDiagnostic({ authority, scenarioId: SCENARIO_ID, buildRequest: async () => request,
+    api: { submitDiagnostic: vi.fn().mockResolvedValue(snapshot('QUEUED', request)),
+      getDiagnosticJob: vi.fn().mockResolvedValue(snapshot('SUCCEEDED', request)),
+      getDiagnosticResult: vi.fn().mockRejectedValue(new ApiError({ status: 413, code: 'TOO_BIG', message: 'large' })) } });
+  const terminal = authority.snapshot.document!.executions.at(-1)!;
+  const next = { ...request, idempotency_key: '00000000-0000-4000-8000-000000000998' };
+  const api = { submitDiagnostic: vi.fn().mockResolvedValue(snapshot('QUEUED', next)),
+    retryDiagnostic: vi.fn().mockRejectedValue(new ApiError({ status: 409, code: 'JOB_NAO_REPETIVEL', message: 'already succeeded' })),
+    getDiagnosticJob: vi.fn().mockResolvedValue(snapshot('FAILED', next)), getDiagnosticResult: vi.fn() };
+  const retried = await retryStudyDiagnostic({ authority, executionId: terminal.id, idempotencyKey: next.idempotency_key, api });
+  expect(retried.jobId).toBe(next.idempotency_key);
+  expect(api.submitDiagnostic).toHaveBeenCalledWith(next, expect.any(AbortSignal));
+  expect(api.retryDiagnostic).not.toHaveBeenCalled();
+  expect(authority.snapshot.document?.executions).toHaveLength(4);
+  expect(authority.snapshot.document?.executions.at(-1)?.status).toBe('FAILED');
+});
