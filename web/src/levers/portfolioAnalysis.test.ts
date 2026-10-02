@@ -4,6 +4,32 @@ import { collectPortfolioMetrics } from './portfolioAnalysis';
 import { addPortfolioFixture, measuredStudyFixture, periodicWaitingStudyFixture, publishedSingletonWaitingStudyFixture } from './testFixtures';
 
 describe('portfolio metrics', () => {
+  it('reads a 255-scenario execution history in one pass while preserving candidate order', async () => {
+    const { study, base } = await measuredStudyFixture();
+    for (let index = 1; index < 255; index += 1) {
+      const scenario = structuredClone(study.scenarios[0]!);
+      scenario.id = `composition-${index}`;
+      scenario.name = `Composition ${index}`;
+      study.scenarios.push(scenario);
+      const execution = structuredClone(base);
+      execution.id = `execution-${index}`;
+      execution.scenarioId = scenario.id;
+      study.executions.push(execution);
+    }
+    let reads = 0;
+    study.executions = new Proxy(study.executions, {
+      get(target, property, receiver) {
+        if (typeof property === 'string' && /^\d+$/.test(property)) reads += 1;
+        return Reflect.get(target, property, receiver);
+      },
+    });
+
+    const result = collectPortfolioMetrics(study);
+
+    expect(result.candidates.map(row => row.scenarioId)).toEqual(study.scenarios.map(row => row.id));
+    expect(result.excluded).toEqual([]);
+    expect(reads).toBeLessThan(1020);
+  });
   it('ignores obsolete combinations on direct opening without hiding ordinary-study scenarios', async () => {
     const { study, base } = await measuredStudyFixture();
     addPortfolioFixture(study, base, 'A', ['A-out'], '5');

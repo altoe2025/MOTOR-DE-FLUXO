@@ -37,11 +37,29 @@ export type PortfolioDataset = Readonly<{
   complete: boolean;
 }>;
 
-function executionRow(study: StudyDocument, scenario: StudyDocument['scenarios'][number]): ScenarioRow {
-  const execution = [...study.executions].reverse().find((item): item is DiagnosticExecutionRecord =>
-    item.kind === 'DIAGNOSTIC' && item.scenarioId === scenario.id && item.status === 'SUCCEEDED'
-    && item.envelope !== null && item.scenarioRevision === scenario.revision
-    && item.inputFingerprint === scenario.inputFingerprint) ?? null;
+function executionIdentity(scenarioId: string, revision: number, fingerprint: string): string {
+  return JSON.stringify([scenarioId, revision, fingerprint]);
+}
+
+function currentExecutionIndex(study: StudyDocument): Readonly<{
+  current: ReadonlyMap<string, DiagnosticExecutionRecord>;
+  succeededScenarioIds: ReadonlySet<string>;
+}> {
+  const current = new Map<string, DiagnosticExecutionRecord>();
+  const succeededScenarioIds = new Set<string>();
+  for (const execution of study.executions) {
+    if (execution.kind !== 'DIAGNOSTIC' || execution.status !== 'SUCCEEDED' || execution.envelope === null) continue;
+    succeededScenarioIds.add(execution.scenarioId);
+    current.set(executionIdentity(execution.scenarioId, execution.scenarioRevision, execution.inputFingerprint), execution);
+  }
+  return { current, succeededScenarioIds };
+}
+
+function executionRow(
+  scenario: StudyDocument['scenarios'][number],
+  current: ReadonlyMap<string, DiagnosticExecutionRecord>,
+): ScenarioRow {
+  const execution = current.get(executionIdentity(scenario.id, scenario.revision, scenario.inputFingerprint)) ?? null;
   return { scenario, execution, envelope: execution?.envelope?.selected_execution ?? null, breakdown: null };
 }
 
@@ -160,9 +178,10 @@ function measuredMetrics(envelope: PreviewEnvelope): Omit<PortfolioMetrics,
 
 /** Pure projection of current whole-company comparisons; missing results never become zero. */
 export function collectPortfolioMetrics(study: StudyDocument): PortfolioDataset {
+  const executionIndex = currentExecutionIndex(study);
   const scenarios = study.studyType === 'PORTFOLIO_COMBINATIONS'
     ? study.scenarios.filter(scenario => isCurrentCombinationScenario(study, scenario)) : study.scenarios;
-  const rows = scenarios.map(scenario => executionRow(study, scenario));
+  const rows = scenarios.map(scenario => executionRow(scenario, executionIndex.current));
   const reference = rows.find(row => row.scenario.id === study.baseScenarioId);
   const referenceCompanies = reference?.execution !== null && reference?.envelope != null
     ? portfolioCompanies(reference) : null;
@@ -171,8 +190,7 @@ export function collectPortfolioMetrics(study: StudyDocument): PortfolioDataset 
   for (const row of rows) {
     let reason: string | null;
     if (row.execution === null || row.envelope === null) {
-      const previous = study.executions.some(execution => execution.scenarioId === row.scenario.id
-        && execution.kind === 'DIAGNOSTIC' && execution.status === 'SUCCEEDED' && execution.envelope !== null);
+      const previous = executionIndex.succeededScenarioIds.has(row.scenario.id);
       reason = previous ? 'Diagnóstico desatualizado; execute novamente este cenário.' : 'Sem diagnóstico concluído; execute este cenário.';
     } else {
       reason = reference === undefined ? 'O cenário original não está disponível.'

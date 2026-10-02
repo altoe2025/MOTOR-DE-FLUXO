@@ -17,6 +17,55 @@ async function subject() {
 }
 
 describe('PortfolioRecommendation', () => {
+  it('defers projection across 255 candidate updates and projects once when the batch ends', async () => {
+    const { study, base } = await measuredStudyFixture();
+    for (let index = 1; index < 255; index += 1) {
+      const scenario = structuredClone(study.scenarios[0]!);
+      scenario.id = `composition-${index}`;
+      scenario.name = `Composition ${index}`;
+      study.scenarios.push(scenario);
+      const execution = structuredClone(base);
+      execution.id = `execution-${index}`;
+      execution.scenarioId = scenario.id;
+      study.executions.push(execution);
+    }
+    let reads = 0;
+    study.executions = new Proxy(study.executions, {
+      get(target, property, receiver) {
+        if (typeof property === 'string' && /^\d+$/.test(property)) reads += 1;
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    const view = (revision: number, deferred: boolean) => <MemoryRouter>
+      <PortfolioRecommendation study={{ ...study, revision }} deferred={deferred} />
+    </MemoryRouter>;
+    const { rerender } = render(view(0, true));
+    for (let progress = 1; progress <= 255; progress += 1) rerender(view(progress, true));
+    expect(reads).toBe(0);
+    expect(screen.getByRole('status')).toHaveTextContent(/após o lote/);
+    rerender(view(256, false));
+    expect(screen.getByText('Comparáveis atuais').parentElement).toHaveTextContent('255');
+    expect(screen.getByRole('heading', { name: /Composição recomendada:/ })).toBeInTheDocument();
+    expect(reads).toBeLessThan(1020);
+  });
+  it('restores the objective, filters and selected analysis after a deferred batch', async () => {
+    const { study, base } = await measuredStudyFixture();
+    addPortfolioFixture(study, base, 'A', ['A-out'], '5');
+    addPortfolioFixture(study, base, 'B', ['B-in'], '3');
+    const view = (deferred: boolean) => <MemoryRouter><PortfolioRecommendation study={study} deferred={deferred} /></MemoryRouter>;
+    const { rerender } = render(view(false));
+    const user = userEvent.setup();
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Objetivo' }), 'efficiency');
+    await user.type(screen.getByRole('textbox', { name: /Economia mínima/ }), '4');
+    await user.click(within(screen.getByRole('region', { name: 'Alternativas em destaque' })).getByRole('button', { name: 'A' }));
+
+    rerender(view(true));
+    expect(screen.queryByRole('combobox', { name: 'Objetivo' })).not.toBeInTheDocument();
+    rerender(view(false));
+    expect(screen.getByRole('combobox', { name: 'Objetivo' })).toHaveValue('efficiency');
+    expect(screen.getByRole('textbox', { name: /Economia mínima/ })).toHaveValue('4');
+    expect(screen.getByText(/Composição selecionada: A/)).toBeInTheDocument();
+  });
   it.each([['costReduction', 'Redução do custo', '50,00%'], ['netability', 'Netabilidade', '0,00%']])(
     'exposes the absolute value of %s even with a single comparable portfolio', async (objective, label, value) => {
       const { study } = await measuredStudyFixture();

@@ -53,6 +53,24 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('combination study diagnosis', () => {
+  it('shows compact progress for a 255-composition batch and restores the recommendation after cancellation', async () => {
+    const { study } = await comboStudy(255);
+    let finishCurrent!: (value: Awaited<ReturnType<typeof mocks.execute>>) => void;
+    mocks.execute.mockImplementationOnce(() => new Promise((resolve) => { finishCurrent = resolve; }));
+    openStudy(study);
+    expect(await screen.findByText('Comparáveis atuais')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Diagnosticar combinações' }));
+    expect(await screen.findByText(/Rodando 1 de 255/)).toHaveAttribute('role', 'status');
+    expect(screen.getByText(/recomendação será atualizada após o lote/)).toBeInTheDocument();
+    expect(screen.queryByText('Comparáveis atuais')).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Cancelar lote' }));
+    await act(async () => finishCurrent({
+      status: 'SUCCEEDED', attemptId: 'done', jobId: 'job', envelope: null, error: null, current: true,
+    }));
+    expect(await screen.findByText('Comparáveis atuais')).toBeInTheDocument();
+    expect(screen.queryByText(/recomendação será atualizada após o lote/)).not.toBeInTheDocument();
+  });
   it('offers one batch action and compact recommendation without the 255 scenario table or individual controls', async () => {
     const { study } = await comboStudy(255);
     openStudy(study);

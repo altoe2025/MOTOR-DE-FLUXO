@@ -382,7 +382,7 @@ export function StudyDiagnosticPage() {
         <p className="field-hint">{study.scenarios.filter((item) => isCurrentCombinationScenario(study, item)).length} composições preparadas. Os diagnósticos atuais são reaproveitados.</p>
         {runAllProgress === null ? null : <p role="status" aria-live="polite">{runAllProgress}</p>}
         {viewState === null || viewState.kind === 'SUCCEEDED' ? null : <DiagnosticStatus state={viewState} />}
-        <PortfolioRecommendation study={study} />
+        <PortfolioRecommendation study={study} deferred={runAllProgress !== null} />
       </> : <>
         <Link to={`/estudos/${study.id}/diagnostico`}>Voltar à recomendação</Link>
         {viewState === null || viewState.kind === 'SUCCEEDED' ? null : <DiagnosticStatus state={viewState} />}

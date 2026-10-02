@@ -7,13 +7,14 @@ import type { StudyDocument } from '../study/model';
 import { PortfolioCriteria, type CompanyChoice } from './PortfolioCriteria';
 import { PortfolioMarginalPanel } from './PortfolioMarginalPanel';
 import { PortfolioSelectionDetails } from './PortfolioSelectionDetails';
-import { collectPortfolioMetrics, type PortfolioMetrics } from './portfolioAnalysis';
+import { collectPortfolioMetrics, type PortfolioDataset, type PortfolioMetrics } from './portfolioAnalysis';
 import { emptyFilters, selectPortfolios, type PortfolioFilters, type PortfolioObjective, type SelectablePortfolio } from './portfolioSelection';
 
 const highlightLabels: readonly [PortfolioObjective, string][] = [
   ['savings', 'Maior economia'], ['efficiency', 'Maior eficiência sobre volume'],
   ['wait', 'Menor espera'], ['companyCount', 'Menor composição'],
 ];
+const deferredDataset: PortfolioDataset = { candidates: [], excluded: [], preparedCount: 0, complete: false };
 
 function companyChoices(rows: readonly PortfolioMetrics[]): CompanyChoice[] {
   const names = new Map<string, string>();
@@ -52,16 +53,16 @@ function comparisonExplanation(winner: SelectablePortfolio, alternative: Selecta
   return `Frente à alternativa ${alternative.name}: economia ${formatSignedMoney(savings.toFixed())}; eficiência ${signed(efficiency, 2)} bps; ${reduction}; espera ${signed(wait, 2)} dias; ${companies > 0 ? '+' : ''}${companies} empresas; netabilidade ${signed(netability, 2)} p.p.`;
 }
 
-export function PortfolioRecommendation({ study }: Readonly<{ study: StudyDocument }>) {
-  return <PortfolioRecommendationForStudy key={study.id} study={study} />;
+export function PortfolioRecommendation({ study, deferred = false }: Readonly<{ study: StudyDocument; deferred?: boolean }>) {
+  return <PortfolioRecommendationForStudy key={study.id} study={study} deferred={deferred} />;
 }
 
-function PortfolioRecommendationForStudy({ study }: Readonly<{ study: StudyDocument }>) {
+function PortfolioRecommendationForStudy({ study, deferred }: Readonly<{ study: StudyDocument; deferred: boolean }>) {
   const titleId = useId();
   const [objective, setObjective] = useState<PortfolioObjective>('savings');
   const [filters, setFilters] = useState<PortfolioFilters>(emptyFilters);
   const [selectedScenarioId, setSelectedScenarioId] = useState<string | null>(null);
-  const dataset = useMemo(() => collectPortfolioMetrics(study), [study]);
+  const dataset = useMemo(() => deferred ? deferredDataset : collectPortfolioMetrics(study), [study, deferred]);
   const companies = useMemo(() => companyChoices(dataset.candidates), [dataset]);
   const selection = useMemo(() => selectPortfolios(dataset.candidates, objective, filters), [dataset, objective, filters]);
   const eligible = useMemo(() => {
@@ -76,6 +77,10 @@ function PortfolioRecommendationForStudy({ study }: Readonly<{ study: StudyDocum
     const ids = new Set(eligible.map(row => row.scenarioId));
     return new Map(dataset.candidates.map(row => [row.scenarioId, ids.has(row.scenarioId)]));
   }, [dataset, eligible]);
+  if (deferred) return <section className="savings-origin portfolio-analysis" aria-labelledby={titleId}>
+    <h2 id={titleId}>Qual carteira atende melhor?</h2>
+    <p role="status">A recomendação será atualizada após o lote.</p>
+  </section>;
   const hasErrors = Object.keys(selection.errors).length > 0;
   const hasRelativeTarget = filters.retainBestPercent !== null && filters.retainBestPercent.trim() !== '';
   const winner = selection.winner;

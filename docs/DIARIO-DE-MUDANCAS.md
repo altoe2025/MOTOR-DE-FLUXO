@@ -90,6 +90,10 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-10-02 — Projeção de carteiras deixa de crescer com o histórico (MOT-100)
+
+**Sintoma:** durante um lote, cada terminal invalidava a tela de recomendação e voltava a procurar a execução atual de cada composição em todo o histórico. **Causa:** a projeção fazia `reverse/find` por cenário e permanecia montada durante o progresso. **O que foi feito:** `portfolioAnalysis` passou a indexar execuções atuais em uma passagem; a recomendação completa é adiada enquanto o lote roda e reconstruída ao terminar, falhar ou cancelar. Testes direcionados: 50/50; revisão de tarefa aprovada. **O que isso invalida:** perfis anteriores de CPU da recomendação durante o lote; métricas financeiras, ranking e marginais permanecem iguais.
+
 ## 2026-10-02 — Design de desempenho para 255 combinações (MOT-100)
 
 **Sintoma:** abrir Estudos, criar uma nova combinação e abrir Diagnóstico ficou lento em estudos grandes; o lote de oito empresas também mantém o navegador ocupado por muito tempo. **Causa:** as listas reconstroem e validam todos os envelopes salvos; cada terminal do lote repete clone, validação, serialização e comparação do estudo cumulativo; o agendamento usa só um dos dois workers; a recomendação é projetada a cada resultado. **O que foi feito:** criados na branch `codex/perf-combinacoes` a especificação `docs/superpowers/specs/2026-10-02-desempenho-combinacoes-design.md` e o plano `docs/superpowers/plans/2026-10-02-desempenho-combinacoes.md`, com catálogo leve, lazy load, preparação idempotente, append atômico, concorrência limitada a dois e gates para 255 composições. Nenhum código de produto foi alterado nesta entrada. **O que isso invalida:** nada nos números ou resultados atuais; medições futuras de desempenho devem separar leitura, persistência, projeção e tempo remoto conforme o novo protocolo.
