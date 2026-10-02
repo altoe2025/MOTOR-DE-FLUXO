@@ -72,6 +72,42 @@ describe('StudyEditor', () => {
       ],
     }) }));
   });
+  it('na combinação, busca empresas e mostra as escolhidas como chips removíveis', async () => {
+    const document = { ...await study(), studyType: 'PORTFOLIO_COMBINATIONS' as const };
+    const cases = ['Alfa', 'Beta', 'Gama'].map((label, index) => ({ ...makeObservedCase(), id: `case-${index}`, companyId: `company-${index}` }));
+    const companies = ['Alfa', 'Beta', 'Gama'].map((label, index) => ({ id: `company-${index}`, ownerSub: FIXTURE_OWNER,
+      displayName: `Empresa ${label}`, aliases: [], createdAt: FIXTURE_NOW, updatedAt: FIXTURE_NOW, revision: 1 }));
+    await subject({ study: document, observedCases: cases, companies }, { openSource: false });
+    const user = userEvent.setup();
+    await user.type(screen.getByRole('searchbox', { name: 'Buscar empresa' }), 'gam');
+    expect(screen.getAllByRole('checkbox')).toHaveLength(1);
+    await user.click(screen.getByRole('checkbox', { name: /Empresa Gama/ }));
+    await user.clear(screen.getByRole('searchbox', { name: 'Buscar empresa' }));
+    await user.click(screen.getByRole('button', { name: 'Selecionar todas' }));
+    expect(screen.getByRole('button', { name: 'Usar 3 casos juntos' })).toBeEnabled();
+    await user.click(screen.getByRole('button', { name: 'Tirar Empresa Beta' }));
+    expect(screen.getByRole('checkbox', { name: /Empresa Beta/ })).not.toBeChecked();
+    expect(screen.getByRole('button', { name: 'Usar 2 casos juntos' })).toBeEnabled();
+  });
+
+  it('na combinação já aplicada, mostra só o resumo das empresas e reabre com "Trocar"', async () => {
+    const base = { ...await study(), studyType: 'PORTFOLIO_COMBINATIONS' as const };
+    const scenario = base.scenarios[0]!;
+    const definition = { kind: 'EXPLICIT_ORDERS' as const, orders: [], provenanceByOrder: {}, sourceCases: [
+      { caseId: 'case-1', caseRevision: 1, companyId: 'company-1' }, { caseId: 'case-2', caseRevision: 1, companyId: 'company-2' }] };
+    const document = { ...base, scenarios: [{ ...scenario, sourceSnapshot: { ...scenario.sourceSnapshot,
+      source: { kind: 'AUTHORED' as const, authoredPortfolioId: 'p', definition } } }] } as unknown as typeof base;
+    const companies = ['Alfa', 'Beta'].map((label, index) => ({ id: `company-${index + 1}`, ownerSub: FIXTURE_OWNER,
+      displayName: `Empresa ${label}`, aliases: [], createdAt: FIXTURE_NOW, updatedAt: FIXTURE_NOW, revision: 1 }));
+    await subject({ study: document, companies }, { openSource: false });
+    const summary = screen.getByRole('region', { name: 'Empresas da carteira' });
+    expect(summary).toHaveTextContent('2 empresas');
+    expect(summary).toHaveTextContent('Empresa Alfa, Empresa Beta');
+    expect(screen.queryByRole('searchbox', { name: 'Buscar empresa' })).not.toBeInTheDocument();
+    await userEvent.setup().click(within(summary).getByRole('button', { name: 'Trocar' }));
+    expect(screen.getByRole('searchbox', { name: 'Buscar empresa' })).toBeInTheDocument();
+  });
+
   it('mostra a origem num resumo e só abre o seletor em "Trocar origem"', async () => {
     await subject({}, { openSource: false });
     expect(screen.getByRole('heading', { name: 'Origem da carteira' })).toBeInTheDocument();

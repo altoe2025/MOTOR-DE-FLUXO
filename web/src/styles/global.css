@@ -808,3 +808,8 @@ h1:focus { outline: none; }
 .combination-diagnosis { margin-top: var(--space-6); max-width: 1000px; }
 .combination-diagnosis h2 { font-family: var(--font-heading); font-size: 1.1rem; font-weight: 600; margin: 0; }
 .combination-diagnosis .field-hint { margin: var(--space-1) 0 0; }
+.case-combiner__search { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: var(--space-3) 0; }
+.case-combiner__search input { flex: 1 1 220px; min-width: 0; padding: var(--space-2); }
+.case-combiner__list { max-height: 280px; overflow-y: auto; }
+.case-combiner__chip span { color: var(--muted); }
+.combination-companies { margin-bottom: var(--space-4); }
