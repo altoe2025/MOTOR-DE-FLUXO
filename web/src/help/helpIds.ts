@@ -143,7 +143,6 @@ export const HELP_IDS = {
   BOARD_SELECT_FILTERED: 'control.quadro.marcar-filtrados',
   BOARD_CLEAR: 'control.quadro.limpar',
   BOARD_REMOVE: 'control.quadro.remover',
-  BOARD_DELETE_STUDY: 'control.quadro.apagar-estudo',
   BOARD_NAME: 'field.quadro.nome-empresa',
   REPLAY_PLAY: 'control.replay.tocar',
   REPLAY_PAUSE: 'control.replay.pausar',

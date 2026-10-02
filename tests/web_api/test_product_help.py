@@ -55,7 +55,6 @@ INTERFACE_CONTROLS = [
     ("control.importacao.analisar-caso", "Analisar este caso", "/importar"),
     ("control.importacao.adicionar-carteira", "Adicionar a uma carteira", "/importar"),
     ("control.importacao.confirmar-adicao", "Adicionar e abrir o estudo", "/importar"),
-    ("control.quadro.apagar-estudo", "Apagar estudo", "/quadro"),
     ("control.carteira.executar", "Executar cenário atual", "/carteira/:id"),
     ("control.carteira.referencia", "Executar exemplo de referência", "/carteira"),
     ("control.composicao.editar", "Criar hipótese / alterar carteira", "/carteira/:id"),

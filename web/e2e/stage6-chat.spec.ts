@@ -151,7 +151,7 @@ test('quatro classes, recusa server-side, histórico/reload e isolamento de cont
 test('Quadro envia só a seleção e o follow-up conserva o assunto no histórico', async ({ page }) => {
   await demo(page);
   await page.goto('/quadro');
-  await expect(page.getByRole('heading', { name: 'Quadro comparativo' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Comparar estudos', level: 1 })).toBeVisible();
   const choices = page.locator('.board-candidates input[type="checkbox"]');
   await expect.poll(() => choices.count()).toBeGreaterThanOrEqual(2);
   await choices.nth(0).check(); await choices.nth(1).check();

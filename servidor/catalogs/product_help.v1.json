@@ -3255,18 +3255,6 @@
       "disabledWhen": ["Nenhum Estudo elegível selecionado ou outra ação está em andamento."],
       "recovery": ["Selecione um Estudo elegível e, depois de adicionar, rode novamente o diagnóstico do original."],
       "relatedConceptIds": ["page.importacao", "page.carteira"]
-    },
-    {
-      "id": "control.quadro.apagar-estudo",
-      "routePattern": "/quadro",
-      "elementKind": "CONTROL",
-      "label": "Apagar estudo",
-      "purpose": "Tirar um Estudo inteiro, com todos os seus cenários, do quadro comparativo após confirmação.",
-      "changes": "Move o Estudo para a lixeira local e remove seus cenários do quadro.",
-      "doesNotChange": "Não apaga apenas a linha selecionada nem exclui o Estudo definitivamente.",
-      "disabledWhen": [],
-      "recovery": ["Restaure o Estudo pela lixeira na página Estudos."],
-      "relatedConceptIds": ["page.quadro", "page.estudos"]
     }
   ]
 }
