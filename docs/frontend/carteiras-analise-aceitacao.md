@@ -164,5 +164,6 @@ No aceite visual de 2026-10-01, o gráfico/Pareto e a tabela completa foram remo
 da tela principal; os módulos permanecem isolados no código, mas não são carregados
 por `PortfolioRecommendationPanel`.
 
-Nenhum resultado desta página representa autorização para push, PR, merge na `main`
-ou deploy. Primeiro Gabriel experimenta esta prévia e informa os ajustes desejados.
+Na fase inicial, os resultados técnicos não autorizavam publicação. Gabriel
+experimentou e aprovou a prévia em 2026-10-02, autorizando commit, merge e deploy
+quando seguros. O CI do candidato e a confirmação do deploy continuam obrigatórios.

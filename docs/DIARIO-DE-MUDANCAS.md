@@ -99,6 +99,7 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 
 - Shell, fontes Geist, tema, Replay, grupos de Diagnóstico e proteções de concorrência da `main` preservados. O CSS temporário `frontConsole.css` foi removido; somente o estilo específico de carteiras permanece.
 - Python normal e `-O`: 1.397 passando, 3 pulados e 1 xfail; web: 1.373 passando. Ruff, mypy, typecheck e lint passaram; contratos regenerados sem diferença e wheel construído.
+- Build de produção e scanner de credenciais passaram. Smoke CSP repetido com a configuração pública sintética exigida pelo harness: login visível, zero violações e zero chamadas ao provider. Sem configuração pública, o build local não serve como teste de login; nenhum segredo real foi necessário.
 - Jornada real das 63 combinações passou em 3,7 minutos; os dois testes visuais passaram sem regenerar referências. Os demais fluxos exercitados na suíte E2E inicial passaram; o CI executará novamente a suíte completa no candidato de merge.
 - Integração dos testes: cancelamento distingue os dois avisos de status da página; teste do Replay aguarda publicação inicial do dia; seletor marginal compara nome literal contendo `+`; capturas ocultam somente o controle de seed exclusivo da prévia.
 - Prévia reconstruída com as mesmas seis empresas sintéticas após a limpeza única já herdada da `main`; nenhum reset adicional, schema, configuração de acesso ou regra do motor foi alterado. Verificação manual de objetivos, retorno à recomendação, claro/escuro e reflow de celular sem overflow horizontal.
