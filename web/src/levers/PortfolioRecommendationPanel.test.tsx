@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
 
-import { addPortfolioFixture, measuredStudyFixture } from './portfolioAnalysisFixtures';
+import { addPortfolioFixture, measuredStudyFixture } from './testFixtures';
 import { PortfolioRecommendation } from './PortfolioRecommendationPanel';
 
 async function subject() {
