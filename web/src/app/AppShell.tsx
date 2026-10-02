@@ -6,6 +6,7 @@ import { ChatPanel } from '../chat/components/ChatPanel';
 import { selectionId } from '../chat/routeContext';
 import { useApiClient, useChatRepository } from './providers';
 import { useProductHelpCatalog } from '../help/HelpCatalogProvider';
+import { useTheme } from './theme';
 
 const destinations = [
   { to: '/empresas', label: 'Empresas' },
@@ -20,6 +21,7 @@ export function AppShell() {
   const apiClient = useApiClient();
   const helpCatalog = useProductHelpCatalog();
   const location = useLocation();
+  const { theme, toggleTheme } = useTheme();
   const studyId = /^\/(?:estudos|carteira)\/([^/]+)/.exec(location.pathname)?.[1];
   const search = new URLSearchParams(location.search);
   const onPresentation = location.pathname.endsWith('/apresentacao');
@@ -61,8 +63,12 @@ export function AppShell() {
       </aside>
       <section className="workspace">
         <header className="workspace-header">
-          <p>Estudo</p>
-          <strong>Ainda não iniciado</strong>
+          <p>Motor de Fluxo / {location.pathname.endsWith('/diagnostico') ? 'Diagnóstico' : 'Área de trabalho'}</p>
+          <button className="theme-toggle" type="button" onClick={toggleTheme}
+            aria-label={theme === 'dark' ? 'Usar tema claro' : 'Usar tema escuro'}>
+            <span aria-hidden="true">{theme === 'dark' ? '☀' : '◐'}</span>
+            {theme === 'dark' ? 'Tema claro' : 'Tema escuro'}
+          </button>
         </header>
         <main id="main-content" className="workspace-content">
           <Outlet />

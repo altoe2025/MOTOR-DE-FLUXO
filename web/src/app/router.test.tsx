@@ -3,6 +3,9 @@ import '@testing-library/jest-dom/vitest';
 // Prepare the actual demo fixture before timing route assertions; its first Vite
 // transform is not navigation latency. The controller still runs its real loader.
 import '../demo/generated/demo-study.v1.json';
+// The route is lazy in production; pre-transform its module before timing a
+// one-second chat assertion in Vitest's cold module graph.
+import '../pages/DiagnosticsHubPage';
 
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';

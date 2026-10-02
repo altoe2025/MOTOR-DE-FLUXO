@@ -1,75 +1,188 @@
 // @vitest-environment jsdom
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
-import { observedInput } from '../communication/testFixtures';
+import { addPortfolioFixture, measuredStudyFixture } from './portfolioAnalysisFixtures';
 import { PortfolioRecommendation } from './PortfolioRecommendationPanel';
-import { recommendPortfolios, type PortfolioCandidate } from './portfolioRecommendation';
-
-vi.mock('./portfolioRecommendation', () => ({ recommendPortfolios: vi.fn() }));
-
-const portfolios: PortfolioCandidate[] = [
-  { scenarioId: 'more-savings', name: 'Carteira ampla', companies: ['Empresa A', 'Empresa B'], savings: '200', volume: '2000', waitDays: 3, eligible: true },
-  { scenarioId: 'less-wait', name: 'Carteira rápida', companies: ['Empresa A'], savings: '100', volume: '1000', waitDays: 1.5, eligible: true },
-];
 
 async function subject() {
-  const { study } = await observedInput();
+  const { study, base } = await measuredStudyFixture();
+  addPortfolioFixture(study, base, 'A', ['A-out'], '5');
+  addPortfolioFixture(study, base, 'B', ['B-in'], '3');
+  const before = structuredClone(study);
   render(<MemoryRouter><PortfolioRecommendation study={study} /></MemoryRouter>);
-  return study;
+  return { study, before };
 }
 
-beforeEach(() => {
-  vi.mocked(recommendPortfolios).mockImplementation((_study, maxWaitDays) => {
-    const candidates = portfolios.map((candidate) => ({ ...candidate, eligible: maxWaitDays === null || candidate.waitDays <= maxWaitDays }));
-    return { candidates, winner: candidates.find((candidate) => candidate.eligible) ?? null,
-      excluded: [{ scenarioId: 'pending', name: 'Pendente', reason: 'Sem diagnóstico atual.' }] };
-  });
-});
-
 describe('PortfolioRecommendation', () => {
-  it('explains when even the best evaluated composition loses money against execution without pool', async () => {
-    const candidate = { ...portfolios[0]!, savings: '-20' };
-    vi.mocked(recommendPortfolios).mockReturnValue({ candidates: [candidate], winner: candidate, excluded: [] });
-    await subject();
-    expect(screen.getByRole('note')).toHaveTextContent('Mesmo a melhor composição avaliada não reduz o custo em relação à execução sem pool.');
-    expect(screen.getByRole('link', { name: 'Abrir composição' })).toBeInTheDocument();
-  });
-  it('shows the best evaluated composition and opens its existing diagnostic', async () => {
-    const study = await subject();
-    expect(screen.getByRole('heading', { name: 'Composição recomendada: Carteira ampla' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Abrir composição' })).toHaveAttribute('href', `/estudos/${study.id}/diagnostico?scenarioId=more-savings`);
-    expect(screen.getByText(/Não garante a melhor combinação possível/)).toBeInTheDocument();
-    expect(screen.getByText(/custos das empresas que ficam fora/)).toBeInTheDocument();
-    expect(screen.getByText('Sem diagnóstico atual.')).toBeInTheDocument();
-    expect(screen.getByText('1.000,00 bps')).toBeInTheDocument();
-    expect(screen.getByText(/próxima alternativa que atende, Carteira rápida/)).toHaveTextContent('diferença de espera média de +1,50 dias');
-  });
+  it.each([['costReduction', 'Redução do custo', '50,00%'], ['netability', 'Netabilidade', '0,00%']])(
+    'exposes the absolute value of %s even with a single comparable portfolio', async (objective, label, value) => {
+      const { study } = await measuredStudyFixture();
+      render(<MemoryRouter><PortfolioRecommendation study={study} /></MemoryRouter>);
+      await userEvent.setup().selectOptions(screen.getByRole('combobox', { name: 'Objetivo' }), objective);
+      const metric = screen.getByText(label).closest('div');
+      expect(metric).toHaveTextContent(value);
+    });
 
-  it('accepts decimal comma, changes the recommendation, and clears the constraint', async () => {
+  it('returns to the current recommendation after selecting an alternative and changing objective', async () => {
     await subject();
     const user = userEvent.setup();
-    const field = screen.getByRole('textbox', { name: /Limite de espera média/ });
-    await user.type(field, '1,5');
-    expect(screen.getByRole('heading', { name: 'Composição recomendada: Carteira rápida' })).toBeInTheDocument();
-    expect(screen.getByText('Acima do limite de espera')).toBeInTheDocument();
-    expect(screen.getByText(/média ponderada pelo volume, não o prazo máximo/)).toBeInTheDocument();
-    await user.clear(field);
-    expect(screen.getByRole('heading', { name: 'Composição recomendada: Carteira ampla' })).toBeInTheDocument();
+    await user.click(within(screen.getByRole('region', { name: 'Alternativas em destaque' })).getByRole('button', { name: 'A' }));
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Objetivo' }), 'costReduction');
+    await user.click(screen.getByRole('button', { name: 'Analisar recomendação atual' }));
+    expect(screen.queryByText(/Composição selecionada:/)).not.toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Detalhes da composição: Caso observado' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Contribuição marginal: Caso observado' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Objetivo' })).toHaveValue('costReduction');
+  });
+  it('keeps the recommendation and analysis without the chart or the full compositions table', async () => {
+    await subject();
+    expect(screen.getByRole('heading', { name: /Composição recomendada:/ })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Economia e espera das carteiras' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('table', { name: /Dados do gráfico/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('table', { name: /Todas as composições/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('region', { name: /Detalhes da composição:/ })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: /Contribuição marginal:/ })).toBeInTheDocument();
   });
 
-  it('reports no eligible portfolio and prevents a recommendation for invalid limits', async () => {
+  it('switches the winner to efficiency without changing the study', async () => {
+    const { study, before } = await subject();
+    const user = userEvent.setup();
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Objetivo' }), 'efficiency');
+    expect(screen.getByRole('heading', { name: 'Composição recomendada: A' })).toBeInTheDocument();
+    expect(study).toEqual(before);
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Objetivo' }), 'wait');
+    expect(screen.getByRole('heading', { name: 'Composição recomendada: B' })).toBeInTheDocument();
+  });
+
+  it('shows a field error, then clears independent filters', async () => {
     await subject();
     const user = userEvent.setup();
-    const field = screen.getByRole('textbox', { name: /Limite de espera média/ });
-    await user.type(field, '0');
-    expect(screen.getByText(/Nenhuma carteira avaliada atende/)).toBeInTheDocument();
-    await user.clear(field);
-    await user.type(field, '-1');
-    expect(screen.getByRole('alert')).toHaveTextContent('Informe um número de dias igual ou maior que zero');
-    expect(screen.queryByRole('link', { name: 'Abrir composição' })).not.toBeInTheDocument();
-    expect(field).toHaveAttribute('aria-invalid', 'true');
+    const wait = screen.getByRole('textbox', { name: /Espera média máxima/ });
+    await user.type(wait, '-1');
+    expect(wait).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByRole('alert')).toHaveTextContent(/número não negativo válido/);
+    expect(screen.queryByRole('heading', { name: /Composição recomendada:/ })).not.toBeInTheDocument();
+    expect(screen.getByText(/Corrija os campos indicados/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Limpar filtros' }));
+    expect(wait).toHaveValue('');
+    expect(screen.getByRole('heading', { name: /Composição recomendada:/ })).toBeInTheDocument();
+  });
+
+  it('explains when no portfolio satisfies an absolute filter', async () => {
+    await subject();
+    await userEvent.setup().type(screen.getByRole('textbox', { name: /Economia mínima/ }), '999');
+    expect(screen.getByText(/Nenhuma carteira atende/)).toBeInTheDocument();
+  });
+
+  it('keeps the recommendation independent of an alternative selected for analysis', async () => {
+    await subject();
+    const user = userEvent.setup();
+    const winner = screen.getByRole('heading', { name: /Composição recomendada:/ }).textContent;
+    await user.click(within(screen.getByRole('region', { name: 'Alternativas em destaque' }))
+      .getByRole('button', { name: 'A' }));
+    expect(screen.getByRole('heading', { name: /Composição recomendada:/ })).toHaveTextContent(winner ?? '');
+    expect(screen.getByText(/Composição selecionada: A/)).toBeInTheDocument();
+  });
+
+  it('explains signed money, efficiency, cost, wait and company differences against the named alternative', async () => {
+    await subject();
+    const explanation = screen.getByText(/Frente à alternativa A/);
+    expect(explanation).toHaveTextContent('+R$');
+    expect(explanation).toHaveTextContent('bps');
+    expect(explanation).toHaveTextContent('p.p.');
+    expect(explanation).toHaveTextContent('dias');
+    expect(explanation).toHaveTextContent('empresas');
+  });
+
+  it('treats a cleared relative percentage as absent in reference, shortcut and warning', async () => {
+    await subject();
+    const user = userEvent.setup();
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Objetivo' }), 'wait');
+    await user.click(screen.getByRole('button', { name: 'Preservar 95% da melhor economia' }));
+    expect(screen.getByText(/Melhor economia após restrições absolutas/)).toBeInTheDocument();
+    const percent = screen.getByRole('textbox', { name: /Preservar percentual/ });
+    await user.clear(percent);
+    expect(screen.queryByText(/Melhor economia após restrições absolutas/)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Preservar 95% da melhor economia' })).toBeInTheDocument();
+    expect(screen.getByText(/Sem meta de economia/)).toBeInTheDocument();
+  });
+
+  it('resets objective, filters and selected scenario when the study ID changes', async () => {
+    const { study: first, base } = await measuredStudyFixture();
+    addPortfolioFixture(first, base, 'A', ['A-out'], '5');
+    const { study: second } = await measuredStudyFixture();
+    second.id = 'another-study';
+    const view = (study: typeof first) => <MemoryRouter><PortfolioRecommendation study={study} /></MemoryRouter>;
+    const { rerender } = render(view(first));
+    const user = userEvent.setup();
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Objetivo' }), 'wait');
+    await user.click(screen.getByRole('checkbox', { name: 'A' }));
+    await user.click(within(screen.getByRole('region', { name: 'Alternativas em destaque' }))
+      .getByRole('button', { name: 'A' }));
+    rerender(view(second));
+    expect(screen.getByRole('combobox', { name: 'Objetivo' })).toHaveValue('savings');
+    expect(screen.queryByText(/Composição selecionada:/)).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Composição recomendada:/ })).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'A' })).not.toBeChecked();
+  });
+
+  it('uses the current recommendation for details until an alternative or marginal counterpart is selected', async () => {
+    await subject();
+    const user = userEvent.setup();
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Objetivo' }), 'efficiency');
+    expect(screen.getByRole('heading', { name: 'Contribuição marginal: A' })).toBeInTheDocument();
+    await user.click(within(screen.getByRole('region', { name: 'Alternativas em destaque' }))
+      .getByRole('button', { name: 'B' }));
+    expect(screen.getByRole('region', { name: 'Detalhes da composição: B' })).toBeInTheDocument();
+    const marginal = screen.getByRole('region', { name: 'Contribuição marginal: B' });
+    await user.click(within(marginal).getByRole('button', { name: /^Analisar composição/ }));
+    expect(screen.getByRole('region', { name: /Detalhes da composição:/ })).not.toHaveAccessibleName('Detalhes da composição: B');
+    expect(screen.getByRole('heading', { name: 'Composição recomendada: A' })).toBeInTheDocument();
+  });
+
+  it('retains marginal counterparts outside filters without the chart or full table', async () => {
+    await subject();
+    const user = userEvent.setup();
+    await user.type(screen.getByRole('textbox', { name: /Economia mínima/ }), '6');
+    const marginal = screen.getByRole('region', { name: /Contribuição marginal:/ });
+    expect(within(marginal).getAllByText(/Contraparte fora dos filtros/)).toHaveLength(2);
+    await user.click(within(marginal).getByRole('button', { name: 'Analisar composição A' }));
+    expect(screen.getByRole('region', { name: 'Detalhes da composição: A' })).toBeInTheDocument();
+  });
+
+  it('labels an independent highlight excluded by the active objective and reveals it when selected', async () => {
+    const { study, base } = await measuredStudyFixture();
+    addPortfolioFixture(study, base, 'A', ['A-out'], '5');
+    const zeroBaseline = addPortfolioFixture(study, base, 'B', ['B-in'], '0');
+    const aggregate = zeroBaseline.envelope!.selected_execution.result.agregado;
+    aggregate.baseline_periodo = { iof: '0', carry: '0', spread: '0', espera: '0', fixo: '0', total: '0' };
+    aggregate.netado_periodo = { ...aggregate.baseline_periodo };
+    render(<MemoryRouter><PortfolioRecommendation study={study} /></MemoryRouter>);
+    const user = userEvent.setup();
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Objetivo' }), 'costReduction');
+    const highlights = screen.getByRole('region', { name: 'Alternativas em destaque' });
+    const highlighted = within(highlights).getByRole('button', { name: 'B' });
+    expect(highlighted.closest('li')).toHaveTextContent(/Fora do objetivo ou dos filtros ativos/);
+    expect(highlighted.closest('li')).toHaveTextContent(/custo sem pool zero.*redução percentual indisponível/i);
+    await user.click(highlighted);
+    expect(highlighted).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('region', { name: 'Detalhes da composição: B' })).toBeInTheDocument();
+  });
+
+  it('distinguishes same-named highlights by scenario ID and selects the requested one', async () => {
+    const { study, base } = await measuredStudyFixture();
+    addPortfolioFixture(study, base, 'A', ['A-out'], '5');
+    addPortfolioFixture(study, base, 'B', ['B-in'], '3');
+    study.scenarios.filter(scenario => scenario.id === 'A' || scenario.id === 'B')
+      .forEach(scenario => { scenario.name = 'Mesmo nome'; });
+    render(<MemoryRouter><PortfolioRecommendation study={study} /></MemoryRouter>);
+    const highlights = screen.getByRole('region', { name: 'Alternativas em destaque' });
+    expect(within(highlights).getByRole('button', { name: 'Mesmo nome (ID: A)' })).toHaveTextContent('ID: A');
+    await userEvent.setup().click(within(highlights).getByRole('button', { name: 'Mesmo nome (ID: B)' }));
+    expect(screen.getByRole('link', { name: 'Abrir composição selecionada' })).toHaveAttribute('href', expect.stringContaining('scenarioId=B'));
+    expect(within(highlights).getByRole('button', { name: 'Mesmo nome (ID: B)' })).toHaveAttribute('aria-pressed', 'true');
   });
 });

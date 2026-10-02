@@ -77,6 +77,41 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-10-02 — Preparação de publicação da análise de carteiras aprovada (MOT-100)
+
+1. **Sintoma:** Gabriel aprovou a prévia visual e autorizou inspeção, commit, merge e deploy quando seguros.
+2. **Causa:** a funcionalidade estava apenas no worktree local; a revisão encontrou contagens incluindo combinações antigas, valores do objetivo ativo pouco explícitos e ausência de retorno direto à recomendação após selecionar uma alternativa.
+3. **O que foi feito:** análise de carteiras com seis objetivos, restrições independentes, alternativas e contribuição marginal; interface console clara/escura aprovada, sem o gráfico economia × espera nem a tabela extensa na tela principal. As três lacunas de revisão receberam testes de regressão. Preparação na branch `codex/carteiras-analise`; integração com a `main`, CI e publicação ainda serão verificadas antes do deploy.
+4. **O que isso invalida:** a restrição anterior de manter esta entrega somente local foi substituída pela autorização explícita de publicação. Nenhuma regra, premissa ou número do motor foi alterado.
+
+## 2026-10-01 — Prévia visual de carteiras no tema console (MOT-100)
+
+1. **Sintoma.** A análise local ainda usava a aparência antiga, distante do console claro/escuro de `feat/front-visual`.
+2. **Causa.** A branch de análise precede o redesenho e os novos componentes tinham apresentação básica.
+3. **O que foi feito.** Tokens, tema persistido e base visual do shell reaproveitados de `feat/front-visual` (`209bdbe`), com CSS de carteiras separado. Empresas obrigatórias passam a cartões pesquisáveis e acessíveis por teclado; recomendação e alternativas têm métricas hierarquizadas; contribuição marginal usa cartões de impacto na mesma escala e tabela detalhada recolhida. Sem mudança de motor, dados persistidos, ranking ou filtros. Testes focados e navegação: 99 passando. Conferência manual com os 63 resultados existentes nos temas claro/escuro e em larguras de desktop/celular. O E2E que recalcula os 63 diagnósticos foi adaptado, mas não repetido nesta revisão visual.
+4. **O que isso invalida.** Capturas da aparência anterior e passos que supõem IDs sempre visíveis, tabela marginal aberta ou botão de tema ausente. Nada nos números simulados. Continua somente local, sem push, PR, main ou deploy.
+
+## 2026-10-01 — Interface compacta da análise de carteiras (MOT-100)
+
+1. **Sintoma.** No aceite manual, o gráfico de economia × espera ficou pouco útil e a tabela com as 63 composições tornou a página excessivamente longa.
+2. **Causa.** A tela expunha simultaneamente recomendação, destaques, gráfico, tabela completa, detalhes e contribuição marginal, repetindo caminhos de exploração.
+3. **O que foi feito.** `PortfolioRecommendationPanel` deixou de renderizar e carregar o gráfico/Pareto e a tabela completa. Objetivos, filtros, recomendação, alternativas, detalhes e contribuição marginal permanecem. Os testes unitários e o E2E focado foram ajustados para o fluxo compacto.
+4. **O que isso invalida.** Evidências e roteiro que orientavam selecionar, ordenar ou conferir carteiras pelo gráfico e pela tabela completa. Os módulos isolados continuam no código, mas não fazem parte da tela principal.
+
+## 2026-09-30 — Showcase sintético ampliado da análise de carteiras (MOT-100)
+
+1. **Sintoma.** A documentação de aceite ainda descrevia o exercício antigo com três empresas e sete carteiras, enquanto o showcase E2E atual cobre uma busca completa maior.
+2. **Causa.** O fixture de aceitação foi ampliado para seis empresas sintéticas e 14 ordens, produzindo 63 combinações não vazias.
+3. **O que foi feito.** A documentação em `docs/frontend/carteiras-analise-aceitacao.md` e o índice em `docs/MAPA.md` agora registram os números atuais e identificam explicitamente as empresas e ordens como sintéticas.
+4. **O que isso invalida.** A descrição anterior de três empresas e sete carteiras como escopo do E2E focado. AstroPay continua apenas uma referência de escala já existente no repositório; nenhum fluxo real da AstroPay é descrito ou representado pelo showcase.
+
+## 2026-09-30 — Análise ampliada de combinações de carteiras (MOT-100)
+
+1. **Sintoma.** A recomendação existente escolhia pela maior economia, com limite opcional de espera, e não permitia comparar as combinações por outros objetivos ou explorar suas diferenças.
+2. **Causa.** A tela apresentava uma recomendação e poucas alternativas, embora os diagnósticos comparáveis já estivessem disponíveis no estudo.
+3. **O que foi feito.** Na branch local `codex/carteiras-analise`, `portfolioAnalysis.ts` projeta métricas dos resultados existentes; `portfolioSelection.ts` aplica objetivos e filtros; `portfolioFrontier.ts` e `PortfolioTradeoffChart.tsx` apresentam o gráfico e Pareto; `portfolioMarginal.ts` e `PortfolioMarginalPanel.tsx` calculam e exibem diferenças por empresa. A interface inclui tabela e detalhes em `web/src/levers/`. A prévia local usa `scripts/preview_carteiras.py`; o E2E focado está em `web/e2e/study-portfolio-analysis.spec.ts`. Na validação inicial, o E2E passou com sete carteiras comparáveis; a validação atual do showcase sintético ampliado cobre seis empresas, 14 ordens e 63 combinações. O teste reconcilia a tabela com os envelopes e observa zero novos POSTs de diagnóstico/preparação durante a exploração, sem mudança do snapshot salvo. A suíte web passou com 1.287/1.287 testes no modo serial; após os ajustes finais, 40/40 testes focados, typecheck, lint e build passaram e o E2E foi revalidado. A prévia foi inspecionada a 1280×800 e em reflow equivalente a zoom de 200%. Apenas o aceite manual do Gabriel permanece pendente. A branch não recebeu push, PR, integração à `main` nem deploy.
+4. **O que isso invalida.** Nada na `main` ou na versão publicada: a branch permanece local e não altera os resultados dos diagnósticos. Os gates técnicos e o E2E não substituem a experimentação manual pendente.
+
 ## 2026-09-29 — Apresentação acessível e referências visuais atualizadas (MOT-99)
 
 1. **Sintoma.** A auditoria do navegador encontrou marcação inválida na lista de métricas; a nota do cabeçalho impresso tinha contraste insuficiente. Referências visuais ainda mostravam as telas anteriores.

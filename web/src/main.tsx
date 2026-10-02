@@ -7,7 +7,10 @@ import { AppRoutes } from './app/router';
 import { AuthProvider } from './auth/AuthProvider';
 import './styles/tokens.css';
 import './styles/global.css';
+import './styles/frontConsole.css';
+import './styles/portfolioConsole.css';
 import './styles/print.css';
+import { applyTheme, readStoredTheme } from './app/theme';
 
 const root = document.getElementById('root');
 
@@ -17,6 +20,7 @@ if (root === null) {
 const rootElement = root;
 
 async function bootstrap() {
+  applyTheme(readStoredTheme());
   if (import.meta.env.MODE === 'e2e') {
     const { installE2EBridge } = await import('./e2eBridge');
     installE2EBridge();

@@ -10,9 +10,10 @@ import { buildDiagnosticRequest, DiagnosticRequestBuildError } from '../diagnost
 import { DiagnosticControls } from '../diagnostics/components/DiagnosticControls';
 import { DiagnosticEngineResult } from '../diagnostics/components/DiagnosticEngineResult';
 import { DiagnosticStatus, type DiagnosticViewState } from '../diagnostics/components/DiagnosticStatus';
-import { currentDiagnostic, VariationComparison } from '../levers/VariationComparison';
+import { VariationComparison } from '../levers/VariationComparison';
 import { PortfolioRecommendation } from '../levers/PortfolioRecommendationPanel';
 import { isCurrentCombinationScenario } from '../levers/prepareCombinationStudy';
+import { currentDiagnostic } from '../levers/savingsOrigin';
 import {
   cancelStudyDiagnostic,
   executeStudyDiagnostic,
@@ -333,7 +334,7 @@ export function StudyDiagnosticPage() {
     <p className="eyebrow">Estudo {study?.name ?? ''}</p>
     <h1 ref={heading} tabIndex={-1}>{combinationOverview ? 'Recomendação de carteira' : generated ? 'Diagnóstico robusto' : 'Diagnóstico'}</h1>
     <p className="page-introduction">{combinationOverview
-      ? 'Compare a economia das composições da carteira e escolha o limite de espera que faz sentido para você.'
+      ? 'Defina suas prioridades, compare as melhores composições e entenda o impacto de cada empresa.'
       : generated
         ? 'A carteira é gerada; o diagnóstico roda várias repetições, mostra a distribuição da economia e detalha a repetição mediana.'
         : `Cenário: ${scenario?.name ?? '…'}. Custo sem pool é cada ordem remetendo sozinha; custo com pool é o que sobra depois do netting.`}</p>
