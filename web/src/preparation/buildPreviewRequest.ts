@@ -78,6 +78,7 @@ function requestProvenance(
   snapshot: PortfolioSourceSnapshot,
   orders: readonly CanonicalAuthoredOrder[],
   context: PreviewRequestProvenance,
+  premises: PremisesDocument,
 ): PreviaRequest['proveniencia'] {
   const provenance: PreviaRequest['proveniencia'] = {
     '/horizonte_dias': projectProvenance(context.period.horizonDays),
@@ -90,6 +91,18 @@ function requestProvenance(
     '/custo/spread_rail_bps': projectProvenance(context.premises.costs.spread_rail_bps),
     '/custo/ptax': projectProvenance(context.premises.costs.ptax),
   };
+  for (const [index, rule] of premises.costs.iof_por_finalidade.entries()) {
+    const purpose = rule.finalidade.replaceAll('~', '~0').replaceAll('/', '~1');
+    const recipe = snapshot.generationInputSnapshot;
+    const previous = recipe?.costs.iof_por_finalidade.find((item) => item.finalidade === rule.finalidade && item.direcao === rule.direcao);
+    const originalSource = previous !== undefined && canonical(previous) === canonical(rule)
+      ? recipe?.sources[`/costs/iof_por_finalidade/${purpose}/${rule.direcao}`] : undefined;
+    const origin = originalSource === undefined
+      ? projectProvenance(context.premises.costs[rule.direcao === 'OUT' ? 'iof_out' : 'iof_in'])
+      : { tipo: originalSource.kind, fonte: originalSource.source, registrado_em_utc: originalSource.recorded_at };
+    provenance[`/custo/iof_por_finalidade/${index}/finalidade`] = origin;
+    provenance[`/custo/iof_por_finalidade/${index}/aliquota`] = origin;
+  }
   const associated = context.orders ?? snapshot.provenanceByOrder;
   const fallback = associated === undefined ? uniformSnapshotProvenance(snapshot) : null;
   for (const [index, order] of orders.entries()) {
@@ -142,7 +155,7 @@ export function buildPreviewRequest(
       horizonte_dias: horizon(period),
     },
     periodo: structuredClone(period.httpPeriod),
-    proveniencia: requestProvenance(snapshot, orders, provenance),
+    proveniencia: requestProvenance(snapshot, orders, provenance, premises),
   };
   if (!validatePreviaRequest(request)) {
     throw new Error('Request de prévia inválido.');

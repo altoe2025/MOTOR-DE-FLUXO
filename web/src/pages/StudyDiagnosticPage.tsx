@@ -1,3 +1,4 @@
+import { diagnosticUsesSavedPremises } from '../diagnostics/effectivePreparation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 
@@ -6,7 +7,7 @@ import { useDiagnosticRuntime } from '../app/providers';
 import { useOptionalChat } from '../chat/ChatProvider';
 import { selectionId } from '../chat/routeContext';
 import type { FieldProvenance } from '../cases/domain';
-import { buildDiagnosticRequest, DiagnosticRequestBuildError } from '../diagnostics/buildDiagnosticRequest';
+import { buildDiagnosticRequest, MAX_DIAGNOSTIC_REQUEST_BYTES, DiagnosticRequestBuildError } from '../diagnostics/buildDiagnosticRequest';
 import { DiagnosticControls } from '../diagnostics/components/DiagnosticControls';
 import { DiagnosticEngineResult } from '../diagnostics/components/DiagnosticEngineResult';
 import { DiagnosticStatus, type DiagnosticViewState } from '../diagnostics/components/DiagnosticStatus';
@@ -85,7 +86,8 @@ export function diagnosticsForScenario(
 
 export function isCurrentForScenario(execution: DiagnosticExecutionRecord, scenario: ScenarioDocument): boolean {
   return execution.scenarioRevision === scenario.revision
-    && execution.inputFingerprint === scenario.inputFingerprint;
+    && execution.inputFingerprint === scenario.inputFingerprint
+    && diagnosticUsesSavedPremises(execution);
 }
 
 export function latestDiagnostic(
@@ -218,6 +220,7 @@ export function StudyDiagnosticPage() {
             currentScenario.sourceSnapshot, currentScenario.premises, currentScenario.period,
             { requestId: crypto.randomUUID(), studyId: currentStudy.id, scenarioId: currentScenario.id, scenarioRevision: currentScenario.revision },
             requestProvenance(currentStudy, currentScenario),
+            { maxBytes: MAX_DIAGNOSTIC_REQUEST_BYTES },
           );
           return buildDiagnosticRequest({
             requestId: preview.request_id, idempotencyKey: crypto.randomUUID(), studyId: currentStudy.id,
@@ -270,6 +273,7 @@ export function StudyDiagnosticPage() {
               currentScenario.sourceSnapshot, currentScenario.premises, currentScenario.period,
               { requestId: crypto.randomUUID(), studyId: currentStudy.id, scenarioId: currentScenario.id, scenarioRevision: currentScenario.revision },
               requestProvenance(currentStudy, currentScenario),
+            { maxBytes: MAX_DIAGNOSTIC_REQUEST_BYTES },
             );
             return buildDiagnosticRequest({
               requestId: preview.request_id, idempotencyKey: crypto.randomUUID(), studyId: currentStudy.id,

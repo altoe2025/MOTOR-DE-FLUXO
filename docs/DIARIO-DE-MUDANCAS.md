@@ -33,10 +33,11 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-10-02, durante a preparação da publicação da análise de carteiras.
+Atualizada em 2026-10-02, durante a entrega das correções de diagnóstico.
 
 | Branch | Situação | Dono |
 |---|---|---|
+| `codex/diagnostico-confiavel` | PR #71 aberto em rascunho; correções e revisão independente concluídas, validação automática em andamento; sem merge ou deploy | Codex |
 | `codex/carteiras-docker-fixture` | Corrige somente o empacotamento de um helper de testes após falha do build Render; versão Live anterior preservada | Codex |
 | `codex/carteiras-analise` | PR #69 mergeado em `9cc8b8e`, CI verde; primeiro deploy interrompido no build por helper de testes fora do padrão de exclusão | Codex |
 | `feat/front-visual` | visual do app inteiro no sistema do Replay; aprovado pelo Gabriel na prévia local; PR para a `main`, deploy com o Codex | Claude |
@@ -88,6 +89,39 @@ Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. 
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+## 2026-10-02 — Confiabilidade de diagnóstico (MOT-70, MOT-72, MOT-73)
+
+**Sintoma:** entradas com proveniência completa eram recusadas, distribuições podiam
+usar premissas antigas, a morte de um worker inutilizava o pool, erros definitivos
+de download deixavam reservas ativas e jobs terminais retinham repetições completas.
+Falhas técnicas não tinham causa sanitizada observável.
+
+**Causa:** cota de 500 origens e orçamento HTTP incompatíveis com 1000 ordens;
+reutilização da receita histórica inteira; ausência de recuperação por geração do
+pool, classificação de erro de resultado e limites de retenção por quantidade/bytes.
+
+**O que foi feito:** `codex/diagnostico-confiavel` amplia os contratos e limites
+somente do diagnóstico, combina participantes preservados com premissas atuais,
+preserva histórico antigo sem considerá-lo atual quando divergente, recupera o pool,
+registra causa técnica sanitizada e permite retomada/reexecução no navegador.
+A revisão independente acrescentou a regressão do botão de repetir após falha local
+de download: esse caso cria um novo job, pois o job original terminou no servidor.
+O fixture de comparação passou a declarar a receita/período que pretende comparar.
+Terminais liberam intermediários; retenção máxima de 128 terminais/64 MiB, expulsando
+somente os mais antigos, e TTL máximo de 24 h. Operação documentada em
+`docs/deploy-render.md`; regressões incluem morte real de processo, callbacks tardios,
+fechamento concorrente, fontes Unicode e 100 repetições. Gates finais registrados no
+relatório de execução local: Python normal e otimizado com 1413 testes passando,
+build e três testes finais de diagnóstico no navegador aprovados. Commits `6d2c51a`
+e `dd3ab35` enviados no PR #71, aberto em rascunho; revisão independente aprovada.
+A validação automática está em andamento. Não houve merge nem deploy.
+
+**O que isso invalida:** a promessa de manter todo resultado no servidor por 24h e a
+indicação de atualidade de históricos cuja receita usou premissas diferentes do
+cenário salvo. Nada nas regras financeiras do motor ou nos resultados inalterados;
+histórico local preservado. Nenhum arquivo de `motor/` foi alterado.
+
 
 ## 2026-10-02 — Fixture de carteiras fora do contexto de produção (MOT-100)
 
