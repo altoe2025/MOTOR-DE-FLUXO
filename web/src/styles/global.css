@@ -854,3 +854,14 @@ h1:focus { outline: none; }
 .board-study__head .disclosure__toggle { flex: 1; min-width: 0; text-align: left; }
 .board-study__head .disclosure__label { color: var(--ink); font-weight: 500; }
 .board-study .board-candidates { margin: var(--space-2) 0 var(--space-1) var(--space-6); }
+
+/* Importar: empresa e planilha em dois passos. */
+.import-upload { max-width: 820px; }
+.import-upload > .page-head h2 { font-family: var(--font-heading); font-size: 1.1rem; font-weight: 600; margin: 0; }
+.import-step { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); display: grid; gap: var(--space-2); margin-top: var(--space-3); padding: var(--space-4) var(--space-5); }
+.import-step > .eyebrow { margin: 0; }
+.import-step__row { align-items: center; display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.import-step__row select, .import-step__row input { flex: 1 1 220px; min-width: 0; padding: var(--space-2); }
+.import-step .field-hint { margin: 0; }
+.import-step .import-instructions { margin-block: var(--space-1) 0; }
+.import-step .import-actions { margin-top: var(--space-2); }
