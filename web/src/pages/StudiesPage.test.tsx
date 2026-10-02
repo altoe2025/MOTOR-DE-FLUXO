@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest';
 
-import { render, screen } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -15,17 +15,20 @@ import { StudiesPage } from './StudiesPage';
 import { buildStudyExport } from '../study/studyTransfer';
 
 const api = { preparePortfolio: vi.fn() };
+let subscriber: (() => void) | null = null;
 const controller = {
   listStudies: vi.fn<() => Promise<StudyDocument[]>>(),
   demoInstallationStatus: vi.fn<() => Promise<'INSTALLED' | 'REMOVED' | null>>(),
   restoreDemoStudy: vi.fn<() => Promise<StudyDocument | null>>(),
   saveDetachedStudy: vi.fn<(study: StudyDocument, expectedRevision: number) => Promise<StudyDocument>>(),
+  loadStudy: vi.fn<(id: string) => Promise<StudyDocument | null>>(),
+  restoreStudy: vi.fn<(id: string, revision: number) => Promise<StudyDocument>>(),
   listObservedCases: vi.fn<() => Promise<ObservedCase[]>>(),
   listCompanies: vi.fn<() => Promise<CompanyRecord[]>>(),
   startNewStudy: vi.fn(),
   edit: vi.fn<(study: StudyDocument) => void>(),
-  flush: vi.fn(async () => null),
-  subscribe: () => () => undefined,
+  flush: vi.fn<() => Promise<StudyDocument | null>>(async () => null),
+  subscribe: (listener: () => void) => { subscriber = listener; return () => { subscriber = null; }; },
   snapshot: { document: null, status: 'IDLE', error: null as unknown },
 };
 vi.mock('../app/providers', () => ({ useStudyController: () => controller, useApiClient: () => api }));
@@ -57,7 +60,10 @@ describe('StudiesPage demo recovery', () => {
     controller.flush.mockResolvedValue(null);
     controller.edit.mockClear();
     page();
-    expect(screen.getByRole('button', { name: 'Novo estudo' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Novo estudo' }))
+      .toHaveAttribute('data-chat-help-id', 'control.estudos.novo');
+    expect(screen.getByRole('button', { name: 'Nova combinação de carteiras' }))
+      .toHaveAttribute('data-chat-help-id', 'control.estudos.nova-combinacao');
     await userEvent.click(screen.getByRole('button', { name: 'Nova combinação de carteiras' }));
     expect(await screen.findByRole('heading', { name: 'Carteira aberta' })).toBeInTheDocument();
     expect(controller.edit).toHaveBeenCalledWith(expect.objectContaining({
@@ -66,11 +72,99 @@ describe('StudiesPage demo recovery', () => {
     expect(controller.flush).toHaveBeenCalled();
   });
   beforeEach(() => {
+    subscriber = null;
     controller.listStudies.mockResolvedValue([]);
     controller.demoInstallationStatus.mockResolvedValue(null);
     controller.snapshot.error = null;
     controller.snapshot.status = 'IDLE';
     controller.restoreDemoStudy.mockReset();
+  });
+
+  it('atualiza a lista uma vez após a sequência DIRTY, SAVING e SAVED', async () => {
+    page();
+    await screen.findByText('Nenhum estudo salvo nesta conta.');
+    controller.listStudies.mockClear();
+
+    controller.snapshot.status = 'DIRTY'; subscriber?.();
+    controller.snapshot.status = 'SAVING'; subscriber?.();
+    controller.snapshot.status = 'SAVED'; subscriber?.();
+
+    await waitFor(() => expect(controller.listStudies).toHaveBeenCalledOnce());
+  });
+
+  it('faz uma leitura final quando SAVED chega durante uma leitura em andamento', async () => {
+    const saved = await study();
+    let finishFirstRead: ((value: StudyDocument[]) => void) | undefined;
+    controller.listStudies
+      .mockImplementationOnce(() => new Promise((resolve) => { finishFirstRead = resolve; }))
+      .mockResolvedValueOnce([saved]);
+    page();
+    await waitFor(() => expect(controller.listStudies).toHaveBeenCalledOnce());
+
+    controller.snapshot.status = 'SAVED';
+    subscriber?.();
+    finishFirstRead?.([]);
+
+    expect(await screen.findByRole('button', { name: 'Abrir Demonstração' })).toBeInTheDocument();
+    expect(controller.listStudies).toHaveBeenCalledTimes(2);
+  });
+
+  it('não atualiza nem inicia a leitura pendente após desmontar', async () => {
+    let finishFirstRead: ((value: StudyDocument[]) => void) | undefined;
+    controller.listStudies.mockImplementationOnce(() => new Promise((resolve) => { finishFirstRead = resolve; }));
+    const rendered = page();
+    await waitFor(() => expect(controller.listStudies).toHaveBeenCalledOnce());
+    controller.snapshot.status = 'SAVED';
+    subscriber?.();
+
+    rendered.unmount();
+    finishFirstRead?.([]);
+    await act(async () => { await Promise.resolve(); await Promise.resolve(); });
+
+    expect(controller.listStudies).toHaveBeenCalledOnce();
+  });
+
+  it('impede duas criações concorrentes da combinação de carteiras', async () => {
+    vi.stubEnv('VITE_MOTOR_BUILD_SHA', 'd'.repeat(40));
+    let finishCreation: ((value: ReturnType<typeof makeScenarioDraft>['sourceSnapshot']) => void) | undefined;
+    vi.mocked(resolvePortfolioSource).mockImplementationOnce(() => new Promise((resolve) => { finishCreation = resolve; }));
+    page();
+    const button = await screen.findByRole('button', { name: 'Nova combinação de carteiras' });
+
+    act(() => {
+      button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(button).toBeDisabled();
+    await waitFor(() => expect(resolvePortfolioSource).toHaveBeenCalledOnce());
+    finishCreation?.(makeScenarioDraft().sourceSnapshot);
+    expect(await screen.findByRole('heading', { name: 'Carteira aberta' })).toBeInTheDocument();
+  });
+
+  it('não repete a leitura quando o salvamento de uma edição publica SAVED', async () => {
+    const existing = await study();
+    controller.listStudies.mockResolvedValue([existing]);
+    controller.loadStudy.mockImplementation(async () => {
+      controller.snapshot.status = 'SAVED';
+      subscriber?.();
+      return existing;
+    });
+    controller.flush.mockImplementationOnce(async () => {
+      controller.snapshot.status = 'SAVED';
+      subscriber?.();
+      return existing;
+    });
+    vi.spyOn(window, 'prompt').mockReturnValue('Nome atualizado');
+    page();
+    await screen.findByRole('button', { name: 'Abrir Demonstração' });
+    controller.listStudies.mockClear();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Renomear Demonstração' }));
+
+    await waitFor(() => expect(controller.listStudies).toHaveBeenCalledOnce());
+    await act(async () => { await Promise.resolve(); await Promise.resolve(); });
+    expect(controller.listStudies).toHaveBeenCalledOnce();
   });
 
   it('oferece restauração explícita na página vazia e abre o estudo persistido', async () => {
@@ -138,6 +232,7 @@ describe('StudiesPage carteira sintética local', () => {
     vi.stubGlobal('__MOTOR_E2E__', { seedPortfolioShowcase });
     page();
     const button = await screen.findByRole('button', { name: 'Carregar empresas sintéticas para análise de carteiras' });
+    expect(button).toHaveAttribute('data-local-preview-only', 'true');
     await userEvent.click(button);
     expect(button).toBeDisabled();
     expect(seedPortfolioShowcase).toHaveBeenCalledOnce();
@@ -173,7 +268,8 @@ describe('StudiesPage cópia de segurança', () => {
   it('avisa que o estudo fica salvo só neste navegador', async () => {
     page();
     expect(await screen.findByText('Salvo neste navegador.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Importar estudo' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Importar estudo' }))
+      .toHaveAttribute('data-chat-help-id', 'control.estudos.importar');
   });
 
   it('importa um arquivo exportado e grava o estudo como revisão 1', async () => {
@@ -213,6 +309,8 @@ describe('StudiesPage novo estudo', () => {
     expect(await screen.findByRole('heading', { name: 'Novo estudo: de onde vêm os dados?' })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: 'Dados importados de uma empresa' })).toBeChecked();
     expect(controller.edit).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Criar estudo' }))
+      .toHaveAttribute('data-chat-help-id', 'control.estudos.criar-caso');
     await userEvent.click(screen.getByRole('button', { name: 'Criar estudo' }));
     expect(await screen.findByRole('heading', { name: 'Carteira aberta' })).toBeInTheDocument();
     const created = controller.edit.mock.calls[0]![0];

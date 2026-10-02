@@ -41,7 +41,7 @@ vi.mock('../importer/workerClient', () => ({ parseCanonicalXlsx: vi.fn(async () 
 })) }));
 
 function session(userId = 'user-a'): AuthSession {
-  return { access_token: `token-${userId}`, expires_at: Math.floor(Date.now() / 1000) + 3600, user: { id: userId } };
+  return { access_token: `token-${userId}`, expires_at: Math.floor(Date.now() / 1000) + 3600, user: { id: userId, email: `${userId}@empresa.com.br` } };
 }
 
 function client(initial: AuthSession | null, options: { loginError?: string } = {}): AuthClient {
@@ -445,7 +445,9 @@ describe('application routes', () => {
     renderAppAt(path);
     expect(await screen.findByRole('heading', { level: 1, name: destination })).toBeVisible();
     expect(screen.getByRole('link', { name: destination })).toHaveAttribute('aria-current', 'page');
-    expect(screen.getByRole('button', { name: 'Sair' })).toBeVisible();
+    const profile = screen.getByRole('region', { name: 'Perfil' });
+    expect(profile).toHaveTextContent('user-a@empresa.com.br');
+    expect(within(profile).getByRole('button', { name: 'Sair' })).toBeVisible();
   });
 
   it('redireciona visitante para login', async () => {

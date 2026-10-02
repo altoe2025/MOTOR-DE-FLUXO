@@ -36,35 +36,71 @@ function subject(companies: readonly string[]) {
 afterEach(() => vi.restoreAllMocks());
 
 describe('LeverBuilder · composição', () => {
-  it('"Cada empresa sozinha" cria uma variação por empresa', async () => {
+  it('um só botão faz todas as combinações das empresas (3 empresas → 6)', async () => {
     const { onCreateCombinations, user } = subject(['A', 'B', 'C']);
-    await user.click(screen.getByRole('button', { name: 'Cada empresa sozinha (3)' }));
-    expect(onCreateCombinations).toHaveBeenCalledWith([['A'], ['B'], ['C']], ['A', 'B', 'C']);
+    expect(screen.queryByRole('button', { name: /Cada empresa sozinha/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Retirar uma por vez/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Criar com as marcadas/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Fazer composição (6 combinações)' }))
+      .toHaveAttribute('data-chat-help-id', 'control.alavancas.combinacoes');
+    await user.click(screen.getByRole('button', { name: 'Fazer composição (6 combinações)' }));
+    expect(onCreateCombinations).toHaveBeenCalledWith(
+      [['A'], ['B'], ['C'], ['A', 'B'], ['A', 'C'], ['B', 'C']], ['A', 'B', 'C'],
+    );
   });
 
-  it('"Retirar uma por vez" cria a carteira sem cada empresa', async () => {
+  it('clicar no nome tira a empresa e a composição usa só as que sobraram', async () => {
     const { onCreateCombinations, user } = subject(['A', 'B', 'C']);
-    await user.click(screen.getByRole('button', { name: 'Retirar uma por vez (3)' }));
-    expect(onCreateCombinations).toHaveBeenCalledWith([['B', 'C'], ['A', 'C'], ['A', 'B']], ['A', 'B', 'C']);
+    await user.click(screen.getByRole('button', { name: 'C', pressed: true }));
+    expect(screen.getByRole('button', { name: 'C', pressed: false })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Fazer composição (3 combinações)' }));
+    expect(onCreateCombinations).toHaveBeenCalledWith([['A'], ['B'], ['A', 'B']], ['A', 'B', 'C']);
   });
 
-  it('seleção manual cria só a combinação marcada', async () => {
-    const { onCreateCombinations, user } = subject(['A', 'B', 'C']);
-    const create = screen.getByRole('button', { name: 'Criar com as marcadas' });
-    expect(create).toBeDisabled();
-    await user.click(screen.getByRole('checkbox', { name: 'Incluir A' }));
-    await user.click(screen.getByRole('checkbox', { name: 'Incluir C' }));
-    await user.click(create);
-    expect(onCreateCombinations).toHaveBeenCalledWith([['A', 'C']], ['A', 'B', 'C']);
+  it('clicar de novo devolve a empresa à composição', async () => {
+    const { user } = subject(['A', 'B', 'C']);
+    await user.click(screen.getByRole('button', { name: 'B', pressed: true }));
+    await user.click(screen.getByRole('button', { name: 'B', pressed: false }));
+    expect(screen.getByRole('button', { name: 'Fazer composição (6 combinações)' })).toBeEnabled();
   });
 
-  it('"Todas as combinações" é avançada e mostra a contagem antes de criar', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
-    const { onCreateCombinations, user } = subject(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']);
-    expect(screen.getByText('Avançado: todas as combinações (254 variações)')).toBeInTheDocument();
-    await user.click(screen.getByText('Avançado: todas as combinações (254 variações)'));
-    await user.click(screen.getByRole('button', { name: 'Criar as 254 variações' }));
-    expect(onCreateCombinations).toHaveBeenCalledOnce();
-    expect(onCreateCombinations.mock.calls[0]![0]).toHaveLength(254);
+  it('sem nenhuma empresa na composição, o botão fica desabilitado', async () => {
+    const { user } = subject(['A', 'B']);
+    await user.click(screen.getByRole('button', { name: 'A', pressed: true }));
+    await user.click(screen.getByRole('button', { name: 'B', pressed: true }));
+    expect(screen.getByRole('button', { name: /Fazer composição/ })).toBeDisabled();
+  });
+
+  it('com mais de 8 empresas na composição, pede para tirar empresas', async () => {
+    const { user } = subject(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I']);
+    expect(screen.getByRole('button', { name: /Fazer composição/ })).toBeDisabled();
+    expect(screen.getByText(/no máximo 8 empresas/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'I', pressed: true }));
+    expect(screen.getByRole('button', { name: 'Fazer composição (255 combinações)' })).toBeEnabled();
+  });
+});
+
+describe('LeverBuilder · aplicar à carteira (combinação de carteiras)', () => {
+  it('desabilita a aplicação neutra e não chama a persistência', async () => {
+    const onCreate = vi.fn().mockResolvedValue(undefined);
+    render(<LeverBuilder base={base(['A', 'B'])} applyToBase onCreate={onCreate} />);
+    const apply = screen.getByRole('button', { name: 'Aplicar à carteira' });
+    expect(apply).toHaveAttribute('data-chat-help-id', 'control.alavancas.aplicar-carteira');
+    expect(apply).toBeDisabled();
+    await userEvent.setup().click(apply);
+    expect(onCreate).not.toHaveBeenCalled();
+  });
+
+  it('não oferece composição nem tirar empresa, e aplica a alavanca à carteira', async () => {
+    const onCreate = vi.fn().mockResolvedValue(undefined);
+    render(<LeverBuilder base={base(['A', 'B'])} applyToBase onCreate={onCreate} />);
+    expect(screen.queryByRole('heading', { name: 'Composição' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('checkbox', { name: /Tirar a empresa inteira/ })).not.toBeInTheDocument();
+    const user = userEvent.setup();
+    const volumeOut = screen.getByLabelText('Volume OUT ×');
+    await user.clear(volumeOut);
+    await user.type(volumeOut, '2');
+    await user.click(screen.getByRole('button', { name: 'Aplicar à carteira' }));
+    expect(onCreate).toHaveBeenCalledWith(expect.objectContaining({ group: 'A', volumeOut: '2', removeCompany: false }));
   });
 });

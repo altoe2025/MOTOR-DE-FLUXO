@@ -25,19 +25,15 @@ def _value(metric: object) -> Decimal | None:
 
 def derive_consequences(axes: DiagnosticAxes) -> tuple[DiagnosticConsequence, ...]:
     consequences: list[DiagnosticConsequence] = []
-    if (
-        _value(axes.structural_potential.gross_out_brl) == 0
-        or _value(axes.structural_potential.gross_in_brl) == 0
-    ):
+    if _value(axes.structural_potential.ceiling_brl) == 0:
         consequences.append(
             DiagnosticConsequence(
                 rule_id="opposite-direction-absent",
-                rule_version="1.0.0",
+                rule_version="1.1.0",
                 axis="STRUCTURAL_POTENTIAL",
                 statement_code="DIRECAO_OPOSTA_AUSENTE",
                 evidence_refs=[
-                    "/axes/structural_potential/gross_out_brl",
-                    "/axes/structural_potential/gross_in_brl",
+                    "/axes/structural_potential/ceiling_brl",
                 ],
             )
         )

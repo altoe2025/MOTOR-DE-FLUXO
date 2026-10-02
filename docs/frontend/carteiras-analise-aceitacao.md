@@ -39,9 +39,19 @@ escala já existente no repositório. Não há dados de fluxo real de empresas.
 
 ## Roteiro de aceite manual
 
+### Aceite e preparação de publicação — 2026-10-02
+
+Gabriel aprovou esta versão e autorizou inspeção, commit, merge e deploy quando
+seguros. A integração reutiliza o shell, fontes e tema completos da `main`.
+Na recomendação, netabilidade e redução de custo agora exibem seu valor absoluto;
+**Analisar recomendação atual** permite sair da alternativa selecionada sem
+limpar objetivo ou filtros. Combinações antigas não entram nas contagens atuais.
+Esses três caminhos têm testes de regressão. O aceite visual não substitui os
+gates automatizados nem comprova publicação, registrada separadamente.
+
 ### Revisão visual do console — 2026-10-01
 
-- Alternar **Tema claro / Tema escuro** no cabeçalho; a preferência é retida no navegador.
+- Alternar **Tema claro / Tema escuro** no menu lateral; a preferência é retida no navegador.
 - Buscar empresas por nome ou ID, inclusive nomes sem acento, e fixar a participação pelo cartão ou pela tecla Espaço. Limpar filtros deve liberar todas novamente.
 - Conferir os cards da recomendação e das alternativas. A alternativa selecionada altera os detalhes e a contribuição marginal, sem mudar o objetivo.
 - Nos cartões marginais, o valor é a diferença da economia da contraparte menos a composição em análise; a espera também é uma diferença. Ganho/perda é informado por texto e sinal, além da cor. As barras compartilham a mesma escala.
@@ -78,6 +88,19 @@ constituem rateio por empresa. Números sintéticos e premissas não calibradas 
 representam cotação ou projeção comercial.
 
 ## Automação e evidências
+
+### Triagem de dependências — 2026-10-02
+
+O lock herdado de `main` permanece inalterado. `npm audit` reporta alertas em
+`brace-expansion` (ferramentas de lint/geração) e `fast-uri` (via Ajv).
+O caminho de validação publicado usa validadores pré-compilados e não carrega
+`fast-uri`; Node e seus pacotes não são copiados para a imagem final Python.
+Não foi identificado caminho explorável desses alertas na entrega examinada.
+A atualização de dependências permanece pendente; não se declara auditoria limpa.
+
+As capturas de Estudos/chat ocultam somente o botão `data-local-preview-only`,
+que carrega o showcase sintético no build E2E e não existe na interface publicada.
+As referências de produção não foram regeneradas para acomodar esse controle.
 
 O teste `web/e2e/study-portfolio-analysis.spec.ts` semeia seis casos sintéticos de
 empresa (14 ordens no total), prepara os 63 subconjuntos não vazios pela interface,

@@ -4,7 +4,6 @@ import { Link } from 'react-router-dom';
 import { formatFraction, formatMoney, formatSignedMoney } from '../presentation/format';
 import type { ScenarioDocument, StudyDocument } from '../study/model';
 import { Button } from '../ui/Button';
-import { PortfolioRecommendation } from './PortfolioRecommendationPanel';
 import { interClientSplit, savingsOrigin, scenarioRow } from './savingsOrigin';
 
 export { currentDiagnostic } from './savingsOrigin';
@@ -16,7 +15,7 @@ export function VariationComparison({ study, selectedScenarioId, running, progre
   progress: string | null;
   onRunAll(): void;
 }>) {
-  if (study.scenarios.length < 2) return <PortfolioRecommendation study={study} />;
+  if (study.scenarios.length < 2) return null;
   const rows = study.scenarios.map((scenario) => scenarioRow(study, scenario));
   const base = rows.find((row) => row.scenario.id === study.baseScenarioId) ?? rows[0]!;
   const mixedSampling = base.execution?.requestSnapshot.sampling.kind === 'GENERATED_INPUT'
@@ -31,7 +30,6 @@ export function VariationComparison({ study, selectedScenarioId, running, progre
   const link = (scenario: ScenarioDocument) => `/estudos/${encodeURIComponent(study.id)}/diagnostico?scenarioId=${encodeURIComponent(scenario.id)}`;
 
   return <section className="variation-comparison" aria-labelledby="variation-comparison-title">
-    <PortfolioRecommendation study={study} />
     <h2 id="variation-comparison-title">Original × variações</h2>
     {mixedSampling ? <p role="note" className="field-hint">
       O original foi regenerado e há variações com ordens fixas. As carteiras podem diferir;
@@ -84,7 +82,7 @@ export function VariationComparison({ study, selectedScenarioId, running, progre
     </div>}
     {origin.length < 2 ? null : <section className="savings-origin" aria-labelledby="savings-origin-title">
       <h3 id="savings-origin-title">De onde vem a economia de cada empresa</h3>
-      {!hasSolo ? <p className="field-hint">No estudo, use “Cada empresa sozinha” a partir do original e rode todas para comparar o que cada empresa faria sozinha com sua participação na carteira.</p> : <>
+      {!hasSolo ? <p className="field-hint">No estudo, use “Fazer composição” a partir do original e rode todas para comparar o que cada empresa faria sozinha com sua participação na carteira.</p> : <>
         <p className="field-hint">“Sozinha” usa as mesmas operações e premissas, sem as outras empresas. A diferença mostra como a economia atribuída à empresa muda na carteira; não é a contribuição total dela para o conjunto.</p>
         <div className="table-scroll" role="region" tabIndex={0} aria-label="Origem da economia por empresa">
           <table className="company-table">

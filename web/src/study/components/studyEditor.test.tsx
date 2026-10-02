@@ -76,6 +76,8 @@ describe('StudyEditor', () => {
     await subject({}, { openSource: false });
     expect(screen.getByRole('heading', { name: 'Origem da carteira' })).toBeInTheDocument();
     expect(screen.queryByRole('radiogroup', { name: 'Origem da carteira' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Trocar origem' }))
+      .toHaveAttribute('data-chat-help-id', 'control.carteira.trocar-origem');
     fireEvent.click(screen.getByRole('button', { name: 'Trocar origem' }));
     expect(screen.getByRole('radiogroup', { name: 'Origem da carteira' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Cancelar troca' })).toHaveAttribute('aria-expanded', 'true');
@@ -208,6 +210,23 @@ describe('StudyEditor', () => {
         iof_out: '0.038', iof_in: '0.0038', carry_cnr: '0.0004', custo_fixo_remessa: '55.00', ptax: '5.40',
       }) }),
     }));
+  });
+
+  it('reedita a janela e salva o valor final sem perder as demais premissas', async () => {
+    const document = await study();
+    const { onScenarioChange } = await subject({ study: document }, { openSource: false });
+    const user = userEvent.setup();
+    const windowDays = screen.getByLabelText('Janela em dias');
+    await user.clear(windowDays);
+    await user.type(windowDays, '3');
+    await user.clear(windowDays);
+    await user.type(windowDays, '12');
+    expect(windowDays).toHaveValue('12');
+    await user.click(screen.getByRole('button', { name: 'Salvar premissas e período' }));
+    expect(onScenarioChange).toHaveBeenCalledExactlyOnceWith({
+      premises: { ...document.scenarios[0]!.premises, windowDays: 12 },
+      period: document.scenarios[0]!.period,
+    });
   });
 
   it('mostra o erro de premissa junto ao campo, com exemplo', async () => {

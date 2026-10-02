@@ -106,6 +106,8 @@ describe('ReplayPage', () => {
       </ChatProvider>
     </MemoryRouter>);
     await screen.findByRole('heading', { name: 'Fronteira Viva' });
+    // READY renders before the mount effects publish the initial route day.
+    await waitFor(() => expect(screen.getByTestId('chat-day')).toHaveTextContent('0'));
     fireEvent.change(screen.getByRole('slider', { name: 'Selecionar dia' }), { target: { value: '1' } });
     await waitFor(() => expect(screen.getByTestId('chat-day')).toHaveTextContent('1'));
     expect(screen.getByTestId('chat-scenario')).toHaveTextContent(persistedStudy().scenarios[0]!.id);
@@ -126,8 +128,9 @@ describe('ReplayPage', () => {
       </ChatProvider>
     </MemoryRouter>);
     await screen.findByRole('heading', { name: 'Fronteira Viva' });
-    expect(screen.getByTestId('chat-day')).toHaveTextContent('0');
-    expect(screen.getByTestId('chat-scenario')).toHaveTextContent(persistedStudy().scenarios[0]!.id);
+    // Dia e cenário chegam ao chat por efeitos da página, logo depois do render.
+    await waitFor(() => expect(screen.getByTestId('chat-day')).toHaveTextContent('0'));
+    await waitFor(() => expect(screen.getByTestId('chat-scenario')).toHaveTextContent(persistedStudy().scenarios[0]!.id));
     const range = screen.getByRole('slider', { name: 'Selecionar dia' });
     fireEvent.change(range, { target: { value: '1' } });
     await waitFor(() => expect(screen.getByTestId('chat-day')).toHaveTextContent('1'));
@@ -159,7 +162,12 @@ describe('ReplayPage', () => {
     expect(mocks.buildReplay).toHaveBeenCalledWith(expect.objectContaining({
       diagnostic_execution_id: '00000000-0000-4000-8000-000000000701',
     }), expect.any(AbortSignal));
-    expect(screen.getByText('Dia 0 de 2')).toBeInTheDocument();
+    expect(screen.queryByText(/Dia 0 de 2/)).not.toBeInTheDocument();
+    expect(screen.getByText('D0 · Medição')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Tocar' })).toBeInTheDocument();
+    const metrics = screen.getByRole('region', { name: 'Acumulados do Replay' });
+    const stage = screen.getByRole('region', { name: 'Cena Fronteira Viva' });
+    expect(metrics.compareDocumentPosition(stage) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     // Resumo em uma linha; o detalhe da repetição fica recolhido, mas acessível.
     expect(screen.getByRole('region', { name: 'Repetição exibida' })).toHaveTextContent('00000000-0000-4000-8000-000000000703');
     const summary = screen.getByText(/Repetição 00000000 de 10 · Primeira repetição do plano/i);

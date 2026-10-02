@@ -7,7 +7,7 @@ function toSession(session: Session | null): AuthSession | null {
   return {
     access_token: session.access_token,
     ...(session.expires_at === undefined ? {} : { expires_at: session.expires_at }),
-    user: { id: session.user.id },
+    user: { id: session.user.id, ...(session.user.email === undefined ? {} : { email: session.user.email }) },
   };
 }
 

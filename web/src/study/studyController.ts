@@ -215,8 +215,11 @@ export class StudyController {
     this.#repository = repository;
     this.#channel = channel;
     channel?.addEventListener('message', this.#onChannelMessage);
-    // A storage failure is shown in the ready UI, rather than blocking authentication.
-    await this.#installDemo('FIRST_EMPTY_SESSION').catch(() => undefined);
+    if (repository.resetAllLocalDataOnce !== undefined) {
+      await this.runForCurrentSession(() => repository.resetAllLocalDataOnce!());
+    }
+    if (!this.#isCurrent(repository, epoch)) return this.#snapshot.sessionEpoch;
+    // Conta nova começa vazia: a demonstração só entra por restoreDemoStudy().
     return this.#snapshot.sessionEpoch;
   }
 

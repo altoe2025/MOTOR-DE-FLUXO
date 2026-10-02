@@ -28,8 +28,16 @@ test('HTTPS, login, demonstração, chat real, apresentação, PDF e deep links'
   expect(health.status()).toBe(200);
   await login(page);
   await page.goto('/estudos');
-  await expect(page.getByRole('button', { name: 'Abrir Estudo demonstrativo sintético' })).toBeVisible();
-  await page.getByRole('button', { name: 'Abrir Estudo demonstrativo sintético' }).click();
+  // Conta nova começa vazia; carrega a demonstração pelo botão se ainda não estiver instalada.
+  const openDemo = page.getByRole('button', { name: 'Abrir Estudo demonstrativo sintético' });
+  const loadDemo = page.getByRole('button', { name: 'Carregar estudo demonstrativo' });
+  await expect(openDemo.or(loadDemo)).toBeVisible();
+  if (await loadDemo.isVisible()) {
+    await loadDemo.click();
+    await page.goto('/estudos');
+  }
+  await expect(openDemo).toBeVisible();
+  await openDemo.click();
   await expect(page).toHaveURL(/\/estudos\/[0-9a-f-]+$/);
   await page.getByRole('button', { name: 'Executar diagnóstico' }).first().click();
   await expect(page.getByRole('region', { name: 'Resultado do motor' })).toBeVisible();

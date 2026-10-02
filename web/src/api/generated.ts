@@ -831,9 +831,9 @@ export interface components {
             rule_id: string;
             /**
              * Rule Version
-             * @constant
+             * @enum {string}
              */
-            rule_version: "1.0.0";
+            rule_version: "1.0.0" | "1.1.0";
             /** Statement Code */
             statement_code: string;
         };

@@ -46,6 +46,8 @@ describe('CaseConfirmation atalhos', () => {
 
   it('“Analisar este caso” cria o estudo com o caso como origem e abre a carteira', async () => {
     page(astro);
+    expect(screen.getByRole('button', { name: 'Analisar este caso' }))
+      .toHaveAttribute('data-chat-help-id', 'control.importacao.analisar-caso');
     await userEvent.click(screen.getByRole('button', { name: 'Analisar este caso' }));
     expect(await screen.findByRole('heading', { name: 'Carteira aberta' })).toBeInTheDocument();
     expect(controller.edit.mock.calls[0]![0].scenarios[0]!.sourceSnapshot.source).toMatchObject({ kind: 'OBSERVED_CASE', caseId: astro.id });
@@ -56,6 +58,8 @@ describe('CaseConfirmation atalhos', () => {
     controller.listStudies.mockResolvedValue([existing]);
     controller.loadStudy.mockResolvedValue(existing);
     page(empresaY);
+    expect(screen.getByRole('button', { name: 'Adicionar a uma carteira' }))
+      .toHaveAttribute('data-chat-help-id', 'control.importacao.adicionar-carteira');
     await userEvent.click(screen.getByRole('button', { name: 'Adicionar a uma carteira' }));
     expect(await screen.findByRole('combobox', { name: 'Estudo que recebe o caso' })).toHaveValue(existing.id);
     await userEvent.click(screen.getByRole('button', { name: 'Adicionar e abrir o estudo' }));

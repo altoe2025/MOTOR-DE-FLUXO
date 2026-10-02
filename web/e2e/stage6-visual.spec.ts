@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
+import { loadDemoIfEmpty } from './helpers/demo';
 
 const python = process.env.MOT_STAGE6_PDF_PYTHON ?? process.env.MOT_E2E_PYTHON
   ?? (process.env.CI === 'true' ? 'python' : process.platform === 'win32' ? '.venv\\Scripts\\python.exe' : '.venv/bin/python');
@@ -34,7 +35,12 @@ test('login, import, demo, chat and presentation match reviewed baselines', asyn
 
   await page.goto('/estudos');
   await expect(page.getByRole('heading', { name: 'Estudos' })).toBeVisible();
+  await loadDemoIfEmpty(page);
+  await expect(page.getByRole('heading', { name: 'Estudos' })).toBeVisible();
   await expect.poll(async () => (await page.evaluate(() => window.__MOTOR_E2E__!.demoAcceptanceSnapshot())).studies.length).toBe(1);
+  // The local showcase loader is absent from production; compare the shipped UI.
+  await page.addStyleTag({ content: '[data-local-preview-only] { display: none !important; }' });
+  await expect(page.locator('[data-local-preview-only]')).toBeHidden();
   await expect(page).toHaveScreenshot('demo.png', { fullPage: true });
   await page.getByRole('button', { name: 'Perguntar', exact: true }).click();
   await expect(page.getByRole('dialog', { name: 'ORKE AI' })).toBeVisible();
@@ -57,6 +63,7 @@ test('login, import, demo, chat and presentation match reviewed baselines', asyn
 
 test('first two A4 pages match reviewed print baselines', async ({ page }, testInfo) => {
   await page.goto('/estudos');
+  await loadDemoIfEmpty(page);
   await expect.poll(async () => (await page.evaluate(() => window.__MOTOR_E2E__!.demoAcceptanceSnapshot())).studies.length).toBe(1);
   const study = (await page.evaluate(() => window.__MOTOR_E2E__!.demoAcceptanceSnapshot())).studies[0]!;
   const scenario = study.scenarios[0]!;

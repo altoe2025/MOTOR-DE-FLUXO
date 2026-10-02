@@ -35,6 +35,7 @@ import { IndexedDbChatRepository } from '../chat/repository';
 import type { ChatConversation } from '../chat/domain';
 
 const DATABASE_VERSION = 3;
+const DATA_RESET_KEY = 'data-reset:2026-09-29-v1';
 
 const STORE_NAMES = [
   'companies',
@@ -137,6 +138,8 @@ type DemoMarker = Readonly<{
   studyId: string;
   packageVersion: string;
   packageDigest: string;
+  installMode?: 'FIRST_EMPTY_SESSION' | 'EXPLICIT_RESTORE';
+  legacyCleanupCompleted?: boolean;
 }>;
 const DEMO_MARKER_KEY = 'demo:installation';
 class DemoStateChangedError extends Error {}
@@ -148,6 +151,9 @@ function readDemoMarker(row: unknown, ownerSub: string): DemoMarker | null {
   if ((value.status !== 'INSTALLED' && value.status !== 'REMOVED')
     || value.ownerSub !== ownerSub || typeof value.studyId !== 'string'
     || typeof value.packageVersion !== 'string' || typeof value.packageDigest !== 'string'
+    || (value.installMode !== undefined
+      && value.installMode !== 'FIRST_EMPTY_SESSION' && value.installMode !== 'EXPLICIT_RESTORE')
+    || (value.legacyCleanupCompleted !== undefined && typeof value.legacyCleanupCompleted !== 'boolean')
     || !/^[a-f0-9]{64}$/.test(value.packageDigest)) {
     throw new DocumentCorruptError('Marcador da demonstração inválido.');
   }
@@ -173,6 +179,19 @@ type ExecutionRow = Readonly<{
   sequence: number;
   document: ExecutionRecordV3;
 }>;
+
+export function groupExecutionsByStudyId<T extends { readonly study_id: string }>(
+  executions: readonly T[],
+): Map<string, T[]> {
+  const grouped = new Map<string, T[]>();
+  for (const execution of executions) {
+    const studyId = execution.study_id;
+    const studyExecutions = grouped.get(studyId);
+    if (studyExecutions === undefined) grouped.set(studyId, [execution]);
+    else studyExecutions.push(execution);
+  }
+  return grouped;
+}
 
 function requestResult<T>(request: IDBRequest<T>): Promise<T> {
   return new Promise((resolve, reject) => {
@@ -528,6 +547,20 @@ export class IndexedDbApplicationRepository implements ApplicationRepository {
     this.#chat = new IndexedDbChatRepository(() => this.#database(), this.#ownerSub);
   }
 
+  async resetAllLocalDataOnce(): Promise<boolean> {
+    const database = await this.#database();
+    if (this.#closed) throw new StorageClosedError();
+    return transactionResult(database, [...STORE_NAMES], 'readwrite', async (transaction) => {
+      const meta = transaction.objectStore('meta');
+      const previous = await requestResult<{ key: string; value: unknown } | undefined>(meta.get(DATA_RESET_KEY));
+      if (previous?.value === true) return false;
+      for (const storeName of STORE_NAMES) transaction.objectStore(storeName).clear();
+      meta.put({ key: 'schema_version', value: DATABASE_VERSION });
+      meta.put({ key: DATA_RESET_KEY, value: true });
+      return true;
+    });
+  }
+
   listChatConversations(studyId: string | null): Promise<ChatConversation[]> {
     return this.#chat.listChatConversations(studyId);
   }
@@ -739,7 +772,7 @@ export class IndexedDbApplicationRepository implements ApplicationRepository {
               meta.put({ key: `demo:replays:${document.id}`, value: materialized.replays });
               meta.put({ key: DEMO_MARKER_KEY, value: {
                 status: 'INSTALLED', ownerSub: this.#ownerSub, studyId: document.id,
-                packageVersion: input.package.packageVersion, packageDigest,
+                packageVersion: input.package.packageVersion, packageDigest, installMode: input.mode,
               } satisfies DemoMarker });
             }
             operations.add({ operation_id: input.operationId, owner_sub: this.#ownerSub,
@@ -755,6 +788,141 @@ export class IndexedDbApplicationRepository implements ApplicationRepository {
       }
     }
     throw new OperationConflictError('A demonstração mudou durante a instalação. Tente novamente.');
+  }
+
+  async needsLegacyDemoCleanup(): Promise<boolean> {
+    if (typeof indexedDB === 'undefined') return false;
+    const database = await this.#database();
+    const marker = await transactionResult(database, ['meta'], 'readonly', async (transaction) =>
+      readDemoMarker(await requestResult(transaction.objectStore('meta').get(DEMO_MARKER_KEY)), this.#ownerSub));
+    return marker !== null
+      && marker.legacyCleanupCompleted !== true
+      && !(marker.status === 'INSTALLED' && marker.installMode === 'EXPLICIT_RESTORE');
+  }
+
+  async removeLegacyAutomaticDemo(candidate: import('../demo/domain').DemoStudyPackageV1): Promise<boolean> {
+    rejectBinary(candidate);
+    const packageValue = snapshotDemoPackage(candidate);
+    const database = await this.#database();
+    if (this.#closed) throw new StorageClosedError();
+
+    const snapshot = await transactionResult(database, ['meta', 'operations'], 'readonly', async (transaction) => {
+      const marker = readDemoMarker(
+        await requestResult(transaction.objectStore('meta').get(DEMO_MARKER_KEY)),
+        this.#ownerSub,
+      );
+      if (marker === null || (marker.status === 'INSTALLED' && marker.installMode === 'EXPLICIT_RESTORE')) return null;
+      const operations = marker.status === 'INSTALLED'
+        ? await requestResult<OperationRow[]>(transaction.objectStore('operations').index('by_owner_entity')
+          .getAll([this.#ownerSub, 'demo_install', marker.studyId]))
+        : (await requestResult<OperationRow[]>(transaction.objectStore('operations').index('by_owner')
+          .getAll(this.#ownerSub))).filter((operation) => operation.entity_kind === 'purged');
+      return { marker, operations };
+    });
+    if (snapshot === null) return false;
+    let operation: OperationRow | null = snapshot.marker.installMode === 'FIRST_EMPTY_SESSION'
+      ? snapshot.operations.find((item): item is StudyOperationRow => item.entity_kind === 'demo_install') ?? null
+      : null;
+    if (snapshot.marker.status === 'INSTALLED' && snapshot.marker.installMode === undefined) {
+      for (const candidateOperation of snapshot.operations) {
+        if (candidateOperation.entity_kind !== 'demo_install') continue;
+        const automaticIntent = await digest({
+          package: packageValue,
+          mode: 'FIRST_EMPTY_SESSION',
+          operationId: candidateOperation.operation_id,
+        } satisfies DemoInstallMutation);
+        if (candidateOperation.intent === automaticIntent) {
+          operation = candidateOperation;
+          break;
+        }
+      }
+    }
+    let materialized = operation === null ? null : await materializeDemoPackage(
+      packageValue,
+      this.#ownerSub,
+      await digest({ database: this.#databaseName, operationId: operation.operation_id }),
+    );
+    if (snapshot.marker.status === 'REMOVED') {
+      for (const candidateOperation of snapshot.operations) {
+        const candidate = await materializeDemoPackage(
+          packageValue,
+          this.#ownerSub,
+          await digest({ database: this.#databaseName, operationId: candidateOperation.operation_id }),
+        );
+        if (candidate.study.id === snapshot.marker.studyId) {
+          operation = candidateOperation;
+          materialized = candidate;
+          break;
+        }
+      }
+    }
+    if (operation === null || materialized === null) return false;
+    const preflight = { marker: snapshot.marker, operation };
+    const demoMaterialized = materialized;
+    if (demoMaterialized.study.id !== preflight.marker.studyId) throw new DocumentCorruptError('Demonstração automática divergente.');
+    if (this.#closed) throw new StorageClosedError();
+
+    return transactionResult(database, [
+      'companies', 'observed_cases', 'import_batches', 'import_events', 'profile_versions',
+      'studies', 'executions', 'operations', 'meta',
+    ], 'readwrite', async (transaction) => {
+      const meta = transaction.objectStore('meta');
+      const marker = readDemoMarker(await requestResult(meta.get(DEMO_MARKER_KEY)), this.#ownerSub);
+      if (marker === null || marker.studyId !== preflight.marker.studyId
+        || marker.status !== preflight.marker.status
+        || (marker.status === 'INSTALLED' && marker.installMode === 'EXPLICIT_RESTORE')) return false;
+
+      const cases = transaction.objectStore('observed_cases');
+      const batches = transaction.objectStore('import_batches');
+      const events = transaction.objectStore('import_events');
+      const profiles = transaction.objectStore('profile_versions');
+      for (const observedCase of demoMaterialized.observedCases) {
+        const row = await requestResult<ObservedCaseRow | undefined>(cases.get(observedCase.id));
+        if (row?.owner_sub !== this.#ownerSub) continue;
+        for (const batch of await requestResult<ImportBatchRow[]>(batches.index('by_owner_company')
+          .getAll([this.#ownerSub, observedCase.companyId]))) {
+          if (batch.case_id === observedCase.id) batches.delete([batch.case_id, batch.batch_sequence]);
+        }
+        for (const event of await requestResult<ImportEventRow[]>(events.index('by_owner_company')
+          .getAll([this.#ownerSub, observedCase.companyId]))) {
+          if (event.case_id === observedCase.id) events.delete([event.case_id, event.event_sequence]);
+        }
+        cases.delete(observedCase.id);
+      }
+      for (const profile of demoMaterialized.profiles) {
+        const row = await requestResult<ProfileVersionRow | undefined>(profiles.get(profile.id));
+        if (row?.owner_sub === this.#ownerSub) profiles.delete(profile.id);
+      }
+      const companies = transaction.objectStore('companies');
+      for (const company of demoMaterialized.companies) {
+        const [remainingCases, remainingProfiles] = await Promise.all([
+          requestResult<ObservedCaseRow[]>(cases.index('by_owner_company').getAll([this.#ownerSub, company.id])),
+          requestResult<ProfileVersionRow[]>(profiles.index('by_owner_company').getAll([this.#ownerSub, company.id])),
+        ]);
+        if (remainingCases.length === 0 && remainingProfiles.length === 0) {
+          const row = await requestResult<CompanyRow | undefined>(companies.get(company.id));
+          if (row?.owner_sub === this.#ownerSub) companies.delete(company.id);
+        }
+      }
+
+      const executions = transaction.objectStore('executions');
+      for (const execution of await requestResult<ExecutionRow[]>(executions.index('by_owner_study')
+        .getAll([this.#ownerSub, marker.studyId]))) {
+        executions.delete([execution.study_id, execution.execution_id]);
+      }
+      const operations = transaction.objectStore('operations');
+      for (const operation of await requestResult<StudyOperationRow[]>(operations.index('by_owner_entity')
+        .getAll([this.#ownerSub, 'demo_install', marker.studyId]))) {
+        operations.put({ operation_id: operation.operation_id, owner_sub: this.#ownerSub,
+          entity_kind: 'purged' } satisfies PurgedOperationRow);
+      }
+      transaction.objectStore('studies').delete(marker.studyId);
+      meta.put({ key: DEMO_MARKER_KEY, value: {
+        ...marker, status: 'REMOVED', legacyCleanupCompleted: true,
+      } satisfies DemoMarker });
+      meta.delete(`demo:replays:${marker.studyId}`);
+      return true;
+    });
   }
 
   async listObservedCases(companyId?: string): Promise<ObservedCase[]> {
@@ -1028,10 +1196,11 @@ export class IndexedDbApplicationRepository implements ApplicationRepository {
       requestResult<StudyRow[]>(studyRequest),
       requestResult<ExecutionRow[]>(executionRequest),
     ]);
+    const executionsByStudyId = groupExecutionsByStudyId(executions);
     const studies = rows
       .map((row) => assembleStudy(
         row,
-        executions.filter((execution) => execution.study_id === row.study_id),
+        executionsByStudyId.get(row.study_id) ?? [],
       ))
       .sort((left, right) => left.id.localeCompare(right.id));
     return Promise.all(studies.map((study) => validateStoredStudy(study, this.#ownerSub)));

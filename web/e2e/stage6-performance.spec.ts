@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { performance as nodePerformance } from 'node:perf_hooks';
 import { gzipSync } from 'node:zlib';
+import { loadDemoIfEmpty } from './helpers/demo';
 
 type ManifestEntry = { file: string; isEntry?: boolean; imports?: string[]; isDynamicEntry?: boolean };
 
@@ -51,7 +52,7 @@ test('20 warm samples stay inside presentation and interaction budgets', async (
     }).observe({ type: 'layout-shift', buffered: true });
   });
   await page.goto('/estudos');
-  await page.waitForFunction(() => '__MOTOR_E2E__' in window);
+  await loadDemoIfEmpty(page);
   await expect.poll(async () => (await page.evaluate(() => window.__MOTOR_E2E__!.demoAcceptanceSnapshot())).studies.length).toBe(1);
   const study = (await page.evaluate(() => window.__MOTOR_E2E__!.demoAcceptanceSnapshot())).studies[0]!;
   const scenario = study.scenarios[0]!;
@@ -84,7 +85,7 @@ test('20 warm samples stay inside presentation and interaction budgets', async (
     longTaskPhases.push(...openingTasks.map(() => 'opening'));
     const section = await page.evaluate(async (target) => {
       const started = performance.now();
-      document.querySelector<HTMLAnchorElement>(`a[href="#${target}"]`)!.click();
+      document.getElementById(target)!.scrollIntoView({ behavior: 'instant' });
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
       const ended = performance.now();
       return { duration: ended - started, started, ended };

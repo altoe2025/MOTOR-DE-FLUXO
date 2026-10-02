@@ -3,17 +3,25 @@ import { useMemo, useState } from 'react';
 import { formatMoney } from '../presentation/format';
 import type { ScenarioDocument } from '../study/model';
 import { Button } from '../ui/Button';
-import { describeLevers, NEUTRAL_LEVERS, type Levers } from './applyLevers';
+import { describeLevers, isNeutralLevers, NEUTRAL_LEVERS, type Levers } from './applyLevers';
 import { companyResolver } from './companies';
-import { combinationPreset, companySubsets, leverBaseAvailable } from './leverScenario';
+import { compositionSubsets, leverBaseAvailable } from './leverScenario';
+
+const MAX_COMPOSITION_COMPANIES = 8;
 
 type DeadlineMode = Levers['deadline']['mode'];
 
-export function LeverBuilder({ base, progress, onCreate, onCreateCombinations }: Readonly<{
+/**
+ * Sem `applyToBase`: cada alavanca vira uma variação nova do estudo, e a Composição gera
+ * todas as combinações das empresas que ficaram na composição. Com `applyToBase` (combinação de carteiras): a alavanca
+ * altera a própria carteira, e as combinações são geradas depois, no diagnóstico.
+ */
+export function LeverBuilder({ base, progress, applyToBase = false, onCreate, onCreateCombinations }: Readonly<{
   base: ScenarioDocument;
   progress?: string | null;
+  applyToBase?: boolean;
   onCreate(levers: Levers): Promise<void>;
-  onCreateCombinations(subsets: readonly (readonly string[])[], companies: readonly string[]): Promise<void>;
+  onCreateCombinations?(subsets: readonly (readonly string[])[], companies: readonly string[]): Promise<void>;
 }>) {
   const orders = base.sourceSnapshot.orders;
   const companyOf = useMemo(() => companyResolver(base.sourceSnapshot.source), [base.sourceSnapshot.source]);
@@ -31,13 +39,14 @@ export function LeverBuilder({ base, progress, onCreate, onCreateCombinations }:
   const [showOrders, setShowOrders] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [manual, setManual] = useState<Set<string>>(new Set());
+  const [leftOut, setLeftOut] = useState<Set<string>>(new Set());
 
   if (!leverBaseAvailable(base) || groups.length === 0) {
     return <section className="lever-builder" aria-labelledby="lever-title">
       <h2 id="lever-title">Alavancas</h2>
-      <p className="field-hint">Alavancas funcionam sobre cenários com ordens explícitas (caso importado ou variação). “{base.name}” é sintético.</p>
-      <p className="field-hint">Para comparar combinações de empresas, abra “Nova combinação de carteiras” em Estudos e selecione de 2 a 8 empresas.</p>
+      <p className="field-hint">{applyToBase
+        ? 'Escolha as empresas no Passo 1 para liberar as alavancas.'
+        : `Alavancas funcionam sobre cenários com ordens explícitas (caso importado ou variação). “${base.name}” é sintético.`}</p>
     </section>;
   }
 
@@ -49,11 +58,13 @@ export function LeverBuilder({ base, progress, onCreate, onCreateCombinations }:
     shiftDays: Number(shift),
     deadline: deadlineMode === 'KEEP' ? { mode: 'KEEP' } : { mode: deadlineMode, days: Number(deadlineDays) },
   };
+  const neutral = isNeutralLevers(levers);
   const reset = () => {
     setRemoveCompany(false); setRemoved(new Set()); setVolumeIn('1'); setVolumeOut('1'); setSpacing('1');
     setShift('0'); setDeadlineMode('KEEP'); setDeadlineDays('0');
   };
   const create = async () => {
+    if (applyToBase && neutral) return;
     setBusy(true); setError(null);
     try {
       await onCreate(levers);
@@ -64,27 +75,21 @@ export function LeverBuilder({ base, progress, onCreate, onCreateCombinations }:
       setBusy(false);
     }
   };
-  const allSubsets = groups.length >= 2 && groups.length <= 8 ? companySubsets(groups) : [];
-  const alone = combinationPreset('ALONE', groups);
-  const leaveOneOut = combinationPreset('LEAVE_ONE_OUT', groups);
-  const manualSubset = groups.filter((item) => manual.has(item));
-  const createCombinations = async (subsets: readonly (readonly string[])[]) => {
-    if (subsets.length === 0) return;
+  const included = groups.filter((item) => !leftOut.has(item));
+  const tooMany = included.length > MAX_COMPOSITION_COMPANIES;
+  const composition = tooMany ? [] : compositionSubsets(included, groups);
+  const compose = async () => {
+    if (composition.length === 0 || onCreateCombinations === undefined) return;
     setBusy(true); setError(null);
     try {
-      await onCreateCombinations(subsets, groups);
-      setManual(new Set());
+      await onCreateCombinations(composition, groups);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Não foi possível criar as combinações.');
     } finally {
       setBusy(false);
     }
   };
-  const createAll = () => {
-    if (!window.confirm(`Criar ${allSubsets.length} variações, uma para cada combinação de ${groups.join(', ')}?`)) return;
-    void createCombinations(allSubsets);
-  };
-  const toggleManual = (company: string) => setManual((current) => {
+  const toggleLeftOut = (company: string) => setLeftOut((current) => {
     const next = new Set(current);
     if (!next.delete(company)) next.add(company);
     return next;
@@ -97,12 +102,14 @@ export function LeverBuilder({ base, progress, onCreate, onCreateCombinations }:
 
   return <section className="lever-builder" aria-labelledby="lever-title">
     <h2 id="lever-title">Alavancas</h2>
-    <p className="field-hint">Cria uma variação de “{base.name}” como cenário novo deste estudo. O original não muda. Rode o diagnóstico para comparar.</p>
+    <p className="field-hint">{applyToBase
+      ? 'Altera a carteira acima (volume, datas, prazo ou ordens de uma empresa). Todas as combinações usam a carteira alterada. Para desfazer, aplique de novo as empresas no Passo 1.'
+      : `Cria uma variação de “${base.name}” como cenário novo deste estudo. O original não muda. Rode o diagnóstico para comparar.`}</p>
     <div className="lever-grid">
       <label>Empresa<select value={group} onChange={(event) => { setGroup(event.target.value); setRemoved(new Set()); }}>
         {groups.map((item) => <option key={item} value={item}>{item}</option>)}
       </select></label>
-      <label className="checkbox-field"><input type="checkbox" checked={removeCompany} onChange={(event) => setRemoveCompany(event.target.checked)} /> Tirar a empresa inteira</label>
+      {applyToBase ? null : <label className="checkbox-field"><input type="checkbox" checked={removeCompany} onChange={(event) => setRemoveCompany(event.target.checked)} /> Tirar a empresa inteira</label>}
     </div>
     {removeCompany ? null : <>
       <div className="lever-grid">
@@ -132,40 +139,29 @@ export function LeverBuilder({ base, progress, onCreate, onCreateCombinations }:
         </table>
       </div> : null}
     </>}
-    {groups.length < 2 ? null : <div className="lever-combinations">
+    {applyToBase || groups.length < 2 ? null : <div className="lever-combinations">
       <h3>Composição</h3>
       <p className="field-hint">
-        Cada variação usa as mesmas ordens, valores, datas, período e premissas de “{base.name}”, só sem as empresas de fora.
-        Depois, no diagnóstico, “Rodar todas” e compare. “Cada empresa sozinha” alimenta a origem da economia de cada empresa.
+        Cria uma variação para cada combinação das empresas abaixo, com as mesmas ordens, valores, datas, período e premissas
+        de “{base.name}”. Clique no nome de uma empresa para tirá-la da composição (clique de novo para devolver).
+        Depois, no diagnóstico, “Rodar todas” e compare.
       </p>
-      <div className="source-actions">
-        <Button variant="secondary" disabled={busy} onClick={() => void createCombinations(alone)}>Cada empresa sozinha ({alone.length})</Button>
-        {leaveOneOut.length === 0 ? null
-          : <Button variant="secondary" disabled={busy} onClick={() => void createCombinations(leaveOneOut)}>Retirar uma por vez ({leaveOneOut.length})</Button>}
+      <div className="composition-companies" role="group" aria-label="Empresas da composição">
+        {groups.map((item) => <button key={item} type="button" className="composition-company" aria-pressed={!leftOut.has(item)}
+          title={leftOut.has(item) ? `Devolver ${item} à composição` : `Tirar ${item} da composição`} onClick={() => toggleLeftOut(item)}>{item}</button>)}
       </div>
-      <fieldset className="lever-manual">
-        <legend>Escolher as empresas de uma variação</legend>
-        {groups.map((item) => <label key={item} className="checkbox-field">
-          <input type="checkbox" aria-label={`Incluir ${item}`} checked={manual.has(item)} onChange={() => toggleManual(item)} /> {item}
-        </label>)}
-        <Button variant="secondary" disabled={busy || manualSubset.length === 0 || manualSubset.length === groups.length}
-          onClick={() => void createCombinations([manualSubset])}>Criar com as marcadas</Button>
-      </fieldset>
-      <details className="lever-advanced">
-        <summary>{allSubsets.length === 0
-          ? `Avançado: todas as combinações (indisponível com ${groups.length} empresas; máximo 8)`
-          : `Avançado: todas as combinações (${allSubsets.length} variações)`}</summary>
-        {allSubsets.length === 0 ? null : <>
-          <p className="field-hint">Cria uma variação para cada grupo possível de empresas. Com muitas empresas, a lista e o tempo de “Rodar todas” crescem rápido.</p>
-          <Button variant="secondary" disabled={busy} onClick={createAll}>Criar as {allSubsets.length} variações</Button>
-        </>}
-      </details>
+      {tooMany ? <p className="field-hint">A composição aceita no máximo {MAX_COMPOSITION_COMPANIES} empresas; tire {included.length - MAX_COMPOSITION_COMPANIES} para continuar.</p> : null}
+      <div className="source-actions">
+        <Button data-chat-help-id="control.alavancas.combinacoes" disabled={busy || composition.length === 0} onClick={() => void compose()}>
+          Fazer composição ({composition.length} {composition.length === 1 ? 'combinação' : 'combinações'})
+        </Button>
+      </div>
       {progress ? <p role="status">{progress}</p> : null}
     </div>}
     {error === null ? null : <p role="alert" className="field-error">{error}</p>}
     <div className="source-actions">
-      <span className="field-hint">Variação: {describeLevers(levers)}</span>
-      <Button data-chat-help-id="control.alavancas.criar" disabled={busy} onClick={() => void create()}>{busy ? 'Criando…' : 'Criar variação'}</Button>
+      <span className="field-hint">{applyToBase ? 'Alteração' : 'Variação'}: {describeLevers(levers)}</span>
+      <Button data-chat-help-id={applyToBase ? 'control.alavancas.aplicar-carteira' : 'control.alavancas.criar'} disabled={busy || (applyToBase && neutral)} onClick={() => void create()}>{busy ? (applyToBase ? 'Aplicando…' : 'Criando…') : applyToBase ? 'Aplicar à carteira' : 'Criar variação'}</Button>
     </div>
   </section>;
 }

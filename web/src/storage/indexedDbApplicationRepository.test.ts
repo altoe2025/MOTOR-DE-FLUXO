@@ -33,6 +33,7 @@ import {
   StorageClosedError,
 } from './errors';
 import { IndexedDbApplicationRepository } from './indexedDbApplicationRepository';
+import * as repositoryModule from './indexedDbApplicationRepository';
 
 const PROJECT_REF = 'project-alpha';
 const OWNER_SUB = 'owner-a';
@@ -547,6 +548,33 @@ describe('observed cases', () => {
 });
 
 describe('studies', () => {
+  it('indexa cada execução uma vez e preserva a associação ao estudo em escala', () => {
+    const groupExecutions = Reflect.get(repositoryModule, 'groupExecutionsByStudyId');
+    expect(groupExecutions).toBeTypeOf('function');
+    if (typeof groupExecutions !== 'function') return;
+
+    let studyIdReads = 0;
+    const rows = Array.from({ length: 1_000 }, (_, index) => {
+      const row = { execution_id: `execution-${index}`, study_id: '' };
+      Object.defineProperty(row, 'study_id', {
+        enumerable: true,
+        get: () => {
+          studyIdReads += 1;
+          return `study-${index % 25}`;
+        },
+      });
+      return row;
+    });
+
+    const grouped = groupExecutions(rows) as Map<string, typeof rows>;
+
+    expect(studyIdReads).toBe(rows.length);
+    expect(grouped).toHaveLength(25);
+    expect(grouped.get('study-7')?.map((row) => row.execution_id)).toEqual(
+      Array.from({ length: 40 }, (_, index) => `execution-${7 + index * 25}`),
+    );
+  });
+
   it('round-trips exact documents, filters trash, restores and purges', async () => {
     const target = repository();
     const original = await study();

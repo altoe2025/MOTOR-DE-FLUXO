@@ -1,9 +1,4 @@
-/* Prévia MOT-100: linguagem de feat/front-visual, sem alterações no motor. */
-.session-label { border-color: var(--border); color: var(--ink); }
-.session-label small, .product-kicker { color: var(--muted); }
-.session-signout { color: var(--ink); border-color: var(--border); }
-.session-signout:hover { background: var(--hover); }
-.workspace-header .theme-toggle { flex: none; }
+/* Análise de carteiras no sistema visual compartilhado do console. */
 .destination-page:has(.portfolio-analysis) { max-width: none; }
 .portfolio-analysis { --portfolio-gap: 24px; font-size: .9rem; }
 .portfolio-analysis > h2 { font-size: 1.2rem; margin: 32px 0 16px; }

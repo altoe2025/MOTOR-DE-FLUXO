@@ -52,6 +52,13 @@ function transientState(snapshot: JobSnapshot): DiagnosticViewState {
   };
 }
 
+export function diagnosticFailureMessage(error: Readonly<{ code: string; message: string }> | null): string {
+  if (error?.code === 'ACESSO_NAO_PERMITIDO') {
+    return 'Esta conta entrou, mas ainda não está autorizada a executar diagnósticos no servidor.';
+  }
+  return error?.message ?? 'Não foi possível concluir o diagnóstico.';
+}
+
 function persistedState(execution: DiagnosticExecutionRecord | null): DiagnosticViewState | null {
   if (execution === null) return null;
   if (execution.status === 'QUEUED') {
@@ -114,6 +121,9 @@ export function StudyDiagnosticPage() {
   const [runAllProgress, setRunAllProgress] = useState<string | null>(null);
   const [comparisonOpen, setComparisonOpen] = useState(false);
   const cancelInFlightRef = useRef(false);
+  // Trava síncrona: dois cliques no mesmo instante chegam antes de `runInProgress` re-renderizar.
+  const runInFlightRef = useRef(false);
+  const batchCancelRequested = useRef(false);
   const identityToken = useRef(0);
   const activeIdentity = useRef(screenIdentity);
 
@@ -124,6 +134,7 @@ export function StudyDiagnosticPage() {
     mounted.current = true;
     resumedAttempts.current = new Set();
     batchToken.current = null;
+    batchCancelRequested.current = false;
     setViewState(null);
     setRunInProgress(false);
     setRunAllProgress(null);
@@ -185,12 +196,17 @@ export function StudyDiagnosticPage() {
     if (!mounted.current || activeIdentity.current !== screenIdentity) return;
     const current = controller.snapshot.document;
     if (current !== null) setStudy(current);
-    if (attempt.status === 'FAILED') setViewState({ kind: 'FAILED', attemptId: attempt.attemptId, publicMessage: 'Não foi possível concluir o diagnóstico. A tentativa anterior foi preservada no histórico.' });
+    if (attempt.status === 'FAILED') {
+      const publicMessage = diagnosticFailureMessage(attempt.error);
+      setViewState({ kind: 'FAILED', attemptId: attempt.attemptId,
+        publicMessage: `${publicMessage} A tentativa foi preservada no histórico.` });
+    }
     else setViewState({ kind: attempt.status, attemptId: attempt.attemptId });
   }, [controller, screenIdentity]);
 
   const run = useCallback(async () => {
-    if (study === null || scenario === null || runInProgress) return;
+    if (study === null || scenario === null || runInProgress || runInFlightRef.current) return;
+    runInFlightRef.current = true;
     setRunInProgress(true);
     try {
       const result = await executeStudyDiagnostic({
@@ -217,7 +233,10 @@ export function StudyDiagnosticPage() {
       if (mounted.current) setViewState(controller.snapshot.status === 'STORAGE_FAILURE'
         ? { kind: 'STORAGE_FAILURE', message: 'O resultado não pôde ser salvo. Nenhum novo cálculo foi iniciado.' }
         : { kind: 'FAILED', attemptId: 'não persistida', publicMessage });
-    } finally { if (mounted.current) setRunInProgress(false); }
+    } finally {
+      runInFlightRef.current = false;
+      if (mounted.current) setRunInProgress(false);
+    }
   }, [complete, controller, effectiveCount, runInProgress, scenario, study, trackedApi]);
 
   useEffect(() => {
@@ -232,13 +251,14 @@ export function StudyDiagnosticPage() {
     if (study === null || study.id !== studyId || runInProgress || runAllProgress !== null || batchToken.current !== null) return;
     const token = identityToken.current;
     batchToken.current = token;
+    batchCancelRequested.current = false;
     const isActive = () => mounted.current && identityToken.current === token;
     const pending = study.scenarios.filter((item) => currentDiagnostic(study, item) === null
       && (!combinationStudy || isCurrentCombinationScenario(study, item)));
     setRunInProgress(true);
     try {
       for (const [index, item] of pending.entries()) {
-        if (!isActive()) return;
+        if (!isActive() || batchCancelRequested.current) return;
         setRunAllProgress(`Rodando ${index + 1} de ${pending.length}…`);
         const itemCount = item.sourceSnapshot.generationInputSnapshot !== undefined ? count : 1;
         const attempt = await executeStudyDiagnostic({
@@ -256,8 +276,10 @@ export function StudyDiagnosticPage() {
               scenario: currentScenario, count: itemCount, baseSeed: attemptId, previewRequest: preview,
             });
           },
+          ...(combinationStudy ? { persistence: 'TERMINAL_ONLY' as const } : {}),
         });
         if (!isActive()) return;
+        if (batchCancelRequested.current) return;
         if (attempt.status !== 'SUCCEEDED') {
           complete(attempt);
           return;
@@ -269,7 +291,11 @@ export function StudyDiagnosticPage() {
       if (isActive()) setViewState({ kind: 'FAILED', attemptId: 'não persistida', publicMessage: 'Não foi possível rodar todas as variações. As que terminaram ficaram salvas.' });
     } finally {
       if (batchToken.current === token) batchToken.current = null;
-      if (isActive()) { setRunAllProgress(null); setRunInProgress(false); }
+      if (isActive()) {
+        batchCancelRequested.current = false;
+        setRunAllProgress(null);
+        setRunInProgress(false);
+      }
     }
   }, [client, combinationStudy, complete, controller, count, runAllProgress, runInProgress, study, studyId]);
 
@@ -282,6 +308,12 @@ export function StudyDiagnosticPage() {
     setSearchParams(next, { replace: true });
     void runAll();
   }, [combinationOverview, runAll, runAllRequested, runInProgress, screenIdentity, searchParams, setSearchParams, study, studyId]);
+
+  const cancelBatch = () => {
+    if (!runInProgress || runAllProgress === null) return;
+    batchCancelRequested.current = true;
+    setRunAllProgress('Cancelando após a combinação atual…');
+  };
 
   const cancel = async () => {
     if (scenario === null || cancelInFlightRef.current) return;
@@ -340,10 +372,13 @@ export function StudyDiagnosticPage() {
         : `Cenário: ${scenario?.name ?? '…'}. Custo sem pool é cada ordem remetendo sozinha; custo com pool é o que sobra depois do netting.`}</p>
     {study === null || scenario === null ? <DiagnosticStatus state={viewState ?? { kind: 'UNAVAILABLE', reason: 'Carregando estudo…' }} /> : combinationStudy ? <>
       {combinationOverview ? <>
-        <p><Link to={`/carteira/${encodeURIComponent(study.id)}`}>Alterar empresas e premissas</Link></p>
-        <Button onClick={() => void runAll()} disabled={runInProgress || controller.snapshot.status === 'STORAGE_FAILURE'}>
+        <p><Link to={`/carteira/${encodeURIComponent(study.id)}`}>Alterar empresas, premissas e alavancas</Link></p>
+        <Button data-chat-help-id="control.diagnostico.combinacoes" onClick={() => void runAll()} disabled={runInProgress || controller.snapshot.status === 'STORAGE_FAILURE'}>
           Diagnosticar combinações
         </Button>
+        {runAllProgress === null ? null : <Button variant="secondary" data-chat-help-id="control.diagnostico.cancelar-lote" onClick={cancelBatch}>
+          Cancelar lote
+        </Button>}
         <p className="field-hint">{study.scenarios.filter((item) => isCurrentCombinationScenario(study, item)).length} composições preparadas. Os diagnósticos atuais são reaproveitados.</p>
         {runAllProgress === null ? null : <p role="status" aria-live="polite">{runAllProgress}</p>}
         {viewState === null || viewState.kind === 'SUCCEEDED' ? null : <DiagnosticStatus state={viewState} />}
@@ -359,7 +394,7 @@ export function StudyDiagnosticPage() {
       </>}
     </> : <>
       <DiagnosticControls generated={generated} count={effectiveCount} onCountChange={setCount} onRun={() => void run()} disabled={runInProgress || controller.snapshot.status === 'STORAGE_FAILURE'} />
-      {study.scenarios.length < 2 ? null : <Button variant="secondary" className="comparison-toggle"
+      {study.scenarios.length < 2 ? null : <Button variant="secondary" data-chat-help-id="control.diagnostico.mostrar-quadros" className="comparison-toggle"
         aria-expanded={comparisonOpen} aria-controls="variation-comparison-panel" onClick={() => setComparisonOpen((open) => !open)}>
         {comparisonOpen ? 'Ocultar quadros comparativos' : 'Abrir quadros comparativos'}
       </Button>}

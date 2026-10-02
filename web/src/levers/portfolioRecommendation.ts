@@ -4,6 +4,7 @@ import { canonical } from '../study/fingerprints';
 import type { DiagnosticExecutionRecord, PreviewEnvelope, StudyDocument } from '../study/model';
 import { companyResolver } from './companies';
 import type { ScenarioRow } from './savingsOrigin';
+import { isCurrentCombinationScenario } from './prepareCombinationStudy';
 
 export type PortfolioCandidate = Readonly<{
   scenarioId: string;
@@ -106,7 +107,14 @@ function measuredPortfolio(envelope: PreviewEnvelope): Readonly<{ volume: Decima
 
 /** Greatest total BRL savings among comparable tested portfolios within the optional mean-wait limit. */
 export function recommendPortfolios(study: StudyDocument, maxWaitDays: number | null): PortfolioRecommendation {
-  const rows = study.scenarios.map((scenario) => executionRow(study, scenario));
+  // Numa combinação de carteiras, combinações de uma carteira anterior (antes de trocar empresas ou
+  // aplicar alavancas) ficam guardadas para reaproveitar resultados, mas não concorrem.
+  const scenarios = study.studyType === 'PORTFOLIO_COMBINATIONS'
+    ? study.scenarios.filter((scenario) => isCurrentCombinationScenario(study, scenario)) : study.scenarios;
+  const rows = scenarios.map((scenario) => executionRow(study, scenario));
+  // Na combinação, o cenário base é a carteira inteira; o nome dele descreve as alavancas aplicadas.
+  const nameOf = (scenario: StudyDocument['scenarios'][number]) =>
+    study.studyType === 'PORTFOLIO_COMBINATIONS' && scenario.id === study.baseScenarioId ? 'Todas as empresas juntas' : scenario.name;
   const reference = rows.find((row) => row.scenario.id === study.baseScenarioId);
   const candidates: PortfolioCandidate[] = [];
   const excluded: PortfolioExclusion[] = [];
@@ -127,12 +135,12 @@ export function recommendPortfolios(study: StudyDocument, maxWaitDays: number | 
       } else {
         const companyOf = companyResolver(row.execution.sourceSnapshot.source);
         const companies = [...new Set(row.envelope.input_snapshot.cenario.ordens.map((order) => companyOf(order.id)))].sort();
-        candidates.push({ scenarioId: row.scenario.id, name: row.scenario.name, companies,
+        candidates.push({ scenarioId: row.scenario.id, name: nameOf(row.scenario), companies,
           savings: savings.toFixed(), volume: metrics.volume.toFixed(), waitDays: metrics.wait.toNumber(),
           eligible: maxWaitDays === null || (Number.isFinite(maxWaitDays) && maxWaitDays >= 0 && metrics.wait.lte(maxWaitDays)) });
       }
     }
-    if (reason !== null) excluded.push({ scenarioId: row.scenario.id, name: row.scenario.name, reason });
+    if (reason !== null) excluded.push({ scenarioId: row.scenario.id, name: nameOf(row.scenario), reason });
   }
   candidates.sort((left, right) => new Decimal(right.savings).comparedTo(left.savings));
   return { candidates, winner: candidates.find((candidate) => candidate.eligible) ?? null, excluded };

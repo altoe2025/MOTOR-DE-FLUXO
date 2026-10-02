@@ -6,6 +6,7 @@ import { describeSource } from '../sourceSummary';
 
 export type StudyListProps = Readonly<{
   studies: readonly StudyDocument[]; selectedId: string | null; onCreate(): void; onCreateCombinations?(): void;
+  createCombinationsDisabled?: boolean;
   onOpen(id: string): void; onRename(study: StudyDocument): void; onDuplicate(study: StudyDocument): void;
   onRestore(study: StudyDocument): void; onDelete(study: StudyDocument): void;
   onExport?(study: StudyDocument): void;
@@ -17,13 +18,21 @@ function sourceLabel(study: StudyDocument): string {
   return scenario === undefined ? 'Sem origem' : describeSource(scenario, [], []).label;
 }
 
-export function StudyList({ studies, selectedId, onCreate, onCreateCombinations, onOpen, onRename, onDuplicate, onRestore, onDelete, onExport }: StudyListProps) {
+export function StudyList({ studies, selectedId, onCreate, onCreateCombinations, createCombinationsDisabled = false, onOpen, onRename, onDuplicate, onRestore, onDelete, onExport }: StudyListProps) {
   const [showTrash, setShowTrash] = useState(false);
   const visibleStudies = studies.filter((study) => (study.deletedAt !== null) === showTrash);
   return <>
+    {showTrash ? null : <div className="create-options">
+      <div className="create-option">
+        <Button data-chat-help-id="control.estudos.novo" onClick={onCreate}>Novo estudo</Button>
+        <p className="field-hint">Rode o que quiser: escolha as empresas, mexa nas alavancas e compare os cenários.</p>
+      </div>
+      {onCreateCombinations === undefined ? null : <div className="create-option">
+        <Button variant="secondary" data-chat-help-id="control.estudos.nova-combinacao" disabled={createCombinationsDisabled} onClick={onCreateCombinations}>Nova combinação de carteiras</Button>
+        <p className="field-hint">Escolha as empresas e ajuste as alavancas; todas as combinações entre elas são testadas e a tela diz qual carteira atende melhor.</p>
+      </div>}
+    </div>}
     <div className="list-toolbar">
-      {!showTrash && <Button onClick={onCreate}>Novo estudo</Button>}
-      {!showTrash && onCreateCombinations !== undefined ? <Button variant="secondary" onClick={onCreateCombinations}>Nova combinação de carteiras</Button> : null}
       <Button variant="secondary" onClick={() => setShowTrash((current) => !current)}>
         {showTrash ? 'Voltar aos estudos' : 'Lixeira de estudos'}
       </Button>
@@ -44,7 +53,7 @@ export function StudyList({ studies, selectedId, onCreate, onCreateCombinations,
               ? <Button variant="secondary" aria-label={`Restaurar ${study.name}`} onClick={() => onRestore(study)}>Restaurar</Button>
               : <><Button variant="secondary" aria-label={`Renomear ${study.name}`} onClick={() => onRename(study)}>Renomear</Button>
                 <Button variant="secondary" aria-label={`Duplicar ${study.name}`} onClick={() => onDuplicate(study)}>Duplicar</Button>
-                {onExport === undefined ? null : <Button variant="secondary" aria-label={`Exportar ${study.name}`} onClick={() => onExport(study)}>Exportar</Button>}
+                {onExport === undefined ? null : <Button variant="secondary" data-chat-help-id="control.estudos.exportar" aria-label={`Exportar ${study.name}`} onClick={() => onExport(study)}>Exportar</Button>}
                 <Button variant="secondary" aria-label={`Excluir ${study.name}`} onClick={() => onDelete(study)}>Excluir</Button></>}
           </div>
         </li>)}

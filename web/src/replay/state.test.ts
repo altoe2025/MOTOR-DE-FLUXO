@@ -3,6 +3,14 @@ import { describe, expect, it } from 'vitest';
 import { nextClosingDay, replayStateAt, replayTransition, sortOpenOrders } from './state';
 import { replayDocumentFixture } from './testFixtures';
 
+function freezeDeep<T>(value: T): T {
+  if (value !== null && typeof value === 'object' && !Object.isFrozen(value)) {
+    for (const child of Object.values(value)) freezeDeep(child);
+    Object.freeze(value);
+  }
+  return value;
+}
+
 describe('estado determinístico do replay', () => {
   it('reconstrói dias vazios e preserva o saldo parcialmente coberto', () => {
     const replay = replayDocumentFixture();
@@ -22,6 +30,22 @@ describe('estado determinístico do replay', () => {
     expect(replayStateAt(replay, 2).openOrders).toEqual([]);
     expect(replayStateAt(replay, 0)).toEqual(replayStateAt(structuredClone(replay), 0));
     expect(replayStateAt(replay, 1)).toEqual(replayStateAt(replay, 1));
+  });
+
+  it('reaproveita o estado já reconstruído para o mesmo documento e dia', () => {
+    const replay = freezeDeep(replayDocumentFixture());
+
+    expect(replayStateAt(replay, 1)).toBe(replayStateAt(replay, 1));
+    expect(Object.isFrozen(replayStateAt(replay, 1).openOrders[0])).toBe(true);
+  });
+
+  it('não reutiliza estado de um documento mutável que mudou no lugar', () => {
+    const replay = replayDocumentFixture();
+    replayStateAt(replay, 0);
+
+    replay.days[0]!.end_state.open_out_brl = '61';
+
+    expect(() => replayStateAt(replay, 0)).toThrow(/não reconcilia/i);
   });
 
   it('expõe transições sem inventar contrapartes e liquida a ordem no evento correto', () => {

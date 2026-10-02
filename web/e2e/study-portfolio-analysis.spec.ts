@@ -126,7 +126,8 @@ test('63 carteiras sintéticas diagnosticadas pelo motor real permitem explorar 
   await expect(analysis.getByRole('region', { name: `Detalhes da composição: ${selectedName}` })).toBeVisible();
   await expect(analysis.getByRole('heading', { name: /Composição recomendada:/ })).toHaveText(defaultWinner);
 
-  const marginal = analysis.getByRole('region', { name: new RegExp(`^Contribuição marginal: ${selectedName}$`) });
+  const marginal = analysis.getByRole('region', { name: `Contribuição marginal: ${selectedName}`, exact: true });
+  await expect(marginal).toBeVisible();
   await marginal.getByText('Ver todos os valores: antes, depois e diferença', { exact: true }).click();
   const counterpart = marginal.getByRole('button', { name: /^Analisar composição / }).first();
   await expect(counterpart).toBeVisible();

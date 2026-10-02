@@ -5,6 +5,14 @@ front-end atualizados em 2026-09-30.
 
 ## Comece por aqui
 
+**Integração do Live (2026-09-30):** referência publicada `29d955c`, com 52 commits
+posteriores à main `3342059`. A integração autorizada em `codex/main-render-sync`
+preserva o deploy do Render e acrescenta correções verificadas para falha do
+IndexedDB, edição da janela, teto da coorte com aquecimento e prontidão do contexto
+do chat. Plano e evidências em
+`docs/superpowers/plans/2026-09-30-main-render-sync.md`. Consulte o diário e o PR
+para o resultado dos gates e do merge. Os estados históricos abaixo são datados.
+
 **Consolidação em andamento (2026-09-25):** `codex/integracao-etapas-5-6`
 reúne as Etapas 5/6, finalidade opcional e a bancada do Claude
 (`feat/bancada-exploracao`). Inclui quadro `/quadro`, alavancas por empresa e
@@ -24,7 +32,7 @@ verde e o aceite técnico da Etapa 3 é **PASS**, incluindo prova browser espec�
 de teclado e zoom a 200% na página nova de diagnóstico robusto. Não houve push, PR,
 CI publicado, aprovação de merge ou merge desta branch.
 
-**MOT-100 em validação local:** a branch `codex/carteiras-analise` reúne a análise
+**MOT-100 aprovada, em preparação de publicação:** a branch `codex/carteiras-analise` reúne a análise
 de combinações por objetivos e filtros, alternativas, detalhes, contribuição
 marginal e uma prévia local. Após o aceite visual de 2026-10-01, gráfico/Pareto e
 tabela completa deixaram de ser renderizados na tela principal. Métricas e seleção
@@ -33,8 +41,10 @@ marginais, em `portfolioMarginal.ts` e `PortfolioMarginalPanel.tsx`. A interface
 a aceitação manual estão descritas em `docs/frontend/carteiras-analise-aceitacao.md`;
 o launcher é `scripts/preview_carteiras.py` e o aceite integrado está em
 `web/e2e/study-portfolio-analysis.spec.ts`, que exercita 6 empresas sintéticas,
-14 ordens e 63 combinações. Esta branch continua somente local:
-sem push, PR, integração à `main` ou deploy, aguardando o aceite manual do Gabriel.
+14 ordens e 63 combinações. Gabriel aprovou a interface em 2026-10-02 e autorizou
+commit, merge e deploy após validação. A integração preserva o shell/tema, Replay e
+proteções de concorrência da `main`; CI e publicação devem ser confirmados no PR
+e no registro de deploy, não inferidos do aceite visual.
 
 ```
 main

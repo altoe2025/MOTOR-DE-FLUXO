@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { strToU8, unzipSync, zipSync } from 'fflate';
 import type { ChatConversation } from '../src/chat/domain';
 import type { ChatRequest, ChatResponse } from '../src/api/client';
+import { loadDemoIfEmpty } from './helpers/demo';
 
 const OWNER = '00000000-0000-4000-8000-000000000021';
 const REFUSAL = 'Posso ajudar apenas com o Motor de Fluxo, o funcionamento da aplicação e os dados deste projeto.';
@@ -14,7 +15,7 @@ const messages = (page: Page) => panel(page).getByRole('list', { name: 'Mensagen
 
 async function demo(page: Page) {
   await page.goto('/estudos');
-  await page.waitForFunction(() => '__MOTOR_E2E__' in window);
+  await loadDemoIfEmpty(page);
   await expect.poll(async () => (await page.evaluate(() => (window.__MOTOR_E2E__ as unknown as Bridge).demoAcceptanceSnapshot())).studies.length).toBe(1);
   return (await page.evaluate(() => (window.__MOTOR_E2E__ as unknown as Bridge).demoAcceptanceSnapshot())).studies[0]!;
 }

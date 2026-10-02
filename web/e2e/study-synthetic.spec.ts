@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { expectCanonicalPreview, persistedPreviews } from './helpers/persistedPreview';
+import { runCanonicalDiagnostic, persistedDiagnostics } from './helpers/persistedDiagnostic';
 
 test('synthetic and manual portfolios use the preparation service and persist after reload', async ({ page }) => {
   const preparations: string[] = [];
@@ -19,29 +19,28 @@ test('synthetic and manual portfolios use the preparation service and persist af
   const studyId = page.url().split('/').at(-1)!;
   await expect.poll(() => page.evaluate((id) => window.__MOTOR_E2E__!.studySource(id), studyId))
     .toBe('SYNTHETIC:exportadores');
-  await page.getByRole('button', { name: 'Executar cenário atual' }).click();
-  const synthetic = await expectCanonicalPreview(page, studyId);
+  const synthetic = await runCanonicalDiagnostic(page, studyId);
   expect(synthetic.sourceSnapshot?.source).toMatchObject({ kind: 'SYNTHETIC', recipe: { exampleId: 'exportadores' } });
+  await page.goto(`/carteira/${studyId}`);
   await page.reload();
   await page.getByRole('button', { name: 'Trocar origem' }).click();
   await expect(page.getByRole('radio', { name: 'Carteira gerada (exemplo)' })).toBeChecked();
   await expect(page.getByLabel('Escolha do exemplo sintético')).toHaveValue('exportadores');
-  expect(await persistedPreviews(page, studyId)).toEqual([synthetic]);
+  expect(await persistedDiagnostics(page, studyId)).toEqual([synthetic]);
 
   await page.getByRole('radio', { name: 'Montar à mão (avançado)' }).check();
   await page.getByLabel('Nome do grupo').fill('Nome local que não cruza a rede');
   await page.getByRole('button', { name: 'Preparar carteira manual' }).click();
   await expect.poll(() => page.evaluate((id) => window.__MOTOR_E2E__!.studySource(id), studyId))
     .toBe('AUTHORED');
-  await page.getByRole('button', { name: 'Executar cenário atual' }).click();
-  await expect.poll(async () => (await persistedPreviews(page, studyId)).length).toBe(2);
-  const authored = await expectCanonicalPreview(page, studyId, 2);
+  const authored = await runCanonicalDiagnostic(page, studyId);
   expect(authored.sourceSnapshot?.source.kind).toBe('AUTHORED');
+  await page.goto(`/carteira/${studyId}`);
   await page.reload();
   await page.getByRole('button', { name: 'Trocar origem' }).click();
   await expect(page.getByRole('radio', { name: 'Montar à mão (avançado)' })).toBeChecked();
-  expect(await persistedPreviews(page, studyId)).toEqual([synthetic, authored]);
-  await expect.poll(async () => (await persistedPreviews(page, studyId)).length).toBe(2);
+  expect(await persistedDiagnostics(page, studyId)).toEqual([synthetic, authored]);
+  await expect.poll(async () => (await persistedDiagnostics(page, studyId)).length).toBe(2);
 
   expect(preparations.length).toBeGreaterThanOrEqual(3);
   expect(preparations.every((body) => !body.includes('Nome local que não cruza a rede'))).toBe(true);

@@ -5,12 +5,13 @@ import { BrowserRouter } from 'react-router-dom';
 import { ApplicationProviders } from './app/providers';
 import { AppRoutes } from './app/router';
 import { AuthProvider } from './auth/AuthProvider';
+import { applyTheme, readStoredTheme } from './app/theme';
+import '@fontsource-variable/geist';
+import '@fontsource-variable/geist-mono';
 import './styles/tokens.css';
 import './styles/global.css';
-import './styles/frontConsole.css';
 import './styles/portfolioConsole.css';
 import './styles/print.css';
-import { applyTheme, readStoredTheme } from './app/theme';
 
 const root = document.getElementById('root');
 
@@ -18,9 +19,9 @@ if (root === null) {
   throw new Error('Elemento raiz da aplicação não encontrado.');
 }
 const rootElement = root;
+applyTheme(readStoredTheme());
 
 async function bootstrap() {
-  applyTheme(readStoredTheme());
   if (import.meta.env.MODE === 'e2e') {
     const { installE2EBridge } = await import('./e2eBridge');
     installE2EBridge();

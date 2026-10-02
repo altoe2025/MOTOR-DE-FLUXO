@@ -211,6 +211,41 @@ export async function appendScenarios(
     updatedAt,
   });
 }
+
+/**
+ * Substitui um lote interno de cenários em uma única revisão. Execuções ligadas a
+ * cenários descartados saem junto; execuções dos cenários preservados continuam.
+ */
+export async function replaceScenarioBatch(
+  study: StudyDocument,
+  retainedScenarioIds: ReadonlySet<string>,
+  drafts: readonly ScenarioDraft[],
+  now: string,
+): Promise<StudyDocument> {
+  if (!retainedScenarioIds.has(study.baseScenarioId)) {
+    throw new Error('O cenário base precisa ser preservado.');
+  }
+  const retained = study.scenarios.filter((scenario) => retainedScenarioIds.has(scenario.id));
+  if (retained.length !== retainedScenarioIds.size) {
+    throw new Error('Cenário preservado não encontrado no estudo.');
+  }
+  const ids = new Set(retained.map((scenario) => scenario.id));
+  const materialized: ScenarioDocument[] = [];
+  for (const draft of drafts) {
+    if (ids.has(draft.id)) throw new Error('ID de cenário já existe no lote.');
+    ids.add(draft.id);
+    materialized.push(await materializeScenario({ ...clone(draft), revision: 1 }));
+  }
+  return finalize({
+    ...clone(study),
+    scenarios: [...retained.map(clone), ...materialized],
+    executions: study.executions
+      .filter((execution) => retainedScenarioIds.has(execution.scenarioId))
+      .map(clone),
+    revision: study.revision + 1,
+    updatedAt: checkedInstant(now),
+  });
+}
 export async function appendCompositionHypothesis(
   study: StudyDocumentV3,
   input: Readonly<{

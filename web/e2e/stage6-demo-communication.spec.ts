@@ -2,8 +2,10 @@ import { expect, test, type Page } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { strToU8, unzipSync, zipSync } from 'fflate';
-import { AXIS_TITLES } from '../src/hypotheses/comparison';
+import { runCanonicalDiagnostic } from './helpers/persistedDiagnostic';
+import { seedWindowScenario, useDemoSamplingSeed } from './helpers/windowScenario';
 import { formatFraction, formatMoney } from '../src/presentation/format';
+import { loadDemoIfEmpty } from './helpers/demo';
 
 const OWNER = '00000000-0000-4000-8000-000000000021';
 const packageValue = JSON.parse(readFileSync(fileURLToPath(new URL('../src/demo/generated/demo-study.v1.json', import.meta.url)), 'utf8')) as {
@@ -47,6 +49,7 @@ async function snapshot(page: Page): Promise<DemoSnapshot> {
 }
 
 async function installedDemo(page: Page): Promise<DemoSnapshot> {
+  await loadDemoIfEmpty(page);
   await expect.poll(async () => (await snapshot(page)).studies.length, { timeout: 20_000 }).toBe(1);
   return snapshot(page);
 }
@@ -77,10 +80,15 @@ function importedWorkbook(): Buffer {
   return Buffer.from(zipSync(entries, { mtime: new Date('2020-01-01T00:00:00Z') }));
 }
 
-test('primeiro acesso instala uma vez; remoção não ressuscita e restauração é explícita', async ({ page }) => {
+test('primeiro acesso começa vazio; carregar instala uma vez; remoção não ressuscita', async ({ page }) => {
   await page.goto('/estudos');
   await expect(page.getByRole('heading', { name: 'Estudos' })).toBeVisible();
   await expect.poll(() => bridge(page)).toBe(true);
+  const empty = await snapshot(page);
+  expect(empty.studies).toHaveLength(0);
+  expect(empty.profiles).toHaveLength(0);
+  await expect(page.getByRole('button', { name: 'Carregar estudo demonstrativo' })).toBeVisible();
+  await loadDemoIfEmpty(page);
   const first = await installedDemo(page);
   expect(first.marker).toBe('INSTALLED');
   expect(first.studies).toHaveLength(1);
@@ -96,8 +104,7 @@ test('primeiro acesso instala uma vez; remoção não ressuscita e restauração
   await expect(page.getByRole('button', { name: 'Carregar estudo demonstrativo' })).toBeVisible();
   expect((await snapshot(page)).marker).toBe('REMOVED');
   expect((await snapshot(page)).studies).toHaveLength(0);
-  await page.getByRole('button', { name: 'Carregar estudo demonstrativo' }).click();
-  await expect(page).toHaveURL(/\/carteira\/[0-9a-f-]+$/);
+  await loadDemoIfEmpty(page);
   const restored = await snapshot(page);
   expect(restored.marker).toBe('INSTALLED');
   expect(restored.studies).toHaveLength(1);
@@ -135,14 +142,9 @@ test('Etapa 6: finalidade opcional executa XLSX e demo restaura com Estudo impor
   const caseId = new URL(profileUrl!, page.url()).searchParams.get('caseId')!;
   await page.getByLabel('Caso importado').selectOption(caseId);
   await page.getByRole('button', { name: 'Usar este caso' }).click();
-  await page.getByRole('button', { name: 'Executar cenário atual' }).click();
-  await expect.poll(() => page.evaluate((id) => window.__MOTOR_E2E__!.studyExecutionStatuses(id), importedStudyId)).toEqual(['RUNNING', 'SUCCEEDED']);
-  await page.goto(`/estudos/${importedStudyId}/diagnostico`);
-  await page.getByRole('button', { name: 'Executar diagnóstico', exact: true }).click();
-  await expect.poll(async () => (await page.request.get('/__e2e__/diagnostics/state')).json()).toMatchObject({ pending: 1 });
-  expect((await page.request.post('/__e2e__/diagnostics/release', { data: { fail: false } })).ok()).toBe(true);
-  await expect(page.getByRole('heading', { name: 'Resultado do motor' })).toBeVisible();
-  expect(await page.evaluate((id) => window.__MOTOR_E2E__!.studyExecutionStatuses(id), importedStudyId)).toEqual(['RUNNING', 'SUCCEEDED', 'QUEUED', 'SUCCEEDED']);
+  await expect.poll(() => page.evaluate((id) => window.__MOTOR_E2E__!.studySource(id), importedStudyId)).toBe('OBSERVED_CASE');
+  await runCanonicalDiagnostic(page, importedStudyId);
+  expect(await page.evaluate((id) => window.__MOTOR_E2E__!.studyExecutionStatuses(id), importedStudyId)).toEqual(['QUEUED', 'SUCCEEDED']);
   await page.goto('/estudos');
   await expect(page.getByRole('button', { name: 'Carregar estudo demonstrativo' })).toBeVisible();
   await page.getByRole('button', { name: 'Carregar estudo demonstrativo' }).click();
@@ -180,8 +182,11 @@ test('cinco cenários exibem repetição e Replay; documento projeta as mesmas e
     expect(projected.executiveMetrics.find((metric) => metric.code === 'SAVINGS_BRL')?.value).toBe(diagnostic.savingsBrl);
     expect(projected.executiveMetrics.find((metric) => metric.code === 'NETABILITY')?.value).toBe(diagnostic.netability);
     await expect(page.getByRole('region', { name: 'Acumulados do Replay' })).toContainText(formatFraction(diagnostic.netability));
-    await page.getByLabel('Selecionar dia').fill('31');
-    await expect(page.getByText(/Dia 31 de \d+/).first()).toBeVisible();
+    await page.getByLabel('Selecionar dia').focus();
+    await page.keyboard.press('Home');
+    for (let day = 0; day < 31; day += 1) await page.keyboard.press('ArrowRight');
+    await expect(page.getByLabel('Selecionar dia')).toHaveValue('31');
+    await expect(page.getByRole('region', { name: 'Controles do Replay' }).getByText('D31', { exact: true })).toBeVisible();
     expect(projected.replaySnapshot?.metrics.length).toBeGreaterThan(0);
     const matched = projected.replaySnapshot!.metrics.find((metric) => metric.code === 'measured_matched_contribution_accumulated_brl');
     expect(matched?.value).not.toBeNull();
@@ -197,102 +202,53 @@ test('cinco cenários exibem repetição e Replay; documento projeta as mesmas e
   }
 });
 
-test('hipótese guiada preserva Perfis; compara diagnóstico compatível e explica incompatibilidade', async ({ page }) => {
+test('variação de janela preserva Perfis; publicação compara diagnóstico compatível e explica incompatibilidade', async ({ page }) => {
   test.setTimeout(120_000);
   await page.goto('/estudos');
   const study = (await installedDemo(page)).studies[0]!;
   const base = study.diagnostics.find((item) => item.scenarioId === study.scenarios[0]!.id)!;
   const beforeProfiles = (await snapshot(page)).profiles;
-  await page.goto(`/carteira/${study.id}`);
-  await page.getByRole('button', { name: 'Criar hipótese / alterar carteira' }).click();
-  const builder = page.getByRole('region', { name: 'Criar hipótese de composição' });
-  await expect(builder).toBeVisible();
-  const removeButton = builder.getByRole('group', { name: 'Participantes' }).getByRole('button', { name: /^Remover / }).first();
-  const company = (await removeButton.innerText()).replace(/^Remover /, '');
-  await removeButton.click();
-  await builder.getByLabel('Adicionar Perfil').selectOption({ label: company });
-  await builder.getByLabel('Nome da hipótese').fill('Troca guiada B6');
-  await builder.getByRole('button', { name: 'Criar hipótese', exact: true }).click();
-  await expect(page).toHaveURL(new RegExp(`/estudos/${study.id}/diagnostico\\?scenarioId=`));
+  const incompatible = study.diagnostics.find((item) => item.scenarioId === study.scenarios[1]!.id)!;
+  const comparison = await page.evaluate((ids) => (window.__MOTOR_E2E__ as unknown as AcceptanceBridge).compareDemoExecutions(...ids),
+    [study.id, base.id, incompatible.id] as const);
+  expect(comparison.ok).toBe(false);
+  await page.goto(`/estudos/${study.id}/apresentacao?cenario=${base.scenarioId}&execucao=${base.id}&comparacao=${incompatible.id}`);
+  expect(comparison.reason).toContain('incompatíveis');
+  await expect(page.getByRole('alert')).toContainText('A comparação solicitada não corresponde');
+
+  const comparableScenarioId = await seedWindowScenario(page, study.id);
+  await page.goto(`/estudos/${study.id}/diagnostico?scenarioId=${comparableScenarioId}`);
+  await expect(page.getByRole('heading', { name: 'Diagnóstico robusto' })).toBeVisible();
+  await useDemoSamplingSeed(page);
+  const before = await (await page.request.get('/__e2e__/diagnostics/state')).json() as { submitted: number };
+  await page.getByRole('button', { name: 'Executar diagnóstico', exact: true }).click();
+  await releaseDiagnostics(page, 10, before.submitted);
+  await expect(page.getByRole('heading', { name: 'Resultado do motor' })).toBeVisible();
   const edited = await snapshot(page);
   expect(edited.profiles).toEqual(beforeProfiles);
   expect(edited.studies[0]!.scenarios).toHaveLength(6);
   expect(edited.studies[0]!.scenarios[0]!.inputFingerprint).toBe(study.scenarios[0]!.inputFingerprint);
-  const hypothesis = study.diagnostics.find((item) => item.scenarioId === study.scenarios[1]!.id)!;
-  await page.goto(`/comparar?studyId=${study.id}`);
-  await page.getByLabel('Execução base').selectOption(base.id);
-  await page.getByLabel('Execução da hipótese').selectOption(hypothesis.id);
-  await page.getByRole('button', { name: 'Comparar', exact: true }).click();
-  const comparison = await page.evaluate((ids) => (window.__MOTOR_E2E__ as unknown as AcceptanceBridge).compareDemoExecutions(...ids),
-    [study.id, base.id, hypothesis.id] as const);
-  expect(comparison.ok).toBe(false);
-  await expect(page.getByRole('alert')).toContainText(comparison.reason!);
-  const projected = await page.evaluate((input) => (window.__MOTOR_E2E__ as unknown as AcceptanceBridge).projectDemoCommunication(input), {
-    studyId: study.id, scenarioId: base.scenarioId, diagnosticExecutionId: base.id,
-    replayDay: 31,
-  });
-  expect(projected.selection.comparisonExecutionId).toBeNull();
-  expect(projected.comparison).toBeNull();
-
-  await page.goto(`/carteira/${study.id}`);
-  const compatibleBuilder = page.getByRole('region', { name: 'Criar hipótese de composição' });
-  await compatibleBuilder.getByLabel('Nome da hipótese').fill('Janela comparável B6');
-  await compatibleBuilder.getByLabel('Janela em dias').fill('8');
-  await compatibleBuilder.getByRole('button', { name: 'Criar hipótese', exact: true }).click();
-  await expect(page).toHaveURL(new RegExp(`/estudos/${study.id}/diagnostico\\?scenarioId=`));
-  const comparableScenarioId = new URL(page.url()).searchParams.get('scenarioId')!;
-  const before = await (await page.request.get('/__e2e__/diagnostics/state')).json() as { submitted: number };
-  await page.evaluate(() => {
-    const original = crypto.randomUUID.bind(crypto);
-    let first = true;
-    Object.defineProperty(crypto, 'randomUUID', { configurable: true, value: () => {
-      if (first) { first = false; return '00000000-0000-4000-8000-000000000111'; }
-      return original();
-    } });
-  });
-  await page.getByRole('button', { name: 'Executar diagnóstico', exact: true }).click();
-  await releaseDiagnostics(page, 10, before.submitted);
-  await expect(page.getByRole('heading', { name: 'Resultado do motor' })).toBeVisible();
-  const comparable = (await snapshot(page)).studies[0]!.diagnostics.find((item) => item.scenarioId === comparableScenarioId);
-  expect(comparable).toBeDefined();
-  await page.goto(`/comparar?studyId=${study.id}`);
-  await page.getByLabel('Execução base').selectOption(base.id);
-  await page.getByLabel('Execução da hipótese').selectOption(comparable!.id);
-  await page.getByRole('button', { name: 'Comparar', exact: true }).click();
-  await expect(page.getByRole('heading', { name: '4. Exposição residual' })).toBeVisible();
+  const comparable = edited.studies[0]!.diagnostics.find((item) => item.scenarioId === comparableScenarioId)!;
   const compatible = await page.evaluate((ids) => (window.__MOTOR_E2E__ as unknown as AcceptanceBridge).compareDemoExecutions(...ids),
-    [study.id, base.id, comparable!.id] as const);
+    [study.id, base.id, comparable.id] as const);
   expect(compatible.ok).toBe(true);
   const comparedDocument = await page.evaluate((input) => (window.__MOTOR_E2E__ as unknown as AcceptanceBridge).projectDemoCommunication(input), {
     studyId: study.id, scenarioId: base.scenarioId, diagnosticExecutionId: base.id,
-    comparisonExecutionId: comparable!.id, replayDay: 31,
+    comparisonExecutionId: comparable.id, replayDay: 31,
   });
-  expect(comparedDocument.selection.comparisonExecutionId).toBe(comparable!.id);
+  expect(comparedDocument.selection.comparisonExecutionId).toBe(comparable.id);
   const windowBefore = comparedDocument.comparison!.facts.find((item) => item.code.startsWith('WINDOW.') && item.code.endsWith('.before'));
   const windowAfter = comparedDocument.comparison!.facts.find((item) => item.code.startsWith('WINDOW.') && item.code.endsWith('.after'));
   expect([windowBefore?.value, windowAfter?.value]).toEqual(['7', '8']);
-  await expect(page.getByRole('region', { name: 'Entradas alteradas' })).toContainText('Janela: 7 → 8');
-  const remittedDelta = comparedDocument.comparison!.metrics.find((item) => item.code === 'CROSS_BORDER_RESIDUAL.remitted_brl.delta');
-  expect(remittedDelta?.value).not.toBeNull();
-  await expect(page.getByRole('row', { name: /Remetido/ })).toContainText(`${remittedDelta!.value} BRL`);
-  const rendered = await page.locator('.comparison-axis').evaluateAll((sections) => sections.flatMap((section) => {
-    const axis = section.querySelector('h2')?.textContent ?? '';
-    return [...section.querySelectorAll('tbody tr')].map((row) => ({
-      axis, label: row.querySelector('th')?.textContent ?? '',
-      cells: [...row.querySelectorAll('td')].map((cell) => cell.textContent ?? ''),
-    }));
-  }));
   for (const metric of comparedDocument.comparison!.metrics) {
-    const axis = metric.code.split('.')[0] as keyof typeof AXIS_TITLES;
-    const label = metric.label.replace(/ \([^)]+\): (base|hypothesis|delta)$/, '');
-    const side = metric.code.split('.').at(-1);
-    const column = side === 'base' ? 0 : side === 'hypothesis' ? 1 : 2;
-    const row = rendered.find((item) => item.axis === AXIS_TITLES[axis] && item.label === label);
-    expect(row, metric.code).toBeDefined();
-    expect(row!.cells[column], metric.code).toContain(metric.value ?? 'Indisponível');
     expect(metric.evidenceRefs.length).toBeGreaterThan(0);
     for (const ref of metric.evidenceRefs) expect(comparedDocument.evidenceIndex[ref]).toBeDefined();
   }
+  await page.goto(`/estudos/${study.id}/apresentacao?cenario=${comparableScenarioId}&execucao=${comparable.id}&comparacao=${base.id}`);
+  await expect(page.getByRole('heading', { name: study.name, level: 1 })).toBeVisible();
+  const variations = page.getByRole('table', { name: 'Comparação entre o original e as variações' });
+  await expect(variations.getByRole('row').filter({ hasText: 'Janela 8 dias' })).toContainText(formatMoney(comparable.savingsBrl));
+  await expect(variations.getByRole('row').filter({ hasText: study.scenarios[0]!.name })).toContainText(formatMoney(base.savingsBrl));
   const response = await page.request.get('/api/v1/catalogos/ajuda', {
     headers: { Authorization: 'Bearer mot21-controlled-e2e-token' },
   });

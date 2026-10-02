@@ -57,6 +57,8 @@ describe('combination study diagnosis', () => {
     const { study } = await comboStudy(255);
     openStudy(study);
     expect(await screen.findByRole('button', { name: 'Diagnosticar combinações' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Diagnosticar combinações' }))
+      .toHaveAttribute('data-chat-help-id', 'control.diagnostico.combinacoes');
     expect(screen.getByRole('heading', { name: 'Qual carteira atende melhor?' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Abrir quadros comparativos' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Executar diagnóstico' })).not.toBeInTheDocument();
@@ -98,5 +100,24 @@ describe('combination study diagnosis', () => {
     await waitFor(() => expect(mocks.execute).toHaveBeenCalledTimes(2));
     expect(mocks.execute.mock.calls.map((call) => call[0].scenarioId)).toEqual(study.scenarios.slice(0, 2).map((scenario) => scenario.id));
     expect(screen.getByText('2 composições preparadas. Os diagnósticos atuais são reaproveitados.')).toBeInTheDocument();
+  });
+
+  it('cancels the batch after the current combination and does not start another one', async () => {
+    const { study } = await comboStudy(3);
+    let finishCurrent!: (value: Awaited<ReturnType<typeof mocks.execute>>) => void;
+    mocks.execute.mockImplementationOnce(() => new Promise((resolve) => { finishCurrent = resolve; }));
+    openStudy(study);
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Diagnosticar combinações' }));
+    expect(await screen.findByRole('button', { name: 'Cancelar lote' })).toBeEnabled();
+    await userEvent.click(screen.getByRole('button', { name: 'Cancelar lote' }));
+    expect(screen.getByText('Cancelando após a combinação atual…')).toHaveAttribute('role', 'status');
+
+    await act(async () => finishCurrent({
+      status: 'SUCCEEDED', attemptId: 'done', jobId: 'job', envelope: null, error: null, current: true,
+    }));
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Diagnosticar combinações' })).toBeEnabled());
+    expect(mocks.execute).toHaveBeenCalledTimes(1);
   });
 });

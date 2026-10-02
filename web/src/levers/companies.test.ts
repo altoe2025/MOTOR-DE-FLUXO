@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { CompanyRecord, ObservedCase } from '../cases/domain';
 import { makeObservedCase } from '../study/fixtures';
 import { combineObservedCases, companyResolver } from './companies';
-import { combinationPreset, companySubsets, derivationKind } from './leverScenario';
+import { companySubsets, compositionSubsets, derivationKind } from './leverScenario';
 
 const company = (id: string, displayName: string) => ({ id, displayName } as CompanyRecord);
 const companies = [company('c-astro', 'AstroPay'), company('c-y', 'Empresa Y')];
@@ -46,19 +46,18 @@ describe('companySubsets', () => {
   });
 });
 
-describe('presets de composição', () => {
+describe('composição', () => {
   const companies = ['A', 'B', 'C', 'D'];
 
-  it('"Cada empresa sozinha" gera uma variação por empresa', () => {
-    expect(combinationPreset('ALONE', companies)).toEqual([['A'], ['B'], ['C'], ['D']]);
+  it('com todas as empresas, deixa de fora só a carteira completa (a base)', () => {
+    expect(compositionSubsets(['A', 'B', 'C'], ['A', 'B', 'C']))
+      .toEqual([['A'], ['B'], ['C'], ['A', 'B'], ['A', 'C'], ['B', 'C']]);
   });
 
-  it('"Retirar uma por vez" gera uma variação sem cada empresa', () => {
-    expect(combinationPreset('LEAVE_ONE_OUT', companies)).toEqual([['B', 'C', 'D'], ['A', 'C', 'D'], ['A', 'B', 'D'], ['A', 'B', 'C']]);
-  });
-
-  it('com duas empresas "retirar uma" é igual a "sozinha" e não duplica', () => {
-    expect(combinationPreset('LEAVE_ONE_OUT', ['A', 'B'])).toEqual([]);
+  it('tirando empresas, combina só as que sobraram e inclui o grupo que sobrou', () => {
+    expect(compositionSubsets(['A', 'C'], ['A', 'B', 'C'])).toEqual([['A'], ['C'], ['A', 'C']]);
+    expect(compositionSubsets(['B'], ['A', 'B', 'C'])).toEqual([['B']]);
+    expect(compositionSubsets([], ['A', 'B', 'C'])).toEqual([]);
   });
 
   it('classifica o vínculo pelo tamanho do subconjunto', () => {

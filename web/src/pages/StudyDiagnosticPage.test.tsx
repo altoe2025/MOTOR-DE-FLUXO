@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { appendScenario, createStudy } from '../study/domain';
 import { FIXTURE_NOW, FIXTURE_OWNER, makeScenarioDraft } from '../study/fixtures';
 import type { DiagnosticExecutionRecord, StudyDocument } from '../study/model';
-import { diagnosticsForScenario, isCurrentForScenario, latestDiagnostic } from './StudyDiagnosticPage';
+import { diagnosticFailureMessage, diagnosticsForScenario, isCurrentForScenario, latestDiagnostic } from './StudyDiagnosticPage';
 
 function execution(
   id: string,
@@ -23,6 +23,11 @@ function execution(
 }
 
 describe('escopo de cenário do diagnóstico', () => {
+  it('explica quando a conta autenticada ainda não está autorizada no servidor', () => {
+    expect(diagnosticFailureMessage({ code: 'ACESSO_NAO_PERMITIDO', message: 'Forbidden' }))
+      .toContain('ainda não está autorizada');
+  });
+
   it('filtra histórico e current pela identidade do cenário selecionado', async () => {
     const original = await createStudy({
       id: '00000000-0000-4000-8000-000000000701', ownerSub: FIXTURE_OWNER,
