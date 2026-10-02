@@ -90,6 +90,10 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-10-02 — Lote de combinações usa dois workers com commit serial (MOT-100)
+
+**Sintoma:** o navegador submetia uma composição por vez, deixando um dos dois workers padrão ocioso; cancelamento/conflitos entre abas podiam ainda manter pendências antigas na fila. **Causa:** computação remota e persistência estavam acopladas no serviço individual e a fila era congelada no começo do lote. **O que foi feito:** extraída computação sem persistência; novo pool limita a dois computes e um commit incremental por vez, drena jobs ativos ao cancelar/falhar e revalida cada item antes do POST. Conflito recarrega uma vez e não reenvia resultado já atual. Após duas rodadas de revisão, 53/53 testes passaram em três execuções consecutivas, com typecheck e lint verdes. **O que isso invalida:** a medição de 3,7 minutos para 63 combinações como representação da agenda atual; ela precisa ser refeita no gate de navegador.
+
 ## 2026-10-02 — Append diagnóstico incremental e schema local v5 (MOT-100)
 
 **Sintoma:** cada terminal do lote clonava, validava, serializava, comparava e registrava o estudo cumulativo inteiro, fazendo CPU e armazenamento crescerem com o histórico. **Causa:** diagnóstico usava o CAS estrutural genérico embora execuções já vivessem numa store separada. **O que foi feito:** schema v5 adiciona contagem no resumo e índice por tentativa; `appendDiagnosticAttempt` valida e grava somente reserva+terminal, revisão, resumo e operação compacta numa transação. O controller aplica delta certificado sem revalidar o histórico. Migrações v1–v4, rollback, owner, conflito e idempotência passaram 185 testes, typecheck e revisão. **O que isso invalida:** perfil anterior de persistência quadrática; saves estruturais continuam usando validação integral.
