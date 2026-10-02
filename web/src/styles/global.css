@@ -792,3 +792,19 @@ h1:focus { outline: none; }
 .page-head { align-items: flex-end; display: flex; flex-wrap: wrap; gap: var(--space-4); justify-content: space-between; }
 .page-head__actions { align-items: center; display: flex; flex-wrap: wrap; gap: var(--space-2); }
 @media (prefers-reduced-motion: reduce) { .disclosure__toggle::before { transition: none; } }
+
+/* Alavancas e cenários: composição em destaque, ajuste recolhido, ações no ⋯. */
+.lever-builder > .lever-combinations { border-top: 0; margin-top: 0; padding-top: 0; }
+.lever-builder > .lever-combinations + .disclosure, .lever-builder > .field-error + .disclosure { border-top: 1px solid var(--line-soft); margin-top: var(--space-4); padding-top: var(--space-3); }
+.lever-combinations__head { align-items: center; display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.lever-combinations__head h2 { font-family: var(--font-heading); font-size: 1.1rem; font-weight: 600; margin: 0; }
+.lever-combinations__head .status-badge { margin-left: auto; }
+.scenario-workspace > .page-head { margin-bottom: var(--space-3); }
+.scenario-workspace > .page-head h2 { font-family: var(--font-heading); font-size: 1.1rem; font-weight: 600; margin: 0; }
+.scenario-list li.scenario-item { display: flex; flex-wrap: wrap; justify-content: space-between; }
+.scenario-item__name { align-items: center; display: flex; flex-wrap: wrap; gap: var(--space-2); min-width: 0; }
+.scenario-item__name strong { color: var(--ink); }
+.scenario-item__actions { align-items: center; display: flex; gap: var(--space-2); margin-left: auto; }
+.combination-diagnosis { margin-top: var(--space-6); max-width: 1000px; }
+.combination-diagnosis h2 { font-family: var(--font-heading); font-size: 1.1rem; font-weight: 600; margin: 0; }
+.combination-diagnosis .field-hint { margin: var(--space-1) 0 0; }

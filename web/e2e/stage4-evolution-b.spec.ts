@@ -61,6 +61,8 @@ test('conflito CAS mantém os valores da alavanca na aba perdedora', async ({ br
   await loser.goto(winner.url());
   const first = winner.getByRole('region', { name: 'Alavancas', exact: true });
   const second = loser.getByRole('region', { name: 'Alavancas', exact: true });
+  await first.getByRole('button', { name: /Ajustar uma empresa/ }).click();
+  await second.getByRole('button', { name: /Ajustar uma empresa/ }).click();
   await first.getByLabel('Volume OUT ×', { exact: true }).fill('2');
   await second.getByLabel('Volume OUT ×', { exact: true }).fill('3');
   await first.getByRole('button', { name: 'Criar variação', exact: true }).click();

@@ -43,6 +43,7 @@ test('alavanca cria variação isolada e mantém original observado persistido',
   await page.goto(`/carteira/${STUDY}`);
   const before = await page.evaluate((id) => window.__MOTOR_E2E__!.stage4Snapshot(id), STUDY);
   const levers = page.getByRole('region', { name: 'Alavancas', exact: true });
+  await levers.getByRole('button', { name: /Ajustar uma empresa/ }).click();
   await levers.getByLabel('Volume OUT ×', { exact: true }).fill('2');
   await levers.getByRole('button', { name: 'Criar variação', exact: true }).click();
   await expect.poll(async () => (await page.evaluate((id) => window.__MOTOR_E2E__!.stage4Snapshot(id), STUDY)).scenarios.length).toBe(2);
