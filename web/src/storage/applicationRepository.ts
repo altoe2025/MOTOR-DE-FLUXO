@@ -1,5 +1,5 @@
 import type { CompanyRecord, ObservedCase } from '../cases/domain';
-import type { StudyDocument } from '../study/model';
+import type { DiagnosticExecutionRecord, StudyDocument } from '../study/model';
 import type { OperationalProfileVersion } from '../profiles/domain';
 import type { DemoStudyPackageV1 } from '../demo/domain';
 import type { ChatConversation } from '../chat/domain';
@@ -7,17 +7,23 @@ import type { ChatConversation } from '../chat/domain';
 /** The catalogue never carries scenarios, evidence or execution envelopes. */
 export type StudySummary = Readonly<Pick<StudyDocument,
   'id' | 'ownerSub' | 'name' | 'studyType' | 'revision' | 'createdAt' | 'updatedAt' | 'deletedAt'
-> & { scenarioCount: number; hasExecutions: boolean }>;
+> & { scenarioCount: number; hasExecutions: boolean; executionCount: number;
+  baseSourceKind: 'OBSERVED_CASE' | 'SYNTHETIC' | 'AUTHORED_MULTI_COMPANY' | 'AUTHORED' }>;
 
 export function summarizeStudy(
   document: Omit<StudyDocument, 'executions'>,
-  hasExecutions: boolean,
+  executionCount: number,
 ): StudySummary {
+  const source = document.scenarios.find((scenario) => scenario.id === document.baseScenarioId)?.sourceSnapshot.source;
+  if (source === undefined) throw new Error('Cenário base ausente.');
+  const baseSourceKind = source.kind === 'AUTHORED' && source.definition?.kind === 'EXPLICIT_ORDERS'
+    && (source.definition.sourceCases?.length ?? 0) > 0 ? 'AUTHORED_MULTI_COMPANY' : source.kind;
   return {
     id: document.id, ownerSub: document.ownerSub, name: document.name,
     ...(document.studyType === undefined ? {} : { studyType: document.studyType }),
     revision: document.revision, createdAt: document.createdAt, updatedAt: document.updatedAt,
-    deletedAt: document.deletedAt, scenarioCount: document.scenarios.length, hasExecutions,
+    deletedAt: document.deletedAt, scenarioCount: document.scenarios.length,
+    hasExecutions: executionCount > 0, executionCount, baseSourceKind,
   };
 }
 
@@ -32,6 +38,21 @@ export type CASMutation<T> = Readonly<{
   expectedRevision: number;
   operationId: string;
   document: T;
+}>;
+
+export type AppendDiagnosticAttemptMutation = Readonly<{
+  studyId: string;
+  expectedRevision: number;
+  operationId: string;
+  reservation: DiagnosticExecutionRecord;
+  terminal: DiagnosticExecutionRecord;
+}>;
+
+export type DiagnosticAppendDelta = Readonly<{
+  studyId: string;
+  revision: number;
+  updatedAt: string;
+  executions: readonly [DiagnosticExecutionRecord, DiagnosticExecutionRecord];
 }>;
 
 export type ImportBatchRecord = Readonly<{
@@ -105,6 +126,7 @@ export interface ApplicationRepository {
   listStudySummaries(options?: { includeDeleted?: boolean }): Promise<StudySummary[]>;
   getStudy(id: string): Promise<StudyDocument | null>;
   saveStudy(input: CASMutation<StudyDocument>): Promise<StudyDocument>;
+  appendDiagnosticAttempt(input: AppendDiagnosticAttemptMutation): Promise<DiagnosticAppendDelta>;
   restoreStudy(
     id: string,
     expectedRevision: number,

@@ -6,7 +6,8 @@ import type { ImportReview } from '../importer/eligibility';
 import { confirmImport } from '../importer/publisher';
 import type { OperationalProfileVersion } from '../profiles/domain';
 import { attachOperationalProfileEvidence } from './domain';
-import type { StudyDocument, StudyDocumentV3 } from './model';
+import type { DiagnosticExecutionRecord, StudyDocument, StudyDocumentV3 } from './model';
+import { applyCertifiedDiagnosticAppend, isCertifiedStudy } from './certifiedStudy';
 
 export type StudyControllerStatus =
   | 'IDLE'
@@ -426,6 +427,42 @@ export class StudyController {
           status: error instanceof RevisionConflictError ? 'CONFLICT' : 'STORAGE_FAILURE',
           error,
         });
+      }
+      throw error;
+    }
+  }
+
+  async appendDiagnosticAttempt(
+    reservation: DiagnosticExecutionRecord,
+    terminal: DiagnosticExecutionRecord,
+  ): Promise<StudyDocument> {
+    this.#assertOpen();
+    const { repository, epoch } = this.#session();
+    const current = this.#snapshot.document;
+    if (current === null || this.#snapshot.status !== 'SAVED' || this.#pending.length > 0
+      || !isCertifiedStudy(current, this.#snapshot.ownerSub!)) {
+      throw new Error('Carregue um estudo salvo e certificado antes de anexar diagnóstico.');
+    }
+    const selectionEpoch = this.#selectionEpoch;
+    const conflictVersion = this.#conflictVersion;
+    const operationId = this.#operationId();
+    this.#publish({ ...this.#snapshot, status: 'SAVING', error: null });
+    try {
+      const delta = await repository.appendDiagnosticAttempt({ studyId: current.id,
+        expectedRevision: current.revision, operationId, reservation, terminal });
+      if (!this.#isCurrent(repository, epoch, selectionEpoch)) throw new StudyControllerSessionError();
+      const saved = applyCertifiedDiagnosticAppend(current, delta);
+      this.#persistedRevision = saved.revision;
+      const conflict = this.#conflictVersion !== conflictVersion || this.snapshot.status === 'CONFLICT';
+      const edited = this.#snapshot.document !== current;
+      this.#publish({ ...this.#snapshot, status: conflict || edited ? 'CONFLICT' : 'SAVED',
+        document: edited ? this.#snapshot.document : saved, error: null });
+      this.#channel?.postMessage({ studyId: saved.id, revision: saved.revision, operationId });
+      return saved;
+    } catch (error) {
+      if (this.#isCurrent(repository, epoch, selectionEpoch)) {
+        this.#publish({ ...this.#snapshot,
+          status: error instanceof RevisionConflictError ? 'CONFLICT' : 'STORAGE_FAILURE', error });
       }
       throw error;
     }

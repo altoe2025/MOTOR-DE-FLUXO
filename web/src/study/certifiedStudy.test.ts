@@ -10,7 +10,7 @@ import { validateStoredStudy } from '../storage/migrations';
 import { createStudy } from './domain';
 import { FIXTURE_NOW, FIXTURE_OWNER, makeScenarioDraft } from './fixtures';
 import type { DeepMutable, DiagnosticExecutionRecord, PreviaRequest, PreviewEnvelope, PreviewExecutionRecord, StudyDocument } from './model';
-import { isCertifiedStudy, validateAndCertifyStudy } from './certifiedStudy';
+import { applyCertifiedDiagnosticAppend, isCertifiedStudy, validateAndCertifyStudy } from './certifiedStudy';
 import * as validation from './validation';
 
 async function certifiedInput() {
@@ -44,6 +44,33 @@ async function previewStudy(): Promise<DeepMutable<StudyDocument>> {
 }
 
 describe('certificado efêmero por identidade e divisão persistida', () => {
+  it('aplica somente o delta a uma base certificada e preserva referências imutáveis', async () => {
+    const complete = structuredClone(demoJson.study) as StudyDocument;
+    const reservation = complete.executions.find((item) => item.kind === 'DIAGNOSTIC' && item.status === 'QUEUED')! as DiagnosticExecutionRecord;
+    const terminal = complete.executions.find((item) => item.kind === 'DIAGNOSTIC'
+      && item.attemptId === reservation.attemptId && item.status === 'SUCCEEDED')! as DiagnosticExecutionRecord;
+    const raw = { ...complete, executions: complete.executions.filter((item) => item.attemptId !== reservation.attemptId) };
+    const initial = await validateStoredStudy(raw, raw.ownerSub);
+    const delta = { studyId: initial.id, revision: initial.revision + 1,
+      updatedAt: terminal.finishedAt!, executions: [reservation, terminal] as const };
+    const validator = vi.spyOn(validation, 'validateStudyDocumentWithExecutionYield');
+    try {
+      const result = applyCertifiedDiagnosticAppend(initial, delta);
+      expect(isCertifiedStudy(result, initial.ownerSub)).toBe(true);
+      expect(result.executions).toEqual([...initial.executions, reservation, terminal]);
+      expect(result.scenarios).toBe(initial.scenarios);
+      expect(result.executions[0]).toBe(initial.executions[0]);
+      expect(Object.isFrozen(result.executions.at(-1)!.requestSnapshot)).toBe(true);
+      expect(validator).not.toHaveBeenCalled();
+      expect(() => applyCertifiedDiagnosticAppend(raw, delta)).toThrow('certificado');
+      expect(() => applyCertifiedDiagnosticAppend(initial, { ...delta, revision: initial.revision })).toThrow();
+      expect(() => applyCertifiedDiagnosticAppend(initial, { ...delta, executions: [terminal, reservation] })).toThrow();
+      expect(() => applyCertifiedDiagnosticAppend(initial, { ...delta, executions: [reservation,
+        { ...terminal, envelope: { ...terminal.envelope!, job_id: '00000000-0000-4000-8000-000000000099' } }] })).toThrow();
+      expect(() => applyCertifiedDiagnosticAppend(initial, { ...delta, updatedAt: '2026-10-02T00:00:00Z' })).toThrow();
+      expect(() => applyCertifiedDiagnosticAppend(result, { ...delta, revision: result.revision + 1 })).toThrow();
+    } finally { validator.mockRestore(); }
+  });
   it('preserva resultado e ordem integral dos issues entre validador raw e dividido', async () => {
     const input = await observedInput();
     const fingerprint = structuredClone(input.study);

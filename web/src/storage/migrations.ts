@@ -18,7 +18,7 @@ import {
   SchemaUnsupportedError,
 } from './errors';
 
-const DATABASE_SCHEMA_VERSION = 4;
+const DATABASE_SCHEMA_VERSION = 5;
 
 export type LegacySource = Readonly<{
   sourceKey: string;
@@ -455,7 +455,7 @@ export async function migrateDatabase(
           transaction.objectStore('study_summaries').add({
             study_id: item.study.id, owner_sub: item.study.ownerSub,
             deleted: item.study.deletedAt === null ? 0 : 1,
-            document: summarizeStudy(document, executionDocuments.length > 0),
+            document: summarizeStudy(document, executionDocuments.length),
           });
           for (const [sequence, execution] of executionDocuments.entries()) {
             executions.add({
@@ -463,6 +463,7 @@ export async function migrateDatabase(
               execution_id: execution.id,
               owner_sub: item.study.ownerSub,
               sequence,
+              ...(execution.attemptId === undefined ? {} : { attempt_id: execution.attemptId }),
               document: execution,
             });
           }

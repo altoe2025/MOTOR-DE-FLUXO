@@ -224,6 +224,8 @@ describe('appendDiagnosticExecution', () => {
       terminal as DiagnosticExecutionRecord,
       terminal.finishedAt!,
     )).rejects.toThrow('reserva');
+    await expect(appendDiagnosticAttemptAtomically(study, reservation, terminal as DiagnosticExecutionRecord))
+      .rejects.toThrow('reserva');
   });
 
   it('validação integral rejeita terminal artesanal sem reserva correspondente', async () => {

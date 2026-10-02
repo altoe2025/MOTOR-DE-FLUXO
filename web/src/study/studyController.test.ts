@@ -6,6 +6,8 @@ import type { DemoStudyPackageV1 } from '../demo/domain';
 import generatedDemo from '../demo/generated/demo-study.v1.json';
 import type {
   ApplicationRepository,
+  AppendDiagnosticAttemptMutation,
+  DiagnosticAppendDelta,
   AppendProfileVersionMutation,
   CASMutation,
   ConfirmObservedCaseMutation,
@@ -15,7 +17,10 @@ import { createImportReview } from '../importer/eligibility';
 import { DemoInstallSkippedError, OperationConflictError, RevisionConflictError } from '../storage/errors';
 import { attachOperationalProfileEvidence, createStudy, renameStudy } from './domain';
 import { FIXTURE_NOW, FIXTURE_OWNER, makeObservedCase, makeScenarioDraft } from './fixtures';
-import type { StudyDocument } from './model';
+import type { DiagnosticExecutionRecord, StudyDocument } from './model';
+import { validateStoredStudy } from '../storage/migrations';
+import { applyCertifiedDiagnosticAppend, isCertifiedStudy } from './certifiedStudy';
+import { summarizeStudy } from '../storage/applicationRepository';
 import {
   StudyController,
   StudyControllerClosedError,
@@ -57,6 +62,15 @@ class RepositoryDouble implements ApplicationRepository {
   closed = false;
   readonly saveCalls: CASMutation<StudyDocument>[] = [];
   readonly appendProfileCalls: AppendProfileVersionMutation[] = [];
+  readonly appendDiagnosticCalls: AppendDiagnosticAttemptMutation[] = [];
+  appendDiagnosticImplementation: (input: AppendDiagnosticAttemptMutation) => Promise<DiagnosticAppendDelta> = async (input) => ({
+    studyId: input.studyId, revision: input.expectedRevision + 1,
+    updatedAt: input.terminal.finishedAt!, executions: [input.reservation, input.terminal],
+  });
+  async appendDiagnosticAttempt(input: AppendDiagnosticAttemptMutation): Promise<DiagnosticAppendDelta> {
+    this.appendDiagnosticCalls.push(input);
+    return this.appendDiagnosticImplementation(input);
+  }
   getStudyImplementation: (id: string) => Promise<StudyDocument | null>;
   saveStudyImplementation: (input: CASMutation<StudyDocument>) => Promise<StudyDocument>;
 
@@ -97,13 +111,7 @@ class RepositoryDouble implements ApplicationRepository {
   }
   async listStudies(): Promise<StudyDocument[]> { return this.studies; }
   async listStudySummaries(): Promise<Awaited<ReturnType<ApplicationRepository['listStudySummaries']>>> {
-    return this.studies.map((document) => ({
-      id: document.id, ownerSub: document.ownerSub, name: document.name,
-      ...(document.studyType === undefined ? {} : { studyType: document.studyType }),
-      revision: document.revision, createdAt: document.createdAt, updatedAt: document.updatedAt,
-      deletedAt: document.deletedAt, scenarioCount: document.scenarios.length,
-      hasExecutions: document.executions.length > 0,
-    }));
+    return this.studies.map((document) => summarizeStudy(document, document.executions.length));
   }
   async getStudy(id: string): Promise<StudyDocument | null> {
     return this.getStudyImplementation(id);
@@ -200,6 +208,114 @@ function controller(input: {
 }
 
 describe('StudyController', () => {
+  async function appendFixture() {
+    const complete = structuredClone(generatedDemo.study) as StudyDocument;
+    const reservation = complete.executions.find((item) => item.kind === 'DIAGNOSTIC' && item.status === 'QUEUED')! as DiagnosticExecutionRecord;
+    const terminal = complete.executions.find((item) => item.kind === 'DIAGNOSTIC'
+      && item.attemptId === reservation.attemptId && item.status === 'SUCCEEDED')! as DiagnosticExecutionRecord;
+    const initial = await validateStoredStudy({ ...complete,
+      executions: complete.executions.filter((item) => item.attemptId !== reservation.attemptId) }, complete.ownerSub);
+    const repository = new RepositoryDouble(initial.ownerSub, initial);
+    const hub = new ChannelHub();
+    const subject = controller({ repositories: [repository], hub });
+    await subject.switchSession(initial.ownerSub);
+    await subject.loadStudy(initial.id);
+    return { initial, reservation, terminal, repository, hub, subject };
+  }
+
+  it('publica append certificado, transmite revisão e continua autosave sem save integral do append', async () => {
+    const { initial, reservation, terminal, repository, hub, subject } = await appendFixture();
+    const states: string[] = [];
+    subject.subscribe(() => states.push(subject.snapshot.status));
+    const result = await subject.appendDiagnosticAttempt(reservation, terminal);
+    expect(result.executions).toEqual([...initial.executions, reservation, terminal]);
+    expect(result.scenarios).toBe(initial.scenarios);
+    expect(isCertifiedStudy(result, result.ownerSub)).toBe(true);
+    expect(states).toEqual(['SAVING', 'SAVED']);
+    expect(repository.saveCalls).toHaveLength(0);
+    expect(repository.appendDiagnosticCalls[0]).toMatchObject({ studyId: initial.id,
+      expectedRevision: initial.revision, operationId: 'operation-1' });
+    expect(hub.messages).toEqual([{ studyId: initial.id, revision: initial.revision + 1, operationId: 'operation-1' }]);
+    subject.edit(await renameStudy(result, 'Editado', FIXTURE_NOW));
+    await subject.flush();
+    expect(repository.saveCalls[0]!.expectedRevision).toBe(result.revision);
+    subject.close();
+  });
+
+  it('expõe conflito de revisão sem retentar e sem publicar um delta', async () => {
+    const { initial, reservation, terminal, repository, hub, subject } = await appendFixture();
+    const conflict = new RevisionConflictError(initial.revision, initial.revision + 1);
+    repository.appendDiagnosticImplementation = async () => { throw conflict; };
+    await expect(subject.appendDiagnosticAttempt(reservation, terminal)).rejects.toBe(conflict);
+    expect(subject.snapshot).toMatchObject({ status: 'CONFLICT', document: initial, error: conflict });
+    expect(repository.appendDiagnosticCalls).toHaveLength(1);
+    expect(hub.messages).toEqual([]);
+    subject.close();
+  });
+
+  it('não aplica append de uma sessão encerrada', async () => {
+    const { reservation, terminal, repository, hub, subject } = await appendFixture();
+    const pending = deferred<DiagnosticAppendDelta>();
+    repository.appendDiagnosticImplementation = () => pending.promise;
+    const work = subject.appendDiagnosticAttempt(reservation, terminal);
+    await subject.switchSession(null);
+    const input = repository.appendDiagnosticCalls[0]!;
+    pending.resolve({ studyId: input.studyId, revision: input.expectedRevision + 1,
+      updatedAt: terminal.finishedAt!, executions: [reservation, terminal] });
+    await expect(work).rejects.toBeInstanceOf(StudyControllerSessionError);
+    expect(subject.snapshot).toMatchObject({ status: 'IDLE', document: null });
+    expect(hub.messages).toEqual([]);
+    subject.close();
+  });
+
+  it('notifica outra aba limpa e preserva a edição pendente de uma aba suja', async () => {
+    const { initial, reservation, terminal, repository, hub, subject } = await appendFixture();
+    let stored = initial;
+    const cleanRepository = new RepositoryDouble(initial.ownerSub, initial);
+    const dirtyRepository = new RepositoryDouble(initial.ownerSub, initial);
+    cleanRepository.getStudyImplementation = async () => stored;
+    const clean = controller({ repositories: [cleanRepository], hub });
+    const dirty = controller({ repositories: [dirtyRepository], hub, scheduler: new ManualScheduler() });
+    await clean.switchSession(initial.ownerSub);
+    await dirty.switchSession(initial.ownerSub);
+    await clean.loadStudy(initial.id);
+    await dirty.loadStudy(initial.id);
+    const edited = await renameStudy(initial, 'Nome de outra aba', FIXTURE_NOW);
+    dirty.edit(edited);
+    repository.appendDiagnosticImplementation = async (input) => {
+      const delta: DiagnosticAppendDelta = { studyId: initial.id, revision: initial.revision + 1,
+        updatedAt: input.terminal.finishedAt!, executions: [input.reservation, input.terminal] };
+      stored = applyCertifiedDiagnosticAppend(initial, delta);
+      return delta;
+    };
+    await subject.appendDiagnosticAttempt(reservation, terminal);
+    await vi.waitFor(() => expect(clean.snapshot.document?.revision).toBe(initial.revision + 1));
+    expect(clean.snapshot).toMatchObject({ status: 'SAVED', document: stored });
+    expect(dirty.snapshot).toMatchObject({ status: 'CONFLICT', document: edited });
+    subject.close(); clean.close(); dirty.close();
+  });
+
+  it('mantém conflito recebido durante o commit e recusa base não certificada', async () => {
+    const { initial, reservation, terminal, repository, hub, subject } = await appendFixture();
+    const pending = deferred<DiagnosticAppendDelta>();
+    repository.appendDiagnosticImplementation = () => pending.promise;
+    const work = subject.appendDiagnosticAttempt(reservation, terminal);
+    for (const group of hub.channels.values()) for (const channel of group) channel.deliver({
+      studyId: initial.id, revision: initial.revision + 2, operationId: 'other-tab',
+    });
+    pending.resolve({ studyId: initial.id, revision: initial.revision + 1,
+      updatedAt: terminal.finishedAt!, executions: [reservation, terminal] });
+    await work;
+    expect(subject.snapshot.status).toBe('CONFLICT');
+    subject.close();
+    const rawRepository = new RepositoryDouble(initial.ownerSub, structuredClone(initial));
+    const raw = controller({ repositories: [rawRepository] });
+    await raw.switchSession(initial.ownerSub);
+    await raw.loadStudy(initial.id);
+    await expect(raw.appendDiagnosticAttempt(reservation, terminal)).rejects.toThrow('certificado');
+    expect(rawRepository.appendDiagnosticCalls).toHaveLength(0);
+    raw.close();
+  });
   it('reads another study without changing the selected dirty document or queued revision', async () => {
     const selected = await makeStudy();
     const other = await makeStudy(FIXTURE_OWNER, 'study-2');
@@ -234,7 +350,7 @@ describe('StudyController', () => {
     pending.resolve(initial);
     summaries.resolve([{ id: initial.id, ownerSub: FIXTURE_OWNER, name: initial.name,
       revision: 1, createdAt: FIXTURE_NOW, updatedAt: FIXTURE_NOW, deletedAt: null,
-      scenarioCount: 1, hasExecutions: false }]);
+      scenarioCount: 1, hasExecutions: false, executionCount: 0, baseSourceKind: 'AUTHORED' }]);
     expect(await reading).toBeNull();
     expect(await listing).toEqual([]);
     expect(subject.snapshot).toMatchObject({ ownerSub: OWNER_B, document: null, status: 'IDLE' });

@@ -56,7 +56,7 @@ async function seedV2(marker = 2) {
   const originalRows = new Map<string, Record<string, unknown>>();
   const request = indexedDB.open(name, 2);
   request.onupgradeneeded = () => {
-    // Use real v2 keys/indexes; v4 derives summaries but leaves original rows intact.
+    // Use real v2 keys/indexes; v5 derives summaries and preserves source documents.
     for (const store of oldStores) {
       const schema = oldSchema[store]!;
       const target = request.result.createObjectStore(store, { keyPath: schema.keyPath });
@@ -96,7 +96,7 @@ describe('chat physical upgrade', () => {
     const originalRows = await seedV2();
     await upgrade();
     const db = await open();
-    expect(db.version).toBe(4);
+    expect(db.version).toBe(5);
     for (const store of oldStores) {
       expect(await requestResult(db.transaction(store).objectStore(store).getAll()))
         .toContainEqual(originalRows.get(store));
@@ -104,7 +104,7 @@ describe('chat physical upgrade', () => {
     expect(await requestResult(db.transaction('meta').objectStore('meta').get('demo:installation')))
       .toEqual({ key: 'demo:installation', value: { status: 'REMOVED', ownerSub: 'owner-a' } });
     expect(await requestResult(db.transaction('meta').objectStore('meta').get('schema_version')))
-      .toEqual({ key: 'schema_version', value: 4 });
+      .toEqual({ key: 'schema_version', value: 5 });
     expect([...db.objectStoreNames]).toEqual([...oldStores, 'chat_conversations', 'chat_operations', 'study_summaries'].sort());
     expect(await requestResult(db.transaction('study_summaries').objectStore('study_summaries').get('sentinel:studies')))
       .toMatchObject({ study_id: 'sentinel:studies', owner_sub: 'owner-a', deleted: 0,

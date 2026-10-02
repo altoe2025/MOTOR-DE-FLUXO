@@ -1,5 +1,5 @@
 import type { DiagnosticExecutionRecord, StudyDocument } from '../study/model';
-import { assertValidStudy } from '../study/validation';
+import { assertValidStudy, validateExecutionRecord } from '../study/validation';
 import {
   diagnosticAttemptHasPersistedShape,
   diagnosticAttemptIdentityMatches,
@@ -7,21 +7,15 @@ import {
 
 const TERMINAL = new Set(['SUCCEEDED', 'FAILED', 'CANCELLED', 'INTERRUPTED']);
 
-export async function appendDiagnosticAttemptAtomically(
-  study: StudyDocument,
+export function assertDiagnosticAttemptPair(
   reservation: DiagnosticExecutionRecord,
   terminal: DiagnosticExecutionRecord,
-): Promise<StudyDocument> {
+): void {
   if (reservation.status !== 'QUEUED' || !TERMINAL.has(terminal.status)) {
     throw new Error('Tentativa diagnóstica atômica exige reserva QUEUED e terminal.');
   }
-  if (reservation.id === terminal.id
-    || study.executions.some((existing) => existing.id === reservation.id || existing.id === terminal.id)) {
+  if (reservation.id === terminal.id) {
     throw new Error('Execução diagnóstica já anexada.');
-  }
-  if (study.executions.some((existing) => existing.kind === 'DIAGNOSTIC'
-    && existing.attemptId === reservation.attemptId)) {
-    throw new Error('Tentativa diagnóstica já possui registro persistido.');
   }
   if (!diagnosticAttemptIdentityMatches(reservation, terminal)
     || !diagnosticAttemptHasPersistedShape([reservation, terminal])) {
@@ -32,6 +26,42 @@ export async function appendDiagnosticAttemptAtomically(
   if (Number.isNaN(timestamp.valueOf()) || !terminal.finishedAt.endsWith('Z')) {
     throw new Error('Instante inválido.');
   }
+}
+
+/** Validate only the new pair against the current stored scenario. No history traversal. */
+export function assertDiagnosticAttemptForStudy(
+  study: Omit<StudyDocument, 'executions'>,
+  reservation: DiagnosticExecutionRecord,
+  terminal: DiagnosticExecutionRecord,
+): void {
+  assertDiagnosticAttemptPair(reservation, terminal);
+  const scenario = study.scenarios.find((item) => item.id === reservation.scenarioId);
+  if (study.deletedAt !== null || scenario === undefined
+    || scenario.revision !== reservation.scenarioRevision
+    || scenario.inputFingerprint !== reservation.inputFingerprint) {
+    throw new Error('Cenário ou fingerprint da tentativa não corresponde ao cenário atual.');
+  }
+  const context = { ...study, executions: [] };
+  for (const execution of [reservation, terminal]) {
+    if (execution.kind !== 'DIAGNOSTIC') throw new Error('Execução não diagnóstica.');
+    const validation = validateExecutionRecord(execution, context);
+    if (!validation.ok) throw new Error(validation.issues[0]?.message ?? 'Execução inválida.');
+  }
+}
+
+export async function appendDiagnosticAttemptAtomically(
+  study: StudyDocument,
+  reservation: DiagnosticExecutionRecord,
+  terminal: DiagnosticExecutionRecord,
+): Promise<StudyDocument> {
+  assertDiagnosticAttemptPair(reservation, terminal);
+  if (study.executions.some((existing) => existing.id === reservation.id || existing.id === terminal.id)) {
+    throw new Error('Execução diagnóstica já anexada.');
+  }
+  if (study.executions.some((existing) => existing.kind === 'DIAGNOSTIC'
+    && existing.attemptId === reservation.attemptId)) {
+    throw new Error('Tentativa diagnóstica já possui registro persistido.');
+  }
   const result: StudyDocument = {
     ...structuredClone(study),
     executions: [
@@ -40,7 +70,7 @@ export async function appendDiagnosticAttemptAtomically(
       structuredClone(terminal),
     ],
     revision: study.revision + 1,
-    updatedAt: terminal.finishedAt,
+    updatedAt: terminal.finishedAt!,
   };
   await assertValidStudy(result);
   return result;

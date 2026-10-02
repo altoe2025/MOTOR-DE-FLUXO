@@ -90,6 +90,10 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-10-02 — Append diagnóstico incremental e schema local v5 (MOT-100)
+
+**Sintoma:** cada terminal do lote clonava, validava, serializava, comparava e registrava o estudo cumulativo inteiro, fazendo CPU e armazenamento crescerem com o histórico. **Causa:** diagnóstico usava o CAS estrutural genérico embora execuções já vivessem numa store separada. **O que foi feito:** schema v5 adiciona contagem no resumo e índice por tentativa; `appendDiagnosticAttempt` valida e grava somente reserva+terminal, revisão, resumo e operação compacta numa transação. O controller aplica delta certificado sem revalidar o histórico. Migrações v1–v4, rollback, owner, conflito e idempotência passaram 185 testes, typecheck e revisão. **O que isso invalida:** perfil anterior de persistência quadrática; saves estruturais continuam usando validação integral.
+
 ## 2026-10-02 — Preparação idempotente das combinações (MOT-100)
 
 **Sintoma:** repetir “Diagnosticar combinações” reconstruía os 254 rascunhos mesmo quando a cobertura atual já estava completa; IDs diferentes com nomes iguais também podiam colapsar subconjuntos. **Causa:** não havia uma assinatura persistida da cobertura e a identidade de composição usava nome de empresa. **O que foi feito:** o estudo guarda cobertura opcional V3 validada; hit exato pula a construção, miss reconstrói todas as derivadas e descarta resultados obsoletos. Combinações usam IDs, nomes ficam só na apresentação e duplicatas são desambiguadas. Após corrigir dois achados da revisão, 27/27 testes e typecheck passaram. **O que isso invalida:** tempo anterior de um segundo clique já preparado; a cardinalidade por ID agora é rigorosamente `2^N - 1` mesmo com nomes repetidos.
