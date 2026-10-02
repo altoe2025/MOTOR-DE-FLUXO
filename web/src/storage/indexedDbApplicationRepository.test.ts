@@ -1,8 +1,10 @@
 import 'fake-indexeddb/auto';
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { CompanyRecord, ObservedCase } from '../cases/domain';
+import generatedDemo from '../demo/generated/demo-study.v1.json';
+import type { DemoStudyPackageV1 } from '../demo/domain';
 import { calculateOperationalProfile } from '../profiles/calculateOperationalProfile';
 import type { OperationalProfileVersion } from '../profiles/domain';
 import { buildDiagnosticRequest } from '../diagnostics/buildDiagnosticRequest';
@@ -27,6 +29,7 @@ import type { DeepMutable, DiagnosticExecutionRecord, ExecutionRecord, StudyDocu
 import {
   BinaryDataNotAllowedError,
   InvalidDocumentError,
+  DocumentCorruptError,
   OperationConflictError,
   OwnerMismatchError,
   RevisionConflictError,
@@ -235,7 +238,7 @@ afterEach(async () => {
 });
 
 describe('IndexedDbApplicationRepository schema', () => {
-  it('opens the scoped v2 database with the nine schema-2 stores and listing indexes', async () => {
+  it('opens the scoped database with schema-4 stores and listing indexes', async () => {
     await repository().listCompanies();
 
     const databases = await indexedDB.databases();
@@ -261,6 +264,7 @@ describe('IndexedDbApplicationRepository schema', () => {
       'operations',
       'profile_versions',
       'studies',
+      'study_summaries',
     ]);
     const databaseForIndexes = await openDatabase(DATABASE_NAME);
     const transaction = databaseForIndexes.transaction(storeNames, 'readonly');
@@ -273,6 +277,10 @@ describe('IndexedDbApplicationRepository schema', () => {
       'by_owner_company',
     ]);
     expect([...transaction.objectStore('studies').indexNames]).toEqual([
+      'by_owner',
+      'by_owner_deleted',
+    ]);
+    expect([...transaction.objectStore('study_summaries').indexNames]).toEqual([
       'by_owner',
       'by_owner_deleted',
     ]);
@@ -299,7 +307,7 @@ describe('IndexedDbApplicationRepository schema', () => {
       'by_owner_company',
       'by_owner_company_version',
     ]);
-    expect(meta).toEqual({ key: 'schema_version', value: 3 });
+    expect(meta).toEqual({ key: 'schema_version', value: 4 });
     databaseForIndexes.close();
   });
 
@@ -548,6 +556,150 @@ describe('observed cases', () => {
 });
 
 describe('studies', () => {
+  it('stores demo installation and restoration summaries before any catalogue read', async () => {
+    const target = repository();
+    const packageValue = generatedDemo as unknown as DemoStudyPackageV1;
+    const installed = await target.installDemoStudy({ package: packageValue, mode: 'EXPLICIT_RESTORE', operationId: 'demo-install' });
+    const database = await openDatabase(DATABASE_NAME);
+    const storedSummary = () => requestResult(database.transaction('study_summaries')
+      .objectStore('study_summaries').get(installed.id));
+    try {
+      expect(await storedSummary()).toMatchObject({ document: { id: installed.id,
+        revision: installed.revision, hasExecutions: true, deletedAt: null } });
+      const trashed = await moveStudyToTrash(installed, FIXTURE_NOW);
+      await target.saveStudy({ document: trashed, expectedRevision: installed.revision, operationId: 'demo-trash' });
+      const restored = await target.installDemoStudy({ package: packageValue, mode: 'EXPLICIT_RESTORE', operationId: 'demo-restore' });
+      expect(await storedSummary()).toMatchObject({ document: { revision: restored.revision, deletedAt: null, hasExecutions: true } });
+      await target.purgeStudy(installed.id);
+      expect(await storedSummary()).toBeUndefined();
+    } finally { database.close(); }
+  }, 30_000);
+
+  it('rolls back study, execution and operation writes when the summary write fails', async () => {
+    const target = repository();
+    const initial = await study();
+    await target.saveStudy({ document: initial, expectedRevision: 0, operationId: OPERATION_A });
+    const next = await appendExecution(initial, executionFor(initial), '2026-09-19T13:00:00Z');
+    const originalPut = IDBObjectStore.prototype.put;
+    const failure = new DOMException('quota', 'QuotaExceededError');
+    const put = vi.spyOn(IDBObjectStore.prototype, 'put').mockImplementation(function (this: IDBObjectStore, ...args) {
+      if (this.name === 'study_summaries') throw failure;
+      return originalPut.apply(this, args);
+    });
+    try {
+      await expect(target.saveStudy({ document: next, expectedRevision: 1, operationId: OPERATION_B })).rejects.toBe(failure);
+    } finally { put.mockRestore(); }
+    expect(await target.getStudy(initial.id)).toEqual(initial);
+    expect(await target.listStudySummaries()).toMatchObject([{ revision: 1, hasExecutions: false }]);
+    await target.saveStudy({ document: next, expectedRevision: 1, operationId: OPERATION_B });
+    expect(await target.listStudySummaries()).toMatchObject([{ revision: 2, hasExecutions: true }]);
+  });
+
+  it('sorts summaries by id, preserves study type, and isolates owners', async () => {
+    const target = repository();
+    const later = await study('study-z');
+    const earlier = await createStudy({ id: 'study-a', ownerSub: OWNER_SUB, name: 'Combinações',
+      studyType: 'PORTFOLIO_COMBINATIONS', baseScenario: makeScenarioDraft(), now: FIXTURE_NOW });
+    await target.saveStudy({ document: later, expectedRevision: 0, operationId: OPERATION_A });
+    await target.saveStudy({ document: earlier, expectedRevision: 0, operationId: OPERATION_B });
+    expect((await target.listStudySummaries()).map((item) => [item.id, item.studyType]))
+      .toEqual([['study-a', 'PORTFOLIO_COMBINATIONS'], ['study-z', undefined]]);
+    expect(await repository(PROJECT_REF, 'owner-b').listStudySummaries()).toEqual([]);
+  });
+
+  it.each([
+    { scenarioCount: -1 }, { revision: 0 }, { hasExecutions: 1 },
+    { executions: [] }, { updatedAt: 'invalid' }, { studyType: 'UNKNOWN' },
+  ])('rejects malformed catalogue metadata %j without touching the study', async (patch) => {
+    const target = repository();
+    const initial = await study();
+    await target.saveStudy({ document: initial, expectedRevision: 0, operationId: OPERATION_A });
+    const database = await openDatabase(DATABASE_NAME);
+    try {
+      const store = database.transaction('study_summaries', 'readwrite').objectStore('study_summaries');
+      const row = await requestResult(store.get(initial.id));
+      await requestResult(store.put({ ...row, document: { ...row.document, ...patch } }));
+      await expect(target.listStudySummaries()).rejects.toBeInstanceOf(DocumentCorruptError);
+      expect(await target.getStudy(initial.id)).toEqual(initial);
+    } finally { database.close(); }
+  });
+
+  it('does not overwrite a foreign summary while repairing the owner catalogue', async () => {
+    const target = repository();
+    const initial = await study();
+    await target.saveStudy({ document: initial, expectedRevision: 0, operationId: OPERATION_A });
+    const database = await openDatabase(DATABASE_NAME);
+    try {
+      const store = database.transaction('study_summaries', 'readwrite').objectStore('study_summaries');
+      const row = await requestResult(store.get(initial.id));
+      await requestResult(store.put({ ...row, owner_sub: 'intruder', document: { ...row.document, ownerSub: 'intruder' } }));
+      await expect(target.listStudySummaries()).rejects.toBeInstanceOf(OwnerMismatchError);
+      expect(await requestResult(database.transaction('study_summaries').objectStore('study_summaries').get(initial.id)))
+        .toMatchObject({ owner_sub: 'intruder' });
+    } finally { database.close(); }
+  });
+
+  it('lists only lightweight summaries and keeps them atomic with structural saves, trash, restore and purge', async () => {
+    const target = repository();
+    const initial = await study();
+    await target.saveStudy({ document: initial, expectedRevision: 0, operationId: OPERATION_A });
+    expect(await target.listStudySummaries()).toEqual([{
+      id: initial.id, ownerSub: OWNER_SUB, name: 'Estudo A', revision: 1,
+      createdAt: FIXTURE_NOW, updatedAt: FIXTURE_NOW, deletedAt: null,
+      scenarioCount: 1, hasExecutions: false,
+    }]);
+    const renamed = await renameStudy(initial, 'Novo nome', FIXTURE_NOW);
+    await target.saveStudy({ document: renamed, expectedRevision: 1, operationId: OPERATION_B });
+    const trashed = await moveStudyToTrash(renamed, FIXTURE_NOW);
+    await target.saveStudy({ document: trashed, expectedRevision: 2, operationId: OPERATION_C });
+    expect(await target.listStudySummaries()).toEqual([]);
+    expect(await target.listStudySummaries({ includeDeleted: true })).toMatchObject([
+      { name: 'Novo nome', revision: 3, deletedAt: FIXTURE_NOW },
+    ]);
+    await target.restoreStudy(initial.id, 3, OPERATION_D);
+    expect(await target.listStudySummaries()).toMatchObject([{ revision: 4, deletedAt: null }]);
+    await target.purgeStudy(initial.id);
+    expect(await target.listStudySummaries({ includeDeleted: true })).toEqual([]);
+  });
+
+  it('repairs missing summaries once using execution keys without loading envelopes', async () => {
+    const target = repository();
+    const initial = await study();
+    await target.saveStudy({ document: initial, expectedRevision: 0, operationId: OPERATION_A });
+    const database = await openDatabase(DATABASE_NAME);
+    try {
+      const transaction = database.transaction(['study_summaries', 'executions'], 'readwrite');
+      await requestResult(transaction.objectStore('study_summaries').delete(initial.id));
+      await requestResult(transaction.objectStore('executions').add({
+        study_id: initial.id, execution_id: 'malformed', owner_sub: OWNER_SUB,
+        sequence: 0, document: { envelope: 'invalid payload kept untouched' },
+      }));
+      const getAll = vi.spyOn(IDBIndex.prototype, 'getAll');
+      const getStudy = vi.spyOn(IDBObjectStore.prototype, 'get');
+      try {
+        expect(await target.listStudySummaries()).toMatchObject([{ hasExecutions: true }]);
+        const firstStudyReads = getStudy.mock.contexts.filter((store) => (store as IDBObjectStore).name === 'studies').length;
+        expect(firstStudyReads).toBe(1);
+        expect(await target.listStudySummaries()).toMatchObject([{ hasExecutions: true }]);
+        expect(getStudy.mock.contexts.filter((store) => (store as IDBObjectStore).name === 'studies')).toHaveLength(1);
+        expect(getAll.mock.contexts.some((index) => (index as IDBIndex).objectStore.name === 'executions')).toBe(false);
+      } finally { getAll.mockRestore(); getStudy.mockRestore(); }
+      await expect(target.getStudy(initial.id)).rejects.toBeInstanceOf(DocumentCorruptError);
+    } finally { database.close(); }
+  });
+
+  it('rejects a summary whose owner disagrees with its indexed owner', async () => {
+    const target = repository();
+    const initial = await study();
+    await target.saveStudy({ document: initial, expectedRevision: 0, operationId: OPERATION_A });
+    const database = await openDatabase(DATABASE_NAME);
+    try {
+      const store = database.transaction('study_summaries', 'readwrite').objectStore('study_summaries');
+      const row = await requestResult(store.get(initial.id));
+      await requestResult(store.put({ ...row, document: { ...row.document, ownerSub: 'intruder' } }));
+      await expect(target.listStudySummaries()).rejects.toBeInstanceOf(OwnerMismatchError);
+    } finally { database.close(); }
+  });
   it('indexa cada execução uma vez e preserva a associação ao estudo em escala', () => {
     const groupExecutions = Reflect.get(repositoryModule, 'groupExecutionsByStudyId');
     expect(groupExecutions).toBeTypeOf('function');
@@ -1080,7 +1232,7 @@ describe('lifecycle', () => {
   it('closes the repository connection on versionchange', async () => {
     const target = repository();
     await target.listCompanies();
-    const upgrade = indexedDB.open(DATABASE_NAME, 4);
+    const upgrade = indexedDB.open(DATABASE_NAME, 5);
     const upgraded = await new Promise<IDBDatabase>((resolve, reject) => {
       upgrade.onerror = () => reject(upgrade.error);
       upgrade.onsuccess = () => resolve(upgrade.result);

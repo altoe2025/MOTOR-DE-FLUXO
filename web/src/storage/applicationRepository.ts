@@ -4,6 +4,23 @@ import type { OperationalProfileVersion } from '../profiles/domain';
 import type { DemoStudyPackageV1 } from '../demo/domain';
 import type { ChatConversation } from '../chat/domain';
 
+/** The catalogue never carries scenarios, evidence or execution envelopes. */
+export type StudySummary = Readonly<Pick<StudyDocument,
+  'id' | 'ownerSub' | 'name' | 'studyType' | 'revision' | 'createdAt' | 'updatedAt' | 'deletedAt'
+> & { scenarioCount: number; hasExecutions: boolean }>;
+
+export function summarizeStudy(
+  document: Omit<StudyDocument, 'executions'>,
+  hasExecutions: boolean,
+): StudySummary {
+  return {
+    id: document.id, ownerSub: document.ownerSub, name: document.name,
+    ...(document.studyType === undefined ? {} : { studyType: document.studyType }),
+    revision: document.revision, createdAt: document.createdAt, updatedAt: document.updatedAt,
+    deletedAt: document.deletedAt, scenarioCount: document.scenarios.length, hasExecutions,
+  };
+}
+
 export type DemoInstallMode = 'FIRST_EMPTY_SESSION' | 'EXPLICIT_RESTORE';
 export type DemoInstallMutation = Readonly<{
   package: DemoStudyPackageV1;
@@ -85,6 +102,7 @@ export interface ApplicationRepository {
     input: AppendProfileVersionMutation,
   ): Promise<OperationalProfileVersion>;
   listStudies(options?: { includeDeleted?: boolean }): Promise<StudyDocument[]>;
+  listStudySummaries(options?: { includeDeleted?: boolean }): Promise<StudySummary[]>;
   getStudy(id: string): Promise<StudyDocument | null>;
   saveStudy(input: CASMutation<StudyDocument>): Promise<StudyDocument>;
   restoreStudy(

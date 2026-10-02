@@ -1,4 +1,4 @@
-import type { ApplicationRepository } from '../storage/applicationRepository';
+import type { ApplicationRepository, StudySummary } from '../storage/applicationRepository';
 import { installDemoStudy, type DemoPackageLoader } from '../demo/installDemoStudy';
 import { RevisionConflictError } from '../storage/errors';
 import type { CompanyRecord, ObservedCase } from '../cases/domain';
@@ -303,6 +303,30 @@ export class StudyController {
   }
 
   /** Read-only queries deliberately stay behind the session-bound controller. */
+  async readStudy(id: string): Promise<StudyDocument | null> {
+    this.#assertOpen();
+    const { repository, epoch } = this.#session();
+    try {
+      const document = await repository.getStudy(id);
+      return this.#isCurrent(repository, epoch) ? document : null;
+    } catch (error) {
+      if (!this.#isCurrent(repository, epoch)) return null;
+      throw error;
+    }
+  }
+
+  async listStudySummaries(includeDeleted = false): Promise<StudySummary[]> {
+    this.#assertOpen();
+    const { repository, epoch } = this.#session();
+    try {
+      const summaries = await repository.listStudySummaries({ includeDeleted });
+      return this.#isCurrent(repository, epoch) ? summaries : [];
+    } catch (error) {
+      if (!this.#isCurrent(repository, epoch)) return [];
+      throw error;
+    }
+  }
+
   async listStudies(includeDeleted = false): Promise<StudyDocument[]> {
     this.#assertOpen();
     const { repository, epoch } = this.#session();

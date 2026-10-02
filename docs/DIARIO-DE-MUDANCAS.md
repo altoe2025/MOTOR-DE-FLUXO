@@ -90,6 +90,10 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-10-02 — Catálogo leve de estudos no IndexedDB (MOT-100)
+
+**Sintoma:** entrar em Estudos ou Diagnóstico carregava e validava todos os cenários e envelopes de todos os estudos antes de mostrar uma lista curta. **Causa:** o repositório só expunha `listStudies`, que reconstituía documentos completos. **O que foi feito:** schema local v4 adiciona `study_summaries`, atualizado atomicamente nos saves/restores/demo/purge e reconstruído de forma reparável para dados antigos sem validar envelopes; controller ganhou listagem resumida e leitura destacada que não altera a seleção. Migração e contratos passaram 111 testes, typecheck e lint; re-revisão aprovada. **O que isso invalida:** qualquer suposição de que telas de catálogo precisam receber `StudyDocument`; estudos e execuções persistidos continuam compatíveis.
+
 ## 2026-10-02 — Fixture válida de desempenho para 255 combinações (MOT-100)
 
 **Sintoma:** não havia uma massa unitária persistível que representasse 63/255 composições já diagnosticadas, então regressões de CPU e identidade só apareciam no E2E longo. **Causa:** as fixtures menores não exercitavam o formato reserva `QUEUED` + terminal nem todas as identidades entre request, cenário e envelope. **O que foi feito:** criada uma fixture determinística validada pelo contrato de produção, com goldens independentes de projeção/ranking para seis e oito empresas; 4/4 testes direcionados passaram e os dois achados importantes da revisão foram corrigidos. **O que isso invalida:** nada nos resultados atuais; novos testes de desempenho podem reutilizar a massa sem chamar o motor.

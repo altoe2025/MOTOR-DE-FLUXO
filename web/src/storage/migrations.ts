@@ -10,6 +10,7 @@ import type {
 } from '../study/model';
 import { validateAndCertifyStudy } from '../study/certifiedStudy';
 import type { ApplicationRepository } from './applicationRepository';
+import { summarizeStudy } from './applicationRepository';
 import {
   DocumentCorruptError,
   NotFoundError,
@@ -17,7 +18,7 @@ import {
   SchemaUnsupportedError,
 } from './errors';
 
-const DATABASE_SCHEMA_VERSION = 3;
+const DATABASE_SCHEMA_VERSION = 4;
 
 export type LegacySource = Readonly<{
   sourceKey: string;
@@ -423,7 +424,7 @@ export async function migrateDatabase(
 
   await transactionResult(
     database,
-    ['studies', 'executions', 'meta'],
+    ['studies', 'study_summaries', 'executions', 'meta'],
     'readwrite',
     async (transaction) => {
       const meta = transaction.objectStore('meta');
@@ -450,6 +451,11 @@ export async function migrateDatabase(
             owner_sub: item.study.ownerSub,
             deleted: item.study.deletedAt === null ? 0 : 1,
             document,
+          });
+          transaction.objectStore('study_summaries').add({
+            study_id: item.study.id, owner_sub: item.study.ownerSub,
+            deleted: item.study.deletedAt === null ? 0 : 1,
+            document: summarizeStudy(document, executionDocuments.length > 0),
           });
           for (const [sequence, execution] of executionDocuments.entries()) {
             executions.add({

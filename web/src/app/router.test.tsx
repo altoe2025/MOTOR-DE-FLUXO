@@ -28,6 +28,7 @@ import type {
   ConfirmObservedCaseMutation,
 } from '../storage/applicationRepository';
 import { createStudy } from '../study/domain';
+import { summarizeStudy } from '../storage/applicationRepository';
 import { makeObservedCase, makeScenarioDraft } from '../study/fixtures';
 import type { StudyDocument } from '../study/model';
 import { parseCanonicalXlsx } from '../importer/workerClient';
@@ -103,6 +104,10 @@ class RepositoryDouble implements ApplicationRepository {
     return input.document;
   }
   async listStudies() { return this.studies; }
+  async listStudySummaries(options?: { includeDeleted?: boolean }) {
+    return this.studies.filter((study) => options?.includeDeleted === true || study.deletedAt === null)
+      .map((study) => summarizeStudy(study, study.executions.length > 0));
+  }
   async getStudy(id: string) { return this.studies.find((item) => item.id === id) ?? null; }
   async saveStudy(input: CASMutation<StudyDocument>) {
     const index = this.studies.findIndex((item) => item.id === input.document.id);

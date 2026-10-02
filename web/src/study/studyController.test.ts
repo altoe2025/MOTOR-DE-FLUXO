@@ -96,6 +96,15 @@ class RepositoryDouble implements ApplicationRepository {
     return this.installDemoImplementation(input);
   }
   async listStudies(): Promise<StudyDocument[]> { return this.studies; }
+  async listStudySummaries(): Promise<Awaited<ReturnType<ApplicationRepository['listStudySummaries']>>> {
+    return this.studies.map((document) => ({
+      id: document.id, ownerSub: document.ownerSub, name: document.name,
+      ...(document.studyType === undefined ? {} : { studyType: document.studyType }),
+      revision: document.revision, createdAt: document.createdAt, updatedAt: document.updatedAt,
+      deletedAt: document.deletedAt, scenarioCount: document.scenarios.length,
+      hasExecutions: document.executions.length > 0,
+    }));
+  }
   async getStudy(id: string): Promise<StudyDocument | null> {
     return this.getStudyImplementation(id);
   }
@@ -191,6 +200,46 @@ function controller(input: {
 }
 
 describe('StudyController', () => {
+  it('reads another study without changing the selected dirty document or queued revision', async () => {
+    const selected = await makeStudy();
+    const other = await makeStudy(FIXTURE_OWNER, 'study-2');
+    const repository = new RepositoryDouble(FIXTURE_OWNER, selected);
+    const subject = controller({ repositories: [repository], scheduler: new ManualScheduler() });
+    await subject.switchSession(FIXTURE_OWNER);
+    await subject.loadStudy(selected.id);
+    const dirty = await renameStudy(selected, 'Editado', FIXTURE_NOW);
+    subject.edit(dirty);
+    const snapshot = subject.snapshot;
+    repository.getStudyImplementation = async () => other;
+    expect(await subject.readStudy(other.id)).toBe(other);
+    expect(subject.snapshot).toBe(snapshot);
+    await subject.flush();
+    expect(subject.snapshot.document).toBe(dirty);
+    expect(repository.saveCalls[0]?.expectedRevision).toBe(1);
+    subject.close();
+  });
+
+  it('discards summary and detached reads when the session changes', async () => {
+    const initial = await makeStudy();
+    const repository = new RepositoryDouble(FIXTURE_OWNER, initial);
+    const pending = deferred<StudyDocument | null>();
+    const summaries = deferred<Awaited<ReturnType<ApplicationRepository['listStudySummaries']>>>();
+    repository.getStudyImplementation = () => pending.promise;
+    Object.assign(repository, { listStudySummaries: () => summaries.promise });
+    const subject = controller({ repositories: [repository, new RepositoryDouble(OWNER_B)] });
+    await subject.switchSession(FIXTURE_OWNER);
+    const reading = subject.readStudy(initial.id);
+    const listing = subject.listStudySummaries(true);
+    await subject.switchSession(OWNER_B);
+    pending.resolve(initial);
+    summaries.resolve([{ id: initial.id, ownerSub: FIXTURE_OWNER, name: initial.name,
+      revision: 1, createdAt: FIXTURE_NOW, updatedAt: FIXTURE_NOW, deletedAt: null,
+      scenarioCount: 1, hasExecutions: false }]);
+    expect(await reading).toBeNull();
+    expect(await listing).toEqual([]);
+    expect(subject.snapshot).toMatchObject({ ownerSub: OWNER_B, document: null, status: 'IDLE' });
+    subject.close();
+  });
   it('publica revisão importada somente na sessão e empresa proprietárias', async () => {
     const repository = new RepositoryDouble(FIXTURE_OWNER);
     const subject = controller({ repositories: [repository, new RepositoryDouble(OWNER_B)] });
