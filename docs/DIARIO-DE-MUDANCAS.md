@@ -33,10 +33,11 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-10-02, durante a preparação da publicação da análise de carteiras.
+Atualizada em 2026-10-02, durante a entrega das correções de diagnóstico.
 
 | Branch | Situação | Dono |
 |---|---|---|
+| `codex/diagnostico-confiavel` | PR #71 aberto em rascunho; correções e revisão independente concluídas, validação automática em andamento; sem merge ou deploy | Codex |
 | `codex/carteiras-docker-fixture` | Corrige somente o empacotamento de um helper de testes após falha do build Render; versão Live anterior preservada | Codex |
 | `codex/carteiras-analise` | PR #69 mergeado em `9cc8b8e`, CI verde; primeiro deploy interrompido no build por helper de testes fora do padrão de exclusão | Codex |
 | `feat/front-visual` | visual do app inteiro no sistema do Replay; aprovado pelo Gabriel na prévia local; PR para a `main`, deploy com o Codex | Claude |
@@ -111,7 +112,10 @@ Terminais liberam intermediários; retenção máxima de 128 terminais/64 MiB, e
 somente os mais antigos, e TTL máximo de 24 h. Operação documentada em
 `docs/deploy-render.md`; regressões incluem morte real de processo, callbacks tardios,
 fechamento concorrente, fontes Unicode e 100 repetições. Gates finais registrados no
-relatório de execução local. Não houve publicação, push, merge ou deploy nesta tarefa.
+relatório de execução local: Python normal e otimizado com 1413 testes passando,
+build e três testes finais de diagnóstico no navegador aprovados. Commits `6d2c51a`
+e `dd3ab35` enviados no PR #71, aberto em rascunho; revisão independente aprovada.
+A validação automática está em andamento. Não houve merge nem deploy.
 
 **O que isso invalida:** a promessa de manter todo resultado no servidor por 24h e a
 indicação de atualidade de históricos cuja receita usou premissas diferentes do
