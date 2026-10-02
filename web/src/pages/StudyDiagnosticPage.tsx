@@ -392,27 +392,28 @@ export function StudyDiagnosticPage() {
         {viewState === null || viewState.kind === 'SUCCEEDED' ? null : <DiagnosticStatus state={viewState} />}
         {envelope === null ? null : <>
           <DiagnosticEngineResult envelope={envelope} />
-          {hasIofFallback ? <p><strong>IOF padrão por direção</strong>: ordens sem regra específica para a combinação de finalidade e direção usam as premissas da simulação por direção, sem classificação regulatória inferida ou cotação.</p> : null}
+          {hasIofFallback ? <p className="field-hint iof-note"><strong>IOF padrão por direção</strong>: ordens sem regra específica de finalidade e direção usam as alíquotas por direção das premissas, sem classificação regulatória inferida ou cotação.</p> : null}
           <Link className="button-link" to={`/estudos/${study.id}/apresentacao?cenario=${encodeURIComponent(scenario.id)}&execucao=${encodeURIComponent(terminal!.id)}`}>Apresentar esta execução</Link>
         </>}
       </>}
     </> : <>
       <DiagnosticControls generated={generated} count={effectiveCount} onCountChange={setCount} onRun={() => void run()} disabled={runInProgress || controller.snapshot.status === 'STORAGE_FAILURE'} />
-      {study.scenarios.length < 2 ? null : <Button variant="secondary" data-chat-help-id="control.diagnostico.mostrar-quadros" className="comparison-toggle"
+      {viewState === null || viewState.kind === 'SUCCEEDED' ? null : <DiagnosticStatus state={viewState} {...(cancelInFlight ? {} : { onCancel: () => void cancel() })} onRetry={(attemptId) => void retry(attemptId)} />}
+      {envelope === null ? null : <>
+        <DiagnosticEngineResult envelope={envelope} />
+        {hasIofFallback ? <p className="field-hint iof-note"><strong>IOF padrão por direção</strong>: ordens sem regra específica de finalidade e direção usam as alíquotas por direção das premissas, sem classificação regulatória inferida ou cotação.</p> : null}
+        <div className="result-actions">
+          <Link className="button-link replay-cta" to={`/estudos/${study.id}/replay?executionId=${encodeURIComponent(terminal!.id)}`}>Abrir Replay · Fronteira Viva</Link>
+          <Link className="button-link" to={`/estudos/${study.id}/apresentacao?cenario=${encodeURIComponent(scenario.id)}&execucao=${encodeURIComponent(terminal!.id)}`}>Apresentar esta execução</Link>
+        </div>
+      </>}
+      {study.scenarios.length < 2 ? null : <Button variant="secondary" data-chat-help-id="control.diagnostico.mostrar-quadros" className="comparison-toggle" title="Compare os cenários: escolha a carteira com maior economia dentro do seu limite de espera."
         aria-expanded={comparisonOpen} aria-controls="variation-comparison-panel" onClick={() => setComparisonOpen((open) => !open)}>
         {comparisonOpen ? 'Ocultar quadros comparativos' : 'Abrir quadros comparativos'}
       </Button>}
-      {study.scenarios.length > 1 ? <p className="field-hint">Nos quadros comparativos, escolha a carteira com maior economia dentro do seu limite de espera.</p> : null}
       {comparisonOpen ? <div id="variation-comparison-panel">
         <VariationComparison study={study} selectedScenarioId={scenario.id} running={runInProgress} progress={runAllProgress} onRunAll={() => void runAll()} />
       </div> : null}
-      {viewState === null || viewState.kind === 'SUCCEEDED' ? null : <DiagnosticStatus state={viewState} {...(cancelInFlight ? {} : { onCancel: () => void cancel() })} onRetry={(attemptId) => void retry(attemptId)} />}
-      {envelope === null ? null : <>
-        <Link className="button-link replay-cta" to={`/estudos/${study.id}/replay?executionId=${encodeURIComponent(terminal!.id)}`}>Abrir Replay · Fronteira Viva</Link>
-        <DiagnosticEngineResult envelope={envelope} />
-        {hasIofFallback ? <p><strong>IOF padrão por direção</strong>: ordens sem regra específica para a combinação de finalidade e direção usam as premissas da simulação por direção, sem classificação regulatória inferida ou cotação.</p> : null}
-        <Link className="button-link" to={`/estudos/${study.id}/apresentacao?cenario=${encodeURIComponent(scenario.id)}&execucao=${encodeURIComponent(terminal!.id)}`}>Apresentar esta execução</Link>
-      </>}
     </>}
   </article>;
 }

@@ -84,6 +84,8 @@ describe('combination study diagnosis', () => {
     const { study, scenarioId } = await comboStudy(2, true);
     openStudy(study, `?scenarioId=${scenarioId}`);
     expect(await screen.findByRole('link', { name: 'Voltar à recomendação' })).toHaveAttribute('href', `/estudos/${study.id}/diagnostico`);
+    expect(screen.getByRole('region', { name: 'Resultado do motor' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /Custos por componente/ }));
     expect(screen.getByRole('region', { name: 'Tabela de decomposição de custos' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Qual carteira atende melhor?' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Executar diagnóstico' })).not.toBeInTheDocument();
