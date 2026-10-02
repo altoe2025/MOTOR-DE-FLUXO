@@ -33,6 +33,12 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
+Atualizada em 2026-10-02, após a publicação das correções de diagnóstico.
+
+| Branch | Situação | Dono |
+|---|---|---|
+| `codex/diagnostico-727d3ee-registro` | Registro documental do merge #71 e deploy Live `727d3ee`; sem alteração de produto ou novo deploy | Codex |
+| `codex/diagnostico-confiavel` | PR #71 mergeado em `727d3ee`, CI aprovada; publicado no Render com status Live | Codex |
 Atualizada em 2026-10-01, com a publicação do visual unificado no Render.
 
 | Branch | Situação | Dono |
@@ -75,6 +81,7 @@ Atualizada em 2026-10-05, durante o ajuste do contorno dos cartões de Estudos (
 | `codex/carteira-criterios` | Integra estudo separado de combinações, últimas melhorias de `feat/bancada-exploracao` e chat já publicado do PR #57; deploy aguardando comando do Gabriel | Codex |
 | `codex/chat-interface-render` | PR #57 aberto (draft, base `feat/bancada-exploracao`); código `8d43695` publicado no Render com status Live em 2026-09-28; sem merge na `main` | Codex |
 | `codex/integracao-etapas-5-6` | Consolida `feat/bancada-exploracao` e `codex/finalidade-verificacao`, incluindo histórico de `origin/main`; publicação/CI em preparação, sem deploy | Codex |
+| `main` | `727d3ee`: PR #71 mergeado; mesma revisão confirmada Live no Render | os dois |
 | `main` | `c3620bf`: PR #66 mergeado e visual unificado publicado no Render | os dois |
 | `main` | `5483fab`: PR #65 mergeado e diagnóstico recolhível publicado no Render | os dois |
 | `main` | `77ceea2`: PR #75 mergeado e publicado no Render; otimização das combinações Live | os dois |
@@ -114,6 +121,26 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-10-02 — Publicação das correções de diagnóstico (MOT-73)
+
+1. **Sintoma:** as correções do PR #71 estavam revisadas, mas o serviço publicado
+   ainda executava `09a979e`, com a cota antiga de 500 campos de proveniência.
+2. **Causa:** publicação manual separada da entrega de código, aguardando autorização.
+3. **O que foi feito:** após autorização explícita do Gabriel, CI integral
+   `37073143867` aprovada e merge do PR #71 em
+   `727d3ee7c6918cd74f2a578d17302add3df03d71`. A árvore do merge é idêntica à revisão
+   testada `8258e36`. Deploy manual específico no serviço `motor-de-fluxo-piloto`,
+   ID `dep-db03bn9srm7s73duha40`, iniciado às 19:53:17 GMT-3 e concluído como **Live**
+   em 51,1 segundos. Nenhuma configuração, variável, plano ou permissão foi alterada.
+   Smoke público após publicação: health `200 {"status":"ok"}`, `/login` HTTP 200
+   e OpenAPI com `DiagnosticRequest.provenance.maxProperties = 8309`.
+   A CI anterior do mesmo código (`37072489030`) também passou: 1415 testes Python
+   em cada modo, 1385 web, 66 navegador e orçamentos de desempenho. Não foi executado
+   diagnóstico autenticado em produção; o exemplo e os logs do incidente de Sávio
+   não estavam disponíveis. Este registro é exclusivamente documental.
+4. **O que isso invalida:** a indicação de que o PR #71 aguardava integração e
+   publicação. Resultados financeiros e histórico local continuam preservados;
+   a retenção transitória segue os limites documentados na entrada abaixo.
 ## 2026-10-02 — Front mais leve publicado no Render (MOT-99)
 
 1. **Sintoma.** O PR #73 estava aprovado e validado, mas a versão Live ainda era
