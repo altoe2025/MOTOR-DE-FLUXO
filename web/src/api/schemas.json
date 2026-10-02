@@ -2094,7 +2094,7 @@
             "minLength": 1,
             "type": "string"
           },
-          "maxItems": 500,
+          "maxItems": 8309,
           "title": "Evidence Refs",
           "type": "array"
         },
@@ -2102,7 +2102,7 @@
           "additionalProperties": {
             "$ref": "#/$defs/OrigemValor"
           },
-          "maxProperties": 500,
+          "maxProperties": 8309,
           "title": "Request Paths",
           "type": "object"
         }
@@ -2136,7 +2136,7 @@
           "additionalProperties": {
             "$ref": "#/$defs/OrigemValor"
           },
-          "maxProperties": 500,
+          "maxProperties": 8309,
           "title": "Provenance",
           "type": "object"
         },

@@ -648,3 +648,37 @@ describe('cancel e retry diagnósticos', () => {
     expect(retryDiagnostic).toHaveBeenCalledWith(JOB_ID, retryJobId, expect.any(AbortSignal));
   });
 });
+
+
+it.each(['http', 'envelope'] as const)('persists permanent result failure %s and permits a new attempt', async (kind) => {
+  const { study, request } = await studyFixture();
+  const authority = new AuthorityDouble(study);
+  const api = {
+    submitDiagnostic: vi.fn().mockResolvedValue(snapshot('QUEUED', request)),
+    getDiagnosticJob: vi.fn().mockResolvedValue(snapshot('SUCCEEDED', request)),
+    getDiagnosticResult: kind === 'http'
+      ? vi.fn().mockRejectedValue(new ApiError({ status: 413, code: 'RESPOSTA_GRANDE', message: 'too large' }))
+      : vi.fn().mockResolvedValue({}),
+  };
+  const result = await executeStudyDiagnostic({ authority, scenarioId: SCENARIO_ID, buildRequest: async () => request, api });
+  expect(result.status).toBe('FAILED');
+  expect(authority.snapshot.document?.executions.at(-1)?.status).toBe('FAILED');
+  const next = { ...request, idempotency_key: '00000000-0000-4000-8000-000000000999' };
+  await executeStudyDiagnostic({ authority, scenarioId: SCENARIO_ID, buildRequest: async () => next, api: { ...api, submitDiagnostic: vi.fn().mockResolvedValue(snapshot('QUEUED', next)), getDiagnosticJob: vi.fn().mockResolvedValue(snapshot('FAILED', next)) } });
+  expect(authority.snapshot.document?.executions).toHaveLength(4);
+});
+
+
+it.each([0, 408, 429, 503])('retains TERMINAL_ONLY reservation after transient download %i and resumes without POST', async (status) => {
+  const { study, request } = await studyFixture();
+  const authority = new AuthorityDouble(study);
+  const failure = new ApiError({ status, code: 'TRANSIENT', message: 'later' });
+  const api = { submitDiagnostic: vi.fn().mockResolvedValue(snapshot('QUEUED', request)), getDiagnosticJob: vi.fn().mockResolvedValue(snapshot('SUCCEEDED', request)), getDiagnosticResult: vi.fn().mockRejectedValue(failure) };
+  const options = { authority, scenarioId: SCENARIO_ID, buildRequest: async () => request, api, persistence: 'TERMINAL_ONLY' as const };
+  await expect(executeStudyDiagnostic(options)).rejects.toBe(failure);
+  expect(authority.snapshot.document?.executions).toHaveLength(1);
+  api.getDiagnosticJob.mockResolvedValue(snapshot('FAILED', request));
+  await executeStudyDiagnostic(options);
+  expect(api.submitDiagnostic).toHaveBeenCalledOnce();
+  expect(authority.snapshot.document?.executions).toHaveLength(2);
+});

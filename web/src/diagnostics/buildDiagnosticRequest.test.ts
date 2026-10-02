@@ -1,3 +1,11 @@
+import { buildPreviewRequest, type PreviewRequestProvenance } from '../preparation/buildPreviewRequest';
+import { createStudy, updateScenario } from '../study/domain';
+import { appendDiagnosticExecution } from './domain';
+import { currentDiagnostic } from '../levers/savingsOrigin';
+import { isCurrentForScenario } from '../pages/StudyDiagnosticPage';
+import { validateStudyDocument } from '../study/validation';
+import type { DiagnosticExecutionRecord } from '../study/model';
+import observedSource from '../../../contracts/fixtures/communication/observed-source.json';
 import { describe, expect, it } from 'vitest';
 
 import type { PreviaRequest } from '../api/client';
@@ -118,4 +126,62 @@ describe('buildDiagnosticRequest', () => {
     }
     expect(validateDiagnosticRequest(first)).toBe(true);
   });
+});
+
+
+it('uses current premises, period and rule sources without mutating preserved participants', async () => {
+  const source = makeSyntheticSnapshot();
+  source.generationInputSnapshot = generationInput();
+  const original = structuredClone(source.generationInputSnapshot);
+  const value = input(10, source);
+  value.scenario = { ...value.scenario, premises: { windowDays: 1, costs: { ...value.scenario.premises.costs, iof_out: '0.01', iof_por_finalidade: [{ finalidade: 'NEW', direcao: 'OUT', aliquota: '0.02' }] } }, period: { httpPeriod: { modo: 'NATURAL', dias_aquecimento: 2, periodo_medicao_dias: 20 } } };
+  const origin = { tipo: 'ESTIMATIVA_USUARIO' as const, fonte: 'edited-now', registrado_em_utc: '2026-10-02T12:00:00Z' };
+  value.previewRequest.proveniencia = Object.fromEntries(['/janela_dias', '/horizonte_dias', ...Object.keys(value.scenario.premises.costs).filter((k) => k !== 'iof_por_finalidade').map((k) => `/custo/${k}`), '/custo/iof_por_finalidade/0/aliquota'].map((path) => [path, origin]));
+  const request = await buildDiagnosticRequest(value);
+  if (request.sampling.kind !== 'GENERATED_INPUT') throw new Error('wrong kind');
+  expect(request.sampling.preparation_input).toMatchObject({ window_days: 1, warmup_days: 2, measurement_days: 20, costs: { iof_out: '0.01' } });
+  expect(request.sampling.preparation_input.participants).toEqual(original.participants);
+  expect(request.sampling.preparation_input.sources['/costs/iof_por_finalidade/NEW/OUT']).toEqual({ kind: 'ESTIMATIVA_USUARIO', source: 'edited-now', recorded_at: origin.registrado_em_utc });
+  expect(source.generationInputSnapshot).toEqual(original);
+});
+
+
+it.each([99, 1000])('real preview builder supplies complete provenance for %i orders', async (count) => {
+  const source = makeSyntheticSnapshot();
+  source.orders = Array.from({ length: count }, (_, i) => ({ ...source.orders[0]!, id: `order-${i}` }));
+  const value = input(1, source);
+  const provenance = source.provenance[0]!;
+  value.previewRequest = buildPreviewRequest(source, value.scenario.premises, value.scenario.period,
+    { requestId: REQUEST_ID, studyId: value.studyId, scenarioId: value.scenario.id, scenarioRevision: 1 },
+    { premises: { windowDays: provenance, costs: Object.fromEntries(Object.keys(value.scenario.premises.costs).filter(k => k !== 'iof_por_finalidade').map(k => [k, provenance])) }, period: { horizonDays: provenance } } as PreviewRequestProvenance);
+  expect(Object.keys(value.previewRequest.proveniencia)).toHaveLength(9 + count * 5);
+  expect((await buildDiagnosticRequest(value)).provenance).toEqual(value.previewRequest.proveniencia);
+});
+
+it('persists edited generated scenarios and keeps legacy mismatches historical, never current', async () => {
+  const source = makeSyntheticSnapshot();
+  source.generationInputSnapshot = generationInput();
+  const value = input(10, source);
+  let study = await createStudy({ id: value.studyId, ownerSub: 'owner-a', name: 'generated', baseScenario: value.scenario, now: '2026-10-02T12:00:00Z' });
+  study = await updateScenario(study, value.scenario.id, { premises: { ...value.scenario.premises, windowDays: 1, costs: { ...value.scenario.premises.costs, iof_out: '0.01' } }, period: { httpPeriod: { modo: 'NATURAL', dias_aquecimento: 2, periodo_medicao_dias: 20 } } }, '2026-10-02T12:01:00Z');
+  value.scenario = study.scenarios[0]!;
+  const origin = { tipo: 'ESTIMATIVA_USUARIO' as const, fonte: 'current-edit', registrado_em_utc: '2026-10-02T12:01:00Z' };
+  value.previewRequest.proveniencia = Object.fromEntries(['/janela_dias', '/horizonte_dias', '/custo/iof_out'].map(path => [path, origin]));
+  const request = await buildDiagnosticRequest(value);
+  const reservation: DiagnosticExecutionRecord = { kind: 'DIAGNOSTIC', id: 'reservation-edited', attemptId: 'attempt-edited', scenarioId: value.scenario.id, scenarioRevision: value.scenario.revision, inputFingerprint: value.scenario.inputFingerprint, requestSnapshot: request, sourceSnapshot: value.scenario.sourceSnapshot, premisesSnapshot: value.scenario.premises, periodSnapshot: value.scenario.period, status: 'QUEUED', jobId: request.idempotency_key, envelope: null, error: null, createdAt: '2026-10-02T12:02:00Z', finishedAt: null };
+  study = await appendDiagnosticExecution(study, reservation, reservation.createdAt);
+  const envelope = structuredClone(observedSource.envelope);
+  Object.assign(envelope, { job_id: request.idempotency_key, request_fingerprint: request.input_fingerprint });
+  Object.assign(envelope.selected_execution, { study_id: request.study_id, scenario_id: request.scenario_id, scenario_revision: request.scenario_revision });
+  const terminal = { ...reservation, id: 'terminal-edited', status: 'SUCCEEDED' as const, envelope, finishedAt: '2026-10-02T12:03:00Z' } as DiagnosticExecutionRecord;
+  study = await appendDiagnosticExecution(study, terminal, terminal.finishedAt!);
+  expect((await validateStudyDocument(study)).ok).toBe(true);
+  expect(currentDiagnostic(study, value.scenario)?.id).toBe(terminal.id);
+  const legacy = structuredClone(study) as DeepMutable<typeof study>;
+  for (const execution of legacy.executions) {
+    if (execution.kind === 'DIAGNOSTIC' && execution.requestSnapshot.sampling.kind === 'GENERATED_INPUT') execution.requestSnapshot.sampling.preparation_input = structuredClone(source.generationInputSnapshot);
+  }
+  expect((await validateStudyDocument(legacy)).ok).toBe(true);
+  expect(currentDiagnostic(legacy, value.scenario)).toBeNull();
+  expect(isCurrentForScenario(legacy.executions[1] as DiagnosticExecutionRecord, value.scenario)).toBe(false);
 });

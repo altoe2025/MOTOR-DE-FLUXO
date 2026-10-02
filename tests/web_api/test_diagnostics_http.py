@@ -216,7 +216,7 @@ def test_corpo_maior_que_um_mib_e_resposta_invalida_sao_sanitizados(client_parts
     client, executor = client_parts
     oversized = client.post(
         "/api/v1/diagnosticos",
-        content=b"x" * (1024 * 1024 + 1),
+        content=b"x" * (16 * 1024 * 1024 + 1),
         headers={**_auth(), "Content-Type": "application/json"},
     )
     assert oversized.status_code == 413

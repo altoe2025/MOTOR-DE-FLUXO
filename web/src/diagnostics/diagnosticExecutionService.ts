@@ -89,6 +89,7 @@ export async function executeStudyDiagnostic(
 
     let reservation = activeReservation(study, options.scenarioId);
     let reservedStudy = study;
+    const reservationDeferred = options.persistence === 'TERMINAL_ONLY' && reservation === null;
     if (reservation === null) {
       if (!sessionIsCurrent(options.authority, ownerSub, epoch, signal)) return null;
       fallbackAttemptId = nextId();
@@ -121,7 +122,7 @@ export async function executeStudyDiagnostic(
       if (!sessionIsCurrent(options.authority, ownerSub, epoch, signal)) {
         return interrupted(reservation, null);
       }
-      if (options.persistence === 'TERMINAL_ONLY') {
+      if (reservationDeferred) {
         assertDeferredReservation(study, reservation);
         reservedStudy = study;
       } else {
@@ -148,7 +149,7 @@ export async function executeStudyDiagnostic(
           reservation,
           terminalRecord(reservation, nextId(), 'FAILED', now(), null, failure),
           signal,
-          options.persistence === 'TERMINAL_ONLY',
+          reservationDeferred,
         );
       }
       if (!sessionIsCurrent(options.authority, ownerSub, epoch, signal)) {
@@ -172,7 +173,10 @@ export async function executeStudyDiagnostic(
         }
       }
     } catch (error) {
-      if (!(error instanceof ApiError) || error.status !== 404) throw error;
+      if (!(error instanceof ApiError) || error.status !== 404) {
+        if (reservationDeferred) await persistDeferredReservation(options.authority, ownerSub, epoch, reservedStudy, reservation, signal);
+        throw error;
+      }
       return persistTerminal(
         options.authority, ownerSub, epoch, reservedStudy, reservation,
         terminalRecord(reservation, nextId(), 'INTERRUPTED', now(), null, {
@@ -180,7 +184,7 @@ export async function executeStudyDiagnostic(
           message: 'O job não está mais disponível no servidor.',
         }),
         signal,
-        options.persistence === 'TERMINAL_ONLY',
+        reservationDeferred,
       );
     }
 
@@ -188,22 +192,26 @@ export async function executeStudyDiagnostic(
     if (terminalSnapshot.status === 'SUCCEEDED') {
       try {
         envelope = await options.api.getDiagnosticResult(reservation.jobId!, signal);
+        assertEnvelopeIdentity(envelope, reservation);
       } catch (error) {
-        if (!(error instanceof ApiError) || error.status !== 404) throw error;
+        const expired = error instanceof ApiError && error.status === 404;
+        if (!expired && !definitiveResultFailure(error)) {
+          if (reservationDeferred) await persistDeferredReservation(options.authority, ownerSub, epoch, reservedStudy, reservation, signal);
+          throw error;
+        }
         return persistTerminal(
           options.authority, ownerSub, epoch, reservedStudy, reservation,
-          terminalRecord(reservation, nextId(), 'INTERRUPTED', now(), null, {
-            code: 'SERVER_RESTART_OR_JOB_EXPIRED',
-            message: 'O resultado do job não está mais disponível no servidor.',
+          terminalRecord(reservation, nextId(), expired ? 'INTERRUPTED' : 'FAILED', now(), null, {
+            code: expired ? 'SERVER_RESTART_OR_JOB_EXPIRED' : 'DIAGNOSTIC_RESULT_UNAVAILABLE',
+            message: expired ? 'O resultado do job não está mais disponível no servidor.' : 'O resultado não pôde ser recuperado. Inicie um novo diagnóstico.',
           }),
           signal,
-          options.persistence === 'TERMINAL_ONLY',
+          reservationDeferred,
         );
       }
       if (!sessionIsCurrent(options.authority, ownerSub, epoch, signal)) {
         return interrupted(reservation, null);
       }
-      assertEnvelopeIdentity(envelope, reservation);
     }
     const status = terminalSnapshot.status as 'SUCCEEDED' | 'FAILED' | 'CANCELLED';
     const error = status === 'FAILED'
@@ -222,7 +230,7 @@ export async function executeStudyDiagnostic(
       reservation,
       terminalRecord(reservation, nextId(), status, now(), envelope, error),
       signal,
-      options.persistence === 'TERMINAL_ONLY',
+      reservationDeferred,
     );
   });
   return result ?? {
@@ -398,7 +406,7 @@ function assertEnvelopeIdentity(
     || selected.study_id !== request.study_id
     || selected.scenario_id !== request.scenario_id
     || selected.scenario_revision !== request.scenario_revision) {
-    throw new Error('Envelope diagnóstico diverge da tentativa reservada.');
+    throw new InvalidDiagnosticResultError('Envelope diagnóstico diverge da tentativa reservada.');
   }
 }
 
@@ -503,4 +511,36 @@ async function persistTerminal(
     error: terminal.error,
     current: current === true,
   };
+}
+
+
+class InvalidDiagnosticResultError extends Error {}
+
+function definitiveResultFailure(error: unknown): boolean {
+  if (error instanceof InvalidDiagnosticResultError) return true;
+  return error instanceof ApiError && error.status < 500 && ![408, 429].includes(error.status) && (
+    ['RESPOSTA_INVALIDA', 'VERSAO_INCOMPATIVEL'].includes(error.code)
+    || (error.status >= 400 && error.status < 500 && ![408, 429].includes(error.status))
+  );
+}
+
+
+async function persistDeferredReservation(
+  authority: DiagnosticStudyAuthority, ownerSub: string, epoch: number,
+  reservedStudy: StudyDocument, reservation: DiagnosticExecutionRecord, signal: AbortSignal,
+): Promise<void> {
+  if (!sessionIsCurrent(authority, ownerSub, epoch, signal)) return;
+  await authority.flush();
+  if (!sessionIsCurrent(authority, ownerSub, epoch, signal)) return;
+  const current = authority.snapshot.document;
+  const attached = current?.id === reservedStudy.id;
+  const base = attached ? current : reservedStudy;
+  const withReservation = await appendDiagnosticExecution(base, reservation, reservation.createdAt);
+  if (!sessionIsCurrent(authority, ownerSub, epoch, signal)) return;
+  if (attached) {
+    authority.edit(withReservation);
+    await authority.flush();
+  } else {
+    await authority.saveDetachedStudy(withReservation, base.revision);
+  }
 }

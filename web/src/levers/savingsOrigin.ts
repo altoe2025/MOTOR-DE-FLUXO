@@ -1,3 +1,4 @@
+import { diagnosticUsesSavedPremises } from '../diagnostics/effectivePreparation';
 import Decimal from 'decimal.js';
 
 import { breakdownByCompany, type Breakdown, type CompanyBreakdown } from '../pages/comparisonBoardBreakdown';
@@ -19,7 +20,7 @@ export function currentDiagnostic(study: StudyDocument, scenario: ScenarioDocume
   return [...study.executions].reverse().find((item): item is DiagnosticExecutionRecord =>
     item.kind === 'DIAGNOSTIC' && item.scenarioId === scenario.id && item.status === 'SUCCEEDED'
     && item.envelope !== null && item.scenarioRevision === scenario.revision
-    && item.inputFingerprint === scenario.inputFingerprint) ?? null;
+    && item.inputFingerprint === scenario.inputFingerprint && diagnosticUsesSavedPremises(item)) ?? null;
 }
 
 export function scenarioRow(study: StudyDocument, scenario: ScenarioDocument): ScenarioRow {

@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import multiprocessing
 from collections import deque
 from collections.abc import Callable
 from concurrent.futures import Future, ProcessPoolExecutor
+from concurrent.futures.process import BrokenProcessPool
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from threading import Condition, Lock, Thread
@@ -29,6 +31,8 @@ from servidor.diagnostics.service import (
     aggregate_diagnostic,
     execute_repetition,
 )
+
+_LOGGER = logging.getLogger(__name__)
 
 _ACTIVE = {"QUEUED", "RUNNING", "AGGREGATING", "CANCEL_REQUESTED"}
 CommandKind = Literal["SUBMIT", "RETRY"]
@@ -79,6 +83,7 @@ class _Job:
     results: list[RepetitionResult] = field(default_factory=list)
     envelope: DiagnosticEnvelope | None = None
     error: JobError | None = None
+    retained_bytes: int = 0
 
     @property
     def total(self) -> int:
@@ -123,10 +128,21 @@ class DiagnosticExecutor:
         max_jobs_per_owner: int = 3,
         max_jobs_global: int = 32,
         retention_seconds: int = 86400,
+        max_terminal_jobs: int = 128,
+        max_retained_bytes: int = 64 * 1024 * 1024,
     ) -> None:
         if not 1 <= max_workers <= 4:
             raise ValueError("max_workers deve estar entre 1 e 4")
-        if max_jobs_per_owner < 1 or max_jobs_global < 1 or retention_seconds < 1:
+        if (
+            min(
+                max_jobs_per_owner,
+                max_jobs_global,
+                retention_seconds,
+                max_terminal_jobs,
+                max_retained_bytes,
+            )
+            < 1
+        ):
             raise ValueError("limites do executor devem ser positivos")
         self._build_sha = build_sha
         self._clock = relogio or (lambda: datetime.now(UTC))
@@ -134,6 +150,10 @@ class DiagnosticExecutor:
         self._max_workers = max_workers
         self._max_jobs_per_owner = max_jobs_per_owner
         self._max_jobs_global = max_jobs_global
+        self._max_terminal_jobs = max_terminal_jobs
+        self._max_retained_bytes = max_retained_bytes
+        self._recovering = False
+        self._unavailable = False
         self._retention = timedelta(seconds=retention_seconds)
         self._pool = worker_pool or _ProcessWorkerPool(max_workers)
         self._lock = Lock()
@@ -168,6 +188,25 @@ class DiagnosticExecutor:
             and job.finished_at is not None
             and now - job.finished_at >= self._retention
         }
+        terminals = sorted(
+            (
+                (key, job)
+                for key, job in self._jobs.items()
+                if job.status not in _ACTIVE and key not in expired
+            ),
+            key=lambda item: item[1].finished_at or item[1].updated_at,
+        )
+        retained = sum(job.retained_bytes for _, job in terminals)
+        remaining = len(terminals)
+        for key, job in terminals:
+            if (
+                remaining <= self._max_terminal_jobs
+                and retained <= self._max_retained_bytes
+            ):
+                break
+            expired.add(key)
+            retained -= job.retained_bytes
+            remaining -= 1
         for job_key in expired:
             del self._jobs[job_key]
         if expired:
@@ -237,6 +276,8 @@ class DiagnosticExecutor:
     ) -> JobSnapshot:
         if self._closed:
             raise DiagnosticExecutorError("EXECUTOR_FECHADO")
+        if self._unavailable:
+            raise DiagnosticExecutorError("EXECUTOR_INDISPONIVEL")
         key = (owner_sub, request.idempotency_key)
         identity = _canonical_command_identity(request)
         binding = self._idempotency.get(key)
@@ -344,6 +385,7 @@ class DiagnosticExecutor:
             if self._closed:
                 return
             self._closed = True
+            pool = self._pool
             for job in self._jobs.values():
                 if (
                     job.status == "QUEUED"
@@ -356,7 +398,7 @@ class DiagnosticExecutor:
                     job.updated_at = self._now_for(job)
             self._queue.clear()
             self._condition.notify_all()
-        self._pool.shutdown(wait=True, cancel_futures=True)
+        pool.shutdown(wait=True, cancel_futures=True)
         self._dispatcher.join(timeout=5)
 
     def _dispatch_loop(self) -> None:
@@ -365,7 +407,11 @@ class DiagnosticExecutor:
                 self._expire_locked()
                 if self._closed:
                     return
-                if not self._queue or self._running >= self._max_workers:
+                if (
+                    self._recovering
+                    or not self._queue
+                    or self._running >= self._max_workers
+                ):
                     self._maintenance_waiter(
                         self._condition, self._next_expiry_timeout_locked()
                     )
@@ -389,26 +435,35 @@ class DiagnosticExecutor:
                 job.current_repetition_id = repetition_id
                 self._running += 1
                 task = RepetitionTask(job.request, index, self._build_sha)
+                pool = self._pool
             try:
-                future = self._pool.submit(task)
+                future = pool.submit(task)
             except Exception as error:  # noqa: BLE001 -- falha de infraestrutura do pool
                 future = Future()
                 future.set_exception(error)
 
             def completed_callback(
-                completed: Future[object], current_job_key: JobKey = job_key
+                completed: Future[object],
+                current_job_key: JobKey = job_key,
+                current_pool: WorkerPool = pool,
             ) -> None:
-                self._completed(current_job_key, completed)
+                self._completed(current_job_key, completed, current_pool)
 
             future.add_done_callback(completed_callback)
 
-    def _completed(self, job_key: JobKey, future: Future[object]) -> None:
+    def _completed(
+        self, job_key: JobKey, future: Future[object], pool: WorkerPool
+    ) -> None:
         try:
             result = cast(RepetitionResult, future.result())
             failure: Exception | None = None
         except Exception as error:  # noqa: BLE001 -- fronteira do worker
             result = None
             failure = error
+        if failure is not None:
+            self._log_failure("worker", failure, job_key)
+            if isinstance(failure, BrokenProcessPool):
+                self._recover_pool(pool, job_key)
         aggregate: tuple[DiagnosticRequest, tuple[RepetitionResult, ...]] | None = None
         with self._condition:
             self._running -= 1
@@ -424,7 +479,11 @@ class DiagnosticExecutor:
                 job.failed += 1
                 job.status = "FAILED"
                 job.error = JobError(
-                    code="DIAGNOSTICO_INVALIDO",
+                    code=(
+                        "EXECUTOR_INDISPONIVEL"
+                        if isinstance(failure, BrokenProcessPool)
+                        else "DIAGNOSTICO_INVALIDO"
+                    ),
                     message="A repetição diagnóstica falhou.",
                     repetition_id=(
                         job.request.sampling.repetitions[job.completed].repetition_id
@@ -452,6 +511,7 @@ class DiagnosticExecutor:
             except Exception as caught:  # noqa: BLE001 -- validação do envelope é terminal
                 envelope = None
                 aggregation_error = caught
+                self._log_failure("aggregation", caught, job_key)
             with self._condition:
                 job = self._jobs.get(job_key)
                 if job is None:
@@ -477,8 +537,75 @@ class DiagnosticExecutor:
         job.updated_at = now
         job.finished_at = now
         job.current_repetition_id = None
+        job.results.clear()
+        job.retained_bytes = len(job.request.model_dump_json().encode("utf-8"))
+        if job.envelope is not None:
+            job.retained_bytes += len(job.envelope.model_dump_json().encode("utf-8"))
 
     def _finish_cancelled_locked(self, job: _Job) -> None:
         job.status = "CANCELLED"
         job.error = None
         self._finish_terminal_locked(job)
+
+    @staticmethod
+    def _log_failure(category: str, error: Exception, job_key: JobKey) -> None:
+        # Never log str(error), traceback, owner, request or financial values.
+        safe_type = type(error).__name__
+        if not safe_type.isidentifier() or len(safe_type) > 80:
+            safe_type = "Exception"
+        _LOGGER.error(
+            "diagnostic category=%s exception_type=%s job_id=%s",
+            category,
+            safe_type,
+            job_key[1],
+        )
+
+    def _recover_pool(self, failed_pool: WorkerPool, job_key: JobKey) -> None:
+        with self._condition:
+            if (
+                self._closed
+                or self._recovering
+                or self._pool is not failed_pool
+                or self._unavailable
+            ):
+                return
+            self._recovering = True
+        replacement: WorkerPool | None = None
+        try:
+            replacement = _ProcessWorkerPool(self._max_workers)
+        except Exception as error:  # noqa: BLE001 -- infrastructure boundary
+            self._log_failure("recovery", error, job_key)
+        with self._condition:
+            keep = not self._closed and replacement is not None
+            if keep:
+                self._pool = cast(WorkerPool, replacement)
+            elif not self._closed:
+                self._unavailable = True
+                for job in self._jobs.values():
+                    if (
+                        job.status in {"QUEUED", "RUNNING"}
+                        and job.current_repetition_id is None
+                    ):
+                        job.status = "FAILED"
+                        job.error = JobError(
+                            code="EXECUTOR_INDISPONIVEL",
+                            message="Executor diagnóstico indisponível.",
+                            repetition_id=None,
+                        )
+                        self._finish_terminal_locked(job)
+                self._queue.clear()
+            self._recovering = False
+            self._condition.notify_all()
+
+        # BrokenProcessPool callbacks can hold ProcessPool's shutdown lock.
+        # Even shutdown(wait=False) deadlocks there; retire outside that callback.
+        def retire() -> None:
+            for pool in (failed_pool, replacement if not keep else None):
+                if pool is None:
+                    continue
+                try:
+                    pool.shutdown(wait=True, cancel_futures=True)
+                except Exception as error:  # noqa: BLE001 -- infrastructure boundary
+                    self._log_failure("recovery_shutdown", error, job_key)
+
+        Thread(target=retire, name="diagnostic-pool-retirement", daemon=True).start()

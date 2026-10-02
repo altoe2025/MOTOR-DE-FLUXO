@@ -89,6 +89,33 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-10-02 — Confiabilidade de diagnóstico (MOT-70, MOT-72, MOT-73)
+
+**Sintoma:** entradas com proveniência completa eram recusadas, distribuições podiam
+usar premissas antigas, a morte de um worker inutilizava o pool, erros definitivos
+de download deixavam reservas ativas e jobs terminais retinham repetições completas.
+Falhas técnicas não tinham causa sanitizada observável.
+
+**Causa:** cota de 500 origens e orçamento HTTP incompatíveis com 1000 ordens;
+reutilização da receita histórica inteira; ausência de recuperação por geração do
+pool, classificação de erro de resultado e limites de retenção por quantidade/bytes.
+
+**O que foi feito:** `codex/diagnostico-confiavel` amplia os contratos e limites
+somente do diagnóstico, combina participantes preservados com premissas atuais,
+preserva histórico antigo sem considerá-lo atual quando divergente, recupera o pool,
+registra causa técnica sanitizada e permite retomada/reexecução no navegador.
+Terminais liberam intermediários; retenção máxima de 128 terminais/64 MiB, expulsando
+somente os mais antigos, e TTL máximo de 24 h. Operação documentada em
+`docs/deploy-render.md`; regressões incluem morte real de processo, callbacks tardios,
+fechamento concorrente, fontes Unicode e 100 repetições. Gates finais registrados no
+relatório de execução local. Não houve publicação, push, merge ou deploy nesta tarefa.
+
+**O que isso invalida:** a promessa de manter todo resultado no servidor por 24h e a
+indicação de atualidade de históricos cuja receita usou premissas diferentes do
+cenário salvo. Nada nas regras financeiras do motor ou nos resultados inalterados;
+histórico local preservado. Nenhum arquivo de `motor/` foi alterado.
+
+
 ## 2026-10-02 — Fixture de carteiras fora do contexto de produção (MOT-100)
 
 1. **Sintoma:** após o merge autorizado do PR #69 (`9cc8b8e`), o deploy Render

@@ -13,7 +13,7 @@ function execution(
 ): DiagnosticExecutionRecord {
   return {
     kind: 'DIAGNOSTIC', id, attemptId: `attempt-${id}`, scenarioId, scenarioRevision,
-    inputFingerprint, requestSnapshot: {} as DiagnosticExecutionRecord['requestSnapshot'],
+    inputFingerprint, requestSnapshot: { sampling: { kind: 'FIXED_INPUT' } } as DiagnosticExecutionRecord['requestSnapshot'],
     sourceSnapshot: {} as DiagnosticExecutionRecord['sourceSnapshot'],
     premisesSnapshot: {} as DiagnosticExecutionRecord['premisesSnapshot'],
     periodSnapshot: {} as DiagnosticExecutionRecord['periodSnapshot'], status: 'FAILED',
