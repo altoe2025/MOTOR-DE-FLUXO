@@ -1,24 +1,35 @@
 import { useState } from 'react';
 
 import { Button } from '../../ui/Button';
+import type { StudySummary } from '../../storage/applicationRepository';
 import type { StudyDocument } from '../model';
-import { describeSource } from '../sourceSummary';
+import { describeSource, SOURCE_LABELS } from '../sourceSummary';
 
-export type StudyListProps = Readonly<{
-  studies: readonly StudyDocument[]; selectedId: string | null; onCreate(): void; onCreateCombinations?(): void;
+export type StudyListProps<T extends StudySummary | StudyDocument = StudySummary> = Readonly<{
+  studies: readonly T[]; selectedId: string | null; onCreate(): void; onCreateCombinations?(): void;
   createCombinationsDisabled?: boolean;
-  onOpen(id: string): void; onRename(study: StudyDocument): void; onDuplicate(study: StudyDocument): void;
-  onRestore(study: StudyDocument): void; onDelete(study: StudyDocument): void;
-  onExport?(study: StudyDocument): void;
+  onOpen(id: string): void; onRename(study: T): void; onDuplicate(study: T): void;
+  onRestore(study: T): void; onDelete(study: T): void;
+  onExport?(study: T): void;
 }>;
 
-function sourceLabel(study: StudyDocument): string {
+function sourceLabel(study: StudySummary | StudyDocument): string {
   if (study.studyType === 'PORTFOLIO_COMBINATIONS') return 'Combinação de carteiras';
-  const scenario = study.scenarios.find((item) => item.id === study.baseScenarioId);
-  return scenario === undefined ? 'Sem origem' : describeSource(scenario, [], []).label;
+  if ('scenarios' in study) {
+    const scenario = study.scenarios.find((item) => item.id === study.baseScenarioId);
+    return scenario === undefined ? 'Sem origem' : describeSource(scenario, [], []).label;
+  }
+  if (study.baseSourceKind === 'OBSERVED_CASE') return SOURCE_LABELS.IMPORTED;
+  if (study.baseSourceKind === 'SYNTHETIC') return SOURCE_LABELS.SYNTHETIC;
+  if (study.baseSourceKind === 'AUTHORED_MULTI_COMPANY') return SOURCE_LABELS.COMPANIES;
+  return SOURCE_LABELS.MANUAL;
 }
 
-export function StudyList({ studies, selectedId, onCreate, onCreateCombinations, createCombinationsDisabled = false, onOpen, onRename, onDuplicate, onRestore, onDelete, onExport }: StudyListProps) {
+function hasResult(study: StudySummary | StudyDocument): boolean {
+  return 'hasExecutions' in study ? study.hasExecutions : study.executions.length > 0;
+}
+
+export function StudyList<T extends StudySummary | StudyDocument>({ studies, selectedId, onCreate, onCreateCombinations, createCombinationsDisabled = false, onOpen, onRename, onDuplicate, onRestore, onDelete, onExport }: StudyListProps<T>) {
   const [showTrash, setShowTrash] = useState(false);
   const visibleStudies = studies.filter((study) => (study.deletedAt !== null) === showTrash);
   return <>
@@ -46,7 +57,7 @@ export function StudyList({ studies, selectedId, onCreate, onCreateCombinations,
             : <button type="button" className="study-list__open" aria-label={`Abrir ${study.name}`}
               aria-current={selectedId === study.id ? 'true' : undefined} onClick={() => onOpen(study.id)}>
               <strong>{study.name}</strong><span>{sourceLabel(study)} · {new Date(study.updatedAt).toLocaleDateString('pt-BR')}</span>
-              <small>{study.executions.length === 0 ? 'Sem resultado' : 'Resultado disponível'}</small>
+              <small>{hasResult(study) ? 'Resultado disponível' : 'Sem resultado'}</small>
             </button>}
           <div className="study-list__actions">
             {showTrash

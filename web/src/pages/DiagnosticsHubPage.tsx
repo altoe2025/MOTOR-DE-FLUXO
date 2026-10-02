@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { useStudyController } from '../app/providers';
 import { currentDiagnostic } from '../levers/savingsOrigin';
 import { formatFraction, formatMoney } from '../presentation/format';
+import type { StudySummary } from '../storage/applicationRepository';
 import type { StudyDocument } from '../study/model';
 import { EmptyState } from '../ui/EmptyState';
 import { InlineNotice } from '../ui/InlineNotice';
@@ -13,24 +14,49 @@ function formatDate(iso: string | null): string {
   return match === null ? '—' : `${match[3]}/${match[2]}/${match[1]}`;
 }
 
-function StudyDiagnostics({ study }: Readonly<{ study: StudyDocument }>) {
+function StudyDiagnostics({ summary, readStudy }: Readonly<{ summary: StudySummary; readStudy(id: string): Promise<StudyDocument | null> }>) {
   const [expanded, setExpanded] = useState(false);
-  const base = `/estudos/${encodeURIComponent(study.id)}`;
-  const regionId = `hub-scenarios-${study.id}`;
-  const scenarioCount = `${study.scenarios.length} ${study.scenarios.length === 1 ? 'cenário' : 'cenários'}`;
-  return <section className="diagnostics-hub__study" aria-labelledby={`hub-${study.id}`}>
+  const [state, setState] = useState<'collapsed' | 'loading' | 'loaded' | 'error'>('collapsed');
+  const [study, setStudy] = useState<StudyDocument | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const inFlight = useRef<Promise<StudyDocument | null> | null>(null);
+  const active = useRef(true);
+  useEffect(() => { active.current = true; return () => { active.current = false; }; }, []);
+  const toggle = () => {
+    if (expanded && state !== 'error') { setExpanded(false); return; }
+    setExpanded(true);
+    if (study !== null || inFlight.current !== null) return;
+    setState('loading'); setLoadError(null);
+    const reading = readStudy(summary.id);
+    inFlight.current = reading;
+    void reading.then((loaded) => {
+      if (!active.current) return;
+      if (loaded === null) throw new Error('Estudo não encontrado.');
+      setStudy(loaded); setState('loaded');
+    }).catch((reason: unknown) => {
+      if (!active.current) return;
+      setLoadError(reason instanceof Error ? reason.message : 'Não foi possível carregar os cenários.');
+      setState('error');
+    }).finally(() => { if (inFlight.current === reading) inFlight.current = null; });
+  };
+  const base = `/estudos/${encodeURIComponent(summary.id)}`;
+  const regionId = `hub-scenarios-${summary.id}`;
+  const scenarioCount = `${summary.scenarioCount} ${summary.scenarioCount === 1 ? 'cenário' : 'cenários'}`;
+  return <section className="diagnostics-hub__study" aria-labelledby={`hub-${summary.id}`}>
     <div className="diagnostics-hub__study-header">
-      <h2 id={`hub-${study.id}`}><button type="button" className="diagnostics-hub__toggle"
+      <h2 id={`hub-${summary.id}`}><button type="button" className="diagnostics-hub__toggle"
         aria-expanded={expanded} aria-controls={expanded ? regionId : undefined}
-        aria-label={`${expanded ? 'Ocultar' : 'Mostrar'} diagnósticos de ${study.name}`}
-        onClick={() => setExpanded((current) => !current)}>
-        <span>{study.name}</span>
+        aria-label={`${state === 'error' && expanded ? 'Tentar novamente os' : expanded ? 'Ocultar' : 'Mostrar'} diagnósticos de ${summary.name}`}
+        onClick={toggle}>
+        <span>{summary.name}</span>
         <small>{scenarioCount}</small>
         <span className="diagnostics-hub__toggle-icon" aria-hidden="true">{expanded ? '−' : '+'}</span>
       </button></h2>
-      <Link className="diagnostics-hub__study-link" to={`/carteira/${encodeURIComponent(study.id)}`}>Abrir estudo</Link>
+      <Link className="diagnostics-hub__study-link" to={`/carteira/${encodeURIComponent(summary.id)}`}>Abrir estudo</Link>
     </div>
-    {expanded ? <div id={regionId} className="table-scroll" role="region" tabIndex={0} aria-label={`Cenários de ${study.name}`}>
+    {expanded && state === 'loading' ? <p id={regionId} role="status">Carregando cenários de {summary.name}…</p> : null}
+    {expanded && state === 'error' ? <p id={regionId} role="alert">{loadError}</p> : null}
+    {expanded && state === 'loaded' && study !== null ? <div id={regionId} className="table-scroll" role="region" tabIndex={0} aria-label={`Cenários de ${summary.name}`}>
       <table className="company-table">
         <thead><tr>
           <th scope="col">Cenário</th><th scope="col" title="Parte do volume que não cruzou a fronteira">Netabilidade</th><th scope="col">Economia</th>
@@ -61,12 +87,12 @@ function StudyDiagnostics({ study }: Readonly<{ study: StudyDocument }>) {
 export function DiagnosticsHubPage() {
   const controller = useStudyController();
   const heading = useRef<HTMLHeadingElement>(null);
-  const [studies, setStudies] = useState<StudyDocument[] | null>(null);
+  const [studies, setStudies] = useState<StudySummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => heading.current?.focus(), []);
   useEffect(() => {
     let active = true;
-    controller.listStudies().then((items) => { if (active) setStudies(items); })
+    controller.listStudySummaries().then((items) => { if (active) setStudies(items); })
       .catch(() => { if (active) setError('Não foi possível carregar os estudos.'); });
     return () => { active = false; };
   }, [controller]);
@@ -77,6 +103,6 @@ export function DiagnosticsHubPage() {
     {studies === null && error === null ? <p role="status">Carregando estudos…</p> : null}
     {studies !== null && studies.length === 0
       ? <EmptyState title="Nenhum estudo ainda">Crie um estudo em Estudos para executar o primeiro diagnóstico.</EmptyState> : null}
-    {studies?.map((study) => <StudyDiagnostics key={study.id} study={study} />)}
+    {studies?.map((study) => <StudyDiagnostics key={study.id} summary={study} readStudy={(id) => controller.readStudy(id)} />)}
   </article>;
 }

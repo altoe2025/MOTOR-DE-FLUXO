@@ -90,6 +90,10 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-10-02 — Estudos e Diagnóstico carregam sob demanda (MOT-100)
+
+**Sintoma:** mesmo com os cenários visualmente recolhidos, entrar nas páginas aguardava documentos e envelopes completos. **Causa:** as páginas consumiam `listStudies` e o hub recebia todos os `StudyDocument` antes da primeira interação. **O que foi feito:** Estudos e o hub usam `StudySummary`; o hub carrega somente o estudo expandido, com estados locais de carregamento/erro e proteção contra respostas obsoletas. Rótulos e ações foram preservados, inclusive a distinção de carteira observada, sintética, multiempresa e manual. Testes focados 49/49 e typecheck verdes; revisão aprovada. **O que isso invalida:** medições antigas de abertura dessas rotas que incluíam leitura/validação de todos os envelopes; importação explícita ainda lê documentos completos por necessidade do fluxo.
+
 ## 2026-10-02 — Catálogo leve de estudos no IndexedDB (MOT-100)
 
 **Sintoma:** entrar em Estudos ou Diagnóstico carregava e validava todos os cenários e envelopes de todos os estudos antes de mostrar uma lista curta. **Causa:** o repositório só expunha `listStudies`, que reconstituía documentos completos. **O que foi feito:** schema local v4 adiciona `study_summaries`, atualizado atomicamente nos saves/restores/demo/purge e reconstruído de forma reparável para dados antigos sem validar envelopes; controller ganhou listagem resumida e leitura destacada que não altera a seleção. Migração e contratos passaram 111 testes, typecheck e lint; re-revisão aprovada. **O que isso invalida:** qualquer suposição de que telas de catálogo precisam receber `StudyDocument`; estudos e execuções persistidos continuam compatíveis.
