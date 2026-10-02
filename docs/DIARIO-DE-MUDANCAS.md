@@ -90,6 +90,10 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-10-02 — Fixture válida de desempenho para 255 combinações (MOT-100)
+
+**Sintoma:** não havia uma massa unitária persistível que representasse 63/255 composições já diagnosticadas, então regressões de CPU e identidade só apareciam no E2E longo. **Causa:** as fixtures menores não exercitavam o formato reserva `QUEUED` + terminal nem todas as identidades entre request, cenário e envelope. **O que foi feito:** criada uma fixture determinística validada pelo contrato de produção, com goldens independentes de projeção/ranking para seis e oito empresas; 4/4 testes direcionados passaram e os dois achados importantes da revisão foram corrigidos. **O que isso invalida:** nada nos resultados atuais; novos testes de desempenho podem reutilizar a massa sem chamar o motor.
+
 ## 2026-10-02 — Projeção de carteiras deixa de crescer com o histórico (MOT-100)
 
 **Sintoma:** durante um lote, cada terminal invalidava a tela de recomendação e voltava a procurar a execução atual de cada composição em todo o histórico. **Causa:** a projeção fazia `reverse/find` por cenário e permanecia montada durante o progresso. **O que foi feito:** `portfolioAnalysis` passou a indexar execuções atuais em uma passagem; a recomendação completa é adiada enquanto o lote roda e reconstruída ao terminar, falhar ou cancelar. Testes direcionados: 50/50; revisão de tarefa aprovada. **O que isso invalida:** perfis anteriores de CPU da recomendação durante o lote; métricas financeiras, ranking e marginais permanecem iguais.
