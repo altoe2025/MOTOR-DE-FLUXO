@@ -6,6 +6,7 @@ import { runCanonicalDiagnostic } from './helpers/persistedDiagnostic';
 import { seedWindowScenario, useDemoSamplingSeed } from './helpers/windowScenario';
 import { formatFraction, formatMoney } from '../src/presentation/format';
 import { loadDemoIfEmpty } from './helpers/demo';
+import { fillNewCompany } from './helpers/importCompany';
 
 const OWNER = '00000000-0000-4000-8000-000000000021';
 const packageValue = JSON.parse(readFileSync(fileURLToPath(new URL('../src/demo/generated/demo-study.v1.json', import.meta.url)), 'utf8')) as {
@@ -117,7 +118,7 @@ test('Etapa 6: finalidade opcional executa XLSX e demo restaura com Estudo impor
   const demoId = (await installedDemo(page)).studies[0]!.id;
   await purge(page, demoId);
   await page.goto('/importar');
-  await page.getByLabel('Nome da nova empresa').fill('Empresa B6 importada');
+  await fillNewCompany(page, 'Empresa B6 importada');
   await page.getByRole('button', { name: 'Usar nova empresa neste Caso' }).click();
   await page.getByLabel('Planilha canônica XLSX').setInputFiles({
     name: 'caso-b6.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer: importedWorkbook(),
@@ -146,8 +147,10 @@ test('Etapa 6: finalidade opcional executa XLSX e demo restaura com Estudo impor
   await runCanonicalDiagnostic(page, importedStudyId);
   expect(await page.evaluate((id) => window.__MOTOR_E2E__!.studyExecutionStatuses(id), importedStudyId)).toEqual(['QUEUED', 'SUCCEEDED']);
   await page.goto('/estudos');
-  await expect(page.getByRole('button', { name: 'Carregar estudo demonstrativo' })).toBeVisible();
-  await page.getByRole('button', { name: 'Carregar estudo demonstrativo' }).click();
+  // Com um estudo na lista, a demonstração fica no menu de criação.
+  await page.getByRole('button', { name: 'Mais ações: criar' }).click();
+  await page.getByRole('menuitem', { name: 'Carregar estudo demonstrativo' }).click();
+  await expect.poll(async () => (await snapshot(page)).studies.length).toBe(2);
   const state = await snapshot(page);
   expect(state.studies).toHaveLength(2);
   expect(state.studies.map((item) => item.id)).toContain(importedStudyId);

@@ -249,7 +249,7 @@ export function ComparisonBoardPage() {
 
   return <article className="destination-page">
     <p className="eyebrow">Estudos</p>
-    <div className="page-head"><h1 ref={heading} tabIndex={-1}>Comparar estudos</h1>
+    <div className="page-head page-head--title"><h1 ref={heading} tabIndex={-1}>Comparar estudos</h1>
       <HelpTip label="Comparar estudos">Marque os cenários que entram na comparação. Vale a última execução concluída da revisão atual de cada cenário; com diagnóstico de várias repetições, os números são da repetição mediana da economia.</HelpTip></div>
     {error ? <p role="alert" className="field-error">{error}</p> : null}
     {rows === null && error === null ? <p role="status">Carregando estudos…</p> : null}
@@ -258,7 +258,7 @@ export function ComparisonBoardPage() {
     {rows !== null && rows.length > 0 ? <fieldset className="source-selector">
       <legend className="visually-hidden">Escolher estudos</legend>
       <div className="source-actions">
-        <label>Filtrar<input value={filter} onChange={(event) => setFilter(event.target.value)} placeholder="nome do estudo, cenário ou empresa" /></label>
+        <label className="board-filter">Filtrar<input value={filter} onChange={(event) => setFilter(event.target.value)} placeholder="nome do estudo, cenário ou empresa" /></label>
         <Button variant="secondary" onClick={() => updateSelection((next) => candidates.forEach((row) => next.add(row.key)))}>Marcar {filter.trim() === '' ? 'todos' : 'filtrados'}</Button>
         <Button variant="secondary" onClick={() => updateSelection((next) => next.clear())}>Limpar quadro</Button>
       </div>

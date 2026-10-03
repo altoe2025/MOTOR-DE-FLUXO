@@ -17,6 +17,8 @@ export type StudyListProps = Readonly<{
   toolbarStart?: ReactNode;
   /** Título da página, na mesma linha das ações. */
   heading?: ReactNode;
+  /** Avisos e formulários que ficam entre o cabeçalho e a lista (ex.: escolha do novo estudo). */
+  beforeList?: ReactNode;
 }>;
 
 function sourceLabel(study: StudyDocument): string {
@@ -25,7 +27,7 @@ function sourceLabel(study: StudyDocument): string {
   return scenario === undefined ? 'Sem origem' : describeSource(scenario, [], []).label;
 }
 
-export function StudyList({ studies, selectedId, onCreate, onCreateCombinations, createCombinationsDisabled = false, onOpen, onRename, onDuplicate, onRestore, onDelete, onExport, createActions = [], toolbarStart, heading }: StudyListProps) {
+export function StudyList({ studies, selectedId, onCreate, onCreateCombinations, createCombinationsDisabled = false, onOpen, onRename, onDuplicate, onRestore, onDelete, onExport, createActions = [], toolbarStart, heading, beforeList }: StudyListProps) {
   const [showTrash, setShowTrash] = useState(false);
   const visibleStudies = studies.filter((study) => (study.deletedAt !== null) === showTrash);
   const createMenu: ActionMenuItem[] = [
@@ -46,6 +48,7 @@ export function StudyList({ studies, selectedId, onCreate, onCreateCombinations,
           : <>{toolbarStart}<Button data-chat-help-id="control.estudos.novo" onClick={onCreate}>Novo estudo</Button><ActionMenu label="criar" items={createMenu} /></>}
       </div>
     </div>
+    {beforeList}
     {visibleStudies.length === 0
       ? <p className="empty-list">{showTrash ? 'A lixeira está vazia.' : 'Nenhum estudo salvo nesta conta.'}</p>
       : <ul className="study-list" aria-label={showTrash ? 'Lixeira de estudos' : 'Estudos'}>

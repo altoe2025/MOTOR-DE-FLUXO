@@ -20,6 +20,8 @@ test('browser executes a generated study through the real API and engine exactly
     if (request.url().endsWith('/api/v1/diagnosticos')) calls.diagnose += 1;
   });
   const studyId = await createGeneratedStudy(page);
+  await page.getByRole('button', { name: 'Mais ações: estudo' }).click();
+  await page.getByRole('menuitem', { name: 'Renomear' }).click();
   await page.getByLabel('Nome do estudo', { exact: true }).fill('Validação MOT-22');
   await page.getByRole('button', { name: 'Salvar nome', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Validação MOT-22', exact: true })).toBeVisible();
@@ -44,11 +46,12 @@ test('browser executes a generated study through the real API and engine exactly
     .eq(aggregate.economia_periodo_brl)).toBe(true);
   await expect(page.getByTestId('economia-brl')).toBeVisible();
   await expect(page.getByTestId('netabilidade')).toBeVisible();
-  await expect(page.getByText(/não é probabilidade de desempenho futuro/)).toBeVisible();
+  await page.getByRole('button', { name: 'Ajuda: Faixa da economia' }).click();
+  await expect(page.getByRole('tooltip')).toContainText('não é probabilidade de desempenho futuro');
   await expect(page.getByRole('link', { name: 'Empresas', exact: true })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Estudos', exact: true })).toBeVisible();
   await page.goto(`/carteira/${studyId}`);
-  await expect(page.getByLabel('Nome do estudo', { exact: true })).toHaveValue('Validação MOT-22');
+  await expect(page.getByRole('heading', { name: 'Validação MOT-22', level: 1 })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Abrir diagnóstico', exact: true })).toBeVisible();
   await page.goto(`/estudos/${studyId}/diagnostico`);
   await expect(page.getByRole('heading', { name: 'Resultado do motor', exact: true })).toBeVisible();
@@ -76,12 +79,14 @@ test('login, study, diagnostic and expired session remain usable at acceptance s
     await page.screenshot({ path: testInfo.outputPath(`carteira-${viewport.width}x${viewport.height}.png`), fullPage: true });
   }
   await runCanonicalDiagnostic(page, studyId);
+  await page.getByRole('button', { name: /Como a economia se forma/ }).click();
   for (const viewport of [{ width: 1280, height: 800 }, { width: 1440, height: 900 }]) {
     await page.setViewportSize(viewport);
     await expect(page.getByRole('group', { name: 'Autonetting — mesmo participante' })).toBeVisible();
     await expect(page.getByRole('group', { name: 'Netting multilateral — entre participantes' })).toBeVisible();
     await expect(page.getByRole('group', { name: 'Remetido — cruzou a fronteira' })).toBeVisible();
-    await expect(page.getByText(/não é probabilidade de desempenho futuro/)).toBeVisible();
+    await page.getByRole('button', { name: 'Ajuda: Faixa da economia' }).click();
+    await expect(page.getByRole('tooltip')).toContainText('não é probabilidade de desempenho futuro');
     await page.screenshot({ path: testInfo.outputPath(`diagnostico-${viewport.width}x${viewport.height}.png`), fullPage: true });
   }
   await page.evaluate(() => { document.documentElement.style.zoom = '200%'; });

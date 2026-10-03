@@ -865,3 +865,21 @@ h1:focus { outline: none; }
 .import-step .field-hint { margin: 0; }
 .import-step .import-instructions { margin-block: var(--space-1) 0; }
 .import-step .import-actions { margin-top: var(--space-2); }
+form.import-step__row { border: 0; margin: 0; padding: 0; }
+.import-step .profile-confirmation { align-items: center; margin-top: var(--space-1); }
+.import-step .profile-confirmation input { margin: 0; }
+.page-head { margin-bottom: var(--space-3); }
+.page-head h1 { margin-bottom: 0; }
+.source-summary.summary-line { justify-content: flex-start; margin: var(--space-2) 0 var(--space-2); }
+.source-summary.summary-line h2 { font: 500 0.66rem var(--font-mono); letter-spacing: 0.12em; margin: 0; }
+.premises-settings { margin-bottom: var(--space-4); }
+p.storage-notice { background: none; border: 0; display: block; margin: var(--space-4) 0 0; padding: 0; }
+.page-head--title { align-items: center; justify-content: flex-start; gap: var(--space-2); }
+.board-filter { align-items: center; display: flex; flex: 1 1 320px; gap: var(--space-2); }
+.board-filter input { flex: 1; min-width: 0; padding: var(--space-2); }
+.board-study .board-candidates { gap: 2px; }
+.board-study .board-candidates li { background: none; border: 0; padding: 4px 0; }
+.study-editor > .page-head { align-items: flex-start; flex-wrap: nowrap; }
+.study-editor > .page-head > div:first-child { flex: 1; min-width: 0; }
+.study-editor > .page-head h1 { overflow-wrap: anywhere; }
+a.button, a.button:hover { text-decoration: none; }

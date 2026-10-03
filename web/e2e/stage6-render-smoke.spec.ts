@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 import { assertCompletedChatExchange, requireRenderSmokeConfig } from '../scripts/render-smoke-gate.mjs';
 import { allHelpIds } from '../src/help/helpIds';
+import { fillNewCompany } from './helpers/importCompany';
 
 const renderConfig = requireRenderSmokeConfig(process.env);
 const xlsx = readFileSync(fileURLToPath(new URL('../src/importer/__fixtures__/valid-minimal.xlsx', import.meta.url)));
@@ -97,7 +98,7 @@ test('XLSX sintético permanece local e o Caso alcança diagnóstico observado',
   const bodies: string[] = [];
   page.on('request', (request) => { if (request.postData()) bodies.push(request.postData()!); });
   await page.goto('/importar');
-  await page.getByLabel('Nome da nova empresa').fill('Empresa smoke sintética');
+  await fillNewCompany(page, 'Empresa smoke sintética');
   await page.getByRole('button', { name: 'Usar nova empresa neste Caso' }).click();
   await page.getByLabel('Planilha canônica XLSX').setInputFiles({
     name: 'smoke-sintetico.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer: xlsx,

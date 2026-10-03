@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { strToU8, unzipSync, zipSync } from 'fflate';
 import { runCanonicalDiagnostic } from './helpers/persistedDiagnostic';
+import { fillNewCompany } from './helpers/importCompany';
 
 const OWNER = '00000000-0000-4000-8000-000000000021';
 const OWNER_B = '00000000-0000-4000-8000-000000000022';
@@ -77,7 +78,7 @@ async function assertPrivate(page: Page, requests: ReturnType<typeof captureRequ
 async function selectFile(page: Page, buffer: Buffer, companyId?: string) {
   await page.goto(companyId === undefined ? '/importar' : `/empresas/${companyId}/importar`);
   if (companyId === undefined) {
-    await page.getByLabel('Nome da nova empresa').fill('Empresa aceite XLSX');
+    await fillNewCompany(page, 'Empresa aceite XLSX');
     await page.getByRole('button', { name: 'Usar nova empresa neste Caso' }).click();
   }
   await page.getByLabel('Planilha canônica XLSX').setInputFiles({ name: SOURCE_NAME, mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer });
