@@ -26,6 +26,7 @@ import {
   makeScenarioDraft,
 } from '../study/fixtures';
 import type { DeepMutable, DiagnosticExecutionRecord, ExecutionRecord, StudyDocument } from '../study/model';
+import { isCertifiedStudy } from '../study/certifiedStudy';
 import {
   BinaryDataNotAllowedError,
   InvalidDocumentError,
@@ -749,6 +750,27 @@ describe('observed cases', () => {
 });
 
 describe('studies', () => {
+  it('lê o histórico por cursor para não desserializar todos os envelopes numa única tarefa', async () => {
+    const target = repository();
+    const initial = await study();
+    const withExecution = await appendExecution(initial, executionFor(initial), FIXTURE_NOW);
+    await target.saveStudy({ document: initial, expectedRevision: 0, operationId: OPERATION_A });
+    await target.saveStudy({ document: withExecution, expectedRevision: 1, operationId: OPERATION_B });
+    const getAll = vi.spyOn(IDBIndex.prototype, 'getAll');
+    const openCursor = vi.spyOn(IDBIndex.prototype, 'openCursor');
+    try {
+      const loaded = await target.getStudy(initial.id);
+      expect(loaded).toEqual(withExecution);
+      expect(isCertifiedStudy(loaded, OWNER_SUB)).toBe(true);
+      expect(Object.isFrozen(loaded!.executions[0])).toBe(true);
+      expect(openCursor.mock.contexts.some((index) => (index as IDBIndex).objectStore.name === 'executions')).toBe(true);
+      expect(getAll.mock.contexts.some((index) => (index as IDBIndex).objectStore.name === 'executions')).toBe(false);
+    } finally {
+      getAll.mockRestore();
+      openCursor.mockRestore();
+    }
+  });
+
   it('preserves the four source labels in display metadata', async () => {
     const initial = await study();
     const snapshot = initial.scenarios[0]!.sourceSnapshot;

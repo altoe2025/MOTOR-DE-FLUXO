@@ -15,7 +15,7 @@ import type {
 import { calculateOperationalProfile } from '../profiles/calculateOperationalProfile';
 import { createImportReview } from '../importer/eligibility';
 import { DemoInstallSkippedError, OperationConflictError, RevisionConflictError } from '../storage/errors';
-import { attachOperationalProfileEvidence, createStudy, renameStudy } from './domain';
+import { attachOperationalProfileEvidence, createStudy, moveStudyToTrash, renameStudy } from './domain';
 import { FIXTURE_NOW, FIXTURE_OWNER, makeObservedCase, makeScenarioDraft } from './fixtures';
 import type { DiagnosticExecutionRecord, StudyDocument } from './model';
 import { validateStoredStudy } from '../storage/migrations';
@@ -61,6 +61,7 @@ class RepositoryDouble implements ApplicationRepository {
   async deleteChatConversation(): Promise<void> { throw new Error('Chat outside fixture scope'); }
   closed = false;
   readonly saveCalls: CASMutation<StudyDocument>[] = [];
+  readonly getStudyCalls: string[] = [];
   readonly appendProfileCalls: AppendProfileVersionMutation[] = [];
   readonly appendDiagnosticCalls: AppendDiagnosticAttemptMutation[] = [];
   appendDiagnosticImplementation: (input: AppendDiagnosticAttemptMutation) => Promise<DiagnosticAppendDelta> = async (input) => ({
@@ -114,6 +115,7 @@ class RepositoryDouble implements ApplicationRepository {
     return this.studies.map((document) => summarizeStudy(document, document.executions.length));
   }
   async getStudy(id: string): Promise<StudyDocument | null> {
+    this.getStudyCalls.push(id);
     return this.getStudyImplementation(id);
   }
   async saveStudy(input: CASMutation<StudyDocument>): Promise<StudyDocument> {
@@ -356,6 +358,175 @@ describe('StudyController', () => {
     expect(subject.snapshot.document).toBe(dirty);
     expect(repository.saveCalls[0]?.expectedRevision).toBe(1);
     subject.close();
+  });
+
+  it('reutiliza o estudo certificado já selecionado ao carregá-lo novamente', async () => {
+    const stored = await validateStoredStudy(await makeStudy(), FIXTURE_OWNER);
+    const repository = new RepositoryDouble(FIXTURE_OWNER, stored);
+    const subject = controller({ repositories: [repository] });
+    await subject.switchSession(FIXTURE_OWNER);
+
+    expect(await subject.loadStudy(stored.id)).toBe(stored);
+    expect(await subject.loadStudy(stored.id)).toBe(stored);
+    expect(repository.getStudyCalls).toEqual([stored.id]);
+    subject.close();
+  });
+
+  it('mantém a seleção atual quando uma carga anterior termina atrasada', async () => {
+    const selected = await validateStoredStudy(await makeStudy(), FIXTURE_OWNER);
+    const other = await validateStoredStudy(await makeStudy(FIXTURE_OWNER, 'study-other'), FIXTURE_OWNER);
+    const delayed = deferred<StudyDocument | null>();
+    const repository = new RepositoryDouble(FIXTURE_OWNER, selected);
+    repository.getStudyImplementation = (id) => id === other.id ? delayed.promise : Promise.resolve(selected);
+    const subject = controller({ repositories: [repository] });
+    await subject.switchSession(FIXTURE_OWNER);
+    await subject.loadStudy(selected.id);
+
+    const staleLoad = subject.loadStudy(other.id);
+    expect(await subject.loadStudy(selected.id)).toBe(selected);
+    delayed.resolve(other);
+
+    await expect(staleLoad).resolves.toBeNull();
+    expect(subject.snapshot.document).toBe(selected);
+    subject.close();
+  });
+
+  it('reutiliza o estudo certificado selecionado numa leitura sem trocar o snapshot', async () => {
+    const selected = await validateStoredStudy(await makeStudy(), FIXTURE_OWNER);
+    const repository = new RepositoryDouble(FIXTURE_OWNER, selected);
+    const subject = controller({ repositories: [repository] });
+    await subject.switchSession(FIXTURE_OWNER);
+    await subject.loadStudy(selected.id);
+    const snapshot = subject.snapshot;
+
+    expect(await subject.readStudy(selected.id)).toBe(selected);
+    expect(repository.getStudyCalls).toEqual([selected.id]);
+    expect(subject.snapshot).toBe(snapshot);
+    subject.close();
+  });
+
+  it('não reutiliza o estudo selecionado enquanto uma revisão remota mais nova é carregada', async () => {
+    const revision1 = await validateStoredStudy(await makeStudy(), FIXTURE_OWNER);
+    const revision2 = await validateStoredStudy(
+      await renameStudy(revision1, 'Revisão remota', '2026-09-19T12:01:00Z'),
+      FIXTURE_OWNER,
+    );
+    let stored = revision1;
+    const repository = new RepositoryDouble(FIXTURE_OWNER, revision1);
+    repository.getStudyImplementation = async () => stored;
+    const hub = new ChannelHub();
+    const subject = controller({ repositories: [repository], hub });
+    await subject.switchSession(FIXTURE_OWNER);
+    expect(await subject.loadStudy(revision1.id)).toBe(revision1);
+    stored = revision2;
+
+    for (const group of hub.channels.values()) for (const channel of group) channel.deliver({
+      studyId: revision1.id, revision: revision2.revision, operationId: 'other-tab',
+    });
+
+    await vi.waitFor(() => expect(subject.snapshot.document).toBe(revision2));
+    expect(await subject.readStudy(revision1.id)).toBe(revision2);
+    expect(repository.getStudyCalls).toEqual([revision1.id, revision1.id]);
+    subject.close();
+  });
+
+  it('não devolve uma revisão abaixo da anunciada durante a atualização remota', async () => {
+    const revision1 = await validateStoredStudy(await makeStudy(), FIXTURE_OWNER);
+    const revision2 = await validateStoredStudy(
+      await renameStudy(revision1, 'Revisão remota', '2026-09-19T12:01:00Z'),
+      FIXTURE_OWNER,
+    );
+    const remoteRead = deferred<StudyDocument | null>();
+    let readsAfterBroadcast = 0;
+    const repository = new RepositoryDouble(FIXTURE_OWNER, revision1);
+    const hub = new ChannelHub();
+    const subject = controller({ repositories: [repository], hub });
+    await subject.switchSession(FIXTURE_OWNER);
+    await subject.loadStudy(revision1.id);
+    repository.getStudyImplementation = () => ++readsAfterBroadcast === 1
+      ? remoteRead.promise
+      : Promise.resolve(revision1);
+
+    for (const group of hub.channels.values()) for (const channel of group) channel.deliver({
+      studyId: revision1.id, revision: revision2.revision, operationId: 'other-tab',
+    });
+
+    expect(await subject.readStudy(revision1.id)).toBeNull();
+    remoteRead.resolve(revision2);
+    await vi.waitFor(() => expect(subject.snapshot.document).toBe(revision2));
+    subject.close();
+  });
+
+  it('não reaproveita cache de uma sessão anterior da mesma conta', async () => {
+    const revision1 = await validateStoredStudy(await makeStudy(), FIXTURE_OWNER);
+    const revision2 = await validateStoredStudy(
+      await renameStudy(revision1, 'Reaberto', '2026-09-19T12:01:00Z'),
+      FIXTURE_OWNER,
+    );
+    const firstRepository = new RepositoryDouble(FIXTURE_OWNER, revision1);
+    const reopenedRepository = new RepositoryDouble(FIXTURE_OWNER, revision2);
+    const subject = controller({ repositories: [firstRepository, reopenedRepository] });
+    await subject.switchSession(FIXTURE_OWNER);
+    expect(await subject.loadStudy(revision1.id)).toBe(revision1);
+
+    await subject.switchSession(null);
+    await subject.switchSession(FIXTURE_OWNER);
+
+    expect(await subject.loadStudy(revision1.id)).toBe(revision2);
+    expect(firstRepository.getStudyCalls).toEqual([revision1.id]);
+    expect(reopenedRepository.getStudyCalls).toEqual([revision1.id]);
+    subject.close();
+  });
+
+  it('não devolve cache persistido depois de uma edição local', async () => {
+    const stored = await validateStoredStudy(await makeStudy(), FIXTURE_OWNER);
+    const repository = new RepositoryDouble(FIXTURE_OWNER, stored);
+    const subject = controller({ repositories: [repository], scheduler: new ManualScheduler() });
+    await subject.switchSession(FIXTURE_OWNER);
+    await subject.loadStudy(stored.id);
+    subject.edit(await renameStudy(stored, 'Edição local', '2026-09-19T12:01:00Z'));
+
+    expect(await subject.readStudy(stored.id)).toBe(stored);
+    expect(repository.getStudyCalls).toEqual([stored.id, stored.id]);
+    subject.close();
+  });
+
+  it('publica a restauração para outra aba com o mesmo estudo selecionado', async () => {
+    const original = await validateStoredStudy(await makeStudy(), FIXTURE_OWNER);
+    const deleted = await validateStoredStudy(
+      await moveStudyToTrash(original, '2026-09-19T12:01:00Z'),
+      FIXTURE_OWNER,
+    );
+    const restored = await validateStoredStudy({
+      ...structuredClone(deleted),
+      deletedAt: null,
+      revision: deleted.revision + 1,
+      updatedAt: '2026-09-19T12:02:00Z',
+    }, FIXTURE_OWNER);
+    let stored = deleted;
+    const repositoryA = new RepositoryDouble(FIXTURE_OWNER, deleted);
+    const repositoryB = new RepositoryDouble(FIXTURE_OWNER, deleted);
+    repositoryA.getStudyImplementation = async () => stored;
+    repositoryB.getStudyImplementation = async () => stored;
+    repositoryA.restoreStudy = async () => { stored = restored; return restored; };
+    const hub = new ChannelHub();
+    const first = controller({ repositories: [repositoryA], hub });
+    const second = controller({ repositories: [repositoryB], hub });
+    await first.switchSession(FIXTURE_OWNER);
+    await second.switchSession(FIXTURE_OWNER);
+    await first.loadStudy(deleted.id);
+    await second.loadStudy(deleted.id);
+
+    await expect(first.restoreStudy(deleted.id, deleted.revision)).resolves.toBe(restored);
+
+    await vi.waitFor(() => expect(second.snapshot.document).toBe(restored));
+    expect(hub.messages).toContainEqual({
+      studyId: restored.id,
+      revision: restored.revision,
+      operationId: 'operation-1',
+    });
+    first.close();
+    second.close();
   });
 
   it('discards summary and detached reads when the session changes', async () => {

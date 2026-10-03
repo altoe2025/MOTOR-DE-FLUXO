@@ -32,6 +32,7 @@ import {
 import {
   migrateDatabase,
   type MigrationOptions,
+  validateDetachedStoredStudy,
   validateStoredStudy,
 } from './migrations';
 import { rejectBinary } from './rejectBinary';
@@ -415,6 +416,32 @@ function createChatStores(database: IDBDatabase): void {
   const operations = database.createObjectStore('chat_operations', { keyPath: 'operation_id' });
   operations.createIndex('by_owner', 'owner_sub');
   operations.createIndex('by_owner_conversation', ['owner_sub', 'conversation_id']);
+}
+
+/** IDB request values are already detached structured clones owned by this call. */
+function assembleDetachedStudy(row: StudyRow, executions: readonly ExecutionRow[]): StudyDocument {
+  return {
+    ...row.document,
+    executions: [...executions]
+      .sort((left, right) => left.sequence - right.sequence)
+      .map((execution) => execution.document),
+  };
+}
+
+function cursorResults<T>(request: IDBRequest<IDBCursorWithValue | null>): Promise<T[]> {
+  return new Promise((resolve, reject) => {
+    const values: T[] = [];
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      const cursor = request.result;
+      if (cursor === null) {
+        resolve(values);
+        return;
+      }
+      values.push(cursor.value as T);
+      cursor.continue();
+    };
+  });
 }
 
 function createSummaryStore(database: IDBDatabase): void {
@@ -1363,11 +1390,11 @@ export class IndexedDbApplicationRepository implements ApplicationRepository {
     const transaction = database.transaction(['studies', 'executions'], 'readonly');
     const [row, executions] = await Promise.all([
       requestResult<StudyRow | undefined>(transaction.objectStore('studies').get(id)),
-      requestResult<ExecutionRow[]>(transaction.objectStore('executions')
-        .index('by_owner_study').getAll([this.#ownerSub, id])),
+      cursorResults<ExecutionRow>(transaction.objectStore('executions')
+        .index('by_owner_study').openCursor([this.#ownerSub, id])),
     ]);
     return row?.owner_sub === this.#ownerSub
-      ? validateStoredStudy(assembleStudy(row, executions), this.#ownerSub)
+      ? validateDetachedStoredStudy(assembleDetachedStudy(row, executions), this.#ownerSub)
       : null;
   }
 

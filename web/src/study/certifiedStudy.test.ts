@@ -10,7 +10,7 @@ import { validateStoredStudy } from '../storage/migrations';
 import { createStudy } from './domain';
 import { FIXTURE_NOW, FIXTURE_OWNER, makeScenarioDraft } from './fixtures';
 import type { DeepMutable, DiagnosticExecutionRecord, PreviaRequest, PreviewEnvelope, PreviewExecutionRecord, StudyDocument } from './model';
-import { applyCertifiedDiagnosticAppend, isCertifiedStudy, validateAndCertifyStudy } from './certifiedStudy';
+import { applyCertifiedDiagnosticAppend, isCertifiedStudy, validateAndCertifyDetachedStudy, validateAndCertifyStudy } from './certifiedStudy';
 import * as validation from './validation';
 
 async function certifiedInput() {
@@ -83,6 +83,43 @@ describe('certificado efêmero por identidade e divisão persistida', () => {
       expect(await validation.validateStudyDocumentWithExecutionYield(value, owner))
         .toEqual(await validation.validateStudyDocument(value, owner));
     }
+  });
+
+  it('mantém resultado e issues do certificado geral na fronteira destacada do IndexedDB', async () => {
+    const input = await observedInput();
+    const fingerprint = structuredClone(input.study);
+    fingerprint.scenarios[0]!.sourceSnapshot.sourceFingerprint = '0'.repeat(64);
+    const missingKind = structuredClone(input.study);
+    delete (missingKind.executions[0] as { kind?: unknown }).kind;
+    for (const [value, owner] of [[input.study, input.study.ownerSub], [input.study, 'outro-owner'],
+      [fingerprint, fingerprint.ownerSub], [missingKind, missingKind.ownerSub]] as const) {
+      const general = await validateAndCertifyStudy(structuredClone(value), owner);
+      const detached = await validateAndCertifyDetachedStudy(structuredClone(value), owner);
+      expect(detached).toEqual(general);
+      if (detached.ok) {
+        expect(isCertifiedStudy(detached.value, owner)).toBe(true);
+        expect(Object.isFrozen(detached.value.executions[0])).toBe(true);
+      }
+    }
+  });
+
+  it('mantém a validação integral responsiva ao ceder mais de uma macrotask no histórico', async () => {
+    const study = structuredClone(demoJson.study) as StudyDocument;
+    const original = globalThis.setTimeout;
+    let yields = 0;
+    const timeout = vi.spyOn(globalThis, 'setTimeout').mockImplementation(((handler: TimerHandler, delay?: number) => {
+      if (delay === 0) yields += 1;
+      return original(handler, delay);
+    }) as typeof setTimeout);
+
+    try {
+      const result = await validation.validateStudyDocumentWithExecutionYield(study, study.ownerSub);
+      expect(result.ok).toBe(true);
+    } finally {
+      timeout.mockRestore();
+    }
+
+    expect(yields).toBeGreaterThan(1);
   });
 
   it('valida integralmente uma vez e produz o mesmo documento', async () => {

@@ -1,5 +1,5 @@
 import Decimal from 'decimal.js';
-import { useId, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { formatDecimal, formatMoney, formatSignedMoney } from '../presentation/format';
@@ -7,7 +7,7 @@ import type { StudyDocument } from '../study/model';
 import { PortfolioCriteria, type CompanyChoice } from './PortfolioCriteria';
 import { PortfolioMarginalPanel } from './PortfolioMarginalPanel';
 import { PortfolioSelectionDetails } from './PortfolioSelectionDetails';
-import { collectPortfolioMetrics, type PortfolioDataset, type PortfolioMetrics } from './portfolioAnalysis';
+import { collectPortfolioMetrics, collectPortfolioMetricsCooperatively, type PortfolioDataset, type PortfolioMetrics } from './portfolioAnalysis';
 import { emptyFilters, selectPortfolios, type PortfolioFilters, type PortfolioObjective, type SelectablePortfolio } from './portfolioSelection';
 
 const highlightLabels: readonly [PortfolioObjective, string][] = [
@@ -15,6 +15,59 @@ const highlightLabels: readonly [PortfolioObjective, string][] = [
   ['wait', 'Menor espera'], ['companyCount', 'Menor composição'],
 ];
 const deferredDataset: PortfolioDataset = { candidates: [], excluded: [], preparedCount: 0, complete: false };
+type CachedProjection = Readonly<{
+  revision: number;
+  value: PortfolioDataset | Promise<PortfolioDataset>;
+}>;
+const projectedDatasets = new WeakMap<StudyDocument, CachedProjection>();
+const cooperativeProjectionThreshold = 16;
+
+function projectionFor(study: StudyDocument): PortfolioDataset | Promise<PortfolioDataset> {
+  const cached = projectedDatasets.get(study);
+  if (cached?.revision === study.revision) return cached.value;
+  const revision = study.revision;
+  const value = study.scenarios.length > cooperativeProjectionThreshold
+    ? collectPortfolioMetricsCooperatively(study) : collectPortfolioMetrics(study);
+  projectedDatasets.set(study, { revision, value });
+  if (value instanceof Promise) {
+    void value.then((dataset) => {
+      const current = projectedDatasets.get(study);
+      if (current?.revision === revision && current.value === value) {
+        projectedDatasets.set(study, { revision, value: dataset });
+      }
+    }, () => {
+      const current = projectedDatasets.get(study);
+      if (current?.revision === revision && current.value === value) projectedDatasets.delete(study);
+    });
+  }
+  return value;
+}
+
+type SettledProjection = Readonly<{
+  study: StudyDocument;
+  revision: number;
+  dataset: PortfolioDataset | null;
+  error: unknown;
+}>;
+
+function usePortfolioDataset(study: StudyDocument, deferred: boolean): PortfolioDataset | null {
+  const revision = study.revision;
+  const projection = useMemo(() => deferred ? deferredDataset : projectionFor(study), [deferred, study, revision]);
+  const [settled, setSettled] = useState<SettledProjection | null>(null);
+  useEffect(() => {
+    if (!(projection instanceof Promise)) return;
+    let active = true;
+    void projection.then(
+      dataset => { if (active) setSettled({ study, revision, dataset, error: null }); },
+      error => { if (active) setSettled({ study, revision, dataset: null, error }); },
+    );
+    return () => { active = false; };
+  }, [projection, revision, study]);
+  if (!(projection instanceof Promise)) return projection;
+  if (settled?.study !== study || settled.revision !== revision) return null;
+  if (settled.error !== null) throw settled.error;
+  return settled.dataset;
+}
 
 function companyChoices(rows: readonly PortfolioMetrics[]): CompanyChoice[] {
   const names = new Map<string, string>();
@@ -62,21 +115,26 @@ function PortfolioRecommendationForStudy({ study, deferred }: Readonly<{ study: 
   const [objective, setObjective] = useState<PortfolioObjective>('savings');
   const [filters, setFilters] = useState<PortfolioFilters>(emptyFilters);
   const [selectedScenarioId, setSelectedScenarioId] = useState<string | null>(null);
-  const dataset = useMemo(() => deferred ? deferredDataset : collectPortfolioMetrics(study), [study, deferred]);
-  const companies = useMemo(() => companyChoices(dataset.candidates), [dataset]);
-  const selection = useMemo(() => selectPortfolios(dataset.candidates, objective, filters), [dataset, objective, filters]);
+  const dataset = usePortfolioDataset(study, deferred);
+  const visibleDataset = dataset ?? deferredDataset;
+  const companies = useMemo(() => companyChoices(visibleDataset.candidates), [visibleDataset]);
+  const selection = useMemo(() => selectPortfolios(visibleDataset.candidates, objective, filters), [visibleDataset, objective, filters]);
   const eligible = useMemo(() => {
-    const byId = new Map(dataset.candidates.map(row => [row.scenarioId, row]));
+    const byId = new Map(visibleDataset.candidates.map(row => [row.scenarioId, row]));
     return selection.ranked.flatMap(row => {
       const candidate = byId.get(row.scenarioId);
       return candidate ? [candidate] : [];
     });
-  }, [dataset, selection]);
+  }, [visibleDataset, selection]);
   const universeCompanyIds = useMemo(() => companies.map(company => company.id), [companies]);
   const eligibilityByScenarioId = useMemo(() => {
     const ids = new Set(eligible.map(row => row.scenarioId));
-    return new Map(dataset.candidates.map(row => [row.scenarioId, ids.has(row.scenarioId)]));
-  }, [dataset, eligible]);
+    return new Map(visibleDataset.candidates.map(row => [row.scenarioId, ids.has(row.scenarioId)]));
+  }, [visibleDataset, eligible]);
+  if (dataset === null) return <section className="savings-origin portfolio-analysis" aria-labelledby={titleId}>
+    <h2 id={titleId}>Qual carteira atende melhor?</h2>
+    <p role="status">Preparando a recomendação…</p>
+  </section>;
   if (deferred) return <section className="savings-origin portfolio-analysis" aria-labelledby={titleId}>
     <h2 id={titleId}>Qual carteira atende melhor?</h2>
     <p role="status">A recomendação será atualizada após o lote.</p>

@@ -14,6 +14,17 @@ function formatDate(iso: string | null): string {
   return match === null ? '—' : `${match[3]}/${match[2]}/${match[1]}`;
 }
 
+function PortfolioCombinationDiagnostics({ summary }: Readonly<{ summary: StudySummary }>) {
+  const scenarioCount = `${summary.scenarioCount} ${summary.scenarioCount === 1 ? 'cenário' : 'cenários'}`;
+  return <section className="diagnostics-hub__study" aria-labelledby={`hub-${summary.id}`}>
+    <div className="diagnostics-hub__study-header">
+      <h2 id={`hub-${summary.id}`}><span>{summary.name}</span> <small>{scenarioCount}</small></h2>
+      <Link className="diagnostics-hub__study-link"
+        to={`/estudos/${encodeURIComponent(summary.id)}/diagnostico`}>Abrir recomendação</Link>
+    </div>
+  </section>;
+}
+
 function StudyDiagnostics({ summary, readStudy }: Readonly<{ summary: StudySummary; readStudy(id: string): Promise<StudyDocument | null> }>) {
   const [expanded, setExpanded] = useState(false);
   const [state, setState] = useState<'collapsed' | 'loading' | 'loaded' | 'error'>('collapsed');
@@ -103,6 +114,8 @@ export function DiagnosticsHubPage() {
     {studies === null && error === null ? <p role="status">Carregando estudos…</p> : null}
     {studies !== null && studies.length === 0
       ? <EmptyState title="Nenhum estudo ainda">Crie um estudo em Estudos para executar o primeiro diagnóstico.</EmptyState> : null}
-    {studies?.map((study) => <StudyDiagnostics key={study.id} summary={study} readStudy={(id) => controller.readStudy(id)} />)}
+    {studies?.map((study) => study.studyType === 'PORTFOLIO_COMBINATIONS'
+      ? <PortfolioCombinationDiagnostics key={study.id} summary={study} />
+      : <StudyDiagnostics key={study.id} summary={study} readStudy={(id) => controller.readStudy(id)} />)}
   </article>;
 }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { collectPortfolioMetrics } from '../levers/portfolioAnalysis';
+import { isCurrentCombinationScenario } from '../levers/prepareCombinationStudy';
 import { emptyFilters, selectPortfolios } from '../levers/portfolioSelection';
 import { canonical } from '../study/fingerprints';
 import { validateStudyDocument } from '../study/validation';
@@ -32,6 +33,19 @@ describe('portfolio performance fixtures', () => {
     const validation = await validateStudyDocument(study);
 
     expect(validation).toMatchObject({ ok: true });
+  });
+
+  it('uses an explicit owner for the persisted E2E fixture', async () => {
+    const ownerSub = '00000000-0000-4000-8000-000000000021';
+    const study = await makePortfolioStudy(6, { currentResultCount: 0, ownerSub });
+
+    expect(study.ownerSub).toBe(ownerSub);
+    expect((await validateStudyDocument(study)).ok).toBe(true);
+  });
+
+  it('keeps its derived scenarios current under the combination contract', async () => {
+    const study = await makePortfolioStudy(6, { currentResultCount: 0 });
+    expect(study.scenarios.every((scenario) => isCurrentCombinationScenario(study, scenario))).toBe(true);
   });
 
   it('preserves unique compositions and deterministic projection and savings ranking', async () => {

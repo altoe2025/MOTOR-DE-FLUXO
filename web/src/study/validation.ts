@@ -229,9 +229,23 @@ export function validateExecutionRecord(
   value: unknown,
   study: StudyDocument,
 ): StudyValidation<ExecutionRecordV3 | ExecutionRecord> {
+  const structural = validateExecutionStructure(value);
+  if (!structural.ok) return structural;
+  return validateCompatibleExecutionRecord(structural.value, study);
+}
+
+function validateExecutionStructure(
+  value: unknown,
+  requireKind = false,
+): StudyValidation<ExecutionRecordV3 | ExecutionRecord> {
   const kind = value !== null && typeof value === 'object' && 'kind' in value
     ? (value as { kind?: unknown }).kind
     : undefined;
+  if (requireKind && kind !== 'DIAGNOSTIC' && kind !== 'PREVIEW') {
+    return { ok: false, issues: [issue(
+      '/kind', 'INVALID_STRUCTURE', 'Documento de estudo inválido.',
+    )] };
+  }
   const validator = kind === 'DIAGNOSTIC'
     ? validateDiagnosticExecutionSchema
     : kind === 'PREVIEW'
@@ -240,7 +254,14 @@ export function validateExecutionRecord(
   if (!validator(value)) {
     return { ok: false, issues: (validator.errors ?? []).map(structuralIssue) };
   }
-  const execution = value as ExecutionRecordV3 | ExecutionRecord;
+  return { ok: true, value: value as ExecutionRecordV3 | ExecutionRecord };
+}
+
+function validateCompatibleExecutionRecord(
+  execution: ExecutionRecordV3 | ExecutionRecord,
+  study: StudyDocument,
+): StudyValidation<ExecutionRecordV3 | ExecutionRecord> {
+  const kind = 'kind' in execution ? execution.kind : undefined;
   const envelopeCompatible = kind === 'DIAGNOSTIC'
     ? diagnosticEnvelopeIsCompatible(execution as DiagnosticExecutionRecord, study)
     : envelopeIsCompatible(execution as ExecutionRecord, study);
@@ -266,13 +287,35 @@ export function validateExecutionRecord(
   return { ok: true, value: execution };
 }
 
+function nextMacrotask(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
 async function validateStudyDocumentCore(
   value: unknown,
   expectedOwnerSub?: string,
   yieldBeforeExecutions = false,
 ): Promise<StudyValidation<StudyDocument>> {
-  if (!validateStudyV3Schema(schemaDocument(value))) {
+  const schemaValue = schemaDocument(value);
+  const executions = isRecord(schemaValue) && Array.isArray(schemaValue.executions)
+    ? schemaValue.executions
+    : null;
+  const documentForSchema = yieldBeforeExecutions && executions !== null
+    ? { ...(schemaValue as Record<string, unknown>), executions: [] }
+    : schemaValue;
+  if (!validateStudyV3Schema(documentForSchema)) {
     return { ok: false, issues: (validateStudyV3Schema.errors ?? []).map(structuralIssue) };
+  }
+  if (yieldBeforeExecutions && executions !== null) {
+    for (const [index, execution] of executions.entries()) {
+      const structural = validateExecutionStructure(execution, true);
+      if (!structural.ok) {
+        return { ok: false, issues: structural.issues.map((item) => ({
+          ...item, path: `/executions/${index}${item.path}`,
+        })) };
+      }
+      if ((index + 1) % 8 === 0) await nextMacrotask();
+    }
   }
   if (!hasValidPreparedCoverage(value)) {
     return { ok: false, issues: [issue(
@@ -348,14 +391,14 @@ async function validateStudyDocumentCore(
       ));
     }
   }
-  if (yieldBeforeExecutions) await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  if (yieldBeforeExecutions) await nextMacrotask();
   const executionIds = study.executions.map((execution) => execution.id);
   if (new Set(executionIds).size !== executionIds.length) {
     issues.push(issue('/executions', 'DUPLICATE_ID', 'Identificador de execução repetido.'));
   }
   const terminalRequests = new Set<string>();
   const terminalAttempts = new Set<string>();
-  for (const execution of study.executions) {
+  for (const [index, execution] of study.executions.entries()) {
     if (!isTerminal(execution)) continue;
     const requestId = execution.requestSnapshot.request_id;
     const duplicateRequest = execution.kind === 'PREVIEW' && terminalRequests.has(requestId);
@@ -371,6 +414,7 @@ async function validateStudyDocumentCore(
     }
     if (execution.kind === 'PREVIEW') terminalRequests.add(requestId);
     if (execution.attemptId !== undefined) terminalAttempts.add(execution.attemptId);
+    if (yieldBeforeExecutions && (index + 1) % 8 === 0) await nextMacrotask();
   }
   for (const [index, execution] of study.executions.entries()) {
     const scenario = study.scenarios.find((candidate) => candidate.id === execution.scenarioId);
@@ -382,9 +426,13 @@ async function validateStudyDocumentCore(
       ));
       continue;
     }
-    const executionValidation = validateExecutionRecord(execution, study);
+    const executionValidation = yieldBeforeExecutions
+      ? validateCompatibleExecutionRecord(execution, study)
+      : validateExecutionRecord(execution, study);
     if (!executionValidation.ok) issues.push(...executionValidation.issues);
+    if (yieldBeforeExecutions && (index + 1) % 8 === 0) await nextMacrotask();
   }
+  let attemptIndex = 0;
   for (const records of diagnosticAttempts(study.executions).values()) {
     if (!diagnosticAttemptHasPersistedShape(records)) {
       const index = study.executions.indexOf(records[0]!);
@@ -394,6 +442,8 @@ async function validateStudyDocumentCore(
         'Tentativa diagnóstica não possui exatamente uma reserva QUEUED e até um terminal correlato.',
       ));
     }
+    attemptIndex += 1;
+    if (yieldBeforeExecutions && attemptIndex % 8 === 0) await nextMacrotask();
   }
   return issues.length === 0 ? { ok: true, value: study } : { ok: false, issues };
 }

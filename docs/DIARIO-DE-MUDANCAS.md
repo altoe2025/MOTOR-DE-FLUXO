@@ -37,7 +37,7 @@ Atualizada em 2026-10-02, durante a entrega das correções de diagnóstico.
 
 | Branch | Situação | Dono |
 |---|---|---|
-| `codex/perf-combinacoes` | Otimização para 255 combinações em integração com a `main` do front leve; gate local e preview ainda pendentes | Codex |
+| `codex/perf-combinacoes` | Otimização para 255 combinações integrada ao front leve; gate local verde, preview e aceite do Gabriel pendentes | Codex |
 | `feat/front-mais-leve` | PR #73 mergeado em `66b7c6e`; front leve observado no Render com menus ⋯, detalhes recolhidos e diagnóstico com a resposta primeiro | Claude |
 | `codex/diagnostico-confiavel` | PR #71 mergeado na `main` em `727d3ee`; contratos incorporados à otimização de combinações | Codex |
 | `codex/carteiras-docker-fixture` | Corrige somente o empacotamento de um helper de testes após falha do build Render; versão Live anterior preservada | Codex |
@@ -91,6 +91,14 @@ Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. 
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+## 2026-10-02 — Gate de 255 diagnósticos fica responsivo no front leve (MOT-100)
+
+**Sintoma:** mesmo após o catálogo e o hub ficarem leves, abrir a recomendação reconstruía a análise em toda montagem e a primeira leitura clonava, validava e congelava 510 registros numa única tarefa; o menu de criação não mantinha feedback visível. **Causa:** o cache vivia apenas no `useMemo` do componente desmontado, `getStudy` usava `getAll` mais clones redundantes e a validação/projeção percorriam árvores grandes sem ceder à thread do navegador. **O que foi feito:** a branch `codex/perf-combinacoes`, já integrada a `origin/main@66b7c6e`, preserva o front leve e adiciona leitura de execuções por cursor, certificação integral cooperativa do snapshot destacado do IndexedDB, projeção cooperativa com cache por identidade+revisão, hub compacto e status persistente de criação. O gate Chromium com 8 empresas, 255 cenários e 510 registros ficou verde: p95 SPA 38,8 ms em Estudos, 33,6 ms no hub, 93,2 ms em objetivo/filtro, 26,1 ms para feedback de criação já após duas RAFs e 138,6 ms até o DOM da recomendação nas 20 reaberturas quentes. A primeira abertura terminou em 5.665,8/5.725,4 ms (DOM/duas RAFs), mas a maior tarefa local foi 142 ms e não houve nenhuma long task >200 ms; zero POST incidental. Python normal e `-O`: 1.416 passed, 3 skipped, 1 xfailed cada. **O que isso invalida:** o gate vermelho registrado logo abaixo e as medições com pausas de 1.270/463 ms não descrevem mais a branch; a primeira abertura continua sendo uma carga fria visível, agora cooperativa e não bloqueante. Ainda não se mediu throughput remoto de 255 jobs nem novo tempo do lote real de 63.
+
+## 2026-10-02 — Gate browser revela leitura pesada de 255 diagnósticos (MOT-100) — superado
+
+**Sintoma:** a navegação SPA de listas atende ao orçamento, mas a recomendação de 255 resultados ainda produz pausas locais; no front leve, a criação no menu ⋯ só mostra o novo estudo após 120,2 ms. **Causa:** o gate separa a abertura fria da reabertura sem reload; a função interna das long tasks ainda exige perfil dedicado. O menu fecha imediatamente, mas não conserva indicador de progresso de criação. **O que foi feito:** fixture E2E autocontida corrigiu o import de helper excluído do contexto Docker; os 8 empresas, 255 cenários e 510 registros permanecem válidos. O Playwright pós-main usa o link real de Estudos, volta ao hub compacto pelo histórico, mede abertura direta e 20 reaberturas quentes da recomendação por `page.goBack`, e preserva os budgets no verificador Python. Em Windows 10.0.26200, i7-1185G7, Node 24.19.0 e Chromium 153.0.8010.12, p95 SPA foi 53,5 ms em Estudos, 42,7 ms no hub e 126,8 ms em objetivo/filtro. Hub compacto: zero linhas/controles de expansão; zero POST incidental. A primeira recomendação levou 2.725,4/2.802,0 ms (heading/duas RAFs), com 3 long tasks >200 ms (máximo 1.270 ms). Reaberturas quentes: p95 468,5/633,6 ms, com 20 long tasks >200 ms (máximo 463 ms). Fixture/parser/contrato Docker 15/15, build verde; Playwright e `--assert-budget` vermelhos por feedback >100 ms e long tasks. **O que isso invalida:** as medições antigas de expansão e reabertura com reload não descrevem mais o hub compacto nem um caminho quente verdadeiro. O aceite de desempenho da MOT-100 segue vermelho; não se mediu throughput remoto de 255 jobs nem novo tempo do lote de 63.
 
 ## 2026-10-02 — Conflito entre abas recupera lote após append durável (MOT-100)
 

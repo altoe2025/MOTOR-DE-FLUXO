@@ -179,6 +179,20 @@ describe('StudiesPage demo recovery', () => {
     expect(await screen.findByRole('heading', { name: 'Carteira aberta' })).toBeInTheDocument();
   });
 
+  it('mantém feedback visual enquanto cria uma combinação de carteiras', async () => {
+    vi.stubEnv('VITE_MOTOR_BUILD_SHA', 'd'.repeat(40));
+    let finishCreation: ((value: ReturnType<typeof makeScenarioDraft>['sourceSnapshot']) => void) | undefined;
+    vi.mocked(resolvePortfolioSource).mockImplementationOnce(() => new Promise((resolve) => { finishCreation = resolve; }));
+    page();
+    await userEvent.click(await screen.findByRole('button', { name: 'Mais ações: criar' }));
+
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Nova combinação de carteiras' }));
+
+    expect(screen.getByRole('status')).toHaveTextContent('Criando combinação de carteiras');
+    finishCreation?.(makeScenarioDraft().sourceSnapshot);
+    expect(await screen.findByRole('heading', { name: 'Carteira aberta' })).toBeInTheDocument();
+  });
+
   it('não repete a leitura quando o salvamento de uma edição publica SAVED', async () => {
     const existing = await study();
     controller.listStudySummaries.mockResolvedValue([summarizeStudy(existing, 0)]);

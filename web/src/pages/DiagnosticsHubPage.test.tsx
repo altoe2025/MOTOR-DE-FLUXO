@@ -108,21 +108,22 @@ describe('DiagnosticsHubPage', () => {
     expect(await screen.findByRole('region', { name: 'Cenários de Estudo A' })).toBeInTheDocument();
   });
 
-  it('adia as 255 linhas de cenário até expandir o estudo', async () => {
+  it('resume combinação de carteiras sem montar 255 linhas e abre a recomendação diretamente', async () => {
     const base = await study('study-a', 'Estudo A');
     const scenarios = Array.from({ length: 255 }, (_, index) => ({
       ...base.scenarios[0]!, id: `scenario-${index}`, name: `Cenário ${index}`,
     }));
-    const full = { ...base, baseScenarioId: scenarios[0]!.id, scenarios };
+    const full = { ...base, studyType: 'PORTFOLIO_COMBINATIONS' as const,
+      baseScenarioId: scenarios[0]!.id, scenarios };
     controller.listStudySummaries.mockResolvedValue([{ ...summarizeStudy(full, 0), scenarioCount: 255 }]);
     controller.readStudy.mockResolvedValue(full);
     render(<MemoryRouter><DiagnosticsHubPage /></MemoryRouter>);
-    const toggle = await screen.findByRole('button', { name: 'Mostrar diagnósticos de Estudo A' });
-    expect(toggle).toHaveTextContent('255 cenários');
+
+    expect(await screen.findByRole('heading', { name: /Estudo A/ })).toHaveTextContent('255 cenários');
+    expect(screen.queryByRole('button', { name: 'Mostrar diagnósticos de Estudo A' })).not.toBeInTheDocument();
     expect(screen.queryByRole('row')).not.toBeInTheDocument();
-    await userEvent.click(toggle);
-    await screen.findByRole('region', { name: 'Cenários de Estudo A' });
-    expect(screen.getAllByRole('row')).toHaveLength(256);
-    expect(controller.readStudy).toHaveBeenCalledOnce();
+    expect(screen.getByRole('link', { name: 'Abrir recomendação' }))
+      .toHaveAttribute('href', '/estudos/study-a/diagnostico');
+    expect(controller.readStudy).not.toHaveBeenCalled();
   });
 });

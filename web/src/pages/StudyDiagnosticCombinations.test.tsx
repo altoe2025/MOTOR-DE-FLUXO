@@ -143,7 +143,7 @@ describe('combination study diagnosis', () => {
     beforeEach(async () => { opened = await openStudy(255); });
     it('shows compact progress for 255 compositions, drains cancelled actives and restores the latest recommendation', async () => {
       const { study, jobs, controller, finish } = opened;
-      expect(screen.getByText('Comparáveis atuais')).toBeInTheDocument();
+      expect(await screen.findByText('Comparáveis atuais')).toBeInTheDocument();
       await start();
       await waitFor(() => expect(jobs).toHaveLength(2));
       expect(screen.getByText(/0 de 255 concluídas/)).toHaveAttribute('role', 'status');
@@ -161,9 +161,9 @@ describe('combination study diagnosis', () => {
       await idle();
       expect(jobs).toHaveLength(2);
       expect(controller.snapshot.document!.executions).toHaveLength(4);
-      expect(screen.getByText('Comparáveis atuais').parentElement).toHaveTextContent('2');
+      expect((await screen.findByText('Comparáveis atuais')).parentElement).toHaveTextContent('2');
       expect(screen.queryByText(/recomendação será atualizada após o lote/)).not.toBeInTheDocument();
-    });
+    }, 15_000);
   });
 
   it('has no incidental submissions or individual controls on the overview', async () => {

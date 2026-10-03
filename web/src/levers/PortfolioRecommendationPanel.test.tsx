@@ -17,6 +17,48 @@ async function subject() {
 }
 
 describe('PortfolioRecommendation', () => {
+  it('reuses the projected dataset when the same study document is reopened', async () => {
+    const { study, base } = await measuredStudyFixture();
+    addPortfolioFixture(study, base, 'A', ['A-out'], '5');
+    let reads = 0;
+    study.executions = new Proxy(study.executions, {
+      get(target, property, receiver) {
+        if (typeof property === 'string' && /^\d+$/.test(property)) reads += 1;
+        return Reflect.get(target, property, receiver);
+      },
+    });
+
+    const first = render(<MemoryRouter><PortfolioRecommendation study={study} /></MemoryRouter>);
+    const expected = first.container.textContent;
+    expect(reads).toBeGreaterThan(0);
+    first.unmount();
+    reads = 0;
+
+    const reopened = render(<MemoryRouter><PortfolioRecommendation study={study} /></MemoryRouter>);
+
+    expect(reopened.container.textContent).toBe(expected);
+    expect(reads).toBe(0);
+  });
+
+  it('reprojects when the revision changes on the same document identity', async () => {
+    const { study } = await measuredStudyFixture();
+    let reads = 0;
+    study.executions = new Proxy(study.executions, {
+      get(target, property, receiver) {
+        if (typeof property === 'string' && /^\d+$/.test(property)) reads += 1;
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    const first = render(<MemoryRouter><PortfolioRecommendation study={study} /></MemoryRouter>);
+    first.unmount();
+    reads = 0;
+    study.revision += 1;
+
+    render(<MemoryRouter><PortfolioRecommendation study={study} /></MemoryRouter>);
+
+    expect(reads).toBeGreaterThan(0);
+  });
+
   it('defers projection across 255 candidate updates and projects once when the batch ends', async () => {
     const { study, base } = await measuredStudyFixture();
     for (let index = 1; index < 255; index += 1) {
@@ -44,6 +86,8 @@ describe('PortfolioRecommendation', () => {
     expect(reads).toBe(0);
     expect(screen.getByRole('status')).toHaveTextContent(/após o lote/);
     rerender(view(256, false));
+    expect(screen.getByRole('status')).toHaveTextContent(/preparando a recomendação/i);
+    await screen.findByText('Comparáveis atuais');
     expect(screen.getByText('Comparáveis atuais').parentElement).toHaveTextContent('255');
     expect(screen.getByRole('heading', { name: /Composição recomendada:/ })).toBeInTheDocument();
     expect(reads).toBeLessThan(1020);

@@ -1,9 +1,35 @@
 import { describe, expect, it } from 'vitest';
 import Decimal from 'decimal.js';
-import { collectPortfolioMetrics } from './portfolioAnalysis';
+import { makePortfolioStudy } from '../performance/portfolioPerformanceFixtures';
+import type { DeepMutable, StudyDocument } from '../study/model';
+import { collectPortfolioMetrics, collectPortfolioMetricsCooperatively } from './portfolioAnalysis';
 import { addPortfolioFixture, measuredStudyFixture, periodicWaitingStudyFixture, publishedSingletonWaitingStudyFixture } from './testFixtures';
 
 describe('portfolio metrics', () => {
+  it('yields between batches without changing the 255-scenario projection', async () => {
+    const { study, base } = await measuredStudyFixture();
+    for (let index = 1; index < 255; index += 1) {
+      const scenario = structuredClone(study.scenarios[0]!);
+      scenario.id = `cooperative-composition-${index}`;
+      scenario.name = `Cooperative composition ${index}`;
+      study.scenarios.push(scenario);
+      const execution = structuredClone(base);
+      execution.id = `cooperative-execution-${index}`;
+      execution.scenarioId = scenario.id;
+      study.executions.push(execution);
+    }
+    const expected = collectPortfolioMetrics(study);
+    const projection = collectPortfolioMetricsCooperatively(study);
+
+    const firstTurn = await Promise.race([
+      projection.then(() => 'completed' as const),
+      new Promise<'yielded'>((resolve) => setTimeout(() => resolve('yielded'), 0)),
+    ]);
+
+    expect(firstTurn).toBe('yielded');
+    await expect(projection).resolves.toEqual(expected);
+  });
+
   it('reads a 255-scenario execution history in one pass while preserving candidate order', async () => {
     const { study, base } = await measuredStudyFixture();
     for (let index = 1; index < 255; index += 1) {
@@ -31,19 +57,19 @@ describe('portfolio metrics', () => {
     expect(reads).toBeLessThan(1020);
   });
   it('ignores obsolete combinations on direct opening without hiding ordinary-study scenarios', async () => {
-    const { study, base } = await measuredStudyFixture();
-    addPortfolioFixture(study, base, 'A', ['A-out'], '5');
-    addPortfolioFixture(study, base, 'B', ['B-in'], '3');
-    addPortfolioFixture(study, base, 'old-A', ['A-out'], '5');
-    study.scenarios.find(row => row.id === 'old-A')!.premises.windowDays += 1;
-    study.studyType = 'PORTFOLIO_COMBINATIONS';
+    const study = structuredClone(await makePortfolioStudy(6)) as DeepMutable<StudyDocument>;
+    const obsolete = structuredClone(study.scenarios[1]!);
+    obsolete.id = 'obsolete-combination';
+    obsolete.name = 'Obsolete combination';
+    obsolete.premises.windowDays += 1;
+    study.scenarios.push(obsolete);
     const current = collectPortfolioMetrics(study);
-    expect(current.preparedCount).toBe(3);
+    expect(current.preparedCount).toBe(63);
     expect(current.excluded).toEqual([]);
-    expect(current.candidates.map(row => row.scenarioId)).not.toContain('old-A');
+    expect(current.candidates.map(row => row.scenarioId)).not.toContain(obsolete.id);
     expect(current.complete).toBe(true);
     delete study.studyType;
-    expect(collectPortfolioMetrics(study).preparedCount).toBe(4);
+    expect(collectPortfolioMetrics(study).preparedCount).toBe(64);
   });
   it('uses period money and allocation-weighted waiting, not full-horizon totals', async () => {
     const { study } = await measuredStudyFixture();

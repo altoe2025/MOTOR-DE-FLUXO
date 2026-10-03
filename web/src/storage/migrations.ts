@@ -8,7 +8,7 @@ import type {
   StudyDocument,
   PreviewExecutionRecord,
 } from '../study/model';
-import { validateAndCertifyStudy } from '../study/certifiedStudy';
+import { validateAndCertifyDetachedStudy, validateAndCertifyStudy } from '../study/certifiedStudy';
 import type { ApplicationRepository } from './applicationRepository';
 import { summarizeStudy } from './applicationRepository';
 import {
@@ -366,6 +366,24 @@ export async function validateStoredStudy(
   }
   performance.clearMarks('mot97:stored-study:validated');
   performance.mark('mot97:stored-study:validated');
+  if (!validation.ok) {
+    throw new DocumentCorruptError(
+      `StudyDocument persistido inválido: ${validation.issues.map((issue) => issue.code).join(', ')}.`,
+    );
+  }
+  return validation.value;
+}
+
+/** Only for a uniquely owned value returned by IndexedDB structured cloning. */
+export async function validateDetachedStoredStudy(
+  value: unknown,
+  ownerSub: string,
+): Promise<StudyDocument> {
+  if (isRecord(value) && typeof value.schemaVersion === 'string'
+    && value.schemaVersion !== '3.0.0') {
+    throw new SchemaUnsupportedError(`StudyDocument ${value.schemaVersion} não suportado.`);
+  }
+  const validation = await validateAndCertifyDetachedStudy(value, ownerSub);
   if (!validation.ok) {
     throw new DocumentCorruptError(
       `StudyDocument persistido inválido: ${validation.issues.map((issue) => issue.code).join(', ')}.`,
