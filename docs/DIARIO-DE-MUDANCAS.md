@@ -37,7 +37,8 @@ Atualizada em 2026-10-03, durante a publicação da MOT-100.
 
 | Branch | Situação | Dono |
 |---|---|---|
-| `codex/perf-combinacoes` | PR #75 aberto; gate funcional verde, com correção canônica de import após o primeiro lint remoto | Codex |
+| `codex/perf-combinacoes-deploy-record` | Registra o deploy Live de `77ceea2` e os smokes públicos da MOT-100 | Codex |
+| `codex/perf-combinacoes` | PR #75 mergeado na `main` em `77ceea2`; versão publicada no Render | Codex |
 | `feat/front-mais-leve` | PR #73 mergeado em `66b7c6e`; front leve observado no Render com menus ⋯, detalhes recolhidos e diagnóstico com a resposta primeiro | Claude |
 | `codex/diagnostico-confiavel` | PR #71 mergeado na `main` em `727d3ee`; contratos incorporados à otimização de combinações | Codex |
 | `codex/carteiras-docker-fixture` | Corrige somente o empacotamento de um helper de testes após falha do build Render; versão Live anterior preservada | Codex |
@@ -55,7 +56,7 @@ Atualizada em 2026-10-03, durante a publicação da MOT-100.
 | `codex/carteira-criterios` | Integra estudo separado de combinações, últimas melhorias de `feat/bancada-exploracao` e chat já publicado do PR #57; deploy aguardando comando do Gabriel | Codex |
 | `codex/chat-interface-render` | PR #57 aberto (draft, base `feat/bancada-exploracao`); código `8d43695` publicado no Render com status Live em 2026-09-28; sem merge na `main` | Codex |
 | `codex/integracao-etapas-5-6` | Consolida `feat/bancada-exploracao` e `codex/finalidade-verificacao`, incluindo histórico de `origin/main`; publicação/CI em preparação, sem deploy | Codex |
-| `main` | `66b7c6e`: PR #73 mergeado; front leve confirmado no bundle público do Render | os dois |
+| `main` | `77ceea2`: PR #75 mergeado e publicado no Render; otimização das combinações Live | os dois |
 | `netting/p1` | spike do P1, **NÃO MERGEAR** — dominado, e agora sabemos que a folga é zero em N ≥ 50. Só local, nunca foi pro GitHub | Felipe |
 | `fix/semantica-remessa-p0` | PR #11, mergeada | Felipe |
 | `fix/previsao-temporal-e-colunas-csv` | PR #12, mergeada | Gabriel |
@@ -91,6 +92,10 @@ Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. 
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+## 2026-10-03 — Otimização de combinações publicada no Render (MOT-100)
+
+**Sintoma:** a otimização da navegação e dos diagnósticos já estava mergeada na `main`, mas o ambiente público ainda servia `66b7c6e` e o diário não registrava a publicação efetiva. **Causa:** o serviço usa deploy manual e exige validação operacional separada do merge. **O que foi feito:** o PR #75 foi mergeado em `77ceea2`; o deploy manual `dep-db08pqk9v7es73ad7gug` terminou `Live` em 57,2 s. O endpoint público `/api/v1/health` respondeu HTTP 200 com `{"status":"ok"}`, o bundle público mudou para `index-q8qhdbXB.js` e a rota protegida `/estudos` redirecionou para `/login`. **O que isso invalida:** o estado anterior em que o Render servia `66b7c6e` e a publicação da MOT-100 constava como pendente; não invalida medições locais nem contratos funcionais.
 
 ## 2026-10-03 — Import do gate de desempenho segue o formato canônico (MOT-100)
 
