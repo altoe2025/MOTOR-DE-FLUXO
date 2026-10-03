@@ -104,6 +104,8 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 
 **O que isso invalida.** Apenas a referência visual anterior do cabeçalho da apresentação. Nada nos cálculos, contratos, persistência ou relatórios impressos. Sem deploy nesta tarefa.
 
+**Verificação.** PR #77: CI `37158959576` passou Python (normal e `-O`), 167 arquivos de testes web, tipos e build; no navegador, 67 testes passaram e somente a referência Linux antiga da apresentação divergiu. Captura revisada e incorporada: diferença restrita ao cabeçalho, impressão inalterada. Localmente, referências Windows e caminho em 375 px passaram. Os testes com porta fixa passaram na porta 8021; gates de desempenho passaram isoladamente, após comparação da apresentação com a base `f2e056b`. A atualização da referência Linux dispara nova execução do CI.
+
 ## 2026-10-03 — Otimização de combinações publicada no Render (MOT-100)
 
 **Sintoma:** a otimização da navegação e dos diagnósticos já estava mergeada na `main`, mas o ambiente público ainda servia `66b7c6e` e o diário não registrava a publicação efetiva. **Causa:** o serviço usa deploy manual e exige validação operacional separada do merge. **O que foi feito:** o PR #75 foi mergeado em `77ceea2`; o deploy manual `dep-db08pqk9v7es73ad7gug` terminou `Live` em 57,2 s. O endpoint público `/api/v1/health` respondeu HTTP 200 com `{"status":"ok"}`, o bundle público mudou para `index-q8qhdbXB.js` e a rota protegida `/estudos` redirecionou para `/login`. **O que isso invalida:** o estado anterior em que o Render servia `66b7c6e` e a publicação da MOT-100 constava como pendente; não invalida medições locais nem contratos funcionais.
