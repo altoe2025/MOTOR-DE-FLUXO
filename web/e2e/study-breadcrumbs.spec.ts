@@ -1,0 +1,34 @@
+import { expect, test } from '@playwright/test';
+
+test('caminho permite cancelar criação e voltar ao estudo renomeado no celular', async ({ page }, testInfo) => {
+  await page.goto('/estudos');
+  const trail = page.getByRole('navigation', { name: 'Caminho de navegação' });
+  await page.getByRole('button', { name: 'Novo estudo', exact: true }).click();
+  await expect(trail.locator('[aria-current="page"]')).toHaveText('Novo estudo');
+  await trail.getByRole('link', { name: 'Estudos', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Novo estudo', exact: true })).toBeVisible();
+  await expect(trail.locator('[aria-current="page"]')).toHaveText('Estudos');
+  await page.getByRole('button', { name: 'Novo estudo', exact: true }).click();
+  await page.getByRole('radio', { name: 'Carteira gerada (exemplo)' }).check();
+  await page.getByRole('button', { name: 'Criar com carteira gerada' }).click();
+  await expect(page).toHaveURL(/\/carteira\/[0-9a-f-]+$/);
+  const id = page.url().split('/').at(-1)!;
+  const name = 'Estudo de outubro com nome longo para navegação no celular';
+  await page.getByRole('button', { name: 'Mais ações: estudo' }).click();
+  await page.getByRole('menuitem', { name: 'Renomear' }).click();
+  await page.getByLabel('Nome do estudo', { exact: true }).fill(name);
+  await page.getByRole('button', { name: 'Salvar nome', exact: true }).click();
+  await expect(page.getByText('Alterações salvas.', { exact: true })).toBeVisible();
+  await expect(trail.locator('[aria-current="page"]')).toHaveText(name);
+  await page.goto(`/estudos/${id}/diagnostico`);
+  await page.setViewportSize({ width: 375, height: 812 });
+  await expect(trail.locator('[aria-current="page"]')).toHaveText('Diagnóstico');
+  await expect(trail.getByRole('link', { name, exact: true })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.screenshot({ path: testInfo.outputPath('caminho-mobile.png'), fullPage: true });
+  await trail.getByRole('link', { name, exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`/carteira/${id}$`));
+  await expect(page.getByRole('heading', { name, exact: true })).toBeVisible();
+  await trail.getByRole('link', { name: 'Estudos', exact: true }).click();
+  await expect(page).toHaveURL(/\/estudos$/);
+});

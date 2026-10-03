@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useWorkspaceTrailLabel } from '../app/WorkspaceBreadcrumbs';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { useApiClient, useStudyController } from '../app/providers';
@@ -31,6 +32,8 @@ export function StudiesPage() {
   const [notice, setNotice] = useState<string | null>(null); const importInput = useRef<HTMLInputElement>(null);
   const [choosing, setChoosing] = useState<{ cases: ObservedCase[]; companies: CompanyRecord[] } | null>(null); const [creating, setCreating] = useState(false);
   const [creationStatus, setCreationStatus] = useState<string | null>(null);
+  const closeChooser = useCallback(() => setChoosing(null), []);
+  useWorkspaceTrailLabel(choosing === null ? null : 'Novo estudo', closeChooser);
   const creatingRef = useRef(false);
   const mounted = useRef(false);
   const refreshGeneration = useRef(0);

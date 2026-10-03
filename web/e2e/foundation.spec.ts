@@ -49,7 +49,7 @@ test('browser executes a generated study through the real API and engine exactly
   await page.getByRole('button', { name: 'Ajuda: Faixa da economia' }).click();
   await expect(page.getByRole('tooltip')).toContainText('não é probabilidade de desempenho futuro');
   await expect(page.getByRole('link', { name: 'Empresas', exact: true })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Estudos', exact: true })).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Navegação principal' }).getByRole('link', { name: 'Estudos', exact: true })).toBeVisible();
   await page.goto(`/carteira/${studyId}`);
   await expect(page.getByRole('heading', { name: 'Validação MOT-22', level: 1 })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Abrir diagnóstico', exact: true })).toBeVisible();

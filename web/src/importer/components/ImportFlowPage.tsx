@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { useParams } from 'react-router-dom';
 
+import { useWorkspaceTrailLabel } from '../../app/WorkspaceBreadcrumbs';
 import { useApiClient, useStudyController } from '../../app/providers';
 import { useAuth } from '../../auth/AuthProvider';
 import type { CompanyRecord } from '../../cases/domain';
@@ -61,6 +62,7 @@ export function ImportFlowPage() {
   const company = companyId !== undefined
     ? companies?.find((item) => item.id === companyId) ?? null
     : [...(companies ?? []), ...(pendingCompany === null ? [] : [pendingCompany])].find((item) => item.id === selectedCompanyId) ?? null;
+  useWorkspaceTrailLabel(companyId === undefined ? null : company?.displayName ?? null);
   if (companyId !== undefined && companies !== null && !companies.some((item) => item.id === companyId)) {
     return <article className="destination-page"><h1 ref={heading} tabIndex={-1}>Empresa não encontrada</h1><p>A empresa não existe ou pertence a outra conta.</p></article>;
   }

@@ -298,7 +298,7 @@ describe('application routes', () => {
     renderAppAt('/empresas/A/importar?companyId=B', client(session('user-a')), repository);
     expect(await screen.findByRole('heading', { name: 'Importar operações de Empresa A' })).toBeVisible();
     expect(screen.queryByRole('combobox', { name: 'Empresa' })).not.toBeInTheDocument();
-    expect(screen.getByText('Empresa A')).toBeVisible();
+    expect(screen.getByLabelText('Empresa')).toHaveTextContent('Empresa A');
     await user.upload(screen.getByLabelText('Planilha canônica XLSX'), new File(['planilha'], 'operacoes.xlsx'));
     await user.click(screen.getByRole('checkbox', { name: /linhas representam operações explícitas/i }));
     await user.click(screen.getByRole('button', { name: 'Ler planilha' }));
