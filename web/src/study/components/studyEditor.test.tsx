@@ -59,7 +59,7 @@ describe('StudyEditor', () => {
     expect(screen.getByRole('group', { name: 'Empresas da carteira' })).toBeInTheDocument();
     expect(screen.queryByRole('radio')).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Operações explícitas' })).not.toBeInTheDocument();
-    expect(screen.getByLabelText('Nome do estudo')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Mais ações: estudo' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Premissas e período' })).toBeInTheDocument();
     const user = userEvent.setup();
     await user.click(screen.getByRole('checkbox', { name: /Empresa Alfa/ }));
@@ -72,6 +72,42 @@ describe('StudyEditor', () => {
       ],
     }) }));
   });
+  it('na combinação, busca empresas e mostra as escolhidas como chips removíveis', async () => {
+    const document = { ...await study(), studyType: 'PORTFOLIO_COMBINATIONS' as const };
+    const cases = ['Alfa', 'Beta', 'Gama'].map((label, index) => ({ ...makeObservedCase(), id: `case-${index}`, companyId: `company-${index}` }));
+    const companies = ['Alfa', 'Beta', 'Gama'].map((label, index) => ({ id: `company-${index}`, ownerSub: FIXTURE_OWNER,
+      displayName: `Empresa ${label}`, aliases: [], createdAt: FIXTURE_NOW, updatedAt: FIXTURE_NOW, revision: 1 }));
+    await subject({ study: document, observedCases: cases, companies }, { openSource: false });
+    const user = userEvent.setup();
+    await user.type(screen.getByRole('searchbox', { name: 'Buscar empresa' }), 'gam');
+    expect(screen.getAllByRole('checkbox')).toHaveLength(1);
+    await user.click(screen.getByRole('checkbox', { name: /Empresa Gama/ }));
+    await user.clear(screen.getByRole('searchbox', { name: 'Buscar empresa' }));
+    await user.click(screen.getByRole('button', { name: 'Selecionar todas' }));
+    expect(screen.getByRole('button', { name: 'Usar 3 casos juntos' })).toBeEnabled();
+    await user.click(screen.getByRole('button', { name: 'Tirar Empresa Beta' }));
+    expect(screen.getByRole('checkbox', { name: /Empresa Beta/ })).not.toBeChecked();
+    expect(screen.getByRole('button', { name: 'Usar 2 casos juntos' })).toBeEnabled();
+  });
+
+  it('na combinação já aplicada, mostra só o resumo das empresas e reabre com "Trocar"', async () => {
+    const base = { ...await study(), studyType: 'PORTFOLIO_COMBINATIONS' as const };
+    const scenario = base.scenarios[0]!;
+    const definition = { kind: 'EXPLICIT_ORDERS' as const, orders: [], provenanceByOrder: {}, sourceCases: [
+      { caseId: 'case-1', caseRevision: 1, companyId: 'company-1' }, { caseId: 'case-2', caseRevision: 1, companyId: 'company-2' }] };
+    const document = { ...base, scenarios: [{ ...scenario, sourceSnapshot: { ...scenario.sourceSnapshot,
+      source: { kind: 'AUTHORED' as const, authoredPortfolioId: 'p', definition } } }] } as unknown as typeof base;
+    const companies = ['Alfa', 'Beta'].map((label, index) => ({ id: `company-${index + 1}`, ownerSub: FIXTURE_OWNER,
+      displayName: `Empresa ${label}`, aliases: [], createdAt: FIXTURE_NOW, updatedAt: FIXTURE_NOW, revision: 1 }));
+    await subject({ study: document, companies }, { openSource: false });
+    const summary = screen.getByRole('region', { name: 'Empresas da carteira' });
+    expect(summary).toHaveTextContent('2 empresas');
+    expect(summary).toHaveTextContent('Empresa Alfa, Empresa Beta');
+    expect(screen.queryByRole('searchbox', { name: 'Buscar empresa' })).not.toBeInTheDocument();
+    await userEvent.setup().click(within(summary).getByRole('button', { name: 'Trocar' }));
+    expect(screen.getByRole('searchbox', { name: 'Buscar empresa' })).toBeInTheDocument();
+  });
+
   it('mostra a origem num resumo e só abre o seletor em "Trocar origem"', async () => {
     await subject({}, { openSource: false });
     expect(screen.getByRole('heading', { name: 'Origem da carteira' })).toBeInTheDocument();
@@ -115,6 +151,9 @@ describe('StudyEditor', () => {
 
   it('salva nome com teclado', async () => {
     const { onRename } = await subject(); const user = userEvent.setup();
+    expect(screen.queryByLabelText('Nome do estudo')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Mais ações: estudo' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Renomear' }));
     await user.clear(screen.getByLabelText('Nome do estudo'));
     await user.type(screen.getByLabelText('Nome do estudo'), 'Novo estudo{enter}');
     expect(onRename).toHaveBeenCalledWith('Novo estudo');
@@ -195,9 +234,29 @@ describe('StudyEditor', () => {
     }));
   });
 
+  it('mostra as premissas num resumo e só abre o formulário em "Editar premissas"', async () => {
+    await subject({}, { openSource: false });
+    const summary = screen.getByRole('region', { name: 'Premissas e período' });
+    expect(summary).toHaveTextContent('IOF 3,5% / 0,38%');
+    expect(summary).toHaveTextContent('Carry 0,04%');
+    expect(summary).toHaveTextContent('PTAX 5,4');
+    expect(summary).toHaveTextContent(/Janela \d+ dias/);
+    expect(screen.queryByLabelText('IOF OUT')).not.toBeInTheDocument();
+    const edit = screen.getByRole('button', { name: 'Editar premissas' });
+    expect(edit).toHaveAttribute('aria-expanded', 'false');
+    fireEvent.click(edit);
+    expect(edit).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByLabelText('IOF OUT')).toHaveValue('3,5');
+    // Janela e período ficam no Avançado: o motor usa, mas raramente se mexe.
+    expect(screen.queryByLabelText('Janela em dias')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Avançado/ }));
+    expect(screen.getByLabelText('Janela em dias')).toBeInTheDocument();
+  });
+
   it('mostra premissas em % e R$, converte para fração e preserva o que não mudou', async () => {
     const onScenarioChange = vi.fn();
     await subject({ onScenarioChange }); const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Editar premissas' }));
     expect(screen.getByLabelText('IOF OUT')).toHaveValue('3,5');
     expect(screen.getByLabelText('Carry CNR')).toHaveValue('0,04');
     await user.clear(screen.getByLabelText('IOF OUT'));
@@ -216,6 +275,8 @@ describe('StudyEditor', () => {
     const document = await study();
     const { onScenarioChange } = await subject({ study: document }, { openSource: false });
     const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Editar premissas' }));
+    await user.click(screen.getByRole('button', { name: /Avançado/ }));
     const windowDays = screen.getByLabelText('Janela em dias');
     await user.clear(windowDays);
     await user.type(windowDays, '3');
@@ -232,6 +293,7 @@ describe('StudyEditor', () => {
   it('mostra o erro de premissa junto ao campo, com exemplo', async () => {
     const onScenarioChange = vi.fn();
     await subject({ onScenarioChange }); const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Editar premissas' }));
     await user.clear(screen.getByLabelText('Carry CNR'));
     await user.type(screen.getByLabelText('Carry CNR'), '0;04');
     await user.click(screen.getByRole('button', { name: 'Salvar premissas e período' }));
@@ -271,6 +333,8 @@ describe('StudyEditor', () => {
 
     expect(screen.getByLabelText('Nome do grupo')).toHaveValue('Grupo persistido');
     expect(screen.getByLabelText('Ticket mediano do grupo')).toHaveValue('1500.50');
+    await user.click(screen.getByRole('button', { name: 'Editar premissas' }));
+    await user.click(screen.getByRole('button', { name: /Avançado/ }));
     await user.clear(screen.getByLabelText('PTAX'));
     await user.type(screen.getByLabelText('PTAX'), '5,4500');
     await user.clear(screen.getByLabelText('Período de medição em dias'));
@@ -441,7 +505,10 @@ describe('StudyList', () => {
     const onCreate = vi.fn(); const onCreateCombinations = vi.fn();
     render(<StudyList studies={[document]} selectedId={null} onCreate={onCreate} onCreateCombinations={onCreateCombinations}
       onOpen={vi.fn()} onRename={vi.fn()} onDuplicate={vi.fn()} onRestore={vi.fn()} onDelete={vi.fn()} />);
-    await userEvent.click(screen.getByRole('button', { name: 'Nova combinação de carteiras' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Mais ações: criar' }));
+    const item = screen.getByRole('menuitem', { name: 'Nova combinação de carteiras' });
+    expect(item).toHaveAttribute('data-chat-help-id', 'control.estudos.nova-combinacao');
+    await userEvent.click(item);
     expect(onCreateCombinations).toHaveBeenCalledOnce();
     expect(onCreate).not.toHaveBeenCalled();
     expect(screen.getByRole('button', { name: 'Novo estudo' })).toBeInTheDocument();
@@ -453,9 +520,26 @@ describe('StudyList', () => {
     await userEvent.setup().click(screen.getByRole('button', { name: 'Novo estudo' }));
     expect(onCreate).toHaveBeenCalledOnce();
     expect(screen.getByRole('button', { name: 'Abrir Estudo teste' })).toBeVisible();
-    expect(screen.getByRole('button', { name: 'Renomear Estudo teste' })).toBeVisible();
-    expect(screen.getByRole('button', { name: 'Duplicar Estudo teste' })).toBeVisible();
-    expect(screen.getByRole('button', { name: 'Excluir Estudo teste' })).toBeVisible();
+    // As ações de cada estudo ficam no menu ⋯, fora da tela até alguém pedir.
+    expect(screen.queryByRole('button', { name: 'Renomear Estudo teste' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Mais ações: Estudo teste' }));
+    expect(screen.getByRole('menuitem', { name: 'Renomear Estudo teste' })).toBeVisible();
+    expect(screen.getByRole('menuitem', { name: 'Duplicar Estudo teste' })).toBeVisible();
+    expect(screen.getByRole('menuitem', { name: 'Excluir Estudo teste' })).toBeVisible();
+  });
+
+  it('leva cada ação do menu ao estudo certo', async () => {
+    const document = await study(); const onRename = vi.fn(); const onDelete = vi.fn(); const onExport = vi.fn();
+    render(<StudyList studies={[document]} selectedId={null} onCreate={vi.fn()} onOpen={vi.fn()} onRename={onRename}
+      onDuplicate={vi.fn()} onRestore={vi.fn()} onDelete={onDelete} onExport={onExport} />);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Mais ações: Estudo teste' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Exportar Estudo teste' }));
+    expect(onExport).toHaveBeenCalledWith(document);
+    await user.click(screen.getByRole('button', { name: 'Mais ações: Estudo teste' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Excluir Estudo teste' }));
+    expect(onDelete).toHaveBeenCalledWith(document);
+    expect(onRename).not.toHaveBeenCalled();
   });
 
   it('oculta da lista principal os estudos movidos para a lixeira', async () => {
@@ -481,7 +565,10 @@ describe('StudyList', () => {
     render(<StudyList studies={[active, deleted]} selectedId={null} onCreate={vi.fn()} onOpen={onOpen}
       onRename={vi.fn()} onDuplicate={vi.fn()} onRestore={onRestore} onDelete={vi.fn()} />);
     const user = userEvent.setup();
-    screen.getByRole('button', { name: 'Lixeira de estudos' }).focus();
+    screen.getByRole('button', { name: 'Mais ações: criar' }).focus();
+    await user.keyboard('{Enter}');
+    await user.keyboard('{End}');
+    expect(screen.getByRole('menuitem', { name: 'Lixeira de estudos' })).toHaveFocus();
     await user.keyboard('{Enter}');
     expect(screen.getByRole('list', { name: 'Lixeira de estudos' })).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Abrir Estudo excluído' })).not.toBeInTheDocument();

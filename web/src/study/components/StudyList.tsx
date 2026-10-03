@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 
+import { ActionMenu, type ActionMenuItem } from '../../ui/ActionMenu';
 import { Button } from '../../ui/Button';
 import type { StudyDocument } from '../model';
 import { describeSource } from '../sourceSummary';
@@ -10,6 +11,14 @@ export type StudyListProps = Readonly<{
   onOpen(id: string): void; onRename(study: StudyDocument): void; onDuplicate(study: StudyDocument): void;
   onRestore(study: StudyDocument): void; onDelete(study: StudyDocument): void;
   onExport?(study: StudyDocument): void;
+  /** Ações extras do menu de criação (importar, demonstração…), antes da lixeira. */
+  createActions?: readonly ActionMenuItem[];
+  /** Controles que ficam à esquerda de "Novo estudo" (ex.: "Comparar estudos"). */
+  toolbarStart?: ReactNode;
+  /** Título da página, na mesma linha das ações. */
+  heading?: ReactNode;
+  /** Avisos e formulários que ficam entre o cabeçalho e a lista (ex.: escolha do novo estudo). */
+  beforeList?: ReactNode;
 }>;
 
 function sourceLabel(study: StudyDocument): string {
@@ -18,25 +27,28 @@ function sourceLabel(study: StudyDocument): string {
   return scenario === undefined ? 'Sem origem' : describeSource(scenario, [], []).label;
 }
 
-export function StudyList({ studies, selectedId, onCreate, onCreateCombinations, createCombinationsDisabled = false, onOpen, onRename, onDuplicate, onRestore, onDelete, onExport }: StudyListProps) {
+export function StudyList({ studies, selectedId, onCreate, onCreateCombinations, createCombinationsDisabled = false, onOpen, onRename, onDuplicate, onRestore, onDelete, onExport, createActions = [], toolbarStart, heading, beforeList }: StudyListProps) {
   const [showTrash, setShowTrash] = useState(false);
   const visibleStudies = studies.filter((study) => (study.deletedAt !== null) === showTrash);
+  const createMenu: ActionMenuItem[] = [
+    ...(onCreateCombinations === undefined ? [] : [{
+      label: 'Nova combinação de carteiras', helpId: 'control.estudos.nova-combinacao',
+      disabled: createCombinationsDisabled, onSelect: onCreateCombinations,
+    }]),
+    ...createActions,
+    'separator',
+    { label: 'Lixeira de estudos', onSelect: () => setShowTrash(true) },
+  ];
   return <>
-    {showTrash ? null : <div className="create-options">
-      <div className="create-option">
-        <Button data-chat-help-id="control.estudos.novo" onClick={onCreate}>Novo estudo</Button>
-        <p className="field-hint">Rode o que quiser: escolha as empresas, mexa nas alavancas e compare os cenários.</p>
+    <div className="page-head">
+      {heading}
+      <div className="list-toolbar page-head__actions">
+        {showTrash
+          ? <Button variant="secondary" onClick={() => setShowTrash(false)}>Voltar aos estudos</Button>
+          : <>{toolbarStart}<Button data-chat-help-id="control.estudos.novo" onClick={onCreate}>Novo estudo</Button><ActionMenu label="criar" items={createMenu} /></>}
       </div>
-      {onCreateCombinations === undefined ? null : <div className="create-option">
-        <Button variant="secondary" data-chat-help-id="control.estudos.nova-combinacao" disabled={createCombinationsDisabled} onClick={onCreateCombinations}>Nova combinação de carteiras</Button>
-        <p className="field-hint">Escolha as empresas e ajuste as alavancas; todas as combinações entre elas são testadas e a tela diz qual carteira atende melhor.</p>
-      </div>}
-    </div>}
-    <div className="list-toolbar">
-      <Button variant="secondary" onClick={() => setShowTrash((current) => !current)}>
-        {showTrash ? 'Voltar aos estudos' : 'Lixeira de estudos'}
-      </Button>
     </div>
+    {beforeList}
     {visibleStudies.length === 0
       ? <p className="empty-list">{showTrash ? 'A lixeira está vazia.' : 'Nenhum estudo salvo nesta conta.'}</p>
       : <ul className="study-list" aria-label={showTrash ? 'Lixeira de estudos' : 'Estudos'}>
@@ -51,10 +63,13 @@ export function StudyList({ studies, selectedId, onCreate, onCreateCombinations,
           <div className="study-list__actions">
             {showTrash
               ? <Button variant="secondary" aria-label={`Restaurar ${study.name}`} onClick={() => onRestore(study)}>Restaurar</Button>
-              : <><Button variant="secondary" aria-label={`Renomear ${study.name}`} onClick={() => onRename(study)}>Renomear</Button>
-                <Button variant="secondary" aria-label={`Duplicar ${study.name}`} onClick={() => onDuplicate(study)}>Duplicar</Button>
-                {onExport === undefined ? null : <Button variant="secondary" data-chat-help-id="control.estudos.exportar" aria-label={`Exportar ${study.name}`} onClick={() => onExport(study)}>Exportar</Button>}
-                <Button variant="secondary" aria-label={`Excluir ${study.name}`} onClick={() => onDelete(study)}>Excluir</Button></>}
+              : <ActionMenu label={study.name} items={[
+                { label: 'Renomear', ariaLabel: `Renomear ${study.name}`, onSelect: () => onRename(study) },
+                { label: 'Duplicar', ariaLabel: `Duplicar ${study.name}`, onSelect: () => onDuplicate(study) },
+                ...(onExport === undefined ? [] : [{ label: 'Exportar cópia', ariaLabel: `Exportar ${study.name}`, helpId: 'control.estudos.exportar', onSelect: () => onExport(study) }]),
+                'separator',
+                { label: 'Excluir', ariaLabel: `Excluir ${study.name}`, danger: true, onSelect: () => onDelete(study) },
+              ]} />}
           </div>
         </li>)}
       </ul>}

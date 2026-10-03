@@ -136,6 +136,11 @@ test('robust diagnostic remains keyboard accessible at 200 percent zoom', async 
   for (let index = 0; index < 10; index += 1) await release(page);
   await expect(page.getByRole('heading', { name: 'Resultado do motor' })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Resultado do motor' }).getByTestId('economia-brl')).toBeVisible();
+  // Os detalhes ficam recolhidos; o teclado os abre.
+  const costs = page.getByRole('button', { name: /Custos por componente/ });
+  await costs.focus();
+  await page.keyboard.press('Enter');
+  await expect(costs).toHaveAttribute('aria-expanded', 'true');
   await expect(page.getByRole('table', { name: 'Custo sem pool: cada ordem remetendo sozinha. Custo com pool: depois do netting.' })).toBeVisible();
 
   const diagnosticScrollAreas = page.locator('.diagnostic-page .table-scroll');

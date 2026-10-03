@@ -1,19 +1,29 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Locator } from '@playwright/test';
 import { runCanonicalDiagnostic } from './helpers/persistedDiagnostic';
 
 const STUDY = '00000000-0000-4000-8000-000000000901';
 test.setTimeout(90_000);
 
 // Live replaced the hypothesis wizard with duplication, levers and the board.
+
+// "Ajustar uma empresa" já vem aberto quando não há composição (uma empresa só).
+async function openAdjust(levers: Locator) {
+  const toggle = levers.getByRole('button', { name: /Ajustar uma empresa/ });
+  if (await toggle.getAttribute('aria-expanded') === 'false') await toggle.click();
+}
+
 test('duplicar observado permite variar janela sem alterar ordens, proveniência ou original', async ({ page }) => {
   await page.goto('/estudos');
   await page.waitForFunction(() => '__MOTOR_E2E__' in window);
   await page.evaluate(() => window.__MOTOR_E2E__!.seedStage4('OBSERVED_HYPOTHESIS'));
   await page.goto(`/carteira/${STUDY}`);
   const original = await page.evaluate((id) => window.__MOTOR_E2E__!.stage4Snapshot(id), STUDY);
-  await page.getByRole('button', { name: 'Duplicar estudo', exact: true }).click();
+  await page.getByRole('button', { name: 'Mais ações: estudo' }).click();
+  await page.getByRole('menuitem', { name: 'Duplicar estudo', exact: true }).click();
   await expect(page).not.toHaveURL(new RegExp(STUDY));
   const copyId = page.url().split('/').at(-1)!;
+  await page.getByRole('button', { name: 'Editar premissas' }).click();
+  await page.getByRole('button', { name: /Avançado/ }).click();
   await page.getByLabel('Janela em dias', { exact: true }).fill('3');
   await page.getByRole('button', { name: 'Salvar premissas e período' }).click();
   await expect(page.getByText('Alterações salvas.', { exact: true })).toBeVisible();
@@ -43,6 +53,7 @@ test('alavanca cria variação isolada e mantém original observado persistido',
   await page.goto(`/carteira/${STUDY}`);
   const before = await page.evaluate((id) => window.__MOTOR_E2E__!.stage4Snapshot(id), STUDY);
   const levers = page.getByRole('region', { name: 'Alavancas', exact: true });
+  await openAdjust(levers);
   await levers.getByLabel('Volume OUT ×', { exact: true }).fill('2');
   await levers.getByRole('button', { name: 'Criar variação', exact: true }).click();
   await expect.poll(async () => (await page.evaluate((id) => window.__MOTOR_E2E__!.stage4Snapshot(id), STUDY)).scenarios.length).toBe(2);

@@ -62,9 +62,10 @@ describe('StudiesPage demo recovery', () => {
     page();
     expect(screen.getByRole('button', { name: 'Novo estudo' }))
       .toHaveAttribute('data-chat-help-id', 'control.estudos.novo');
-    expect(screen.getByRole('button', { name: 'Nova combinação de carteiras' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Mais ações: criar' }));
+    expect(screen.getByRole('menuitem', { name: 'Nova combinação de carteiras' }))
       .toHaveAttribute('data-chat-help-id', 'control.estudos.nova-combinacao');
-    await userEvent.click(screen.getByRole('button', { name: 'Nova combinação de carteiras' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Nova combinação de carteiras' }));
     expect(await screen.findByRole('heading', { name: 'Carteira aberta' })).toBeInTheDocument();
     expect(controller.edit).toHaveBeenCalledWith(expect.objectContaining({
       name: 'Combinação de carteiras', studyType: 'PORTFOLIO_COMBINATIONS',
@@ -129,14 +130,12 @@ describe('StudiesPage demo recovery', () => {
     let finishCreation: ((value: ReturnType<typeof makeScenarioDraft>['sourceSnapshot']) => void) | undefined;
     vi.mocked(resolvePortfolioSource).mockImplementationOnce(() => new Promise((resolve) => { finishCreation = resolve; }));
     page();
-    const button = await screen.findByRole('button', { name: 'Nova combinação de carteiras' });
+    await userEvent.click(await screen.findByRole('button', { name: 'Mais ações: criar' }));
+    const item = screen.getByRole('menuitem', { name: 'Nova combinação de carteiras' });
 
-    act(() => {
-      button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-      button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    });
-
-    expect(button).toBeDisabled();
+    act(() => { item.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+    await userEvent.click(screen.getByRole('button', { name: 'Mais ações: criar' }));
+    expect(screen.getByRole('menuitem', { name: 'Nova combinação de carteiras' })).toBeDisabled();
     await waitFor(() => expect(resolvePortfolioSource).toHaveBeenCalledOnce());
     finishCreation?.(makeScenarioDraft().sourceSnapshot);
     expect(await screen.findByRole('heading', { name: 'Carteira aberta' })).toBeInTheDocument();
@@ -160,7 +159,8 @@ describe('StudiesPage demo recovery', () => {
     await screen.findByRole('button', { name: 'Abrir Demonstração' });
     controller.listStudies.mockClear();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Renomear Demonstração' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Mais ações: Demonstração' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Renomear Demonstração' }));
 
     await waitFor(() => expect(controller.listStudies).toHaveBeenCalledOnce());
     await act(async () => { await Promise.resolve(); await Promise.resolve(); });
@@ -204,7 +204,11 @@ describe('StudiesPage demo recovery', () => {
     controller.demoInstallationStatus.mockResolvedValue('REMOVED');
     controller.restoreDemoStudy.mockResolvedValue(await study());
     page();
-    await userEvent.click(await screen.findByRole('button', { name: 'Carregar estudo demonstrativo' }));
+    // Com estudos na lista, a demonstração sai do caminho e fica no menu de criação.
+    await screen.findByRole('button', { name: 'Abrir Demonstração' });
+    expect(screen.queryByRole('button', { name: 'Carregar estudo demonstrativo' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Mais ações: criar' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Carregar estudo demonstrativo' }));
     expect(controller.restoreDemoStudy).toHaveBeenCalledOnce();
     expect(await screen.findByRole('heading', { name: 'Demonstração aberta' })).toBeInTheDocument();
   });
@@ -268,7 +272,8 @@ describe('StudiesPage cópia de segurança', () => {
   it('avisa que o estudo fica salvo só neste navegador', async () => {
     page();
     expect(await screen.findByText('Salvo neste navegador.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Importar estudo' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Mais ações: criar' }));
+    expect(screen.getByRole('menuitem', { name: 'Importar estudo' }))
       .toHaveAttribute('data-chat-help-id', 'control.estudos.importar');
   });
 

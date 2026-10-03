@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { formatFraction, formatMoney, formatSignedMoney } from '../presentation/format';
 import type { ScenarioDocument, StudyDocument } from '../study/model';
 import { Button } from '../ui/Button';
+import { Disclosure } from '../ui/Disclosure';
 import { interClientSplit, savingsOrigin, scenarioRow } from './savingsOrigin';
 
 export { currentDiagnostic } from './savingsOrigin';
@@ -62,50 +63,52 @@ export function VariationComparison({ study, selectedScenarioId, running, progre
         })}</tbody>
       </table>
     </div>
-    {groups.length === 0 ? null : <div className="table-scroll" role="region" tabIndex={0} aria-label="Economia por empresa nos cenários">
-      <table className="company-table">
-        <caption>Economia por empresa</caption>
-        <thead><tr><th scope="col">Cenário</th>{groups.map((group) => <th scope="col" key={group}>{group}</th>)}</tr></thead>
-        <tbody>{rows.map((row) => <tr key={row.scenario.id}>
-          <th scope="row">{row.scenario.name}
-            {row.breakdown?.reconciled === false ? <small role="note">conferência com o total não bateu</small> : null}
-          </th>
-          {groups.map((group) => {
-            const item = row.breakdown?.companies.find((company) => company.group === group);
-            const reference = base.breakdown?.companies.find((company) => company.group === group);
-            const diff = row === base || item === undefined ? null : delta(item.savings, reference?.savings ?? '0');
-            return <td key={group}>{item === undefined ? '—' : formatMoney(item.savings)}
-              {diff === null ? null : <small>{formatSignedMoney(diff)} vs original</small>}</td>;
-          })}
-        </tr>)}</tbody>
-      </table>
-    </div>}
-    {origin.length < 2 ? null : <section className="savings-origin" aria-labelledby="savings-origin-title">
-      <h3 id="savings-origin-title">De onde vem a economia de cada empresa</h3>
-      {!hasSolo ? <p className="field-hint">No estudo, use “Fazer composição” a partir do original e rode todas para comparar o que cada empresa faria sozinha com sua participação na carteira.</p> : <>
-        <p className="field-hint">“Sozinha” usa as mesmas operações e premissas, sem as outras empresas. A diferença mostra como a economia atribuída à empresa muda na carteira; não é a contribuição total dela para o conjunto.</p>
-        <div className="table-scroll" role="region" tabIndex={0} aria-label="Origem da economia por empresa">
-          <table className="company-table">
-            <caption>Contra “{base.scenario.name}”</caption>
-            <thead><tr>
-              <th scope="col">Empresa</th><th scope="col">Casou sozinha · mesma linha</th><th scope="col">Casou sozinha · entre linhas da empresa</th>
-              <th scope="col">Economia sozinha</th><th scope="col">Economia na carteira</th><th scope="col">Ganho da carteira</th>
-            </tr></thead>
-            <tbody>{origin.map(({ item, solo }) => <tr key={item.group}>
-              <th scope="row">{item.group}</th>
-              <td>{solo === undefined ? '—' : formatMoney(solo.matchedOwn)}</td>
-              <td>{solo === undefined ? '—' : formatMoney(solo.matchedOthers)}</td>
-              <td>{solo === undefined ? '—' : formatMoney(solo.savings)}</td>
-              <td>{formatMoney(item.savings)}</td>
-              <td>{solo === undefined ? <small>rode “só {item.group}”</small> : formatSignedMoney(new Decimal(item.savings).minus(solo.savings).toFixed())}</td>
-            </tr>)}</tbody>
-          </table>
-        </div>
-        {split === null ? null : <p className="field-hint">
-          Volume casado entre clientes na carteira: {formatMoney(split.total)}. Nas rodadas isoladas, a soma é {formatMoney(split.sameCompany)}.
-          Diferença: {formatSignedMoney(split.betweenCompanies)}. Essa comparação não identifica quanto casou entre empresas na carteira.
-        </p>}
-      </>}
-    </section>}
+    {groups.length === 0 && origin.length < 2 ? null : <Disclosure id="variation-company-details" label="Detalhes por empresa" hint="economia de cada empresa e de onde ela vem">
+      {groups.length === 0 ? null : <div className="table-scroll" role="region" tabIndex={0} aria-label="Economia por empresa nos cenários">
+        <table className="company-table">
+          <caption>Economia por empresa</caption>
+          <thead><tr><th scope="col">Cenário</th>{groups.map((group) => <th scope="col" key={group}>{group}</th>)}</tr></thead>
+          <tbody>{rows.map((row) => <tr key={row.scenario.id}>
+            <th scope="row">{row.scenario.name}
+              {row.breakdown?.reconciled === false ? <small role="note">conferência com o total não bateu</small> : null}
+            </th>
+            {groups.map((group) => {
+              const item = row.breakdown?.companies.find((company) => company.group === group);
+              const reference = base.breakdown?.companies.find((company) => company.group === group);
+              const diff = row === base || item === undefined ? null : delta(item.savings, reference?.savings ?? '0');
+              return <td key={group}>{item === undefined ? '—' : formatMoney(item.savings)}
+                {diff === null ? null : <small>{formatSignedMoney(diff)} vs original</small>}</td>;
+            })}
+          </tr>)}</tbody>
+        </table>
+      </div>}
+      {origin.length < 2 ? null : <section className="savings-origin" aria-labelledby="savings-origin-title">
+        <h3 id="savings-origin-title">De onde vem a economia de cada empresa</h3>
+        {!hasSolo ? <p className="field-hint">No estudo, use “Fazer composição” a partir do original e rode todas para comparar o que cada empresa faria sozinha com sua participação na carteira.</p> : <>
+          <p className="field-hint">“Sozinha” usa as mesmas operações e premissas, sem as outras empresas. A diferença mostra como a economia atribuída à empresa muda na carteira; não é a contribuição total dela para o conjunto.</p>
+          <div className="table-scroll" role="region" tabIndex={0} aria-label="Origem da economia por empresa">
+            <table className="company-table">
+              <caption>Contra “{base.scenario.name}”</caption>
+              <thead><tr>
+                <th scope="col">Empresa</th><th scope="col">Casou sozinha · mesma linha</th><th scope="col">Casou sozinha · entre linhas da empresa</th>
+                <th scope="col">Economia sozinha</th><th scope="col">Economia na carteira</th><th scope="col">Ganho da carteira</th>
+              </tr></thead>
+              <tbody>{origin.map(({ item, solo }) => <tr key={item.group}>
+                <th scope="row">{item.group}</th>
+                <td>{solo === undefined ? '—' : formatMoney(solo.matchedOwn)}</td>
+                <td>{solo === undefined ? '—' : formatMoney(solo.matchedOthers)}</td>
+                <td>{solo === undefined ? '—' : formatMoney(solo.savings)}</td>
+                <td>{formatMoney(item.savings)}</td>
+                <td>{solo === undefined ? <small>rode “só {item.group}”</small> : formatSignedMoney(new Decimal(item.savings).minus(solo.savings).toFixed())}</td>
+              </tr>)}</tbody>
+            </table>
+          </div>
+          {split === null ? null : <p className="field-hint">
+            Volume casado entre clientes na carteira: {formatMoney(split.total)}. Nas rodadas isoladas, a soma é {formatMoney(split.sameCompany)}.
+            Diferença: {formatSignedMoney(split.betweenCompanies)}. Essa comparação não identifica quanto casou entre empresas na carteira.
+          </p>}
+        </>}
+      </section>}
+    </Disclosure>}
   </section>;
 }

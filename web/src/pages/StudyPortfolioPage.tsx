@@ -18,6 +18,7 @@ import type { ScenarioDocument, ScenarioDraft, StudyDocument } from '../study/mo
 import { combinationName, DEFAULT_STUDY_NAME, suggestStudyName, uniqueName, variationName } from '../study/naming';
 import { observedVariationLabel } from '../study/observedVariation';
 import type { StudyControllerStatus } from '../study/studyController';
+import { ActionMenu } from '../ui/ActionMenu';
 import { Button } from '../ui/Button';
 import { InlineNotice } from '../ui/InlineNotice';
 
@@ -59,18 +60,25 @@ function ScenarioItem({ study, scenario, selected, onSelect, onRename, onDiagnos
     if (name !== '' && name !== scenario.name) await onRename(name);
     setDraft(null);
   };
-  return <li>
-    {draft === null
-      ? <label><input type="radio" name="lever-base" checked={selected} onChange={onSelect} /> <strong>{scenario.name}</strong></label>
-      : <form className="scenario-rename" onSubmit={(event) => { event.preventDefault(); void submit(); }}>
-        <label>Novo nome<input value={draft} maxLength={120} autoFocus onChange={(event) => setDraft(event.target.value)} /></label>
-        <Button type="submit" disabled={draft.trim() === ''}>Salvar</Button>
-        <Button variant="secondary" onClick={() => setDraft(null)}>Cancelar</Button>
-      </form>}
-    <span>{sourceLabel(scenario)}{isBase ? ' · original' : ' · variação'}{diagnosed ? ' · diagnóstico atual' : ' · sem diagnóstico'}</span>
-    <Button data-chat-help-id="control.carteira.diagnostico" variant="secondary" onClick={onDiagnose}>{diagnosed ? 'Abrir diagnóstico' : 'Executar diagnóstico'}</Button>
-    {draft === null ? <Button variant="secondary" className="button--compact" aria-label={`Renomear cenário ${scenario.name}`} onClick={() => setDraft(scenario.name)}>Renomear</Button> : null}
-    {isBase ? null : <Button variant="secondary" className="button--danger" aria-label={`Apagar cenário ${scenario.name}`} onClick={onDelete}>Apagar</Button>}
+  return <li className="scenario-item">
+    <div className="scenario-item__name">
+      <span className={`status-badge${diagnosed ? ' status-badge--ok' : ''}`}>{diagnosed ? 'diagnóstico atual' : 'sem diagnóstico'}</span>
+      {draft === null
+        ? <span><strong>{scenario.name}</strong> <small className="field-hint">{sourceLabel(scenario)}{isBase ? ' · original' : ' · variação'}</small></span>
+        : <form className="scenario-rename" onSubmit={(event) => { event.preventDefault(); void submit(); }}>
+          <label>Novo nome<input value={draft} maxLength={120} autoFocus onChange={(event) => setDraft(event.target.value)} /></label>
+          <Button type="submit" disabled={draft.trim() === ''}>Salvar</Button>
+          <Button variant="secondary" onClick={() => setDraft(null)}>Cancelar</Button>
+        </form>}
+    </div>
+    <div className="scenario-item__actions">
+      <Button data-chat-help-id="control.carteira.diagnostico" variant="secondary" onClick={onDiagnose}>{diagnosed ? 'Abrir diagnóstico' : 'Executar diagnóstico'}</Button>
+      <ActionMenu label={scenario.name} items={[
+        ...(selected ? [] : [{ label: 'Usar como base', onSelect }]),
+        { label: 'Renomear', ariaLabel: `Renomear cenário ${scenario.name}`, onSelect: () => setDraft(scenario.name) },
+        ...(isBase ? [] : ['separator' as const, { label: 'Apagar', ariaLabel: `Apagar cenário ${scenario.name}`, danger: true, onSelect: onDelete }]),
+      ]} />
+    </div>
   </li>;
 }
 
@@ -265,25 +273,23 @@ Os diagnósticos dele também serão apagados. Não dá para desfazer.`)) return
   }} />
   {error === null ? null : <InlineNotice tone="error">{error}</InlineNotice>}
   {combinationStudy ? <>
-  <p className="eyebrow">Passo 3</p>
   {scenario.name === COMBINATION_BASE_NAME ? null : <p className="inline-notice" role="status">Alavancas aplicadas à carteira: {scenario.name}</p>}
   <LeverBuilder key={`${scenario.id}:${scenario.sourceSnapshot.sourceFingerprint}`} base={scenario} applyToBase onCreate={applyLeversToBase} />
-  <p className="eyebrow">Passo 4</p>
-  <section aria-labelledby="combination-diagnosis-title">
-    <h2 id="combination-diagnosis-title">Diagnóstico das combinações</h2>
-    <p>As combinações são calculadas internamente. O diagnóstico mostra a recomendação e as principais alternativas.</p>
-    <Button data-chat-help-id="control.carteira.diagnosticar-combinacoes" disabled={combinationProgress !== null} onClick={() => void diagnoseCombinations()}>Diagnosticar combinações</Button>
+  <section className="combination-diagnosis summary-line" aria-labelledby="combination-diagnosis-title">
+    <div><h2 id="combination-diagnosis-title">Diagnóstico das combinações</h2>
+      <p className="field-hint">O diagnóstico roda todas as combinações e recomenda a melhor carteira.</p></div>
+    <span className="summary-line__actions"><Button data-chat-help-id="control.carteira.diagnosticar-combinacoes" disabled={combinationProgress !== null} onClick={() => void diagnoseCombinations()}>Diagnosticar combinações</Button></span>
     {combinationProgress === null ? null : <p role="status">{combinationProgress}</p>}
   </section></> : <>
+  <LeverBuilder key={`${selectedBase.id}:${selectedBase.sourceSnapshot.sourceFingerprint}`} base={selectedBase} progress={combinationProgress} onCreate={createLeverVariation} onCreateCombinations={createCombinations} />
   <section className="scenario-workspace" aria-labelledby="scenario-list-title">
-    <p className="eyebrow">Passo 3</p>
-    <h2 id="scenario-list-title">Cenários do estudo</h2>
-    <p className="field-hint">O original usa a origem e as premissas acima. Rode o diagnóstico de cada cenário; o cenário marcado é a base das alavancas abaixo.</p>
+    <div className="page-head">
+      <h2 id="scenario-list-title"><span className="visually-hidden">Cenários do estudo</span><span aria-hidden="true">Cenários</span></h2>
+      <span className="field-hint">base: {selectedBase.name}</span>
+    </div>
     <ul className="scenario-list">{study.scenarios.map((item) => <ScenarioItem key={item.id} study={study} scenario={item}
       selected={selectedBase.id === item.id} onSelect={() => setSelectedBaseId(item.id)}
       onRename={(name) => rename(item, name)} onDiagnose={() => void navigateAfterFlush(diagnosticPath(item))}
       onDelete={() => void deleteScenario(item)} />)}</ul>
-  </section>
-  <p className="eyebrow">Passo 4</p>
-  <LeverBuilder key={`${selectedBase.id}:${selectedBase.sourceSnapshot.sourceFingerprint}`} base={selectedBase} progress={combinationProgress} onCreate={createLeverVariation} onCreateCombinations={createCombinations} /></>}</>;
+  </section></>}</>;
 }

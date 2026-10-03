@@ -7,7 +7,7 @@ import { Button } from '../ui/Button';
 import { companyResolver } from '../levers/companies';
 import { useOptionalChat } from '../chat/ChatProvider';
 import { buildBoardChatContext } from '../chat/boardContext';
-import { moveStudyToTrash } from '../study/domain';
+import { HelpTip } from '../ui/HelpTip';
 import { breakdownByCompany, type Breakdown } from './comparisonBoardBreakdown';
 import { measuredPeriodLabel, premisesDivergence, savingsBps } from './comparisonBoardMetrics';
 import type { CompanyRecord, ObservedCase } from '../cases/domain';
@@ -186,8 +186,6 @@ export function ComparisonBoardPage() {
   });
   const label = (group: string) => names[group]?.trim() || group;
 
-  const [reload, setReload] = useState(0);
-
   useEffect(() => heading.current?.focus(), []);
   useEffect(() => {
     let active = true;
@@ -199,7 +197,7 @@ export function ComparisonBoardPage() {
         if (active) setError(reason instanceof Error ? reason.message : 'Não foi possível carregar os estudos.');
       });
     return () => { active = false; };
-  }, [controller, reload]);
+  }, [controller]);
 
   const updateSelection = (change: (current: Set<string>) => void) => setSelected((current) => {
     const next = new Set(current);
@@ -208,26 +206,28 @@ export function ComparisonBoardPage() {
     return next;
   });
   const toggle = (key: string) => updateSelection((next) => { if (!next.delete(key)) next.add(key); });
-  const removeStudy = async (row: BoardRow) => {
-    if (!window.confirm(`Apagar o estudo “${row.studyName}”? Todos os cenários dele saem do quadro; dá para restaurar pela lixeira em Estudos.`)) return;
-    try {
-      const loaded = await controller.loadStudy(row.studyId);
-      if (loaded === null) throw new Error('Estudo não encontrado.');
-      controller.edit(await moveStudyToTrash(loaded, new Date().toISOString()));
-      await controller.flush();
-      updateSelection((next) => (rows ?? []).forEach((item) => { if (item.studyId === row.studyId) next.delete(item.key); }));
-      setError(null);
-      setReload((value) => value + 1);
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Não foi possível apagar o estudo.');
-    }
-  };
-
   const candidates = useMemo(() => {
     const term = filter.trim().toLowerCase();
     return sortRows((rows ?? []).filter((row) => term === ''
       || `${row.studyName} ${row.scenarioName} ${row.origin}`.toLowerCase().includes(term)), 'name');
   }, [rows, filter]);
+  const studyGroups = useMemo(() => {
+    const byStudy = new Map<string, { studyId: string; studyName: string; rows: BoardRow[] }>();
+    for (const row of candidates) {
+      const group = byStudy.get(row.studyId) ?? { studyId: row.studyId, studyName: row.studyName, rows: [] };
+      group.rows.push(row);
+      byStudy.set(row.studyId, group);
+    }
+    return [...byStudy.values()];
+  }, [candidates]);
+  const [openStudies, setOpenStudies] = useState<Set<string>>(() => new Set());
+  // Um estudo só não precisa de agrupamento; com filtro, os grupos abrem para mostrar o que bateu.
+  const studyOpen = (studyId: string) => studyGroups.length === 1 || filter.trim() !== '' || openStudies.has(studyId);
+  const toggleStudyOpen = (studyId: string) => setOpenStudies((current) => {
+    const next = new Set(current);
+    if (!next.delete(studyId)) next.add(studyId);
+    return next;
+  });
   const board = useMemo(
     () => sortRows((rows ?? []).filter((row) => selected.has(row.key)), sortKey),
     [rows, selected, sortKey],
@@ -249,31 +249,44 @@ export function ComparisonBoardPage() {
 
   return <article className="destination-page">
     <p className="eyebrow">Estudos</p>
-    <h1 ref={heading} tabIndex={-1}>Quadro comparativo</h1>
-    <p className="page-introduction">
-      Escolha os estudos que entram no quadro. Vale a última execução concluída da revisão atual de cada cenário; com diagnóstico de várias repetições, os números são da repetição mediana da economia.
-    </p>
+    <div className="page-head page-head--title"><h1 ref={heading} tabIndex={-1}>Comparar estudos</h1>
+      <HelpTip label="Comparar estudos">Marque os cenários que entram na comparação. Vale a última execução concluída da revisão atual de cada cenário; com diagnóstico de várias repetições, os números são da repetição mediana da economia.</HelpTip></div>
     {error ? <p role="alert" className="field-error">{error}</p> : null}
     {rows === null && error === null ? <p role="status">Carregando estudos…</p> : null}
     {rows !== null && rows.length === 0 ? <p>Nenhum cenário com execução concluída. Rode o diagnóstico de um estudo para ele aparecer aqui.</p> : null}
 
     {rows !== null && rows.length > 0 ? <fieldset className="source-selector">
-      <legend>Escolher estudos</legend>
+      <legend className="visually-hidden">Escolher estudos</legend>
       <div className="source-actions">
-        <label>Filtrar<input value={filter} onChange={(event) => setFilter(event.target.value)} placeholder="nome do estudo, cenário ou empresa" /></label>
+        <label className="board-filter">Filtrar<input value={filter} onChange={(event) => setFilter(event.target.value)} placeholder="nome do estudo, cenário ou empresa" /></label>
         <Button variant="secondary" onClick={() => updateSelection((next) => candidates.forEach((row) => next.add(row.key)))}>Marcar {filter.trim() === '' ? 'todos' : 'filtrados'}</Button>
         <Button variant="secondary" onClick={() => updateSelection((next) => next.clear())}>Limpar quadro</Button>
       </div>
-      <ul className="board-candidates">{candidates.map((row) => <li key={row.key}>
-        <label className="checkbox-field">
-          <input type="checkbox" checked={selected.has(row.key)} onChange={() => toggle(row.key)} />
-          {' '}{row.studyName} · {row.scenarioName} — {row.origin}
-        </label>
-        <Button variant="secondary" data-chat-help-id="control.quadro.apagar-estudo" onClick={() => void removeStudy(row)} aria-label={`Apagar o estudo ${row.studyName}`}>Apagar estudo</Button>
-      </li>)}</ul>
+      <ul className="board-studies">{studyGroups.map((group) => {
+        const marked = group.rows.filter((row) => selected.has(row.key)).length;
+        const listId = `board-study-${group.studyId}`;
+        return <li key={group.studyId} className="board-study">
+          <div className="board-study__head">
+            <input type="checkbox" aria-label={`Todos os cenários de ${group.studyName}`} checked={marked === group.rows.length}
+              ref={(element) => { if (element !== null) element.indeterminate = marked > 0 && marked < group.rows.length; }}
+              onChange={() => updateSelection((next) => group.rows.forEach((row) => {
+                if (marked === group.rows.length) next.delete(row.key); else next.add(row.key);
+              }))} />
+            <button type="button" className="disclosure__toggle" aria-expanded={studyOpen(group.studyId)} aria-controls={listId}
+              onClick={() => toggleStudyOpen(group.studyId)}><span className="disclosure__label">{group.studyName}</span></button>
+            <span className={`status-badge${marked > 0 ? ' status-badge--ok' : ''}`}>{marked} de {group.rows.length}</span>
+          </div>
+          {studyOpen(group.studyId) ? <ul id={listId} className="board-candidates">{group.rows.map((row) => <li key={row.key}>
+            <label className="checkbox-field">
+              <input type="checkbox" checked={selected.has(row.key)} onChange={() => toggle(row.key)} />
+              {' '}{row.scenarioName} — {row.origin}
+            </label>
+          </li>)}</ul> : null}
+        </li>;
+      })}</ul>
     </fieldset> : null}
 
-    {rows !== null && rows.length > 0 && board.length === 0 ? <p>Nenhum estudo no quadro. Marque acima os que quer comparar.</p> : null}
+    {rows !== null && rows.length > 0 && board.length === 0 ? <p>Nenhum cenário marcado. Marque acima os que quer comparar.</p> : null}
     {board.length > 0 ? <>
       <div className="source-actions">
         <label>Ordenar por<select value={sortKey} onChange={(event) => setSortKey(event.target.value as SortKey)}>
@@ -327,7 +340,6 @@ export function ComparisonBoardPage() {
             <td>{row.savingsBps === null ? '—' : `${new Decimal(row.savingsBps).toFixed(2).replace('.', ',')} bps`}</td>
             <td>
               <Button variant="secondary" onClick={() => toggle(row.key)} aria-label={`Remover ${row.studyName} · ${row.scenarioName} do quadro`}>Remover</Button>
-              <Button variant="secondary" data-chat-help-id="control.quadro.apagar-estudo" onClick={() => void removeStudy(row)} aria-label={`Apagar o estudo ${row.studyName}`}>Apagar estudo</Button>
             </td>
           </tr>)}</tbody>
         </table>

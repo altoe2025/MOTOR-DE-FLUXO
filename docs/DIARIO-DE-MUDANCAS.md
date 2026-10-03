@@ -37,6 +37,7 @@ Atualizada em 2026-10-02, durante a entrega das correções de diagnóstico.
 
 | Branch | Situação | Dono |
 |---|---|---|
+| `feat/front-mais-leve` | front mais leve (menus ⋯, premissas e detalhes recolhidos, composição em destaque, diagnóstico com a resposta primeiro); PR para a `main`, merge e deploy com o Codex | Claude |
 | `codex/diagnostico-confiavel` | PR #71 aberto em rascunho; correções e revisão independente concluídas, validação automática em andamento; sem merge ou deploy | Codex |
 | `codex/carteiras-docker-fixture` | Corrige somente o empacotamento de um helper de testes após falha do build Render; versão Live anterior preservada | Codex |
 | `codex/carteiras-analise` | PR #69 mergeado em `9cc8b8e`, CI verde; primeiro deploy interrompido no build por helper de testes fora do padrão de exclusão | Codex |
@@ -89,6 +90,42 @@ Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. 
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+## 2026-10-02 — Front mais leve: uma ação principal por tela, o resto recolhido (MOT-99)
+
+1. **Sintoma.** Na conversa com o Sávio, as telas de Estudos, editor, alavancas, diagnóstico, Quadro e Importar pareciam poluídas: muitos botões lado a lado, premissas e janela sempre abertas, a Composição perdida no fim das alavancas e o resultado do diagnóstico enterrado em tabelas.
+2. **Causa.** Cada funcionalidade nova ganhou um botão ou bloco visível próprio, sem hierarquia entre a ação principal e as secundárias.
+3. **O que foi feito.** Protótipo aprovado pelo Gabriel (artifact "front mais leve"), levado ao front real, exceto Empresas e a tela de recomendação de carteiras, que ficam como estão. Componentes novos em `web/src/ui/` (`ActionMenu` ⋯ acessível por teclado, `Disclosure`, `HelpTip`).
+   - **Estudos:** "Novo estudo" à vista. Combinação, importar, demonstração e lixeira vão para o ⋯ "criar". Renomear, duplicar, exportar e excluir vão para o ⋯ de cada estudo.
+   - **Navegação:** Estudos, Empresas e Importar; o Quadro vira "Comparar estudos" dentro de Estudos.
+   - **Editor:** renomear e duplicar vão para o ⋯ do estudo. Origem e premissas viram linhas de resumo. "Editar premissas" abre o formulário, com janela, aquecimento e medição em "Avançado".
+   - **Alavancas e cenários:**
+     - a Composição vem primeiro e "Ajustar uma empresa" fica recolhido;
+     - os cenários vêm depois, com selo de diagnóstico e "Abrir/Executar diagnóstico" à vista;
+     - "Usar como base", renomear e apagar vão para o ⋯ e o rádio sai.
+   - **Combinação de carteiras:** empresas aplicadas viram um resumo com "Trocar". A escolha ganha busca, chips e "Selecionar todas".
+   - **Diagnóstico:**
+     - a resposta vem primeiro: economia, netabilidade e custo sem → com pool;
+     - P10–P90 numa linha;
+     - "Como a economia se forma" e "Custos por componente" ficam recolhidos;
+     - Replay e Apresentar ficam lado a lado;
+     - as tabelas por empresa dos quadros comparativos vão para "Detalhes por empresa".
+   - **Comparar estudos:** os cenários são agrupados por estudo, com "n de m" marcados. O "Apagar estudo" sai do Quadro e também do catálogo de ajuda (`control.quadro.apagar-estudo`); a exclusão continua na lista de Estudos.
+   - **Importar:**
+     - modelo no topo;
+     - passo 1, empresa, com "+ Nova empresa";
+     - passo 2, planilha;
+     - "Como montar a planilha" recolhido.
+   - **Testes:** unitários e e2e ajustados aos menus e aos painéis recolhidos.
+4. **O que isso invalida.**
+   - Roteiros e capturas que supõem os botões antigos sempre visíveis:
+     - lixeira, renomear e excluir na lista;
+     - "Apagar estudo" no Quadro;
+     - premissas e janela abertas;
+     - rádio de base dos cenários;
+     - "Passo 3/4".
+   - As referências visuais de `stage6-visual` (estudos, importação, demonstração, chat) foram regeneradas.
+   - Nada nos números: motor, servidor, contratos, regras e cálculos não mudaram. Os textos com testid `economia-brl`/`netabilidade` e o título "Resultado do motor" continuam.
 
 ## 2026-10-02 — Confiabilidade de diagnóstico (MOT-70, MOT-72, MOT-73)
 

@@ -2,7 +2,9 @@ import Decimal from 'decimal.js';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 
 import type { CompanyRecord, ObservedCase } from '../../cases/domain';
+import { ActionMenu } from '../../ui/ActionMenu';
 import { Button } from '../../ui/Button';
+import { Disclosure } from '../../ui/Disclosure';
 import { TextField } from '../../ui/TextField';
 import type {
   DeepMutable,
@@ -66,6 +68,7 @@ function ScenarioSettings({
   const [texts, setTexts] = useState(() => costTexts(premises));
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<CostKey, string>>>({});
   const [error, setError] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
   useEffect(() => {
     setDraftPremises(structuredClone(premises) as DeepMutable<PremisesDocument>);
     setDraftPeriod(structuredClone(period) as DeepMutable<PeriodDocument>);
@@ -91,11 +94,24 @@ function ScenarioSettings({
     setError(null);
     void onSave({ premises: { ...draftPremises, costs }, period: draftPeriod });
   };
-  return <section className="source-panel" aria-labelledby="scenario-settings-title">
-    <h2 id="scenario-settings-title">Premissas e período</h2>
-    {error ? <p role="alert" className="field-error">{error}</p> : null}
-    <div className="parameter-grid">
-      {COST_FIELDS.map((field) => <TextField key={field.key} id={`premise-${field.key}`} label={field.label} hint={field.hint} inputMode="decimal" value={texts[field.key]} {...(fieldErrors[field.key] === undefined ? {} : { error: fieldErrors[field.key] })} onChange={(event) => { const value = event.currentTarget.value; setTexts((current) => ({ ...current, [field.key]: value })); }} />)}
+  const percentText = (value: string) => `${fractionToPercentText(value)}%`;
+  return <section className="premises-settings" aria-labelledby="scenario-settings-title">
+    <div className="summary-line">
+      <h2 id="scenario-settings-title" className="summary-line__key"><span className="visually-hidden">Premissas e período</span><span aria-hidden="true">Premissas</span></h2>
+      <span className="summary-line__value">IOF <strong>{percentText(premises.costs.iof_out)} / {percentText(premises.costs.iof_in)}</strong></span>
+      <span className="summary-line__value">Carry <strong>{percentText(premises.costs.carry_cnr)}</strong></span>
+      <span className="summary-line__value">PTAX <strong>{plainToBrText(premises.costs.ptax)}</strong></span>
+      <span className="summary-line__value">Janela <strong>{premises.windowDays} dias</strong></span>
+      <span className="summary-line__actions"><Button variant="secondary" aria-expanded={editing} aria-controls="scenario-settings-form"
+        onClick={() => setEditing((current) => !current)}>{editing ? 'Fechar premissas' : 'Editar premissas'}</Button></span>
+    </div>
+    {editing ? <div id="scenario-settings-form" className="source-panel premises-form">
+      {error ? <p role="alert" className="field-error">{error}</p> : null}
+      <div className="parameter-grid">
+      {COST_FIELDS.map((field) => <TextField key={field.key} id={`premise-${field.key}`} label={field.label} placeholder={field.hint.replace(/^.*Ex\.: /, '')} title={field.hint} inputMode="decimal" value={texts[field.key]} {...(fieldErrors[field.key] === undefined ? {} : { error: fieldErrors[field.key] })} onChange={(event) => { const value = event.currentTarget.value; setTexts((current) => ({ ...current, [field.key]: value })); }} />)}
+      </div>
+      <Disclosure id="scenario-settings-advanced" label="Avançado" hint="janela, aquecimento e medição">
+        <div className="parameter-grid">
       <TextField id="premise-window-days" label="Janela em dias" inputMode="numeric" value={String(draftPremises.windowDays)} onChange={(event) => {
         const windowDays = Number(event.currentTarget.value);
         setDraftPremises((current) => ({ ...current, windowDays }));
@@ -104,14 +120,17 @@ function ScenarioSettings({
         <TextField id="period-warmup-days" label="Aquecimento em dias" inputMode="numeric" value={String(draftPeriod.httpPeriod.dias_aquecimento)} onChange={(event) => setDraftPeriod({ httpPeriod: { modo: 'NATURAL', dias_aquecimento: Number(event.currentTarget.value), periodo_medicao_dias: draftPeriod.httpPeriod.modo === 'NATURAL' ? draftPeriod.httpPeriod.periodo_medicao_dias : 0 } })} />
         <TextField id="period-measurement-days" label="Período de medição em dias" inputMode="numeric" value={String(draftPeriod.httpPeriod.periodo_medicao_dias)} onChange={(event) => setDraftPeriod({ httpPeriod: { modo: 'NATURAL', dias_aquecimento: draftPeriod.httpPeriod.modo === 'NATURAL' ? draftPeriod.httpPeriod.dias_aquecimento : 0, periodo_medicao_dias: Number(event.currentTarget.value) } })} />
       </> : <TextField id="period-horizon-days" label="Horizonte executável em dias" inputMode="numeric" value={String('executableHorizonDays' in draftPeriod ? draftPeriod.executableHorizonDays : 0)} onChange={(event) => setDraftPeriod({ httpPeriod: { modo: 'LEGADO' }, executableHorizonDays: Number(event.currentTarget.value) })} />}
-    </div>
-    <Button onClick={submit}>Salvar premissas e período</Button>
+        </div>
+      </Disclosure>
+      <div className="source-actions"><Button onClick={submit}>Salvar premissas e período</Button></div>
+    </div> : null}
   </section>;
 }
 
 export function StudyEditor({ study, observedCases, companies, status, error = null, onRename, onDuplicate, onSourceChange, onConvertObserved, onScenarioChange }: StudyEditorProps) {
   const heading = useRef<HTMLHeadingElement>(null);
   const [name, setName] = useState(study.name);
+  const [renaming, setRenaming] = useState(false);
   const scenario = study.scenarios.find((item) => item.id === study.baseScenarioId) ?? study.scenarios[0];
   if (scenario === undefined) throw new Error('Estudo sem cenário base.');
   const source = scenario.sourceSnapshot.source;
@@ -127,9 +146,23 @@ export function StudyEditor({ study, observedCases, companies, status, error = n
     setChangingSource(false);
   }, [scenario.sourceSnapshot.sourceFingerprint]);
   useEffect(() => { setName(study.name); heading.current?.focus(); }, [study.id, study.name]);
-  const submit = async (event: FormEvent) => { event.preventDefault(); if (name.trim()) await onRename(name.trim()); };
+  const submit = async (event: FormEvent) => { event.preventDefault(); if (name.trim()) { await onRename(name.trim()); setRenaming(false); } };
   const sourceControl = study.studyType === 'PORTFOLIO_COMBINATIONS'
     ? <PortfolioSourceSelector combinationsOnly value={kind} study={study} scenario={scenario} observedCases={observedCases} companies={companies} {...(source.kind === 'OBSERVED_CASE' ? { selectedCaseId: source.caseId } : {})} onChange={(next) => void onSourceChange(next)} onConvertObserved={(caseId) => void onConvertObserved(caseId)} />
-    : <><section className="source-summary" aria-labelledby="source-summary-title"><div><h2 id="source-summary-title">Origem da carteira</h2><p><strong>{summary.label}</strong> · {summary.detail}</p></div><Button variant="secondary" data-chat-help-id="control.carteira.trocar-origem" aria-expanded={changingSource} onClick={() => setChangingSource((current) => !current)}>{changingSource ? 'Cancelar troca' : 'Trocar origem'}</Button></section>{changingSource ? <PortfolioSourceSelector value={kind} study={study} scenario={scenario} observedCases={observedCases} companies={companies} {...(source.kind === 'OBSERVED_CASE' ? { selectedCaseId: source.caseId } : {})} onChange={(next) => void onSourceChange(next)} onConvertObserved={(caseId) => { keepSourceOpen.current = true; void onConvertObserved(caseId); }} /> : null}</>;
-  return <article className="study-editor" aria-busy={status === 'SAVING' || undefined}><p className="eyebrow">{study.studyType === 'PORTFOLIO_COMBINATIONS' ? 'Combinação de carteiras' : 'Editor de estudo'}</p><h1 tabIndex={-1} ref={heading}>{study.name}</h1>{status === 'CONFLICT' ? <p className="inline-notice inline-notice--error" role="alert">Este estudo foi alterado em outra aba. Recarregue antes de continuar.</p> : null}{error ? <p className="inline-notice inline-notice--error" role="alert">{error}</p> : null}<p className="save-status" role="status">{status === 'SAVING' ? 'Salvando…' : status === 'STORAGE_FAILURE' ? 'Não foi possível salvar. As alterações continuam nesta aba.' : status === 'DIRTY' ? 'Alterações não salvas.' : 'Alterações salvas.'}</p><form className="study-name-form" onSubmit={(event) => void submit(event)}><TextField id="study-editor-name" label="Nome do estudo" value={name} maxLength={120} {...(name.trim() ? {} : { error: 'Informe um nome para o estudo.' })} onChange={(event) => setName(event.currentTarget.value)} /><div className="source-actions"><Button type="submit" disabled={!name.trim()}>Salvar nome</Button><Button variant="secondary" onClick={() => void onDuplicate()}>Duplicar estudo</Button></div></form><p className="eyebrow">Passo 1</p>{sourceControl}<p className="eyebrow">Passo 2</p><ScenarioSettings premises={scenario.premises} period={scenario.period} onSave={onScenarioChange} /></article>;
+    : <><section className="source-summary summary-line" aria-labelledby="source-summary-title"><h2 id="source-summary-title" className="summary-line__key"><span className="visually-hidden">Origem da carteira</span><span aria-hidden="true">Origem</span></h2><p className="summary-line__value"><strong>{summary.label}</strong> · {summary.detail}</p><span className="summary-line__actions"><Button variant="secondary" data-chat-help-id="control.carteira.trocar-origem" aria-expanded={changingSource} onClick={() => setChangingSource((current) => !current)}>{changingSource ? 'Cancelar troca' : 'Trocar origem'}</Button></span></section>{changingSource ? <PortfolioSourceSelector value={kind} study={study} scenario={scenario} observedCases={observedCases} companies={companies} {...(source.kind === 'OBSERVED_CASE' ? { selectedCaseId: source.caseId } : {})} onChange={(next) => void onSourceChange(next)} onConvertObserved={(caseId) => { keepSourceOpen.current = true; void onConvertObserved(caseId); }} /> : null}</>;
+  return <article className="study-editor" aria-busy={status === 'SAVING' || undefined}>
+    <div className="page-head">
+      <div><p className="eyebrow">{study.studyType === 'PORTFOLIO_COMBINATIONS' ? 'Combinação de carteiras' : 'Estudo'}</p><h1 tabIndex={-1} ref={heading}>{study.name}</h1></div>
+      <div className="page-head__actions"><ActionMenu label="estudo" items={[
+        { label: 'Renomear', onSelect: () => setRenaming(true) },
+        { label: 'Duplicar estudo', helpId: 'control.carteira.duplicar', onSelect: () => void onDuplicate() },
+      ]} /></div>
+    </div>
+    {status === 'CONFLICT' ? <p className="inline-notice inline-notice--error" role="alert">Este estudo foi alterado em outra aba. Recarregue antes de continuar.</p> : null}
+    {error ? <p className="inline-notice inline-notice--error" role="alert">{error}</p> : null}
+    <p className="save-status" role="status">{status === 'SAVING' ? 'Salvando…' : status === 'STORAGE_FAILURE' ? 'Não foi possível salvar. As alterações continuam nesta aba.' : status === 'DIRTY' ? 'Alterações não salvas.' : 'Alterações salvas.'}</p>
+    {renaming ? <form className="study-name-form source-panel" onSubmit={(event) => void submit(event)}><TextField id="study-editor-name" label="Nome do estudo" value={name} maxLength={120} autoFocus {...(name.trim() ? {} : { error: 'Informe um nome para o estudo.' })} onChange={(event) => setName(event.currentTarget.value)} /><div className="source-actions"><Button type="submit" data-chat-help-id="control.carteira.salvar-nome" disabled={!name.trim()}>Salvar nome</Button><Button variant="secondary" onClick={() => { setName(study.name); setRenaming(false); }}>Cancelar</Button></div></form> : null}
+    {sourceControl}
+    <ScenarioSettings premises={scenario.premises} period={scenario.period} onSave={onScenarioChange} />
+  </article>;
 }

@@ -65,7 +65,7 @@ test('confirmed observed case becomes an immutable study snapshot and survives r
   expect((await persistedDiagnostics(page, studyId))[0]!.status).toBe('SUCCEEDED');
 
   await page.evaluate(() => { document.documentElement.style.zoom = '200%'; });
-  await expect(page.getByLabel('Nome do estudo')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Mais ações: estudo' })).toBeVisible();
   expect(await persistedDiagnostics(page, studyId)).toEqual([observed]);
   await page.screenshot({ path: testInfo.outputPath('observed-study-zoom-200.png'), fullPage: true });
   const network = JSON.stringify(requests);
