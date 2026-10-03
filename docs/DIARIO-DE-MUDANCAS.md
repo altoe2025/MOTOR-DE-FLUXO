@@ -90,6 +90,10 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-10-02 — Cobertura legada adotada sem apagar diagnósticos (MOT-100)
+
+**Sintoma:** o primeiro diagnóstico após a atualização podia reconstruir uma matriz antiga já completa só porque ela ainda não tinha o novo campo de cobertura, removendo IDs e execuções derivadas válidas. **Causa:** ausência de assinatura era tratada sempre como carteira obsoleta. **O que foi feito:** matrizes legadas são verificadas por cobertura exata baseada em IDs; quando completas e atuais, recebem apenas o metadado novo, preservando cenários e histórico. Matrizes incompletas, duplicadas ou ambíguas continuam no rebuild seguro. Regressão com o algoritmo antigo passou em 31/31 testes e a correção foi re-revisada. **O que isso invalida:** expectativa de que todo estudo sem assinatura precise ser reconstruído; a migração agora é não destrutiva quando a cobertura é comprovável.
+
 ## 2026-10-02 — Lote de combinações usa dois workers com commit serial (MOT-100)
 
 **Sintoma:** o navegador submetia uma composição por vez, deixando um dos dois workers padrão ocioso; cancelamento/conflitos entre abas podiam ainda manter pendências antigas na fila. **Causa:** computação remota e persistência estavam acopladas no serviço individual e a fila era congelada no começo do lote. **O que foi feito:** extraída computação sem persistência; novo pool limita a dois computes e um commit incremental por vez, drena jobs ativos ao cancelar/falhar e revalida cada item antes do POST. Conflito recarrega uma vez e não reenvia resultado já atual. Após duas rodadas de revisão, 53/53 testes passaram em três execuções consecutivas, com typecheck e lint verdes. **O que isso invalida:** a medição de 3,7 minutos para 63 combinações como representação da agenda atual; ela precisa ser refeita no gate de navegador.

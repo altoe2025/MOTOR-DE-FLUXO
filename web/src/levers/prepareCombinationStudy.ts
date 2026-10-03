@@ -156,6 +156,16 @@ export async function prepareCombinationStudy(
     && canonical(study.preparedCombinationCoverage) === canonical(coverage);
   if (signatureMatches && completeCoverage(study, subsets, companyOf)) return study;
   const now = new Date().toISOString();
+  // A full pre-signature V3 matrix is already certified by its scenario content.
+  // Adopt its metadata without changing scenario IDs or deleting persisted executions.
+  if (study.preparedCombinationCoverage === undefined
+    && completeCoverage(study, subsets, companyOf)) {
+    onProgress('Salvando as combinações…');
+    const adopted = await replaceScenarioBatch(
+      study, new Set(study.scenarios.map((scenario) => scenario.id)), [], now,
+    );
+    return { ...adopted, preparedCombinationCoverage: coverage };
+  }
   const displayById = new Map<string, string>();
   for (const order of base.sourceSnapshot.orders) {
     displayById.set(companyOf(order.id), displayOf(order.id));

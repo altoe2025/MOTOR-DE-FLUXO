@@ -2,18 +2,22 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { CompanyRecord } from '../cases/domain';
 import { resolvePortfolioSource } from '../preparation/resolvePortfolioSource';
-import { appendExecution, appendScenario, createStudy, duplicateStudy, removeScenario, updateScenario } from '../study/domain';
+import { appendExecution, appendScenario, createStudy, duplicateStudy, removeScenario, replaceScenarioBatch, updateScenario } from '../study/domain';
 import { FIXTURE_NOW, FIXTURE_OWNER, makeObservedCase, makeScenarioDraft } from '../study/fixtures';
 import { validateStudyDocument } from '../study/validation';
 import type { DeepMutable, ExecutionRecord, ScenarioInputProvenance, StudyDocument } from '../study/model';
+import { combinationName } from '../study/naming';
 import { combineObservedCases } from './companies';
+import { companyResolver } from './companies';
 import { NEUTRAL_LEVERS } from './applyLevers';
 import * as leverScenario from './leverScenario';
 import { recommendPortfolios } from './portfolioRecommendation';
 import { applyLeversToCombinationBase, isCurrentCombinationScenario, prepareCombinationStudy } from './prepareCombinationStudy';
 
-async function fixture(duplicateNames = false) {
-  const cases = [0, 1, 2].map((i) => ({ ...makeObservedCase(), id: `case-${i}`, companyId: `company-${i}` }));
+async function fixture(duplicateNames = false, companyCount = 3) {
+  const cases = Array.from({ length: companyCount }, (_, i) => ({
+    ...makeObservedCase(), id: `case-${i}`, companyId: `company-${i}`,
+  }));
   const companies = cases.map((item, i) => ({
     id: item.companyId, displayName: duplicateNames && i < 2 ? 'Empresa repetida' : `Empresa ${i}`,
   } as CompanyRecord));
@@ -25,6 +29,23 @@ async function fixture(duplicateNames = false) {
     studyType: 'PORTFOLIO_COMBINATIONS', baseScenario: makeScenarioDraft({
       sourceSnapshot: structuredClone(sourceSnapshot) as DeepMutable<typeof sourceSnapshot>,
     }), now: FIXTURE_NOW });
+}
+
+/** The pre-signature preparation used display names and buildLeverScenario for each subset. */
+async function legacyPreparedStudy(study: StudyDocument): Promise<StudyDocument> {
+  const base = study.scenarios[0]!;
+  const companyOf = companyResolver(base.sourceSnapshot.source);
+  const groups = [...new Set(base.sourceSnapshot.orders.map((order) => companyOf(order.id)))].sort();
+  const drafts = [];
+  for (const subset of leverScenario.companySubsets(groups)) {
+    drafts.push(await leverScenario.buildLeverScenario({
+      base, id: crypto.randomUUID(), authoredPortfolioId: crypto.randomUUID(), recordedAt: FIXTURE_NOW,
+      name: combinationName(subset),
+      levers: groups.filter((company) => !subset.includes(company))
+        .map((group) => ({ ...NEUTRAL_LEVERS, group, removeCompany: true })),
+    }));
+  }
+  return replaceScenarioBatch(study, new Set([base.id]), drafts, FIXTURE_NOW);
 }
 
 const inputProvenance: ScenarioInputProvenance = (() => {
@@ -81,6 +102,55 @@ describe('combination study preparation', () => {
     } finally {
       build.mockRestore();
     }
+  });
+
+  it('adopts complete legacy coverage without changing 63 scenario IDs or a derived execution', async () => {
+    const legacy = await legacyPreparedStudy(await fixture(false, 6));
+    const derived = legacy.scenarios[1]!;
+    const withExecution = await appendExecution(legacy, runningExecution(legacy, derived.id), FIXTURE_NOW);
+    expect(withExecution.preparedCombinationCoverage).toBeUndefined();
+    expect(withExecution.scenarios).toHaveLength(63);
+    const build = vi.spyOn(leverScenario, 'buildLeverScenario');
+    try {
+      const adopted = await prepareCombinationStudy(withExecution, () => {});
+      expect(adopted.scenarios.map((scenario) => scenario.id)).toEqual(withExecution.scenarios.map((scenario) => scenario.id));
+      expect(adopted.executions).toEqual(withExecution.executions);
+      expect(adopted.scenarios.find((scenario) => scenario.id === derived.id)?.inputFingerprint).toBe(derived.inputFingerprint);
+      expect(adopted.preparedCombinationCoverage).toBeDefined();
+      expect(build).not.toHaveBeenCalled();
+      expect(await prepareCombinationStudy(adopted, () => {})).toBe(adopted);
+    } finally {
+      build.mockRestore();
+    }
+  });
+
+  it('rebuilds an incomplete unsigned legacy matrix instead of adopting it', async () => {
+    const legacy = await legacyPreparedStudy(await fixture());
+    const incomplete = await removeScenario(legacy, legacy.scenarios[1]!.id, FIXTURE_NOW);
+    const next = await prepareCombinationStudy(incomplete, () => {});
+    expect(next.scenarios).toHaveLength(7);
+    expect(next.scenarios.some((scenario) => scenario.id === legacy.scenarios[2]!.id)).toBe(false);
+    expect(next.preparedCombinationCoverage).toBeDefined();
+  });
+
+  it('rebuilds duplicate unsigned legacy coverage instead of certifying an ambiguous matrix', async () => {
+    const legacy = await legacyPreparedStudy(await fixture());
+    const duplicate = await appendScenario(legacy, {
+      ...structuredClone(legacy.scenarios[1]!), id: crypto.randomUUID(),
+    }, FIXTURE_NOW);
+    const next = await prepareCombinationStudy(duplicate, () => {});
+    expect(next.scenarios).toHaveLength(7);
+    expect(next.scenarios.some((scenario) => scenario.id === legacy.scenarios[1]!.id)).toBe(false);
+    expect(next.preparedCombinationCoverage).toBeDefined();
+  });
+
+  it('rebuilds a legacy matrix collapsed by duplicate display names', async () => {
+    const legacy = await legacyPreparedStudy(await fixture(true));
+    expect(legacy.scenarios).toHaveLength(3);
+    const next = await prepareCombinationStudy(legacy, () => {});
+    expect(next.scenarios).toHaveLength(7);
+    expect(next.scenarios.some((scenario) => scenario.id === legacy.scenarios[1]!.id)).toBe(false);
+    expect(next.preparedCombinationCoverage?.companyIdsCanonical).toBe('["company-0","company-1","company-2"]');
   });
 
   it('rebuilds a missing combination even when the stored coverage matches the base', async () => {
