@@ -7,6 +7,7 @@ import { selectionId } from '../chat/routeContext';
 import { useApiClient, useChatRepository } from './providers';
 import { useProductHelpCatalog } from '../help/HelpCatalogProvider';
 import { useTheme } from './theme';
+import { WorkspaceBreadcrumbs, WorkspaceTrailProvider } from './WorkspaceBreadcrumbs';
 
 const ICONS = {
   companies: 'M4 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16M16 9h2a2 2 0 0 1 2 2v10M8 7h4M8 11h4M8 15h4M3 21h18',
@@ -31,25 +32,6 @@ const destinations = [
   { to: '/importar', label: 'Importar', icon: 'import' },
 ] as const;
 
-const companySections: Record<string, string> = { casos: 'Casos', perfis: 'Perfis', estudos: 'Estudos', importar: 'Importar' };
-
-/** Rótulos da barra de contexto, derivados só da rota — nenhum dado é carregado para montá-los. */
-function workspaceTrail(pathname: string): string[] {
-  const [first, second, third] = pathname.split('/').filter(Boolean);
-  if (first === 'empresas') return second === undefined ? ['Empresas'] : ['Empresas', third === undefined ? 'Visão geral' : companySections[third] ?? 'Empresa'];
-  if (first === 'carteira') return ['Estudos', 'Carteira'];
-  if (first === 'estudos') {
-    if (third === 'diagnostico') return ['Estudos', 'Diagnóstico'];
-    if (third === 'replay') return ['Estudos', 'Replay'];
-    if (third === 'apresentacao') return ['Estudos', 'Apresentação'];
-    return ['Estudos'];
-  }
-  if (first === 'quadro') return ['Estudos', 'Comparar estudos'];
-  if (first === 'importar') return ['Importar'];
-  if (first === 'diagnostico') return ['Diagnóstico'];
-  return ['Motor de Fluxo'];
-}
-
 export function AppShell() {
   const { userId, userEmail, signOut } = useAuth();
   const chatRepository = useChatRepository();
@@ -69,10 +51,10 @@ export function AppShell() {
     label: 'Apresentar',
     icon: 'present',
   });
-  const trail = workspaceTrail(location.pathname);
+
   const studyArea = /^\/(?:estudos|carteira|quadro|diagnostico)(?:\/|$)/.test(location.pathname);
   return <ChatProvider key={userId} ownerSub={userId!} repository={chatRepository} client={apiClient} catalog={helpCatalog ?? null}>
-    <div className="app-shell">
+    <WorkspaceTrailProvider><div className="app-shell">
       <a className="skip-link" href="#main-content">Pular para o conteúdo</a>
       <aside className="sidebar">
         <div className="product-brand">
@@ -116,9 +98,7 @@ export function AppShell() {
       </aside>
       <section className="workspace">
         <header className="workspace-header">
-          <ol className="workspace-crumbs" aria-label="Você está em">
-            {trail.map((label, index) => <li key={`${index}-${label}`} aria-current={index === trail.length - 1 ? 'page' : undefined}>{label}</li>)}
-          </ol>
+          <WorkspaceBreadcrumbs />
         </header>
         <main id="main-content" className="workspace-content">
           <Outlet />
@@ -126,5 +106,6 @@ export function AppShell() {
       </section>
       <ChatPanel />
     </div>
+    </WorkspaceTrailProvider>
   </ChatProvider>;
 }

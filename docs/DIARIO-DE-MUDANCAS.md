@@ -37,6 +37,7 @@ Atualizada em 2026-10-03, durante a publicação da MOT-100.
 
 | Branch | Situação | Dono |
 |---|---|---|
+| `codex/navegacao-caminho` | Caminho clicável no cabeçalho, com nome do estudo/empresa e retorno ao diagnóstico | Codex |
 | `codex/perf-combinacoes-deploy-record` | Registra o deploy Live de `77ceea2` e os smokes públicos da MOT-100 | Codex |
 | `codex/perf-combinacoes` | PR #75 mergeado na `main` em `77ceea2`; versão publicada no Render | Codex |
 | `feat/front-mais-leve` | PR #73 mergeado em `66b7c6e`; front leve observado no Render com menus ⋯, detalhes recolhidos e diagnóstico com a resposta primeiro | Claude |
@@ -92,6 +93,18 @@ Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. 
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+## 2026-10-03 — Caminho clicável no cabeçalho do front (MOT-99)
+
+**Sintoma.** O cabeçalho indicava a área atual, mas não permitia retornar aos níveis anteriores pelo caminho de navegação.
+
+**Causa.** A trilha era texto estático, sem links nem o nome do estudo ou da empresa abertos.
+
+**O que foi feito.** Na branch `codex/navegacao-caminho`, o cabeçalho passa a mostrar ancestrais clicáveis e a página atual: Estudos → nome do estudo → Diagnóstico → Replay/Apresentação. O retorno ao diagnóstico preserva cenário e execução, sem repetir comandos da URL. A criação mostra Novo estudo e permite voltar à lista. As páginas de empresa reutilizam o nome já carregado. O nome acompanha renomeações, há suporte a teclado e quebra de linha no celular. Testes cobrem navegação, seleção, renomeação, troca de estudo e criação; a referência visual da apresentação acompanha o novo cabeçalho.
+
+**O que isso invalida.** Apenas a referência visual anterior do cabeçalho da apresentação. Nada nos cálculos, contratos, persistência ou relatórios impressos. Sem deploy nesta tarefa.
+
+**Verificação.** PR #77: CI `37158959576` passou Python (normal e `-O`), 167 arquivos de testes web, tipos e build; no navegador, 67 testes passaram e somente a referência Linux antiga da apresentação divergiu. Captura revisada e incorporada: diferença restrita ao cabeçalho, impressão inalterada. Localmente, referências Windows e caminho em 375 px passaram. Os testes com porta fixa passaram na porta 8021; gates de desempenho passaram isoladamente, após comparação da apresentação com a base `f2e056b`. A atualização da referência Linux dispara nova execução do CI.
 
 ## 2026-10-03 — Otimização de combinações publicada no Render (MOT-100)
 
