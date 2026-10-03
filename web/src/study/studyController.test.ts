@@ -208,7 +208,7 @@ function controller(input: {
 }
 
 describe('StudyController', () => {
-  async function appendFixture() {
+  async function appendFixture(scheduler?: ManualScheduler) {
     const complete = structuredClone(generatedDemo.study) as StudyDocument;
     const reservation = complete.executions.find((item) => item.kind === 'DIAGNOSTIC' && item.status === 'QUEUED')! as DiagnosticExecutionRecord;
     const terminal = complete.executions.find((item) => item.kind === 'DIAGNOSTIC'
@@ -217,7 +217,7 @@ describe('StudyController', () => {
       executions: complete.executions.filter((item) => item.attemptId !== reservation.attemptId) }, complete.ownerSub);
     const repository = new RepositoryDouble(initial.ownerSub, initial);
     const hub = new ChannelHub();
-    const subject = controller({ repositories: [repository], hub });
+    const subject = controller({ repositories: [repository], hub, ...(scheduler === undefined ? {} : { scheduler }) });
     await subject.switchSession(initial.ownerSub);
     await subject.loadStudy(initial.id);
     return { initial, reservation, terminal, repository, hub, subject };
@@ -295,7 +295,7 @@ describe('StudyController', () => {
     subject.close(); clean.close(); dirty.close();
   });
 
-  it('mantém conflito recebido durante o commit e recusa base não certificada', async () => {
+  it('expõe conflito recuperável recebido durante o commit sem perder o delta salvo e recusa base não certificada', async () => {
     const { initial, reservation, terminal, repository, hub, subject } = await appendFixture();
     const pending = deferred<DiagnosticAppendDelta>();
     repository.appendDiagnosticImplementation = () => pending.promise;
@@ -305,8 +305,11 @@ describe('StudyController', () => {
     });
     pending.resolve({ studyId: initial.id, revision: initial.revision + 1,
       updatedAt: terminal.finishedAt!, executions: [reservation, terminal] });
-    await work;
+    await expect(work).rejects.toBeInstanceOf(RevisionConflictError);
     expect(subject.snapshot.status).toBe('CONFLICT');
+    expect(subject.snapshot.document!.executions).toEqual([...initial.executions, reservation, terminal]);
+    expect(repository.appendDiagnosticCalls).toHaveLength(1);
+    expect(hub.messages).toEqual([{ studyId: initial.id, revision: initial.revision + 1, operationId: 'operation-1' }]);
     subject.close();
     const rawRepository = new RepositoryDouble(initial.ownerSub, structuredClone(initial));
     const raw = controller({ repositories: [rawRepository] });
@@ -316,6 +319,26 @@ describe('StudyController', () => {
     expect(rawRepository.appendDiagnosticCalls).toHaveLength(0);
     raw.close();
   });
+  it('preserva edição local durante append e broadcast sem oferecer reload automático destrutivo', async () => {
+    const { initial, reservation, terminal, repository, hub, subject } = await appendFixture(new ManualScheduler());
+    const pending = deferred<DiagnosticAppendDelta>();
+    repository.appendDiagnosticImplementation = () => pending.promise;
+    const edited = await renameStudy(initial, 'Edição local pendente', FIXTURE_NOW);
+    const work = subject.appendDiagnosticAttempt(reservation, terminal);
+    subject.edit(edited);
+    for (const group of hub.channels.values()) for (const channel of group) channel.deliver({
+      studyId: initial.id, revision: initial.revision + 2, operationId: 'other-tab',
+    });
+    pending.resolve({ studyId: initial.id, revision: initial.revision + 1,
+      updatedAt: terminal.finishedAt!, executions: [reservation, terminal] });
+    await work;
+    expect(subject.snapshot).toMatchObject({ status: 'CONFLICT', document: edited, error: null });
+    expect(subject.snapshot.document).toBe(edited);
+    expect(repository.saveCalls).toHaveLength(0);
+    expect(repository.appendDiagnosticCalls).toHaveLength(1);
+    subject.close();
+  });
+
   it('reads another study without changing the selected dirty document or queued revision', async () => {
     const selected = await makeStudy();
     const other = await makeStudy(FIXTURE_OWNER, 'study-2');

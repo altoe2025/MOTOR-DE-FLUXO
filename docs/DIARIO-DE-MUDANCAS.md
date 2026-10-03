@@ -90,6 +90,10 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-10-02 — Conflito entre abas recupera lote após append durável (MOT-100)
+
+**Sintoma:** uma atualização recebida de outra aba enquanto um append terminava podia deixar o controller em `CONFLICT`; o próximo item falhava com erro genérico e o lote não recarregava. **Causa:** o append durável publicava conflito, mas retornava sucesso; a página só recuperava `RevisionConflictError`. **O que foi feito:** essa corrida agora produz conflito tipado depois de preservar/transmitir o delta já salvo; a página recarrega uma vez, reconhece a tentativa existente e continua sem POST/append duplicado. Edições locais pendentes não são descartadas. Regressão com BroadcastChannel/IndexedDB reais passou em 87/87 testes e foi re-revisada. **O que isso invalida:** conclusão anterior de que apenas conflitos CAS lançados pelo repositório precisavam de retry.
+
 ## 2026-10-02 — Cobertura legada adotada sem apagar diagnósticos (MOT-100)
 
 **Sintoma:** o primeiro diagnóstico após a atualização podia reconstruir uma matriz antiga já completa só porque ela ainda não tinha o novo campo de cobertura, removendo IDs e execuções derivadas válidas. **Causa:** ausência de assinatura era tratada sempre como carteira obsoleta. **O que foi feito:** matrizes legadas são verificadas por cobertura exata baseada em IDs; quando completas e atuais, recebem apenas o metadado novo, preservando cenários e histórico. Matrizes incompletas, duplicadas ou ambíguas continuam no rebuild seguro. Regressão com o algoritmo antigo passou em 31/31 testes e a correção foi re-revisada. **O que isso invalida:** expectativa de que todo estudo sem assinatura precise ser reconstruído; a migração agora é não destrutiva quando a cobertura é comprovável.

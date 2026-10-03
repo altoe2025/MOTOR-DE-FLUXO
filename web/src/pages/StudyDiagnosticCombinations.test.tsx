@@ -63,15 +63,16 @@ afterEach(() => { cleanup(); controllers.splice(0).forEach((controller) => contr
 async function initializeStudy(count: number) {
   const { study, templates } = await comboStudy(count);
   const repository = new IndexedDbApplicationRepository({ projectRef: crypto.randomUUID(), ownerSub: study.ownerSub });
-  const controller = new StudyController({ repositoryFactory: () => repository, channelScope: crypto.randomUUID() });
+  const channelScope = crypto.randomUUID();
+  const controller = new StudyController({ repositoryFactory: () => repository, channelScope });
   await controller.switchSession(study.ownerSub);
   await repository.saveStudy({ document: { ...study, revision: 1 }, expectedRevision: 0, operationId: crypto.randomUUID() });
   controllers.push(controller);
-  return { study, templates, repository, controller };
+  return { study, templates, repository, controller, channelScope };
 }
 
 async function openStudy(count = 3, query = '') {
-  const { study, templates, repository, controller } = count === 255 ? prepared255 : await initializeStudy(count);
+  const { study, templates, repository, controller, channelScope } = count === 255 ? prepared255 : await initializeStudy(count);
   const jobs: { request: DiagnosticRequest; signal: AbortSignal; done: ReturnType<typeof deferred<JobSnapshot>> }[] = [];
   const snapshot = (request: DiagnosticRequest, status: JobSnapshot['status']): JobSnapshot => ({
     api_version: '1.0.0', job_id: request.idempotency_key, request_id: request.request_id, status,
@@ -130,7 +131,7 @@ async function openStudy(count = 3, query = '') {
     if (job === undefined) throw new Error(`Nenhum job enviado para ${scenarioId}.`);
     await act(async () => job.done.resolve(snapshot(job.request, status)));
   };
-  return { study, repository, controller, client, jobs, router, finish };
+  return { study, repository, controller, client, jobs, router, finish, channelScope };
 }
 
 async function start() { await userEvent.click(screen.getByRole('button', { name: 'Diagnosticar combinações' })); }
@@ -202,6 +203,57 @@ describe('combination study diagnosis', () => {
     await start(); await idle();
     expect(jobs).toHaveLength(3);
     expect(screen.getByText('Comparáveis atuais').parentElement).toHaveTextContent('3');
+  });
+
+  it('recovers once from a real broadcast during a saved append and commits all three computes without duplicates', async () => {
+    const { study, jobs, controller, repository, finish, channelScope, client } = await openStudy();
+    const externalChannel = new BroadcastChannel(`motor-fluxo:study:v2:${encodeURIComponent(channelScope)}:${encodeURIComponent(study.ownerSub)}`);
+    const append = repository.appendDiagnosticAttempt.bind(repository);
+    const load = vi.spyOn(controller, 'loadStudy');
+    const commits: string[] = [];
+    const statuses: string[] = [];
+    const unsubscribe = controller.subscribe(() => statuses.push(controller.snapshot.status));
+    vi.spyOn(repository, 'appendDiagnosticAttempt').mockImplementation(async (input) => {
+      commits.push(input.reservation.scenarioId);
+      const delta = await append(input);
+      if (commits.length === 1) {
+        // Another tab writes after our transaction, before its delta reaches the controller.
+        const saved = (await repository.getStudy(study.id))!;
+        const renamed = await renameStudy(saved, 'Outra aba durante append', saved.updatedAt);
+        await repository.saveStudy({ document: renamed, expectedRevision: saved.revision, operationId: crypto.randomUUID() });
+        const conflicted = deferred<void>();
+        const stop = controller.subscribe(() => {
+          if (controller.snapshot.status === 'CONFLICT') { stop(); conflicted.resolve(); }
+        });
+        externalChannel.postMessage({ studyId: study.id, revision: renamed.revision, operationId: 'external-rename' });
+        await conflicted.promise;
+      }
+      return delta;
+    });
+    try {
+      await start(); await waitFor(() => expect(jobs).toHaveLength(2));
+      await finish(study.scenarios[1]!.id);
+      // A is still active. C can only start after B's commit/recovery releases its slot.
+      await waitFor(() => expect(jobs).toHaveLength(3));
+      expect(load).toHaveBeenCalledExactlyOnceWith(study.id);
+      expect(controller.snapshot.status).toBe('SAVED');
+      await finish(study.baseScenarioId);
+      await finish(study.scenarios[2]!.id);
+      await idle();
+      const stored = (await repository.getStudy(study.id))!;
+      expect(load).toHaveBeenCalledTimes(1);
+      expect(commits).toHaveLength(3);
+      expect(new Set(commits)).toEqual(new Set(study.scenarios.map((scenario) => scenario.id)));
+      expect(client.submitDiagnostic).toHaveBeenCalledTimes(3);
+      expect(new Set(jobs.map((job) => job.request.scenario_id))).toEqual(new Set(commits));
+      expect(stored).toMatchObject({ name: 'Outra aba durante append', revision: 5 });
+      expect(stored.executions).toHaveLength(6);
+      for (const scenario of stored.scenarios) expect(currentDiagnostic(stored, scenario)?.status).toBe('SUCCEEDED');
+      expect(controller.snapshot).toMatchObject({ status: 'SAVED', error: null, document: stored });
+      expect(statuses).toContain('CONFLICT');
+      expect(statuses).not.toContain('STORAGE_FAILURE');
+      expect(screen.queryByText(/Carregue um estudo salvo e certificado/)).not.toBeInTheDocument();
+    } finally { unsubscribe(); externalChannel.close(); }
   });
 
   it('consumes runAll once and does not repeat completed scenarios after rerenders', async () => {

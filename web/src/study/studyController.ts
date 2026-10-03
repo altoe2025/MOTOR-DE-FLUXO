@@ -458,6 +458,12 @@ export class StudyController {
       this.#publish({ ...this.#snapshot, status: conflict || edited ? 'CONFLICT' : 'SAVED',
         document: edited ? this.#snapshot.document : saved, error: null });
       this.#channel?.postMessage({ studyId: saved.id, revision: saved.revision, operationId });
+      // The delta is durable, but a concurrent broadcast invalidated the base.
+      // Let the caller reload and recognize this attempt before continuing its batch.
+      // Local edits must remain pending, not be discarded by automatic recovery.
+      if (conflict && !edited && this.#pending.length === 0) {
+        throw new RevisionConflictError(current.revision, saved.revision);
+      }
       return saved;
     } catch (error) {
       if (this.#isCurrent(repository, epoch, selectionEpoch)) {
