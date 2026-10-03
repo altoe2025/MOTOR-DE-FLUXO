@@ -33,6 +33,12 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
+Atualizada em 2026-10-03, após a publicação do caminho de navegação.
+
+| Branch | Situação | Dono |
+|---|---|---|
+| `codex/navegacao-caminho-deploy-record` | Registra o deploy Live de `bdae970` e o smoke autenticado | Codex |
+| `codex/navegacao-caminho` | PR #77 mergeado em `bdae970` e publicado no Render; caminho clicável no cabeçalho | Codex |
 Atualizada em 2026-10-02, após a publicação das correções de diagnóstico.
 
 | Branch | Situação | Dono |
@@ -81,6 +87,7 @@ Atualizada em 2026-10-05, durante o ajuste do contorno dos cartões de Estudos (
 | `codex/carteira-criterios` | Integra estudo separado de combinações, últimas melhorias de `feat/bancada-exploracao` e chat já publicado do PR #57; deploy aguardando comando do Gabriel | Codex |
 | `codex/chat-interface-render` | PR #57 aberto (draft, base `feat/bancada-exploracao`); código `8d43695` publicado no Render com status Live em 2026-09-28; sem merge na `main` | Codex |
 | `codex/integracao-etapas-5-6` | Consolida `feat/bancada-exploracao` e `codex/finalidade-verificacao`, incluindo histórico de `origin/main`; publicação/CI em preparação, sem deploy | Codex |
+| `main` | `bdae970`: PR #77 mergeado e publicado no Render; caminho de navegação Live | os dois |
 | `main` | `727d3ee`: PR #71 mergeado; mesma revisão confirmada Live no Render | os dois |
 | `main` | `c3620bf`: PR #66 mergeado e visual unificado publicado no Render | os dois |
 | `main` | `5483fab`: PR #65 mergeado e diagnóstico recolhível publicado no Render | os dois |
@@ -121,6 +128,19 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-10-03 — Caminho de navegação publicado no Render (MOT-99)
+
+**Sintoma.** O PR #77 estava pronto para revisão, mas o caminho clicável ainda não estava publicado.
+
+**Causa.** O serviço usa deploy manual; merge e publicação aguardavam autorização do Gabriel e conclusão do CI.
+
+**O que foi feito.** Após autorização explícita, o CI `37159898286` concluiu com sucesso e o PR ficou `MERGEABLE/CLEAN`. Merge com commit `bdae970bfc8b271025258ec78e253be2f6429433`, em 2026-10-03 às 20:07:51 GMT-3. No serviço `motor-de-fluxo-piloto`, esse SHA foi selecionado explicitamente no painel. Deploy `dep-db0olvnavr4c738m4n1g`, iniciado às 20:08:46 GMT-3, terminou em 48,2 s; o log confirmou Live às 20:09:35 GMT-3. Sem alteração de variáveis ou Auto-Deploy.
+
+Smoke público: `/api/v1/health` retornou HTTP 200 com `{"status":"ok"}` e `/login` HTTP 200 via HTTPS. Bundle mudou de `index-q8qhdbXB.js` para `index-BF3k7smw.js`. Smoke autenticado, com sessão aberta pelo Gabriel e somente estudo demonstrativo sintético: editor → diagnóstico → Replay → apresentação → chat. Retornos pelo breadcrumb conservaram cenário e execução; o nome do estudo levou ao editor, Estudos levou à lista, e Estudos / Novo estudo permitiu cancelar a criação pelo ancestral. O chat respondeu com fontes; nenhum erro capturado no console. Nenhuma nova credencial foi criada ou copiada.
+
+Rollback anotado antes de publicar: deploy `dep-db08pqk9v7es73ad7gug`, commit `77ceea26dd92803255966bae044ba560471288e0`. Não foi necessário acioná-lo. Este registro segue em PR próprio, na branch `codex/navegacao-caminho-deploy-record`.
+
+**O que isso invalida.** O status anterior de publicação pendente do PR #77 e a referência Live em `77ceea2`. Nada nos cálculos, contratos ou dados existentes.
 ## 2026-10-02 — Publicação das correções de diagnóstico (MOT-73)
 
 1. **Sintoma:** as correções do PR #71 estavam revisadas, mas o serviço publicado
