@@ -33,11 +33,11 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-10-02, durante a entrega das correções de diagnóstico.
+Atualizada em 2026-10-03, durante a publicação da MOT-100.
 
 | Branch | Situação | Dono |
 |---|---|---|
-| `codex/perf-combinacoes` | Otimização para 255 combinações integrada ao front leve; gate local verde, preview e aceite do Gabriel pendentes | Codex |
+| `codex/perf-combinacoes` | Otimização para 255 combinações integrada ao front leve; gate local e preview aprovados pelo Gabriel, com push, PR, merge e deploy autorizados | Codex |
 | `feat/front-mais-leve` | PR #73 mergeado em `66b7c6e`; front leve observado no Render com menus ⋯, detalhes recolhidos e diagnóstico com a resposta primeiro | Claude |
 | `codex/diagnostico-confiavel` | PR #71 mergeado na `main` em `727d3ee`; contratos incorporados à otimização de combinações | Codex |
 | `codex/carteiras-docker-fixture` | Corrige somente o empacotamento de um helper de testes após falha do build Render; versão Live anterior preservada | Codex |
@@ -91,6 +91,10 @@ Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. 
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+## 2026-10-03 — Publicação da otimização de combinações autorizada (MOT-100)
+
+**Sintoma:** o gate técnico e a prévia local da MOT-100 estavam verdes, mas o Diário ainda registrava o aceite visual e a publicação como pendentes. **Causa:** a autorização final de push, PR, merge e deploy foi dada depois do último commit da implementação. **O que foi feito:** o estado da branch `codex/perf-combinacoes` foi alinhado ao aceite explícito do Gabriel; a publicação segue condicionada à repetição dos gates, CI verde e smoke test do ambiente publicado. **O que isso invalida:** o status de aceite pendente da tabela anterior; não altera resultados, contratos nem medições de desempenho.
 
 ## 2026-10-02 — Gate de 255 diagnósticos fica responsivo no front leve (MOT-100)
 
