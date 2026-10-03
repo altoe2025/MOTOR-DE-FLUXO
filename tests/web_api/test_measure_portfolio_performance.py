@@ -2,7 +2,11 @@ import copy
 
 import pytest
 
-from tests.web_api.measure_portfolio_performance import evaluate_budget, percentile_50, percentile_95
+from tests.web_api.measure_portfolio_performance import (
+    evaluate_budget,
+    percentile_50,
+    percentile_95,
+)
 
 
 def report() -> dict:

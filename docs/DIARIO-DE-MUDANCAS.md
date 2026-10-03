@@ -37,7 +37,7 @@ Atualizada em 2026-10-03, durante a publicação da MOT-100.
 
 | Branch | Situação | Dono |
 |---|---|---|
-| `codex/perf-combinacoes` | Otimização para 255 combinações integrada ao front leve; gate local e preview aprovados pelo Gabriel, com push, PR, merge e deploy autorizados | Codex |
+| `codex/perf-combinacoes` | PR #75 aberto; gate funcional verde, com correção canônica de import após o primeiro lint remoto | Codex |
 | `feat/front-mais-leve` | PR #73 mergeado em `66b7c6e`; front leve observado no Render com menus ⋯, detalhes recolhidos e diagnóstico com a resposta primeiro | Claude |
 | `codex/diagnostico-confiavel` | PR #71 mergeado na `main` em `727d3ee`; contratos incorporados à otimização de combinações | Codex |
 | `codex/carteiras-docker-fixture` | Corrige somente o empacotamento de um helper de testes após falha do build Render; versão Live anterior preservada | Codex |
@@ -91,6 +91,10 @@ Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. 
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+## 2026-10-03 — Import do gate de desempenho segue o formato canônico (MOT-100)
+
+**Sintoma:** a primeira CI do PR #75 executou as duas suítes Python com sucesso, mas o passo `ruff` recusou uma linha de import longa em `test_measure_portfolio_performance.py`; o orçamento Stage 6 falhou em seguida porque seu relatório browser não foi gerado após o encerramento antecipado. **Causa:** o teste novo não havia sido submetido ao mesmo comando de lint executado pelo workflow antes do push. **O que foi feito:** o import foi quebrado no formato canônico indicado pelo próprio `ruff`, sem mudança de comportamento, e a falha foi reproduzida localmente antes da correção. **O que isso invalida:** apenas o resultado vermelho da primeira execução do PR #75; medições e resultados funcionais continuam válidos.
 
 ## 2026-10-03 — Publicação da otimização de combinações autorizada (MOT-100)
 
