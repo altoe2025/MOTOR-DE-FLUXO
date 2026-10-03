@@ -33,12 +33,13 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-10-02, durante a entrega das correções de diagnóstico.
+Atualizada em 2026-10-03, durante a publicação da MOT-100.
 
 | Branch | Situação | Dono |
 |---|---|---|
-| `feat/front-mais-leve` | front mais leve (menus ⋯, premissas e detalhes recolhidos, composição em destaque, diagnóstico com a resposta primeiro); PR para a `main`, merge e deploy com o Codex | Claude |
-| `codex/diagnostico-confiavel` | PR #71 aberto em rascunho; correções e revisão independente concluídas, validação automática em andamento; sem merge ou deploy | Codex |
+| `codex/perf-combinacoes` | PR #75 aberto; gate funcional verde, com correção canônica de import após o primeiro lint remoto | Codex |
+| `feat/front-mais-leve` | PR #73 mergeado em `66b7c6e`; front leve observado no Render com menus ⋯, detalhes recolhidos e diagnóstico com a resposta primeiro | Claude |
+| `codex/diagnostico-confiavel` | PR #71 mergeado na `main` em `727d3ee`; contratos incorporados à otimização de combinações | Codex |
 | `codex/carteiras-docker-fixture` | Corrige somente o empacotamento de um helper de testes após falha do build Render; versão Live anterior preservada | Codex |
 | `codex/carteiras-analise` | PR #69 mergeado em `9cc8b8e`, CI verde; primeiro deploy interrompido no build por helper de testes fora do padrão de exclusão | Codex |
 | `feat/front-visual` | visual do app inteiro no sistema do Replay; aprovado pelo Gabriel na prévia local; PR para a `main`, deploy com o Codex | Claude |
@@ -54,7 +55,7 @@ Atualizada em 2026-10-02, durante a entrega das correções de diagnóstico.
 | `codex/carteira-criterios` | Integra estudo separado de combinações, últimas melhorias de `feat/bancada-exploracao` e chat já publicado do PR #57; deploy aguardando comando do Gabriel | Codex |
 | `codex/chat-interface-render` | PR #57 aberto (draft, base `feat/bancada-exploracao`); código `8d43695` publicado no Render com status Live em 2026-09-28; sem merge na `main` | Codex |
 | `codex/integracao-etapas-5-6` | Consolida `feat/bancada-exploracao` e `codex/finalidade-verificacao`, incluindo histórico de `origin/main`; publicação/CI em preparação, sem deploy | Codex |
-| `main` | `c3620bf`: PR #66 mergeado; Render confirmado Live nessa revisão antes da publicação MOT-100 | os dois |
+| `main` | `66b7c6e`: PR #73 mergeado; front leve confirmado no bundle público do Render | os dois |
 | `netting/p1` | spike do P1, **NÃO MERGEAR** — dominado, e agora sabemos que a folga é zero em N ≥ 50. Só local, nunca foi pro GitHub | Felipe |
 | `fix/semantica-remessa-p0` | PR #11, mergeada | Felipe |
 | `fix/previsao-temporal-e-colunas-csv` | PR #12, mergeada | Gabriel |
@@ -91,6 +92,61 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-10-03 — Import do gate de desempenho segue o formato canônico (MOT-100)
+
+**Sintoma:** a primeira CI do PR #75 executou as duas suítes Python com sucesso, mas o passo `ruff` recusou uma linha de import longa em `test_measure_portfolio_performance.py`; o orçamento Stage 6 falhou em seguida porque seu relatório browser não foi gerado após o encerramento antecipado. **Causa:** o teste novo não havia sido submetido ao mesmo comando de lint executado pelo workflow antes do push. **O que foi feito:** o import foi quebrado no formato canônico indicado pelo próprio `ruff`, sem mudança de comportamento, e a falha foi reproduzida localmente antes da correção. **O que isso invalida:** apenas o resultado vermelho da primeira execução do PR #75; medições e resultados funcionais continuam válidos.
+
+## 2026-10-03 — Publicação da otimização de combinações autorizada (MOT-100)
+
+**Sintoma:** o gate técnico e a prévia local da MOT-100 estavam verdes, mas o Diário ainda registrava o aceite visual e a publicação como pendentes. **Causa:** a autorização final de push, PR, merge e deploy foi dada depois do último commit da implementação. **O que foi feito:** o estado da branch `codex/perf-combinacoes` foi alinhado ao aceite explícito do Gabriel; a publicação segue condicionada à repetição dos gates, CI verde e smoke test do ambiente publicado. **O que isso invalida:** o status de aceite pendente da tabela anterior; não altera resultados, contratos nem medições de desempenho.
+
+## 2026-10-02 — Gate de 255 diagnósticos fica responsivo no front leve (MOT-100)
+
+**Sintoma:** mesmo após o catálogo e o hub ficarem leves, abrir a recomendação reconstruía a análise em toda montagem e a primeira leitura clonava, validava e congelava 510 registros numa única tarefa; o menu de criação não mantinha feedback visível. **Causa:** o cache vivia apenas no `useMemo` do componente desmontado, `getStudy` usava `getAll` mais clones redundantes e a validação/projeção percorriam árvores grandes sem ceder à thread do navegador. **O que foi feito:** a branch `codex/perf-combinacoes`, já integrada a `origin/main@66b7c6e`, preserva o front leve e adiciona leitura de execuções por cursor, certificação integral cooperativa do snapshot destacado do IndexedDB, projeção cooperativa com cache por identidade+revisão, hub compacto e status persistente de criação. O gate Chromium com 8 empresas, 255 cenários e 510 registros ficou verde: p95 SPA 38,8 ms em Estudos, 33,6 ms no hub, 93,2 ms em objetivo/filtro, 26,1 ms para feedback de criação já após duas RAFs e 138,6 ms até o DOM da recomendação nas 20 reaberturas quentes. A primeira abertura terminou em 5.665,8/5.725,4 ms (DOM/duas RAFs), mas a maior tarefa local foi 142 ms e não houve nenhuma long task >200 ms; zero POST incidental. Python normal e `-O`: 1.416 passed, 3 skipped, 1 xfailed cada. **O que isso invalida:** o gate vermelho registrado logo abaixo e as medições com pausas de 1.270/463 ms não descrevem mais a branch; a primeira abertura continua sendo uma carga fria visível, agora cooperativa e não bloqueante. Ainda não se mediu throughput remoto de 255 jobs nem novo tempo do lote real de 63.
+
+## 2026-10-02 — Gate browser revela leitura pesada de 255 diagnósticos (MOT-100) — superado
+
+**Sintoma:** a navegação SPA de listas atende ao orçamento, mas a recomendação de 255 resultados ainda produz pausas locais; no front leve, a criação no menu ⋯ só mostra o novo estudo após 120,2 ms. **Causa:** o gate separa a abertura fria da reabertura sem reload; a função interna das long tasks ainda exige perfil dedicado. O menu fecha imediatamente, mas não conserva indicador de progresso de criação. **O que foi feito:** fixture E2E autocontida corrigiu o import de helper excluído do contexto Docker; os 8 empresas, 255 cenários e 510 registros permanecem válidos. O Playwright pós-main usa o link real de Estudos, volta ao hub compacto pelo histórico, mede abertura direta e 20 reaberturas quentes da recomendação por `page.goBack`, e preserva os budgets no verificador Python. Em Windows 10.0.26200, i7-1185G7, Node 24.19.0 e Chromium 153.0.8010.12, p95 SPA foi 53,5 ms em Estudos, 42,7 ms no hub e 126,8 ms em objetivo/filtro. Hub compacto: zero linhas/controles de expansão; zero POST incidental. A primeira recomendação levou 2.725,4/2.802,0 ms (heading/duas RAFs), com 3 long tasks >200 ms (máximo 1.270 ms). Reaberturas quentes: p95 468,5/633,6 ms, com 20 long tasks >200 ms (máximo 463 ms). Fixture/parser/contrato Docker 15/15, build verde; Playwright e `--assert-budget` vermelhos por feedback >100 ms e long tasks. **O que isso invalida:** as medições antigas de expansão e reabertura com reload não descrevem mais o hub compacto nem um caminho quente verdadeiro. O aceite de desempenho da MOT-100 segue vermelho; não se mediu throughput remoto de 255 jobs nem novo tempo do lote de 63.
+
+## 2026-10-02 — Conflito entre abas recupera lote após append durável (MOT-100)
+
+**Sintoma:** uma atualização recebida de outra aba enquanto um append terminava podia deixar o controller em `CONFLICT`; o próximo item falhava com erro genérico e o lote não recarregava. **Causa:** o append durável publicava conflito, mas retornava sucesso; a página só recuperava `RevisionConflictError`. **O que foi feito:** essa corrida agora produz conflito tipado depois de preservar/transmitir o delta já salvo; a página recarrega uma vez, reconhece a tentativa existente e continua sem POST/append duplicado. Edições locais pendentes não são descartadas. Regressão com BroadcastChannel/IndexedDB reais passou em 87/87 testes e foi re-revisada. **O que isso invalida:** conclusão anterior de que apenas conflitos CAS lançados pelo repositório precisavam de retry.
+
+## 2026-10-02 — Cobertura legada adotada sem apagar diagnósticos (MOT-100)
+
+**Sintoma:** o primeiro diagnóstico após a atualização podia reconstruir uma matriz antiga já completa só porque ela ainda não tinha o novo campo de cobertura, removendo IDs e execuções derivadas válidas. **Causa:** ausência de assinatura era tratada sempre como carteira obsoleta. **O que foi feito:** matrizes legadas são verificadas por cobertura exata baseada em IDs; quando completas e atuais, recebem apenas o metadado novo, preservando cenários e histórico. Matrizes incompletas, duplicadas ou ambíguas continuam no rebuild seguro. Regressão com o algoritmo antigo passou em 31/31 testes e a correção foi re-revisada. **O que isso invalida:** expectativa de que todo estudo sem assinatura precise ser reconstruído; a migração agora é não destrutiva quando a cobertura é comprovável.
+
+## 2026-10-02 — Lote de combinações usa dois workers com commit serial (MOT-100)
+
+**Sintoma:** o navegador submetia uma composição por vez, deixando um dos dois workers padrão ocioso; cancelamento/conflitos entre abas podiam ainda manter pendências antigas na fila. **Causa:** computação remota e persistência estavam acopladas no serviço individual e a fila era congelada no começo do lote. **O que foi feito:** extraída computação sem persistência; novo pool limita a dois computes e um commit incremental por vez, drena jobs ativos ao cancelar/falhar e revalida cada item antes do POST. Conflito recarrega uma vez e não reenvia resultado já atual. Após duas rodadas de revisão, 53/53 testes passaram em três execuções consecutivas, com typecheck e lint verdes. **O que isso invalida:** a medição de 3,7 minutos para 63 combinações como representação da agenda atual; ela precisa ser refeita no gate de navegador.
+
+## 2026-10-02 — Append diagnóstico incremental e schema local v5 (MOT-100)
+
+**Sintoma:** cada terminal do lote clonava, validava, serializava, comparava e registrava o estudo cumulativo inteiro, fazendo CPU e armazenamento crescerem com o histórico. **Causa:** diagnóstico usava o CAS estrutural genérico embora execuções já vivessem numa store separada. **O que foi feito:** schema v5 adiciona contagem no resumo e índice por tentativa; `appendDiagnosticAttempt` valida e grava somente reserva+terminal, revisão, resumo e operação compacta numa transação. O controller aplica delta certificado sem revalidar o histórico. Migrações v1–v4, rollback, owner, conflito e idempotência passaram 185 testes, typecheck e revisão. **O que isso invalida:** perfil anterior de persistência quadrática; saves estruturais continuam usando validação integral.
+
+## 2026-10-02 — Preparação idempotente das combinações (MOT-100)
+
+**Sintoma:** repetir “Diagnosticar combinações” reconstruía os 254 rascunhos mesmo quando a cobertura atual já estava completa; IDs diferentes com nomes iguais também podiam colapsar subconjuntos. **Causa:** não havia uma assinatura persistida da cobertura e a identidade de composição usava nome de empresa. **O que foi feito:** o estudo guarda cobertura opcional V3 validada; hit exato pula a construção, miss reconstrói todas as derivadas e descarta resultados obsoletos. Combinações usam IDs, nomes ficam só na apresentação e duplicatas são desambiguadas. Após corrigir dois achados da revisão, 27/27 testes e typecheck passaram. **O que isso invalida:** tempo anterior de um segundo clique já preparado; a cardinalidade por ID agora é rigorosamente `2^N - 1` mesmo com nomes repetidos.
+
+## 2026-10-02 — Estudos e Diagnóstico carregam sob demanda (MOT-100)
+
+**Sintoma:** mesmo com os cenários visualmente recolhidos, entrar nas páginas aguardava documentos e envelopes completos. **Causa:** as páginas consumiam `listStudies` e o hub recebia todos os `StudyDocument` antes da primeira interação. **O que foi feito:** Estudos e o hub usam `StudySummary`; o hub carrega somente o estudo expandido, com estados locais de carregamento/erro e proteção contra respostas obsoletas. Rótulos e ações foram preservados, inclusive a distinção de carteira observada, sintética, multiempresa e manual. Testes focados 49/49 e typecheck verdes; revisão aprovada. **O que isso invalida:** medições antigas de abertura dessas rotas que incluíam leitura/validação de todos os envelopes; importação explícita ainda lê documentos completos por necessidade do fluxo.
+
+## 2026-10-02 — Catálogo leve de estudos no IndexedDB (MOT-100)
+
+**Sintoma:** entrar em Estudos ou Diagnóstico carregava e validava todos os cenários e envelopes de todos os estudos antes de mostrar uma lista curta. **Causa:** o repositório só expunha `listStudies`, que reconstituía documentos completos. **O que foi feito:** schema local v4 adiciona `study_summaries`, atualizado atomicamente nos saves/restores/demo/purge e reconstruído de forma reparável para dados antigos sem validar envelopes; controller ganhou listagem resumida e leitura destacada que não altera a seleção. Migração e contratos passaram 111 testes, typecheck e lint; re-revisão aprovada. **O que isso invalida:** qualquer suposição de que telas de catálogo precisam receber `StudyDocument`; estudos e execuções persistidos continuam compatíveis.
+
+## 2026-10-02 — Fixture válida de desempenho para 255 combinações (MOT-100)
+
+**Sintoma:** não havia uma massa unitária persistível que representasse 63/255 composições já diagnosticadas, então regressões de CPU e identidade só apareciam no E2E longo. **Causa:** as fixtures menores não exercitavam o formato reserva `QUEUED` + terminal nem todas as identidades entre request, cenário e envelope. **O que foi feito:** criada uma fixture determinística validada pelo contrato de produção, com goldens independentes de projeção/ranking para seis e oito empresas; 4/4 testes direcionados passaram e os dois achados importantes da revisão foram corrigidos. **O que isso invalida:** nada nos resultados atuais; novos testes de desempenho podem reutilizar a massa sem chamar o motor.
+
+## 2026-10-02 — Projeção de carteiras deixa de crescer com o histórico (MOT-100)
+
+**Sintoma:** durante um lote, cada terminal invalidava a tela de recomendação e voltava a procurar a execução atual de cada composição em todo o histórico. **Causa:** a projeção fazia `reverse/find` por cenário e permanecia montada durante o progresso. **O que foi feito:** `portfolioAnalysis` passou a indexar execuções atuais em uma passagem; a recomendação completa é adiada enquanto o lote roda e reconstruída ao terminar, falhar ou cancelar. Testes direcionados: 50/50; revisão de tarefa aprovada. **O que isso invalida:** perfis anteriores de CPU da recomendação durante o lote; métricas financeiras, ranking e marginais permanecem iguais.
+
+## 2026-10-02 — Design de desempenho para 255 combinações (MOT-100)
+
+**Sintoma:** abrir Estudos, criar uma nova combinação e abrir Diagnóstico ficou lento em estudos grandes; o lote de oito empresas também mantém o navegador ocupado por muito tempo. **Causa:** as listas reconstroem e validam todos os envelopes salvos; cada terminal do lote repete clone, validação, serialização e comparação do estudo cumulativo; o agendamento usa só um dos dois workers; a recomendação é projetada a cada resultado. **O que foi feito:** criados na branch `codex/perf-combinacoes` a especificação `docs/superpowers/specs/2026-10-02-desempenho-combinacoes-design.md` e o plano `docs/superpowers/plans/2026-10-02-desempenho-combinacoes.md`, com catálogo leve, lazy load, preparação idempotente, append atômico, concorrência limitada a dois e gates para 255 composições. Nenhum código de produto foi alterado nesta entrada. **O que isso invalida:** nada nos números ou resultados atuais; medições futuras de desempenho devem separar leitura, persistência, projeção e tempo remoto conforme o novo protocolo.
 ## 2026-10-02 — Front mais leve: uma ação principal por tela, o resto recolhido (MOT-99)
 
 1. **Sintoma.** Na conversa com o Sávio, as telas de Estudos, editor, alavancas, diagnóstico, Quadro e Importar pareciam poluídas: muitos botões lado a lado, premissas e janela sempre abertas, a Composição perdida no fim das alavancas e o resultado do diagnóstico enterrado em tabelas.

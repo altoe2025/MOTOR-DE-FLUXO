@@ -67,18 +67,127 @@ type ResumeOptions = Readonly<{
   waitForNextPoll?: (signal: AbortSignal) => Promise<void>;
 }>;
 
+export type ComputedDiagnosticAttempt = Readonly<{
+  reservation: DiagnosticExecutionRecord;
+  terminal: DiagnosticExecutionRecord;
+  attempt: DiagnosticExecutionAttempt;
+}>;
+
+export async function computeDiagnosticAttempt(
+  options: Omit<ExecuteStudyDiagnosticOptions, 'authority' | 'persistence'> & Readonly<{
+    study: StudyDocument;
+    signal: AbortSignal;
+  }>,
+): Promise<ComputedDiagnosticAttempt> {
+  const { study, signal } = options;
+  const nextId = options.nextId ?? (() => crypto.randomUUID());
+  const now = options.now ?? (() => new Date().toISOString());
+  signal.throwIfAborted();
+  const scenario = study.scenarios.find((item) => item.id === options.scenarioId);
+  if (scenario === undefined) throw new Error('Cenário não encontrado para diagnóstico.');
+  const attemptId = nextId();
+  const request = await options.buildRequest({ study, scenario, attemptId });
+  signal.throwIfAborted();
+  assertRequestIdentity(request, study, scenario);
+  const reservation = createReservation(scenario, request, attemptId, nextId(), now());
+  assertDeferredReservation(study, reservation);
+  const terminal = await computeTerminal(reservation, options.api, signal, () => !signal.aborted,
+    nextId, now, options.waitForNextPoll ?? waitForPoll, true);
+  signal.throwIfAborted();
+  if (terminal === null) throw new DOMException('Diagnóstico interrompido.', 'AbortError');
+  return { reservation, terminal, attempt: terminalAttempt(reservation, terminal, true) };
+}
+
+function createReservation(
+  scenario: StudyDocument['scenarios'][number], request: DiagnosticRequest,
+  attemptId: string, id: string, createdAt: string,
+): DiagnosticExecutionRecord {
+  return {
+    kind: 'DIAGNOSTIC', id, attemptId, scenarioId: scenario.id,
+    scenarioRevision: scenario.revision, inputFingerprint: scenario.inputFingerprint,
+    requestSnapshot: structuredClone(request), sourceSnapshot: structuredClone(scenario.sourceSnapshot),
+    premisesSnapshot: structuredClone(scenario.premises), periodSnapshot: structuredClone(scenario.period),
+    status: 'QUEUED', jobId: request.idempotency_key, envelope: null, error: null, createdAt, finishedAt: null,
+  };
+}
+
+function waitForPoll(signal: AbortSignal): Promise<void> {
+  return new Promise((resolve) => {
+    const finish = () => { globalThis.clearTimeout(handle); signal.removeEventListener('abort', finish); resolve(); };
+    const handle = globalThis.setTimeout(finish, 500);
+    signal.addEventListener('abort', finish, { once: true });
+    if (signal.aborted) finish();
+  });
+}
+
+/** Shared remote protocol for new, persisted, cancelled and retried reservations. */
+async function computeTerminal(
+  reservation: DiagnosticExecutionRecord, api: DiagnosticExecutionApi, signal: AbortSignal,
+  isCurrent: () => boolean, nextId: () => string, now: () => string,
+  waitForNextPoll: (signal: AbortSignal) => Promise<void>, submit: boolean,
+): Promise<DiagnosticExecutionRecord | null> {
+  if (!isCurrent()) return null;
+  if (submit) {
+    let submitted: JobSnapshot;
+    try {
+      submitted = await api.submitDiagnostic(structuredClone(reservation.requestSnapshot) as DiagnosticRequest, signal);
+    } catch (error) {
+      if (!isCurrent()) return null;
+      const failure = error instanceof ApiError ? { code: error.code, message: error.message }
+        : { code: 'DIAGNOSTIC_SUBMISSION_FAILED', message: 'O servidor não recebeu o diagnóstico.' };
+      return terminalRecord(reservation, nextId(), 'FAILED', now(), null, failure);
+    }
+    if (!isCurrent()) return null;
+    assertJobIdentity(submitted, reservation);
+  }
+  let terminalSnapshot: JobSnapshot;
+  try {
+    for (;;) {
+      terminalSnapshot = await api.getDiagnosticJob(reservation.jobId!, signal);
+      if (!isCurrent()) return null;
+      assertJobIdentity(terminalSnapshot, reservation);
+      if (['SUCCEEDED', 'FAILED', 'CANCELLED'].includes(terminalSnapshot.status)) break;
+      await waitForNextPoll(signal);
+      if (!isCurrent()) return null;
+    }
+  } catch (error) {
+    if (!isCurrent()) return null;
+    if (!(error instanceof ApiError) || error.status !== 404) throw error;
+    return terminalRecord(reservation, nextId(), 'INTERRUPTED', now(), null, {
+      code: 'SERVER_RESTART_OR_JOB_EXPIRED', message: 'O job não está mais disponível no servidor.',
+    });
+  }
+  let envelope: DiagnosticEnvelope | null = null;
+  if (terminalSnapshot.status === 'SUCCEEDED') {
+    try {
+      envelope = await api.getDiagnosticResult(reservation.jobId!, signal);
+      assertEnvelopeIdentity(envelope, reservation);
+    } catch (error) {
+      if (!isCurrent()) return null;
+      const expired = error instanceof ApiError && error.status === 404;
+      if (!expired && !definitiveResultFailure(error)) throw error;
+      return terminalRecord(reservation, nextId(), expired ? 'INTERRUPTED' : 'FAILED', now(), null, {
+        code: expired ? 'SERVER_RESTART_OR_JOB_EXPIRED' : 'DIAGNOSTIC_RESULT_UNAVAILABLE',
+        message: expired
+          ? 'O resultado do job não está mais disponível no servidor.'
+          : 'O resultado não pôde ser recuperado. Inicie um novo diagnóstico.',
+      });
+    }
+    if (!isCurrent()) return null;
+  }
+  const status = terminalSnapshot.status as 'SUCCEEDED' | 'FAILED' | 'CANCELLED';
+  const error = status === 'FAILED'
+    ? { code: terminalSnapshot.error?.code ?? 'DIAGNOSTICO_INVALIDO', message: terminalSnapshot.error?.message ?? 'O diagnóstico falhou.' }
+    : status === 'CANCELLED' ? { code: 'CANCELLED', message: 'O diagnóstico foi cancelado.' } : null;
+  return terminalRecord(reservation, nextId(), status, now(), envelope, error);
+}
+
 export async function executeStudyDiagnostic(
   options: ExecuteStudyDiagnosticOptions,
 ): Promise<DiagnosticExecutionAttempt> {
   const nextId = options.nextId ?? (() => crypto.randomUUID());
   const now = options.now ?? (() => new Date().toISOString());
-  const waitForNextPoll = options.waitForNextPoll ?? ((signal) => new Promise<void>((resolve) => {
-    const handle = globalThis.setTimeout(resolve, 500);
-    signal.addEventListener('abort', () => {
-      globalThis.clearTimeout(handle);
-      resolve();
-    }, { once: true });
-  }));
+  const waitForNextPoll = options.waitForNextPoll ?? waitForPoll;
   let fallbackAttemptId: string | null = null;
   const result = await options.authority.runForCurrentSession(async ({ ownerSub, epoch, signal }) => {
     await options.authority.flush();
@@ -89,6 +198,7 @@ export async function executeStudyDiagnostic(
     if (scenario === undefined) throw new Error('Cenário não encontrado para diagnóstico.');
 
     let reservation = activeReservation(study, options.scenarioId);
+    const needsSubmission = reservation === null;
     let reservedStudy = study;
     const reservationDeferred = options.persistence === 'TERMINAL_ONLY' && reservation === null;
     if (reservation === null) {
@@ -102,24 +212,7 @@ export async function executeStudyDiagnostic(
       if (!sessionIsCurrent(options.authority, ownerSub, epoch, signal)) return null;
       assertRequestIdentity(request, study, scenario);
       const createdAt = now();
-      reservation = {
-        kind: 'DIAGNOSTIC',
-        id: nextId(),
-        attemptId: fallbackAttemptId,
-        scenarioId: scenario.id,
-        scenarioRevision: scenario.revision,
-        inputFingerprint: scenario.inputFingerprint,
-        requestSnapshot: structuredClone(request),
-        sourceSnapshot: structuredClone(scenario.sourceSnapshot),
-        premisesSnapshot: structuredClone(scenario.premises),
-        periodSnapshot: structuredClone(scenario.period),
-        status: 'QUEUED',
-        jobId: request.idempotency_key,
-        envelope: null,
-        error: null,
-        createdAt,
-        finishedAt: null,
-      };
+      reservation = createReservation(scenario, request, fallbackAttemptId, nextId(), createdAt);
       if (!sessionIsCurrent(options.authority, ownerSub, epoch, signal)) {
         return interrupted(reservation, null);
       }
@@ -135,101 +228,28 @@ export async function executeStudyDiagnostic(
         }
         reservedStudy = stored;
       }
-      let submitted: JobSnapshot;
-      try {
-        submitted = await options.api.submitDiagnostic(request, signal);
-      } catch (error) {
-        const failure = error instanceof ApiError
-          ? { code: error.code, message: error.message }
-          : { code: 'DIAGNOSTIC_SUBMISSION_FAILED', message: 'O servidor não recebeu o diagnóstico.' };
-        return persistTerminal(
-          options.authority,
-          ownerSub,
-          epoch,
-          reservedStudy,
-          reservation,
-          terminalRecord(reservation, nextId(), 'FAILED', now(), null, failure),
-          signal,
-          reservationDeferred,
-        );
-      }
-      if (!sessionIsCurrent(options.authority, ownerSub, epoch, signal)) {
-        return interrupted(reservation, null);
-      }
-      assertJobIdentity(submitted, reservation);
     }
-
-    let terminalSnapshot: JobSnapshot;
+    let terminal: DiagnosticExecutionRecord | null;
     try {
-      for (;;) {
-        terminalSnapshot = await options.api.getDiagnosticJob(reservation.jobId!, signal);
-        if (!sessionIsCurrent(options.authority, ownerSub, epoch, signal)) {
-          return interrupted(reservation, null);
-        }
-        assertJobIdentity(terminalSnapshot, reservation);
-        if (['SUCCEEDED', 'FAILED', 'CANCELLED'].includes(terminalSnapshot.status)) break;
-        await waitForNextPoll(signal);
-        if (!sessionIsCurrent(options.authority, ownerSub, epoch, signal)) {
-          return interrupted(reservation, null);
-        }
-      }
+      terminal = await computeTerminal(reservation, options.api, signal,
+        () => sessionIsCurrent(options.authority, ownerSub, epoch, signal),
+        nextId, now, waitForNextPoll, needsSubmission);
     } catch (error) {
-      if (!(error instanceof ApiError) || error.status !== 404) {
-        if (reservationDeferred) await persistDeferredReservation(options.authority, ownerSub, epoch, reservedStudy, reservation, signal);
-        throw error;
-      }
-      return persistTerminal(
-        options.authority, ownerSub, epoch, reservedStudy, reservation,
-        terminalRecord(reservation, nextId(), 'INTERRUPTED', now(), null, {
-          code: 'SERVER_RESTART_OR_JOB_EXPIRED',
-          message: 'O job não está mais disponível no servidor.',
-        }),
-        signal,
-        reservationDeferred,
-      );
-    }
-
-    let envelope: DiagnosticEnvelope | null = null;
-    if (terminalSnapshot.status === 'SUCCEEDED') {
-      try {
-        envelope = await options.api.getDiagnosticResult(reservation.jobId!, signal);
-        assertEnvelopeIdentity(envelope, reservation);
-      } catch (error) {
-        const expired = error instanceof ApiError && error.status === 404;
-        if (!expired && !definitiveResultFailure(error)) {
-          if (reservationDeferred) await persistDeferredReservation(options.authority, ownerSub, epoch, reservedStudy, reservation, signal);
-          throw error;
-        }
-        return persistTerminal(
-          options.authority, ownerSub, epoch, reservedStudy, reservation,
-          terminalRecord(reservation, nextId(), expired ? 'INTERRUPTED' : 'FAILED', now(), null, {
-            code: expired ? 'SERVER_RESTART_OR_JOB_EXPIRED' : 'DIAGNOSTIC_RESULT_UNAVAILABLE',
-            message: expired ? 'O resultado do job não está mais disponível no servidor.' : 'O resultado não pôde ser recuperado. Inicie um novo diagnóstico.',
-          }),
-          signal,
-          reservationDeferred,
+      if (reservationDeferred) {
+        await persistDeferredReservation(
+          options.authority, ownerSub, epoch, reservedStudy, reservation, signal,
         );
       }
-      if (!sessionIsCurrent(options.authority, ownerSub, epoch, signal)) {
-        return interrupted(reservation, null);
-      }
+      throw error;
     }
-    const status = terminalSnapshot.status as 'SUCCEEDED' | 'FAILED' | 'CANCELLED';
-    const error = status === 'FAILED'
-      ? {
-          code: terminalSnapshot.error?.code ?? 'DIAGNOSTICO_INVALIDO',
-          message: terminalSnapshot.error?.message ?? 'O diagnóstico falhou.',
-        }
-      : status === 'CANCELLED'
-        ? { code: 'CANCELLED', message: 'O diagnóstico foi cancelado.' }
-        : null;
+    if (terminal === null) return interrupted(reservation, null);
     return persistTerminal(
       options.authority,
       ownerSub,
       epoch,
       reservedStudy,
       reservation,
-      terminalRecord(reservation, nextId(), status, now(), envelope, error),
+      terminal,
       signal,
       reservationDeferred,
     );
@@ -510,6 +530,12 @@ async function persistTerminal(
       return interrupted(reservation, terminal.error);
     }
   }
+  return terminalAttempt(reservation, terminal, current === true);
+}
+
+function terminalAttempt(
+  reservation: DiagnosticExecutionRecord, terminal: DiagnosticExecutionRecord, current: boolean,
+): DiagnosticExecutionAttempt {
   return {
     attemptId: reservation.attemptId,
     jobId: reservation.jobId,
@@ -518,7 +544,7 @@ async function persistTerminal(
       ? null
       : structuredClone(terminal.envelope) as DiagnosticEnvelope,
     error: terminal.error,
-    current: current === true,
+    current,
   };
 }
 

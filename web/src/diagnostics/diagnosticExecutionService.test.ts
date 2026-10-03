@@ -12,6 +12,7 @@ import { buildDiagnosticRequest } from './buildDiagnosticRequest';
 import * as diagnosticDomain from './domain';
 import {
   cancelStudyDiagnostic,
+  computeDiagnosticAttempt,
   executeStudyDiagnostic,
   retryStudyDiagnostic,
   type DiagnosticStudyAuthority,
@@ -165,6 +166,75 @@ async function reservedFixture() {
   await preparing;
   return { request, reserved: preparingAuthority.edits[0]! };
 }
+
+describe('computeDiagnosticAttempt', () => {
+  it.each(['SUCCEEDED', 'FAILED', 'CANCELLED', 'SUBMISSION_FAILED', 'JOB_404', 'RESULT_404'] as const)(
+    'returns the same reservation/terminal identity as individual execution for %s without changing the study',
+    async (outcome) => {
+      const { study, request } = await studyFixture();
+      const before = structuredClone(study);
+      const envelope = structuredClone(observedSource.envelope) as DiagnosticEnvelope;
+      envelope.job_id = request.idempotency_key;
+      envelope.request_fingerprint = request.input_fingerprint;
+      envelope.selected_execution.study_id = study.id;
+      envelope.selected_execution.scenario_id = SCENARIO_ID;
+      envelope.selected_execution.scenario_revision = study.scenarios[0]!.revision;
+      const missing = new ApiError({ status: 404, code: 'JOB_NAO_ENCONTRADO', message: 'ausente' });
+      const denied = new ApiError({ status: 403, code: 'ACESSO_NAO_PERMITIDO', message: 'Sem acesso.' });
+      const api = {
+        submitDiagnostic: async () => {
+          if (outcome === 'SUBMISSION_FAILED') throw denied;
+          return snapshot('QUEUED', request);
+        },
+        getDiagnosticJob: async () => {
+          if (outcome === 'JOB_404') throw missing;
+          return snapshot(outcome === 'FAILED' || outcome === 'CANCELLED' ? outcome : 'SUCCEEDED', request);
+        },
+        getDiagnosticResult: async () => {
+          if (outcome === 'RESULT_404') throw missing;
+          return envelope;
+        },
+      };
+      const options = { scenarioId: SCENARIO_ID, buildRequest: async () => request, api, now: () => NOW };
+      const computed = await computeDiagnosticAttempt({ ...options, study, signal: new AbortController().signal,
+        nextId: idFactory(ATTEMPT_ID, RESERVATION_ID, TERMINAL_ID) });
+      expect(study).toEqual(before);
+      expect(computed.reservation).toMatchObject({ id: RESERVATION_ID, attemptId: ATTEMPT_ID,
+        scenarioId: SCENARIO_ID, jobId: JOB_ID, status: 'QUEUED', requestSnapshot: request });
+      expect(computed.terminal).toMatchObject({ id: TERMINAL_ID, attemptId: ATTEMPT_ID,
+        scenarioId: SCENARIO_ID, jobId: JOB_ID,
+        status: outcome.endsWith('404') ? 'INTERRUPTED' : outcome === 'SUBMISSION_FAILED' ? 'FAILED' : outcome });
+      const authority = new AuthorityDouble(study);
+      const individual = await executeStudyDiagnostic({ ...options, authority, persistence: 'TERMINAL_ONLY',
+        nextId: idFactory(ATTEMPT_ID, RESERVATION_ID, TERMINAL_ID) });
+      expect(computed.attempt).toEqual(individual);
+      expect([computed.reservation, computed.terminal]).toEqual(authority.snapshot.document!.executions);
+    },
+  );
+
+  it('rejects a mismatched job before polling or persistence', async () => {
+    const { study, request } = await studyFixture();
+    const getDiagnosticJob = vi.fn();
+    await expect(computeDiagnosticAttempt({ study, scenarioId: SCENARIO_ID,
+      signal: new AbortController().signal, buildRequest: async () => request,
+      api: { submitDiagnostic: async () => ({ ...snapshot('QUEUED', request), job_id: 'other' }),
+        getDiagnosticJob, getDiagnosticResult: vi.fn() },
+    })).rejects.toThrow('Job diagnóstico diverge');
+    expect(getDiagnosticJob).not.toHaveBeenCalled();
+    expect(study.executions).toHaveLength(0);
+  });
+
+  it('aborts before submitting when navigation occurs while building the request', async () => {
+    const { study, request } = await studyFixture();
+    const abort = new AbortController();
+    const submitDiagnostic = vi.fn();
+    await expect(computeDiagnosticAttempt({ study, scenarioId: SCENARIO_ID, signal: abort.signal,
+      buildRequest: async () => { abort.abort(); return request; },
+      api: { submitDiagnostic, getDiagnosticJob: vi.fn(), getDiagnosticResult: vi.fn() },
+    })).rejects.toMatchObject({ name: 'AbortError' });
+    expect(submitDiagnostic).not.toHaveBeenCalled();
+  });
+});
 
 describe('executeStudyDiagnostic', () => {
   it.each([

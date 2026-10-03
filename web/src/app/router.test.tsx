@@ -28,6 +28,7 @@ import type {
   ConfirmObservedCaseMutation,
 } from '../storage/applicationRepository';
 import { createStudy } from '../study/domain';
+import { summarizeStudy } from '../storage/applicationRepository';
 import { makeObservedCase, makeScenarioDraft } from '../study/fixtures';
 import type { StudyDocument } from '../study/model';
 import { parseCanonicalXlsx } from '../importer/workerClient';
@@ -71,6 +72,7 @@ function RouteSwitch({ to }: Readonly<{ to: string }>) {
 }
 
 class RepositoryDouble implements ApplicationRepository {
+  async appendDiagnosticAttempt(): Promise<never> { throw new Error('Append diagnóstico fora do escopo deste double.'); }
   async getDemoInstallationStatus(): Promise<'REMOVED'> { return 'REMOVED'; }
   async listChatConversations(): Promise<never[]> { return []; }
   async getChatConversation(): Promise<null> { return null; }
@@ -103,6 +105,10 @@ class RepositoryDouble implements ApplicationRepository {
     return input.document;
   }
   async listStudies() { return this.studies; }
+  async listStudySummaries(options?: { includeDeleted?: boolean }) {
+    return this.studies.filter((study) => options?.includeDeleted === true || study.deletedAt === null)
+      .map((study) => summarizeStudy(study, study.executions.length));
+  }
   async getStudy(id: string) { return this.studies.find((item) => item.id === id) ?? null; }
   async saveStudy(input: CASMutation<StudyDocument>) {
     const index = this.studies.findIndex((item) => item.id === input.document.id);

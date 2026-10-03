@@ -10,6 +10,7 @@ import { replayStateAt } from './replay/state';
 import { buildCommunicationDocument } from './communication/buildCommunicationDocument';
 import type { CommunicationDocumentV1 } from './communication/domain';
 import { compareMvpDiagnostics } from './hypotheses/comparison';
+import { makePortfolioStudy } from './performance/portfolioPerformanceFixtures';
 
 const E2E_OWNER_SUB = '00000000-0000-4000-8000-000000000021';
 const STAGE4_OBSERVED_ID = '00000000-0000-4000-8000-000000000901';
@@ -66,6 +67,7 @@ export type MotorE2EBridge = Readonly<{
   >;
   seedStage4(fixture: Stage4Fixture): Promise<void>;
   seedPortfolioShowcase(): Promise<Readonly<{ companyIds: readonly string[]; companyNames: readonly string[] }>>;
+  seedPortfolioPerformance(): Promise<Readonly<{ studyId: string; studyCount: number; scenarioCount: number; executionCount: number }>>;
   seedStage5Observed(): Promise<Readonly<{ studyId: string; scenarioId: string }>>;
   measureReplayState(document: ReplayDocument, day: number, iterations: number): Readonly<{ p50Ms: number; maxMs: number }>;
   stage4Snapshot(studyId: string): Promise<Stage4Snapshot>;
@@ -331,6 +333,17 @@ export function installE2EBridge(): void {
           companyIds: PORTFOLIO_SHOWCASE.map((fixture) => `portfolio-showcase-v1-company-${fixture.key}`),
           companyNames: PORTFOLIO_SHOWCASE.map((fixture) => fixture.name),
         };
+      } finally { repository.close(); }
+    },
+    async seedPortfolioPerformance() {
+      const repository = new IndexedDbApplicationRepository({ projectRef: 'local', ownerSub: E2E_OWNER_SUB });
+      try {
+        const study = await makePortfolioStudy(8, { currentResultCount: 255, ownerSub: E2E_OWNER_SUB });
+        if (await repository.getStudy(study.id) !== null) await repository.purgeStudy(study.id);
+        await repository.saveStudy({ expectedRevision: 0, operationId: crypto.randomUUID(), document: study });
+        const summaries = await repository.listStudySummaries();
+        return { studyId: study.id, studyCount: summaries.length,
+          scenarioCount: study.scenarios.length, executionCount: study.executions.length };
       } finally { repository.close(); }
     },
     async seedStage4(fixture: Stage4Fixture) {

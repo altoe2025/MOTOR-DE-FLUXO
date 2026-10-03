@@ -46,6 +46,26 @@ commit, merge e deploy após validação. A integração preserva o shell/tema, 
 proteções de concorrência da `main`; CI e publicação devem ser confirmados no PR
 e no registro de deploy, não inferidos do aceite visual.
 
+**Gate de desempenho local de 255 resultados (2026-10-02):**
+`web/e2e/portfolio-performance.spec.ts` semeia um estudo válido via IndexedDB e
+emite `web/test-results/portfolio-performance.json`; o verificador é
+`tests/web_api/measure_portfolio_performance.py --assert-budget`. No Windows
+10.0.26200, Core i7-1185G7, Node 24.19.0 e Chromium 153.0.8010.12,
+20 transições SPA quentes deram p95 38,8 ms em Estudos (link real do menu),
+33,6 ms no hub compacto (volta pelo histórico) e 93,2 ms em objetivo/filtro.
+O hub de combinações tem zero linhas e zero controles de expansão; a recomendação
+abre diretamente. A primeira abertura fria levou 5.665,8 ms ao resultado e
+5.725,4 ms após duas RAFs; a validação e a projeção agora cedem ao navegador e a
+maior tarefa local foi 142 ms, sem long task >200 ms. As 20 reaberturas quentes
+pelo histórico, sem reload, deram p95 138,6/271,9 ms (resultado/duas RAFs),
+também sem long task >200 ms. O feedback persistente de criação apareceu e foi
+confirmado após duas RAFs em 26,1 ms, dentro do limite de 100 ms. Zero POSTs
+incidentais; fixture Docker, build, testes e o verificador independente passaram.
+O gate estrito está **verde**. A carga fria ainda é visível, mas não congela a UI.
+O relatório completo e os limites de cobertura estão em
+`.superpowers/sdd/2026-10-02-desempenho-combinacoes/task-8-report.md`.
+Essa medição não executou 255 jobs remotos nem reavaliou o tempo do lote de 63.
+
 ```
 main
  └─ gabriel/metrica-tempo        PR #21   colunas de tempo no CSV

@@ -1,4 +1,4 @@
-import type { ApplicationRepository } from '../storage/applicationRepository';
+import type { ApplicationRepository, StudySummary } from '../storage/applicationRepository';
 import { installDemoStudy, type DemoPackageLoader } from '../demo/installDemoStudy';
 import { RevisionConflictError } from '../storage/errors';
 import type { CompanyRecord, ObservedCase } from '../cases/domain';
@@ -6,7 +6,8 @@ import type { ImportReview } from '../importer/eligibility';
 import { confirmImport } from '../importer/publisher';
 import type { OperationalProfileVersion } from '../profiles/domain';
 import { attachOperationalProfileEvidence } from './domain';
-import type { StudyDocument, StudyDocumentV3 } from './model';
+import type { DiagnosticExecutionRecord, StudyDocument, StudyDocumentV3 } from './model';
+import { applyCertifiedDiagnosticAppend, isCertifiedStudy } from './certifiedStudy';
 
 export type StudyControllerStatus =
   | 'IDLE'
@@ -126,6 +127,7 @@ export class StudyController {
   readonly #listeners = new Set<() => void>();
   readonly #abortControllers = new Set<AbortController>();
   readonly #pending: PendingSave[] = [];
+  readonly #requiredStudyRevisions = new Map<string, number>();
 
   #snapshot: StudyControllerSnapshot = {
     status: 'IDLE',
@@ -182,6 +184,7 @@ export class StudyController {
     this.#cancelAutosave();
     this.#pending.splice(0);
     this.#drainPromise = null;
+    this.#requiredStudyRevisions.clear();
     this.#selectionEpoch += 1;
     this.#abortAll();
     this.#closeSessionResources();
@@ -257,6 +260,7 @@ export class StudyController {
       } else if (installed !== null) {
         this.#publish({ ...this.#snapshot, error: null });
       }
+      if (installed !== null) this.#acceptStoredRevision(installed);
       return installed;
     } catch (error) {
       if (!this.#isCurrent(repository, epoch, selectionEpoch)
@@ -269,6 +273,14 @@ export class StudyController {
   async loadStudy(id: string): Promise<StudyDocument | null> {
     this.#assertOpen();
     const { repository, epoch } = this.#session();
+    const current = this.#snapshot.document;
+    if (current?.id === id && this.#snapshot.status === 'SAVED'
+      && this.#pending.length === 0 && this.#isReusableStudy(current)) {
+      // A same-study navigation is still a new selection intent. Invalidate any
+      // older in-flight load so its late result cannot replace this selection.
+      this.#selectionEpoch += 1;
+      return current;
+    }
     this.#pending.splice(0);
     this.#cancelAutosave();
     this.#drainPromise = null;
@@ -281,6 +293,7 @@ export class StudyController {
       throw error;
     }
     if (!this.#isCurrent(repository, epoch, selectionEpoch)) return null;
+    if (!this.#acceptReadResult(id, document)) return null;
     this.#persistedRevision = document?.revision ?? 0;
     this.#publish({
       ...this.#snapshot,
@@ -303,6 +316,37 @@ export class StudyController {
   }
 
   /** Read-only queries deliberately stay behind the session-bound controller. */
+  async readStudy(id: string): Promise<StudyDocument | null> {
+    this.#assertOpen();
+    const { repository, epoch } = this.#session();
+    const current = this.#snapshot.document;
+    if (current?.id === id && this.#snapshot.status === 'SAVED'
+      && this.#pending.length === 0 && this.#isReusableStudy(current)) {
+      return current;
+    }
+    try {
+      const document = await repository.getStudy(id);
+      if (!this.#isCurrent(repository, epoch)) return null;
+      if (!this.#acceptReadResult(id, document)) return null;
+      return document;
+    } catch (error) {
+      if (!this.#isCurrent(repository, epoch)) return null;
+      throw error;
+    }
+  }
+
+  async listStudySummaries(includeDeleted = false): Promise<StudySummary[]> {
+    this.#assertOpen();
+    const { repository, epoch } = this.#session();
+    try {
+      const summaries = await repository.listStudySummaries({ includeDeleted });
+      return this.#isCurrent(repository, epoch) ? summaries : [];
+    } catch (error) {
+      if (!this.#isCurrent(repository, epoch)) return [];
+      throw error;
+    }
+  }
+
   async listStudies(includeDeleted = false): Promise<StudyDocument[]> {
     this.#assertOpen();
     const { repository, epoch } = this.#session();
@@ -392,6 +436,7 @@ export class StudyController {
         throw new StudyControllerSessionError();
       }
       this.#persistedRevision = saved.revision;
+      this.#acceptStoredRevision(saved);
       this.#channel?.postMessage({ studyId: saved.id, revision: saved.revision, operationId });
       this.#publish({ ...this.#snapshot, status: 'SAVED', document: saved, error: null });
       return saved;
@@ -402,6 +447,49 @@ export class StudyController {
           status: error instanceof RevisionConflictError ? 'CONFLICT' : 'STORAGE_FAILURE',
           error,
         });
+      }
+      throw error;
+    }
+  }
+
+  async appendDiagnosticAttempt(
+    reservation: DiagnosticExecutionRecord,
+    terminal: DiagnosticExecutionRecord,
+  ): Promise<StudyDocument> {
+    this.#assertOpen();
+    const { repository, epoch } = this.#session();
+    const current = this.#snapshot.document;
+    if (current === null || this.#snapshot.status !== 'SAVED' || this.#pending.length > 0
+      || !isCertifiedStudy(current, this.#snapshot.ownerSub!)) {
+      throw new Error('Carregue um estudo salvo e certificado antes de anexar diagnóstico.');
+    }
+    const selectionEpoch = this.#selectionEpoch;
+    const conflictVersion = this.#conflictVersion;
+    const operationId = this.#operationId();
+    this.#publish({ ...this.#snapshot, status: 'SAVING', error: null });
+    try {
+      const delta = await repository.appendDiagnosticAttempt({ studyId: current.id,
+        expectedRevision: current.revision, operationId, reservation, terminal });
+      if (!this.#isCurrent(repository, epoch, selectionEpoch)) throw new StudyControllerSessionError();
+      const saved = applyCertifiedDiagnosticAppend(current, delta);
+      this.#persistedRevision = saved.revision;
+      this.#acceptStoredRevision(saved);
+      const conflict = this.#conflictVersion !== conflictVersion || this.snapshot.status === 'CONFLICT';
+      const edited = this.#snapshot.document !== current;
+      this.#publish({ ...this.#snapshot, status: conflict || edited ? 'CONFLICT' : 'SAVED',
+        document: edited ? this.#snapshot.document : saved, error: null });
+      this.#channel?.postMessage({ studyId: saved.id, revision: saved.revision, operationId });
+      // The delta is durable, but a concurrent broadcast invalidated the base.
+      // Let the caller reload and recognize this attempt before continuing its batch.
+      // Local edits must remain pending, not be discarded by automatic recovery.
+      if (conflict && !edited && this.#pending.length === 0) {
+        throw new RevisionConflictError(current.revision, saved.revision);
+      }
+      return saved;
+    } catch (error) {
+      if (this.#isCurrent(repository, epoch, selectionEpoch)) {
+        this.#publish({ ...this.#snapshot,
+          status: error instanceof RevisionConflictError ? 'CONFLICT' : 'STORAGE_FAILURE', error });
       }
       throw error;
     }
@@ -418,8 +506,15 @@ export class StudyController {
   async restoreStudy(id: string, expectedRevision: number): Promise<StudyDocument> {
     this.#assertOpen();
     const { repository, epoch } = this.#session();
-    const restored = await repository.restoreStudy(id, expectedRevision, this.#operationId());
+    const operationId = this.#operationId();
+    const restored = await repository.restoreStudy(id, expectedRevision, operationId);
     if (!this.#isCurrent(repository, epoch)) throw new StudyControllerSessionError();
+    this.#acceptStoredRevision(restored);
+    this.#channel?.postMessage({ studyId: restored.id, revision: restored.revision, operationId });
+    if (this.#snapshot.status === 'SAVED' && this.#snapshot.document?.id === restored.id) {
+      this.#persistedRevision = restored.revision;
+      this.#publish({ ...this.#snapshot, document: restored, error: null });
+    }
     return restored;
   }
 
@@ -428,6 +523,15 @@ export class StudyController {
     const { repository, epoch } = this.#session();
     await repository.purgeStudy(id);
     if (!this.#isCurrent(repository, epoch)) throw new StudyControllerSessionError();
+    this.#requiredStudyRevisions.delete(id);
+    if (this.#snapshot.document?.id === id) {
+      this.#pending.splice(0);
+      this.#cancelAutosave();
+      this.#drainPromise = null;
+      this.#selectionEpoch += 1;
+      this.#persistedRevision = 0;
+      this.#publish({ ...this.#snapshot, status: 'IDLE', document: null, error: null });
+    }
   }
 
   edit(document: StudyDocument): void {
@@ -467,6 +571,7 @@ export class StudyController {
     try {
       const saved = await repository.saveStudy({ document, expectedRevision, operationId });
       if (!this.#isCurrent(repository, epoch)) return null;
+      this.#acceptStoredRevision(saved);
       this.#channel?.postMessage({ studyId: saved.id, revision: saved.revision, operationId });
       const current = this.#snapshot.document;
       if (current?.id === saved.id && this.#snapshot.status === 'SAVED') {
@@ -507,6 +612,7 @@ export class StudyController {
     this.#cancelAutosave();
     this.#pending.splice(0);
     this.#drainPromise = null;
+    this.#requiredStudyRevisions.clear();
     this.#selectionEpoch += 1;
     this.#abortAll();
     this.#closeSessionResources();
@@ -577,6 +683,7 @@ export class StudyController {
           || this.#snapshot.status === 'CONFLICT';
         this.#pending.shift();
         this.#persistedRevision = saved.revision;
+        this.#acceptStoredRevision(saved);
         this.#channel?.postMessage({ studyId: saved.id, revision: saved.revision, operationId });
         const current = this.#snapshot.document;
         this.#publish({
@@ -603,6 +710,11 @@ export class StudyController {
 
   async #acceptBroadcast(message: StudyBroadcastMessage): Promise<void> {
     if (this.#closed) return;
+    const requiredRevision = Math.max(
+      this.#requiredStudyRevisions.get(message.studyId) ?? 0,
+      message.revision,
+    );
+    this.#requiredStudyRevisions.set(message.studyId, requiredRevision);
     const current = this.#snapshot.document;
     if (current === null || current.id !== message.studyId || message.revision <= this.#persistedRevision) {
       return;
@@ -617,7 +729,8 @@ export class StudyController {
     const expectedDocument = current;
     try {
       const stored = await repository.getStudy(message.studyId);
-      if (!this.#isCurrent(repository, epoch) || stored === null || stored.revision < message.revision) return;
+      if (!this.#isCurrent(repository, epoch) || stored === null
+        || stored.revision < (this.#requiredStudyRevisions.get(message.studyId) ?? message.revision)) return;
       if (this.#snapshot.status !== 'SAVED' || this.#snapshot.document !== expectedDocument) {
         if (this.#snapshot.document?.id === message.studyId) {
           this.#conflictVersion += 1;
@@ -626,6 +739,7 @@ export class StudyController {
         return;
       }
       this.#persistedRevision = stored.revision;
+      this.#acceptStoredRevision(stored);
       this.#publish({ ...this.#snapshot, document: stored, error: null });
     } catch (error) {
       if (!this.#isCurrent(repository, epoch)) return;
@@ -638,6 +752,26 @@ export class StudyController {
       && this.#repository === repository
       && this.#snapshot.sessionEpoch === epoch
       && (selectionEpoch === undefined || this.#selectionEpoch === selectionEpoch);
+  }
+
+  #isReusableStudy(document: StudyDocument): boolean {
+    const ownerSub = this.#snapshot.ownerSub;
+    return ownerSub !== null && isCertifiedStudy(document, ownerSub)
+      && document.revision >= (this.#requiredStudyRevisions.get(document.id) ?? 0);
+  }
+
+  #acceptStoredRevision(document: StudyDocument): void {
+    if (document.revision >= (this.#requiredStudyRevisions.get(document.id) ?? 0)) {
+      this.#requiredStudyRevisions.delete(document.id);
+    }
+  }
+
+  #acceptReadResult(id: string, document: StudyDocument | null): boolean {
+    const requiredRevision = this.#requiredStudyRevisions.get(id) ?? 0;
+    if (document === null) return requiredRevision === 0;
+    if (document.revision < requiredRevision) return false;
+    this.#requiredStudyRevisions.delete(id);
+    return true;
   }
 
   #abortAll(): void {

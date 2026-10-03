@@ -1,5 +1,6 @@
 import type { CompanyRecord, ObservedCase } from '../cases/domain';
 import { validateObservedCase } from '../cases/validation';
+import { assertDiagnosticAttemptForStudy } from '../diagnostics/domain';
 import { materializeDemoPackage, snapshotDemoPackage } from '../demo/materializeDemoPackage';
 import type { OperationalProfileVersion } from '../profiles/domain';
 import { validateOperationalProfile } from '../profiles/validation';
@@ -8,11 +9,15 @@ import type { ExecutionRecordV3, StudyDocument } from '../study/model';
 import { parseStudyV3, validateStudyDocument } from '../study/validation';
 import type {
   ApplicationRepository,
+  AppendDiagnosticAttemptMutation,
+  DiagnosticAppendDelta,
   AppendProfileVersionMutation,
   CASMutation,
   ConfirmObservedCaseMutation,
   DemoInstallMutation,
+  StudySummary,
 } from './applicationRepository';
+import { summarizeStudy } from './applicationRepository';
 import {
   InvalidDocumentError,
   DemoInstallSkippedError,
@@ -27,6 +32,7 @@ import {
 import {
   migrateDatabase,
   type MigrationOptions,
+  validateDetachedStoredStudy,
   validateStoredStudy,
 } from './migrations';
 import { rejectBinary } from './rejectBinary';
@@ -34,7 +40,7 @@ import { validateImportRecords } from './importRecords';
 import { IndexedDbChatRepository } from '../chat/repository';
 import type { ChatConversation } from '../chat/domain';
 
-const DATABASE_VERSION = 3;
+const DATABASE_VERSION = 5;
 const DATA_RESET_KEY = 'data-reset:2026-09-29-v1';
 
 const STORE_NAMES = [
@@ -43,6 +49,7 @@ const STORE_NAMES = [
   'import_batches',
   'import_events',
   'studies',
+  'study_summaries',
   'executions',
   'operations',
   'profile_versions',
@@ -130,7 +137,18 @@ type PurgedOperationRow = Readonly<{
   entity_kind: 'purged';
 }>;
 
-type OperationRow = ObservedCaseOperationRow | ProfileVersionOperationRow | StudyOperationRow | PurgedOperationRow;
+type DiagnosticOperationRow = Readonly<{
+  operation_id: string;
+  owner_sub: string;
+  entity_kind: 'diagnostic_append';
+  entity_id: string;
+  intent: string;
+  result_revision: number;
+  result_updated_at: string;
+  result_execution_ids: readonly [string, string];
+}>;
+
+type OperationRow = ObservedCaseOperationRow | ProfileVersionOperationRow | StudyOperationRow | DiagnosticOperationRow | PurgedOperationRow;
 
 type DemoMarker = Readonly<{
   status: 'INSTALLED' | 'REMOVED';
@@ -177,8 +195,56 @@ type ExecutionRow = Readonly<{
   execution_id: string;
   owner_sub: string;
   sequence: number;
+  attempt_id?: string;
   document: ExecutionRecordV3;
 }>;
+
+type StudySummaryRow = Readonly<{
+  study_id: string;
+  owner_sub: string;
+  deleted: 0 | 1;
+  document: StudySummary;
+}>;
+
+function summaryRow(document: Omit<StudyDocument, 'executions'>, executionCount: number): StudySummaryRow {
+  return { study_id: document.id, owner_sub: document.ownerSub,
+    deleted: document.deletedAt === null ? 0 : 1, document: summarizeStudy(document, executionCount) };
+}
+
+function validateSummary(row: StudySummaryRow, ownerSub: string): StudySummary {
+  const value = row.document;
+  if (row.owner_sub !== ownerSub || (isObject(value) && value.ownerSub !== ownerSub)) {
+    throw new OwnerMismatchError();
+  }
+  const fields = ['id', 'ownerSub', 'name', 'studyType', 'revision', 'createdAt',
+    'updatedAt', 'deletedAt', 'scenarioCount', 'hasExecutions', 'executionCount', 'baseSourceKind'];
+  const timestamp = (date: unknown) => typeof date === 'string' && Number.isFinite(Date.parse(date));
+  if (!isObject(value) || Object.keys(value).some((key) => !fields.includes(key))
+    || typeof value.id !== 'string' || value.id.length === 0 || value.id !== row.study_id
+    || typeof value.name !== 'string' || value.name.trim().length === 0
+    || (value.studyType !== undefined && value.studyType !== 'PORTFOLIO_COMBINATIONS')
+    || !Number.isSafeInteger(value.revision) || value.revision < 1
+    || !timestamp(value.createdAt) || !timestamp(value.updatedAt)
+    || (value.deletedAt !== null && !timestamp(value.deletedAt))
+    || row.deleted !== (value.deletedAt === null ? 0 : 1)
+    || !Number.isSafeInteger(value.scenarioCount) || value.scenarioCount < 1
+    || typeof value.hasExecutions !== 'boolean'
+    || !Number.isSafeInteger(value.executionCount) || value.executionCount < 0
+    || value.hasExecutions !== (value.executionCount > 0)
+    || !['OBSERVED_CASE', 'SYNTHETIC', 'AUTHORED_MULTI_COMPANY', 'AUTHORED'].includes(value.baseSourceKind)) {
+    throw new DocumentCorruptError('Resumo de estudo inválido.');
+  }
+  return value;
+}
+
+function summaryFromStoredStudy(row: StudyRow, executionCount: number): StudySummaryRow {
+  if (!isObject(row.document) || !Array.isArray(row.document.scenarios)) {
+    throw new DocumentCorruptError('Metadados de estudo inválidos.');
+  }
+  const result = summaryRow(row.document, executionCount);
+  validateSummary({ ...result, study_id: row.study_id, owner_sub: row.owner_sub, deleted: row.deleted }, row.owner_sub);
+  return result;
+}
 
 export function groupExecutionsByStudyId<T extends { readonly study_id: string }>(
   executions: readonly T[],
@@ -322,6 +388,7 @@ function createBaseStores(database: IDBDatabase): void {
   });
   executions.createIndex('by_owner', 'owner_sub');
   executions.createIndex('by_owner_study', ['owner_sub', 'study_id']);
+  executions.createIndex('by_owner_study_attempt', ['owner_sub', 'study_id', 'attempt_id']);
 
   const operations = database.createObjectStore('operations', { keyPath: 'operation_id' });
   operations.createIndex('by_owner', 'owner_sub');
@@ -349,6 +416,70 @@ function createChatStores(database: IDBDatabase): void {
   const operations = database.createObjectStore('chat_operations', { keyPath: 'operation_id' });
   operations.createIndex('by_owner', 'owner_sub');
   operations.createIndex('by_owner_conversation', ['owner_sub', 'conversation_id']);
+}
+
+/** IDB request values are already detached structured clones owned by this call. */
+function assembleDetachedStudy(row: StudyRow, executions: readonly ExecutionRow[]): StudyDocument {
+  return {
+    ...row.document,
+    executions: [...executions]
+      .sort((left, right) => left.sequence - right.sequence)
+      .map((execution) => execution.document),
+  };
+}
+
+function cursorResults<T>(request: IDBRequest<IDBCursorWithValue | null>): Promise<T[]> {
+  return new Promise((resolve, reject) => {
+    const values: T[] = [];
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      const cursor = request.result;
+      if (cursor === null) {
+        resolve(values);
+        return;
+      }
+      values.push(cursor.value as T);
+      cursor.continue();
+    };
+  });
+}
+
+function createSummaryStore(database: IDBDatabase): void {
+  const summaries = database.createObjectStore('study_summaries', { keyPath: 'study_id' });
+  summaries.createIndex('by_owner', 'owner_sub');
+  summaries.createIndex('by_owner_deleted', ['owner_sub', 'deleted']);
+}
+
+/** Upgrade reads source metadata and execution keys only; envelopes stay opaque. */
+function backfillSummaries(transaction: IDBTransaction): void {
+  const request = transaction.objectStore('studies').openCursor();
+  request.onsuccess = () => {
+    const cursor = request.result;
+    if (cursor === null) return;
+    const row = cursor.value as StudyRow;
+    const count = transaction.objectStore('executions').index('by_owner_study')
+      .count([row.owner_sub, row.study_id]);
+    count.onsuccess = () => {
+      try {
+        transaction.objectStore('study_summaries').put(summaryFromStoredStudy(row, count.result));
+        cursor.continue();
+      } catch (error) { abortUpgrade(transaction, error); }
+    };
+  };
+}
+
+/** Upgrade old rows once, without validating or canonicalizing historical envelopes. */
+function backfillAttemptIndex(transaction: IDBTransaction): void {
+  const executions = transaction.objectStore('executions');
+  executions.createIndex('by_owner_study_attempt', ['owner_sub', 'study_id', 'attempt_id']);
+  const request = executions.openCursor();
+  request.onsuccess = () => {
+    const cursor = request.result;
+    if (cursor === null) return;
+    const row = cursor.value as ExecutionRow;
+    if (typeof row.document?.attemptId === 'string') cursor.update({ ...row, attempt_id: row.document.attemptId });
+    cursor.continue();
+  };
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -415,20 +546,24 @@ function upgradeSchema(
     createBaseStores(database);
     createProfileStore(database);
     createChatStores(database);
+    createSummaryStore(database);
     transaction.objectStore('meta').add({ key: 'schema_version', value: DATABASE_VERSION });
     return;
   }
-  if (oldVersion === 2) {
+  if (oldVersion === 2 || oldVersion === 3 || oldVersion === 4) {
     const marker = transaction.objectStore('meta').get('schema_version');
     marker.onsuccess = () => {
       try {
-        if (marker.result?.value !== 2) {
+        if (marker.result?.value !== oldVersion) {
           if (typeof marker.result?.value === 'number' && marker.result.value > DATABASE_VERSION) {
             throw new SchemaUnsupportedError();
           }
           throw new DocumentCorruptError('Marcador físico e lógico são incompatíveis.');
         }
-        createChatStores(database);
+        if (oldVersion === 2) createChatStores(database);
+        if (oldVersion < 4) createSummaryStore(database);
+        backfillAttemptIndex(transaction);
+        backfillSummaries(transaction);
         transaction.objectStore('meta').put({ key: 'schema_version', value: DATABASE_VERSION });
       } catch (error) {
         abortUpgrade(transaction, error);
@@ -443,11 +578,13 @@ function upgradeSchema(
 
   createProfileStore(database);
   createChatStores(database);
+  createSummaryStore(database);
   const fail = (error: unknown) => abortUpgrade(transaction, error);
   const studies = transaction.objectStore('studies');
   const executions = transaction.objectStore('executions');
   const operations = transaction.objectStore('operations');
   const studyRequest = studies.getAll();
+  executions.createIndex('by_owner_study_attempt', ['owner_sub', 'study_id', 'attempt_id']);
   const executionRequest = executions.getAll();
   const operationRequest = operations.getAll();
   const metaRequest = transaction.objectStore('meta').get('schema_version');
@@ -482,8 +619,14 @@ function upgradeSchema(
           .map((execution) => execution.document);
         parseStudyV3({ ...document, executions: matchingExecutions });
         studies.put({ ...row, document });
+        transaction.objectStore('study_summaries').put(summaryFromStoredStudy(
+          { ...row, document } as StudyRow, matchingExecutions.length,
+        ));
       }
-      for (const row of migratedExecutions) executions.put(row);
+      for (const row of migratedExecutions) executions.put({ ...row,
+        ...(isObject(row.document) && typeof row.document.attemptId === 'string'
+          ? { attempt_id: row.document.attemptId } : {}),
+      });
       for (const row of operationRows) {
         if (row.entity_kind !== 'study' && row.entity_kind !== 'restore_study') continue;
         if (!Array.isArray(row.result_execution_ids)
@@ -713,7 +856,7 @@ export class IndexedDbApplicationRepository implements ApplicationRepository {
       if (this.#closed) throw new StorageClosedError();
       try {
         const result = await transactionResult(database,
-          ['companies', 'observed_cases', 'profile_versions', 'studies', 'executions', 'operations', 'meta'],
+          ['companies', 'observed_cases', 'profile_versions', 'studies', 'study_summaries', 'executions', 'operations', 'meta'],
           'readwrite', async (transaction) => {
             const operations = transaction.objectStore('operations');
             const studies = transaction.objectStore('studies');
@@ -767,7 +910,7 @@ export class IndexedDbApplicationRepository implements ApplicationRepository {
               studies.add(studyRow(document));
               for (const [sequence, execution] of document.executions.entries()) executions.add({
                 study_id: document.id, execution_id: execution.id, owner_sub: this.#ownerSub,
-                sequence, document: execution,
+                sequence, document: execution, ...(execution.attemptId === undefined ? {} : { attempt_id: execution.attemptId }),
               } satisfies ExecutionRow);
               meta.put({ key: `demo:replays:${document.id}`, value: materialized.replays });
               meta.put({ key: DEMO_MARKER_KEY, value: {
@@ -775,6 +918,7 @@ export class IndexedDbApplicationRepository implements ApplicationRepository {
                 packageVersion: input.package.packageVersion, packageDigest, installMode: input.mode,
               } satisfies DemoMarker });
             }
+            transaction.objectStore('study_summaries').put(summaryRow(document, document.executions.length));
             operations.add({ operation_id: input.operationId, owner_sub: this.#ownerSub,
               entity_kind: 'demo_install', entity_id: document.id, intent,
               result_document: studyRow(document).document,
@@ -864,7 +1008,7 @@ export class IndexedDbApplicationRepository implements ApplicationRepository {
 
     return transactionResult(database, [
       'companies', 'observed_cases', 'import_batches', 'import_events', 'profile_versions',
-      'studies', 'executions', 'operations', 'meta',
+      'studies', 'study_summaries', 'executions', 'operations', 'meta',
     ], 'readwrite', async (transaction) => {
       const meta = transaction.objectStore('meta');
       const marker = readDemoMarker(await requestResult(meta.get(DEMO_MARKER_KEY)), this.#ownerSub);
@@ -917,6 +1061,7 @@ export class IndexedDbApplicationRepository implements ApplicationRepository {
           entity_kind: 'purged' } satisfies PurgedOperationRow);
       }
       transaction.objectStore('studies').delete(marker.studyId);
+      transaction.objectStore('study_summaries').delete(marker.studyId);
       meta.put({ key: DEMO_MARKER_KEY, value: {
         ...marker, status: 'REMOVED', legacyCleanupCompleted: true,
       } satisfies DemoMarker });
@@ -1183,6 +1328,40 @@ export class IndexedDbApplicationRepository implements ApplicationRepository {
     return result;
   }
 
+  async listStudySummaries(options?: { includeDeleted?: boolean }): Promise<StudySummary[]> {
+    const database = await this.#database();
+    return transactionResult(database, ['studies', 'study_summaries', 'executions'], 'readwrite', async (transaction) => {
+      const studies = transaction.objectStore('studies');
+      const summaries = transaction.objectStore('study_summaries');
+      const [ids, rows] = await Promise.all([
+        requestResult(studies.index('by_owner').getAllKeys(this.#ownerSub)),
+        requestResult<StudySummaryRow[]>(summaries.index('by_owner').getAll(this.#ownerSub)),
+      ]);
+      const existing = new Set(rows.map((row) => row.study_id));
+      for (const id of ids) {
+        if (typeof id !== 'string') throw new DocumentCorruptError('Identidade de estudo inválida.');
+        if (existing.has(id)) continue;
+        const occupied = await requestResult<StudySummaryRow | undefined>(summaries.get(id));
+        if (occupied !== undefined) {
+          validateSummary(occupied, this.#ownerSub);
+          throw new DocumentCorruptError('Índice de resumo incompatível.');
+        }
+        const [row, count] = await Promise.all([
+          requestResult<StudyRow | undefined>(studies.get(id)),
+          requestResult(transaction.objectStore('executions').index('by_owner_study').count([this.#ownerSub, id])),
+        ]);
+        if (row === undefined) throw new DocumentCorruptError('Estudo ausente durante reparo de resumo.');
+        if (row.owner_sub !== this.#ownerSub) throw new OwnerMismatchError();
+        const summary = summaryFromStoredStudy(row, count);
+        summaries.put(summary);
+        rows.push(summary);
+      }
+      return rows.map((row) => validateSummary(row, this.#ownerSub))
+        .filter((summary) => options?.includeDeleted === true || summary.deletedAt === null)
+        .sort((left, right) => left.id.localeCompare(right.id));
+    });
+  }
+
   async listStudies(options?: { includeDeleted?: boolean }): Promise<StudyDocument[]> {
     const database = await this.#database();
     const transaction = database.transaction(['studies', 'executions'], 'readonly');
@@ -1211,11 +1390,11 @@ export class IndexedDbApplicationRepository implements ApplicationRepository {
     const transaction = database.transaction(['studies', 'executions'], 'readonly');
     const [row, executions] = await Promise.all([
       requestResult<StudyRow | undefined>(transaction.objectStore('studies').get(id)),
-      requestResult<ExecutionRow[]>(transaction.objectStore('executions')
-        .index('by_owner_study').getAll([this.#ownerSub, id])),
+      cursorResults<ExecutionRow>(transaction.objectStore('executions')
+        .index('by_owner_study').openCursor([this.#ownerSub, id])),
     ]);
     return row?.owner_sub === this.#ownerSub
-      ? validateStoredStudy(assembleStudy(row, executions), this.#ownerSub)
+      ? validateDetachedStoredStudy(assembleDetachedStudy(row, executions), this.#ownerSub)
       : null;
   }
 
@@ -1237,7 +1416,7 @@ export class IndexedDbApplicationRepository implements ApplicationRepository {
     const intent = canonical(input);
     const result = await transactionResult(
       database,
-      ['studies', 'executions', 'operations'],
+      ['studies', 'study_summaries', 'executions', 'operations'],
       'readwrite',
       async (transaction) => {
         const operationStore = transaction.objectStore('operations');
@@ -1312,6 +1491,7 @@ export class IndexedDbApplicationRepository implements ApplicationRepository {
               execution_id: execution.id,
               owner_sub: this.#ownerSub,
               sequence,
+              ...(execution.attemptId === undefined ? {} : { attempt_id: execution.attemptId }),
               document: structuredClone(execution),
             } satisfies ExecutionRow);
           } else if (isInterruptionTransition(existing.document, execution)) {
@@ -1324,6 +1504,7 @@ export class IndexedDbApplicationRepository implements ApplicationRepository {
 
         const storedStudy = studyRow(input.document);
         studies.put(storedStudy);
+        transaction.objectStore('study_summaries').put(summaryRow(input.document, input.document.executions.length));
         operationStore.add({
           operation_id: input.operationId,
           owner_sub: this.#ownerSub,
@@ -1339,6 +1520,84 @@ export class IndexedDbApplicationRepository implements ApplicationRepository {
     return validateStoredStudy(result, this.#ownerSub);
   }
 
+  async appendDiagnosticAttempt(inputValue: AppendDiagnosticAttemptMutation): Promise<DiagnosticAppendDelta> {
+    // Capture caller-owned data before hashing/awaiting so the intent and committed rows cannot diverge.
+    rejectBinary(inputValue);
+    const input = structuredClone(inputValue);
+    validateMutation(input.expectedRevision, input.operationId);
+    const [reservationHash, terminalHash] = await Promise.all([digest(input.reservation), digest(input.terminal)]);
+    const intent = canonical({ studyId: input.studyId, expectedRevision: input.expectedRevision,
+      reservationId: input.reservation.id, terminalId: input.terminal.id,
+      attemptId: input.reservation.attemptId, reservationHash, terminalHash });
+    const database = await this.#database();
+    return transactionResult(database, ['studies', 'study_summaries', 'executions', 'operations'], 'readwrite', async (transaction) => {
+      const operations = transaction.objectStore('operations');
+      const studies = transaction.objectStore('studies');
+      const executions = transaction.objectStore('executions');
+      const summaries = transaction.objectStore('study_summaries');
+      const [previous, current] = await Promise.all([
+        requestResult<OperationRow | undefined>(operations.get(input.operationId)),
+        requestResult<StudyRow | undefined>(studies.get(input.studyId)),
+      ]);
+      if (previous !== undefined && (previous.owner_sub !== this.#ownerSub
+        || previous.entity_kind !== 'diagnostic_append' || previous.entity_id !== input.studyId
+        || previous.intent !== intent)) throw new OperationConflictError();
+      if (current === undefined) throw new NotFoundError('Estudo não encontrado.');
+      if (current.owner_sub !== this.#ownerSub || current.document.ownerSub !== this.#ownerSub) {
+        throw new OwnerMismatchError();
+      }
+      if (previous?.entity_kind === 'diagnostic_append') {
+        const rows = await Promise.all(previous.result_execution_ids.map((id) =>
+          requestResult<ExecutionRow | undefined>(executions.get([input.studyId, id]))));
+        const [reservation, terminal] = rows;
+        if (reservation === undefined || terminal === undefined
+          || reservation.owner_sub !== this.#ownerSub || terminal.owner_sub !== this.#ownerSub
+          || !sameDocument(reservation.document, input.reservation)
+          || !sameDocument(terminal.document, input.terminal)) {
+          throw new OperationConflictError('Execuções da tentativa idempotente ausentes ou alteradas.');
+        }
+        return { studyId: input.studyId, revision: previous.result_revision,
+          updatedAt: previous.result_updated_at, executions: [input.reservation, input.terminal] };
+      }
+      if (current.document.revision !== input.expectedRevision) {
+        throw new RevisionConflictError(input.expectedRevision, current.document.revision);
+      }
+      try { assertDiagnosticAttemptForStudy(current.document, input.reservation, input.terminal); }
+      catch (error) { throw new InvalidDocumentError(error instanceof Error ? error.message : 'Tentativa inválida.'); }
+      const [reservationKey, terminalKey, attemptCount, storedSummary, executionCount] = await Promise.all([
+        requestResult(executions.getKey([input.studyId, input.reservation.id])),
+        requestResult(executions.getKey([input.studyId, input.terminal.id])),
+        requestResult(executions.index('by_owner_study_attempt').count([this.#ownerSub, input.studyId, input.reservation.attemptId])),
+        requestResult<StudySummaryRow | undefined>(summaries.get(input.studyId)),
+        requestResult(executions.index('by_owner_study').count([this.#ownerSub, input.studyId])),
+      ]);
+      if (reservationKey !== undefined || terminalKey !== undefined || attemptCount !== 0) {
+        throw new OperationConflictError('Execução ou tentativa diagnóstica já persistida.');
+      }
+      const summary = storedSummary === undefined
+        ? summaryFromStoredStudy(current, executionCount).document : validateSummary(storedSummary, this.#ownerSub);
+      if (summary.revision !== current.document.revision || summary.executionCount !== executionCount) {
+        throw new DocumentCorruptError('Resumo diverge do estudo persistido.');
+      }
+      const delta: DiagnosticAppendDelta = { studyId: input.studyId,
+        revision: current.document.revision + 1, updatedAt: input.terminal.finishedAt!,
+        executions: [input.reservation, input.terminal] };
+      for (const [offset, execution] of delta.executions.entries()) executions.add({
+        study_id: input.studyId, execution_id: execution.id, owner_sub: this.#ownerSub,
+        sequence: summary.executionCount + offset, attempt_id: execution.attemptId, document: execution,
+      } satisfies ExecutionRow);
+      const document = { ...current.document, revision: delta.revision, updatedAt: delta.updatedAt };
+      studies.put({ ...current, document } satisfies StudyRow);
+      summaries.put(summaryRow(document, executionCount + 2));
+      operations.add({ operation_id: input.operationId, owner_sub: this.#ownerSub,
+        entity_kind: 'diagnostic_append', entity_id: input.studyId, intent,
+        result_revision: delta.revision, result_updated_at: delta.updatedAt,
+        result_execution_ids: [input.reservation.id, input.terminal.id],
+      } satisfies DiagnosticOperationRow);
+      return delta;
+    });
+  }
+
   async restoreStudy(
     id: string,
     expectedRevision: number,
@@ -1349,7 +1608,7 @@ export class IndexedDbApplicationRepository implements ApplicationRepository {
     const intent = canonical({ action: 'restoreStudy', id, expectedRevision });
     const result = await transactionResult(
       database,
-      ['studies', 'executions', 'operations'],
+      ['studies', 'study_summaries', 'executions', 'operations'],
       'readwrite',
       async (transaction) => {
         const operationStore = transaction.objectStore('operations');
@@ -1390,6 +1649,7 @@ export class IndexedDbApplicationRepository implements ApplicationRepository {
         };
         const storedStudy = studyRow(restored);
         studies.put(storedStudy);
+        transaction.objectStore('study_summaries').put(summaryRow(restored, restored.executions.length));
         operationStore.add({
           operation_id: operationId,
           owner_sub: this.#ownerSub,
@@ -1409,7 +1669,7 @@ export class IndexedDbApplicationRepository implements ApplicationRepository {
     const database = await this.#database();
     return transactionResult(
       database,
-      ['studies', 'executions', 'operations', 'meta'],
+      ['studies', 'study_summaries', 'executions', 'operations', 'meta'],
       'readwrite',
       async (transaction) => {
         const studies = transaction.objectStore('studies');
@@ -1417,7 +1677,7 @@ export class IndexedDbApplicationRepository implements ApplicationRepository {
         if (row === undefined || row.owner_sub !== this.#ownerSub) return;
         const executions = transaction.objectStore('executions');
         const operations = transaction.objectStore('operations');
-        const [records, studyOperations, restoreOperations, demoOperations, markerRow] = await Promise.all([
+        const [records, studyOperations, restoreOperations, demoOperations, appendOperations, markerRow] = await Promise.all([
           requestResult<ExecutionRow[]>(
             executions.index('by_owner_study').getAll([this.#ownerSub, id]),
           ),
@@ -1430,12 +1690,15 @@ export class IndexedDbApplicationRepository implements ApplicationRepository {
           requestResult<StudyOperationRow[]>(
             operations.index('by_owner_entity').getAll([this.#ownerSub, 'demo_install', id]),
           ),
+          requestResult<DiagnosticOperationRow[]>(
+            operations.index('by_owner_entity').getAll([this.#ownerSub, 'diagnostic_append', id]),
+          ),
           requestResult<unknown>(transaction.objectStore('meta').get(DEMO_MARKER_KEY)),
         ]);
         for (const execution of records) {
           executions.delete([execution.study_id, execution.execution_id]);
         }
-        for (const operation of [...studyOperations, ...restoreOperations, ...demoOperations]) {
+        for (const operation of [...studyOperations, ...restoreOperations, ...demoOperations, ...appendOperations]) {
           operations.put({
             operation_id: operation.operation_id,
             owner_sub: this.#ownerSub,
@@ -1449,6 +1712,7 @@ export class IndexedDbApplicationRepository implements ApplicationRepository {
           meta.delete(`demo:replays:${id}`);
         }
         studies.delete(id);
+        transaction.objectStore('study_summaries').delete(id);
       },
     );
   }
