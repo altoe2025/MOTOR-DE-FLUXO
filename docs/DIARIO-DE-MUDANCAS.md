@@ -37,7 +37,7 @@ Atualizada em 2026-10-02, durante a entrega das correções de diagnóstico.
 
 | Branch | Situação | Dono |
 |---|---|---|
-| `feat/front-mais-leve` | front mais leve (menus ⋯, premissas e detalhes recolhidos, composição em destaque, diagnóstico com a resposta primeiro); PR para a `main`, merge e deploy com o Codex | Claude |
+| `feat/front-mais-leve` | PR #73 mergeado em `66b7c6e` e publicado no Render; health/login aprovados, smoke autenticado pendente | Claude / Codex |
 | `codex/diagnostico-confiavel` | PR #71 aberto em rascunho; correções e revisão independente concluídas, validação automática em andamento; sem merge ou deploy | Codex |
 | `codex/carteiras-docker-fixture` | Corrige somente o empacotamento de um helper de testes após falha do build Render; versão Live anterior preservada | Codex |
 | `codex/carteiras-analise` | PR #69 mergeado em `9cc8b8e`, CI verde; primeiro deploy interrompido no build por helper de testes fora do padrão de exclusão | Codex |
@@ -90,6 +90,42 @@ Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. 
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+## 2026-10-02 — Front mais leve publicado no Render (MOT-99)
+
+1. **Sintoma.** O PR #73 estava aprovado e validado, mas a versão Live ainda era
+   `727d3ee`, pois o serviço usa publicação manual.
+2. **Causa.** O merge na `main` não publica automaticamente no Render.
+3. **O que foi feito.** Com autorização explícita do Gabriel, o PR #73 foi
+   mergeado em `66b7c6e5340681a0d7116f17780c4e50951824c8`, com commit de merge
+   (pais `727d3ee` e `c5517a1`), em 2026-10-02 às 21:37:11 GMT-3.
+   Antes do merge, o GitHub confirmou `MERGEABLE/CLEAN` e o workflow `test.yml`
+   verde no HEAD `c5517a188c0e61d558c5aa58b18f800cb5fd56ec`
+   ([run 37081224985](https://github.com/altoe2025/MOTOR-DE-FLUXO/actions/runs/37081224985)).
+   A base não havia avançado; nenhuma atualização de branch ou correção foi necessária.
+   O commit exato de merge foi selecionado no painel do Render e publicado
+   manualmente no serviço `motor-de-fluxo-piloto`, deploy
+   `dep-db04t7e7bikc7386sun0`: iniciado às 21:38:53 GMT-3, duração 56,9 s,
+   com confirmação de Live no log às 21:39:50 GMT-3 em 2026-10-02.
+   Health HTTPS respondeu `200 {"status":"ok"}`; `/login` respondeu 200 e
+   exibiu o formulário no navegador. Nenhum erro de console foi observado
+   na página de login. **Smoke autenticado pendente:** não há credencial de
+   smoke configurada nesta sessão e o navegador abriu sem sessão autenticada.
+   Foi solicitado ao Gabriel entrar com uma conta autorizada. Estudos, editor,
+   diagnóstico, Replay, apresentação, chat e os controles novos ainda não foram
+   verificados no ambiente publicado nesta rodada; não declarar aceite completo.
+   A CI pós-merge da `main` foi iniciada
+   ([run 37082823150](https://github.com/altoe2025/MOTOR-DE-FLUXO/actions/runs/37082823150));
+   seu resultado não substitui o smoke autenticado.
+   Nenhum código de produto, configuração, segredo, variável, Supabase ou
+   workflow foi alterado nesta publicação. Auto-Deploy confirmado como Off no painel.
+   A árvore de `motor/` é idêntica
+   entre base e HEAD do PR (`fddeb1f1737533cab305a27b32c59cabbe726150`).
+4. **O que isso invalida.** `727d3ee` deixa de ser a versão ativa e passa a ser
+   a referência imediata de rollback, registrada antes da publicação:
+   `dep-db03bn9srm7s73duha40`. Nenhum rollback foi necessário. Capturas e roteiros
+   anteriores ao front mais leve não representam a interface publicada.
+   Nada nos cálculos do motor foi alterado. O smoke autenticado continua pendente.
 
 ## 2026-10-02 — Front mais leve: uma ação principal por tela, o resto recolhido (MOT-99)
 
