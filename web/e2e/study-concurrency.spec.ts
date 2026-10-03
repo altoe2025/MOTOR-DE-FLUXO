@@ -35,6 +35,10 @@ test('two tabs expose CAS conflict while a second account stays isolated', async
   await pageB.goto(studyUrl);
   await expect(pageB.getByRole('heading', { name: 'Novo estudo' })).toBeVisible();
 
+  for (const page of [pageA, pageB]) {
+    await page.getByRole('button', { name: 'Mais ações: estudo' }).click();
+    await page.getByRole('menuitem', { name: 'Renomear' }).click();
+  }
   await pageA.getByLabel('Nome do estudo').fill('Edição da aba A');
   await pageB.getByLabel('Nome do estudo').fill('Edição da aba B');
   await pageA.getByRole('button', { name: 'Salvar nome' }).click();

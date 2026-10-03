@@ -156,3 +156,13 @@ describe('buildPreviewRequest', () => {
       .toThrow('Proveniência ausente para a ordem order-b.');
   });
 });
+
+
+it('includes provenance for IOF rules and preserves an unchanged recipe source', () => {
+  const snapshot = makeSyntheticSnapshot();
+  const rule = { finalidade: 'SERVICES', direcao: 'OUT' as const, aliquota: '0.01' };
+  const changed = { ...premises, costs: { ...premises.costs, iof_por_finalidade: [rule] } };
+  const request = buildPreviewRequest(snapshot, changed, naturalPeriod, identity, provenance);
+  expect(request.proveniencia['/custo/iof_por_finalidade/0/aliquota']?.fonte).toBe(syntheticDefault.source);
+  expect(request.proveniencia['/custo/iof_por_finalidade/0/finalidade']?.fonte).toBe(syntheticDefault.source);
+});

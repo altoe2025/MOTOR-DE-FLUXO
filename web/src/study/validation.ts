@@ -1,3 +1,4 @@
+import { effectivePreparation } from '../diagnostics/effectivePreparation';
 import type { ErrorObject } from 'ajv';
 import { validateStudyV2Schema, validateExecutionSchema, validatePreviewExecutionSchema, validateDiagnosticExecutionSchema, validateStudyV3Schema } from '../generated/validators/study.js';
 
@@ -213,9 +214,15 @@ function diagnosticSnapshotIsCompatible(execution: DiagnosticExecutionRecord): b
       && preview.cenario.janela_dias === execution.premisesSnapshot.windowDays
       && canonical(preview.periodo) === canonical(execution.periodSnapshot.httpPeriod);
   }
-  return execution.sourceSnapshot.generationInputSnapshot !== undefined
-    && canonical(request.sampling.preparation_input)
-      === canonical(execution.sourceSnapshot.generationInputSnapshot);
+  const recipe = execution.sourceSnapshot.generationInputSnapshot;
+  if (recipe === undefined) return false;
+  // Immutable historical records used the original recipe verbatim.
+  if (canonical(request.sampling.preparation_input) === canonical(recipe)) return true;
+  try {
+    return canonical(request.sampling.preparation_input) === canonical(effectivePreparation(
+      recipe, execution.premisesSnapshot, execution.periodSnapshot, request.provenance,
+    ));
+  } catch { return false; }
 }
 
 export function validateExecutionRecord(

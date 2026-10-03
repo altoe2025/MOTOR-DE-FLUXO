@@ -7,6 +7,7 @@ import { strToU8, unzipSync, zipSync } from 'fflate';
 import type { ChatRequest } from '../src/api/client';
 import { formatCommunicationMetric } from '../src/presentation/domain';
 import { formatFraction, formatMoney } from '../src/presentation/format';
+import { fillNewCompany } from './helpers/importCompany';
 
 const RAW_NAME = 'CLIENTE_BRUTO_MOT99';
 const RAW_FILE = 'FONTE_BRUTA_MOT99.xlsx';
@@ -55,7 +56,7 @@ test('Etapa 6: finalidade opcional percorre Caso observado, Diagnóstico, Replay
   const bodies: string[] = [];
   page.on('request', (request) => { if (request.postData()) bodies.push(request.postData()!); });
   await page.goto('/importar');
-  await page.getByLabel('Nome da nova empresa').fill('Empresa observada MOT-99');
+  await fillNewCompany(page, 'Empresa observada MOT-99');
   await page.getByRole('button', { name: 'Usar nova empresa neste Caso' }).click();
   await page.getByLabel('Planilha canônica XLSX').setInputFiles({
     name: RAW_FILE, mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer: workbook(),
@@ -147,10 +148,14 @@ test('estudo comum excluído sai da lista, restaura pela lixeira e reabre com a 
   const sourceBefore = await page.evaluate((id) => window.__MOTOR_E2E__!.studySource(id), studyId);
   await page.goto('/estudos');
   page.once('dialog', (dialog) => dialog.accept());
-  await page.getByRole('button', { name: 'Excluir Novo estudo' }).click();
+  await page.getByRole('button', { name: 'Mais ações: Novo estudo' }).click();
+  await page.getByRole('menuitem', { name: 'Excluir Novo estudo' }).click();
   await expect(page.getByRole('button', { name: 'Abrir Novo estudo' })).toHaveCount(0);
-  const trash = page.getByRole('button', { name: 'Lixeira de estudos' });
-  await trash.focus();
+  // Teclado: o menu abre no primeiro item, End leva à lixeira e Enter abre.
+  await page.getByRole('button', { name: 'Mais ações: criar' }).focus();
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('End');
+  await expect(page.getByRole('menuitem', { name: 'Lixeira de estudos' })).toBeFocused();
   await page.keyboard.press('Enter');
   await expect(page.getByRole('list', { name: 'Lixeira de estudos' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Abrir Novo estudo' })).toHaveCount(0);
@@ -266,7 +271,7 @@ test('cinco mixes demonstrativos reconciliam diagnóstico, Replay, chat, Painel 
 test('falhas locais conservam a fonte e não transformam ausência em resultado', async ({ page, context }) => {
   test.setTimeout(90_000);
   await page.goto('/importar');
-  await page.getByLabel('Nome da nova empresa').fill('Empresa falha MOT-99');
+  await fillNewCompany(page, 'Empresa falha MOT-99');
   await page.getByRole('button', { name: 'Usar nova empresa neste Caso' }).click();
   await page.getByLabel('Planilha canônica XLSX').setInputFiles({
     name: 'formula.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

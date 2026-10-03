@@ -150,3 +150,41 @@ backend da mesma imagem e os dois SHAs compatíveis. Rollback da imagem não des
 automaticamente variáveis do dashboard ou dados no IndexedDB; não apague o banco
 local para mascarar incompatibilidade. Registrar deploy ID, commit, horário e
 resultado, sem segredos. Cada publicação ou rollback externo exige autorização.
+
+
+## Diagnóstico: retenção e recuperação
+
+O executor é transitório e isolado por owner. Guarda até 128 jobs terminais e até 64 MiB
+somando o JSON UTF-8 dos pedidos originais e dos envelopes finais. Esses bytes
+serializados não equivalem ao RSS: objetos Python, trabalhos ativos, processos e
+agregação também consomem memória. As repetições completas intermediárias são
+liberadas ao concluir, falhar ou cancelar. Sob pressão, os terminais mais antigos e
+seus bindings de idempotência são descartados; jobs ativos nunca são expulsos.
+As 24 h são TTL máximo, não garantia de disponibilidade sob pressão ou reinício.
+O resultado já salvo no histórico local do navegador permanece intacto.
+
+Somente o diagnóstico aceita até 16 MiB de pedido e 32 MiB de resposta. O maior pedido
+canônico testado possui 1000 ordens, 100 regras de IOF e fontes de 200 caracteres
+Unicode: 9.618.350 bytes de pedido e 9.876.635 de envelope. A cota de 8309 caminhos
+acomoda os 5209 obrigatórios e os opcionais de identidade/direção. Campos arbitrários
+não têm capacidade ilimitada; excessos continuam recebendo 413. O limite padrão da
+prévia e seu endpoint permanecem inalterados. Os consumidores de diagnóstico,
+individual e em lote, usam explicitamente o orçamento maior ao construir a entrada.
+
+Se um processo filho morrer, a tentativa afetada termina com
+`EXECUTOR_INDISPONIVEL`; o coordenador substitui uma vez a geração quebrada do pool.
+Callbacks tardios não substituem o pool saudável e o fechamento não o ressuscita.
+A limpeza do pool antigo ocorre fora de seu callback e do lock do coordenador.
+Não há reexecução automática da tentativa terminada. Se a criação do pool substituto
+falhar, novos pedidos recebem 503 até reiniciar o serviço. Logs técnicos contêm
+categoria, nome seguro do tipo de exceção e job ID, sem payload, traceback ou texto
+da exceção.
+
+No navegador, 404 reconcilia a reserva como `INTERRUPTED`. Falhas definitivas de
+resultado (como 413/422 ou envelope incompatível) criam terminal local `FAILED` e
+permitem iniciar outra tentativa. Rede, timeout, 429 e 5xx mantêm uma reserva retomável,
+sem repetir POST. O modo de gravação só ao terminar também salva uma reserva quando
+uma falha transitória exige retomada; o caminho de sucesso continua a gravação única.
+Falha ao salvar continua sendo erro de armazenamento. Diagnósticos históricos cuja
+receita original divergia das premissas salvas permanecem legíveis no histórico,
+mas exigem recálculo para voltar a ser considerados atuais.

@@ -1,8 +1,14 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Locator } from '@playwright/test';
 import { runCanonicalDiagnostic } from './helpers/persistedDiagnostic';
 
 const STUDY = '00000000-0000-4000-8000-000000000902';
 test.setTimeout(90_000);
+
+// "Ajustar uma empresa" já vem aberto quando não há composição (uma empresa só).
+async function openAdjust(levers: Locator) {
+  const toggle = levers.getByRole('button', { name: /Ajustar uma empresa/ });
+  if (await toggle.getAttribute('aria-expanded') === 'false') await toggle.click();
+}
 
 // The published composition flow combines observed companies instead of editing profile recipes.
 test('combina empresas, gera subconjuntos, executa e recarrega o quadro', async ({ page }) => {
@@ -61,6 +67,8 @@ test('conflito CAS mantém os valores da alavanca na aba perdedora', async ({ br
   await loser.goto(winner.url());
   const first = winner.getByRole('region', { name: 'Alavancas', exact: true });
   const second = loser.getByRole('region', { name: 'Alavancas', exact: true });
+  await openAdjust(first);
+  await openAdjust(second);
   await first.getByLabel('Volume OUT ×', { exact: true }).fill('2');
   await second.getByLabel('Volume OUT ×', { exact: true }).fill('3');
   await first.getByRole('button', { name: 'Criar variação', exact: true }).click();

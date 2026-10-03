@@ -19,8 +19,8 @@ from servidor.contracts.diagnostics import (
 from servidor.diagnostics.executor import DiagnosticExecutorError
 from servidor.errors import ApiFailure, adopt_request_id, entrada_invalida
 
-MAX_REQUEST_BYTES = 1024 * 1024
-MAX_RESPONSE_BYTES = 8 * 1024 * 1024
+MAX_REQUEST_BYTES = 16 * 1024 * 1024
+MAX_RESPONSE_BYTES = 32 * 1024 * 1024
 router = APIRouter(prefix="/api/v1/diagnosticos")
 CurrentUser = Annotated[AuthenticatedUser, Depends(require_user)]
 Model = TypeVar("Model", bound=BaseModel)
@@ -63,6 +63,7 @@ def _parse(request: Request, body: bytes, model: type[Model]) -> Model:
 
 def _failure(error: DiagnosticExecutorError) -> ApiFailure:
     mapping = {
+        "EXECUTOR_INDISPONIVEL": (503, "Executor diagnóstico indisponível."),
         "FILA_CHEIA": (429, "A fila de diagnósticos está cheia."),
         "JOB_NAO_ENCONTRADO": (404, "Diagnóstico não encontrado."),
         "JOB_NAO_TERMINAL": (409, "O diagnóstico ainda não possui resultado."),

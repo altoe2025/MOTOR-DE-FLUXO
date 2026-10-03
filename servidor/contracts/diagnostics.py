@@ -48,6 +48,10 @@ JobStatus = Literal[
 EvidenceValue = TypeVar("EvidenceValue")
 
 
+# 1000 orders x 8 optional/required fields + 100 IOF rules x 3 + 9 general.
+MAX_PROVENANCE_PATHS = 8309
+
+
 class AvailableEvidenceMetric(StrictModel, Generic[EvidenceValue]):
     state: Literal["AVAILABLE"]
     value: EvidenceValue
@@ -161,7 +165,9 @@ class DiagnosticRequest(StrictModel):
     input_fingerprint: Fingerprint
     sampling: DiagnosticSamplingPlan
     selected_repetition_id: UUIDValue
-    provenance: Annotated[dict[str, OrigemValor], Field(max_length=500)]
+    provenance: Annotated[
+        dict[str, OrigemValor], Field(max_length=MAX_PROVENANCE_PATHS)
+    ]
 
     @model_validator(mode="after")
     def validate_selection_and_fixed_identity(self) -> DiagnosticRequest:
@@ -423,10 +429,12 @@ class DiagnosticLimitation(StrictModel):
 
 
 class DiagnosticProvenance(StrictModel):
-    request_paths: Annotated[dict[str, OrigemValor], Field(max_length=500)]
+    request_paths: Annotated[
+        dict[str, OrigemValor], Field(max_length=MAX_PROVENANCE_PATHS)
+    ]
     evidence_refs: Annotated[
         list[Annotated[str, Field(strict=True, min_length=1, max_length=300)]],
-        Field(max_length=500),
+        Field(max_length=MAX_PROVENANCE_PATHS),
     ]
 
 
@@ -463,7 +471,9 @@ class DiagnosticEnvelope(StrictModel):
             or self.selected_execution.execution_fingerprint
             != selected.execution_fingerprint
         ):
-            raise ValueError("execução completa não corresponde à repetição selecionada")
+            raise ValueError(
+                "execução completa não corresponde à repetição selecionada"
+            )
         if isinstance(self.statistics, SingleExecutionStatistics):
             metrics = (
                 self.axes.economic_robustness.baseline_brl,

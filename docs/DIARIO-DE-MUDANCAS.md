@@ -33,11 +33,13 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-10-02, durante a preparação da publicação da análise de carteiras.
+Atualizada em 2026-10-02, durante a entrega das correções de diagnóstico.
 
 | Branch | Situação | Dono |
 |---|---|---|
-| `codex/perf-combinacoes` | Design e plano aprovados para eliminar leituras integrais incidentais e a amplificação do lote de até 255 combinações; Onda A pronta para execução | Codex |
+| `codex/perf-combinacoes` | Otimização para 255 combinações em integração com a `main` do front leve; gate local e preview ainda pendentes | Codex |
+| `feat/front-mais-leve` | PR #73 mergeado em `66b7c6e`; front leve observado no Render com menus ⋯, detalhes recolhidos e diagnóstico com a resposta primeiro | Claude |
+| `codex/diagnostico-confiavel` | PR #71 mergeado na `main` em `727d3ee`; contratos incorporados à otimização de combinações | Codex |
 | `codex/carteiras-docker-fixture` | Corrige somente o empacotamento de um helper de testes após falha do build Render; versão Live anterior preservada | Codex |
 | `codex/carteiras-analise` | PR #69 mergeado em `9cc8b8e`, CI verde; primeiro deploy interrompido no build por helper de testes fora do padrão de exclusão | Codex |
 | `feat/front-visual` | visual do app inteiro no sistema do Replay; aprovado pelo Gabriel na prévia local; PR para a `main`, deploy com o Codex | Claude |
@@ -53,7 +55,7 @@ Atualizada em 2026-10-02, durante a preparação da publicação da análise de 
 | `codex/carteira-criterios` | Integra estudo separado de combinações, últimas melhorias de `feat/bancada-exploracao` e chat já publicado do PR #57; deploy aguardando comando do Gabriel | Codex |
 | `codex/chat-interface-render` | PR #57 aberto (draft, base `feat/bancada-exploracao`); código `8d43695` publicado no Render com status Live em 2026-09-28; sem merge na `main` | Codex |
 | `codex/integracao-etapas-5-6` | Consolida `feat/bancada-exploracao` e `codex/finalidade-verificacao`, incluindo histórico de `origin/main`; publicação/CI em preparação, sem deploy | Codex |
-| `main` | `09a979e`: PRs #69 e #70 mergeados; análise de carteiras publicada no Render com a correção de empacotamento | os dois |
+| `main` | `66b7c6e`: PR #73 mergeado; front leve confirmado no bundle público do Render | os dois |
 | `netting/p1` | spike do P1, **NÃO MERGEAR** — dominado, e agora sabemos que a folga é zero em N ≥ 50. Só local, nunca foi pro GitHub | Felipe |
 | `fix/semantica-remessa-p0` | PR #11, mergeada | Felipe |
 | `fix/previsao-temporal-e-colunas-csv` | PR #12, mergeada | Gabriel |
@@ -129,6 +131,74 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 ## 2026-10-02 — Design de desempenho para 255 combinações (MOT-100)
 
 **Sintoma:** abrir Estudos, criar uma nova combinação e abrir Diagnóstico ficou lento em estudos grandes; o lote de oito empresas também mantém o navegador ocupado por muito tempo. **Causa:** as listas reconstroem e validam todos os envelopes salvos; cada terminal do lote repete clone, validação, serialização e comparação do estudo cumulativo; o agendamento usa só um dos dois workers; a recomendação é projetada a cada resultado. **O que foi feito:** criados na branch `codex/perf-combinacoes` a especificação `docs/superpowers/specs/2026-10-02-desempenho-combinacoes-design.md` e o plano `docs/superpowers/plans/2026-10-02-desempenho-combinacoes.md`, com catálogo leve, lazy load, preparação idempotente, append atômico, concorrência limitada a dois e gates para 255 composições. Nenhum código de produto foi alterado nesta entrada. **O que isso invalida:** nada nos números ou resultados atuais; medições futuras de desempenho devem separar leitura, persistência, projeção e tempo remoto conforme o novo protocolo.
+## 2026-10-02 — Front mais leve: uma ação principal por tela, o resto recolhido (MOT-99)
+
+1. **Sintoma.** Na conversa com o Sávio, as telas de Estudos, editor, alavancas, diagnóstico, Quadro e Importar pareciam poluídas: muitos botões lado a lado, premissas e janela sempre abertas, a Composição perdida no fim das alavancas e o resultado do diagnóstico enterrado em tabelas.
+2. **Causa.** Cada funcionalidade nova ganhou um botão ou bloco visível próprio, sem hierarquia entre a ação principal e as secundárias.
+3. **O que foi feito.** Protótipo aprovado pelo Gabriel (artifact "front mais leve"), levado ao front real, exceto Empresas e a tela de recomendação de carteiras, que ficam como estão. Componentes novos em `web/src/ui/` (`ActionMenu` ⋯ acessível por teclado, `Disclosure`, `HelpTip`).
+   - **Estudos:** "Novo estudo" à vista. Combinação, importar, demonstração e lixeira vão para o ⋯ "criar". Renomear, duplicar, exportar e excluir vão para o ⋯ de cada estudo.
+   - **Navegação:** Estudos, Empresas e Importar; o Quadro vira "Comparar estudos" dentro de Estudos.
+   - **Editor:** renomear e duplicar vão para o ⋯ do estudo. Origem e premissas viram linhas de resumo. "Editar premissas" abre o formulário, com janela, aquecimento e medição em "Avançado".
+   - **Alavancas e cenários:**
+     - a Composição vem primeiro e "Ajustar uma empresa" fica recolhido;
+     - os cenários vêm depois, com selo de diagnóstico e "Abrir/Executar diagnóstico" à vista;
+     - "Usar como base", renomear e apagar vão para o ⋯ e o rádio sai.
+   - **Combinação de carteiras:** empresas aplicadas viram um resumo com "Trocar". A escolha ganha busca, chips e "Selecionar todas".
+   - **Diagnóstico:**
+     - a resposta vem primeiro: economia, netabilidade e custo sem → com pool;
+     - P10–P90 numa linha;
+     - "Como a economia se forma" e "Custos por componente" ficam recolhidos;
+     - Replay e Apresentar ficam lado a lado;
+     - as tabelas por empresa dos quadros comparativos vão para "Detalhes por empresa".
+   - **Comparar estudos:** os cenários são agrupados por estudo, com "n de m" marcados. O "Apagar estudo" sai do Quadro e também do catálogo de ajuda (`control.quadro.apagar-estudo`); a exclusão continua na lista de Estudos.
+   - **Importar:**
+     - modelo no topo;
+     - passo 1, empresa, com "+ Nova empresa";
+     - passo 2, planilha;
+     - "Como montar a planilha" recolhido.
+   - **Testes:** unitários e e2e ajustados aos menus e aos painéis recolhidos.
+4. **O que isso invalida.**
+   - Roteiros e capturas que supõem os botões antigos sempre visíveis:
+     - lixeira, renomear e excluir na lista;
+     - "Apagar estudo" no Quadro;
+     - premissas e janela abertas;
+     - rádio de base dos cenários;
+     - "Passo 3/4".
+   - As referências visuais de `stage6-visual` (estudos, importação, demonstração, chat) foram regeneradas.
+   - Nada nos números: motor, servidor, contratos, regras e cálculos não mudaram. Os textos com testid `economia-brl`/`netabilidade` e o título "Resultado do motor" continuam.
+
+## 2026-10-02 — Confiabilidade de diagnóstico (MOT-70, MOT-72, MOT-73)
+
+**Sintoma:** entradas com proveniência completa eram recusadas, distribuições podiam
+usar premissas antigas, a morte de um worker inutilizava o pool, erros definitivos
+de download deixavam reservas ativas e jobs terminais retinham repetições completas.
+Falhas técnicas não tinham causa sanitizada observável.
+
+**Causa:** cota de 500 origens e orçamento HTTP incompatíveis com 1000 ordens;
+reutilização da receita histórica inteira; ausência de recuperação por geração do
+pool, classificação de erro de resultado e limites de retenção por quantidade/bytes.
+
+**O que foi feito:** `codex/diagnostico-confiavel` amplia os contratos e limites
+somente do diagnóstico, combina participantes preservados com premissas atuais,
+preserva histórico antigo sem considerá-lo atual quando divergente, recupera o pool,
+registra causa técnica sanitizada e permite retomada/reexecução no navegador.
+A revisão independente acrescentou a regressão do botão de repetir após falha local
+de download: esse caso cria um novo job, pois o job original terminou no servidor.
+O fixture de comparação passou a declarar a receita/período que pretende comparar.
+Terminais liberam intermediários; retenção máxima de 128 terminais/64 MiB, expulsando
+somente os mais antigos, e TTL máximo de 24 h. Operação documentada em
+`docs/deploy-render.md`; regressões incluem morte real de processo, callbacks tardios,
+fechamento concorrente, fontes Unicode e 100 repetições. Gates finais registrados no
+relatório de execução local: Python normal e otimizado com 1413 testes passando,
+build e três testes finais de diagnóstico no navegador aprovados. Commits `6d2c51a`
+e `dd3ab35` enviados no PR #71, aberto em rascunho; revisão independente aprovada.
+A validação automática está em andamento. Não houve merge nem deploy.
+
+**O que isso invalida:** a promessa de manter todo resultado no servidor por 24h e a
+indicação de atualidade de históricos cuja receita usou premissas diferentes do
+cenário salvo. Nada nas regras financeiras do motor ou nos resultados inalterados;
+histórico local preservado. Nenhum arquivo de `motor/` foi alterado.
+
 
 ## 2026-10-02 — Fixture de carteiras fora do contexto de produção (MOT-100)
 

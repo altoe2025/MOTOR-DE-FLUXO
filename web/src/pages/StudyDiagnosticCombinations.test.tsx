@@ -401,7 +401,10 @@ describe('combination study diagnosis', () => {
     const study = controller.snapshot.document!;
     expect(currentDiagnostic(study, study.scenarios[0]!)).not.toBeNull();
     await act(async () => { await router.navigate(`/estudos/${study.id}/diagnostico?scenarioId=${study.baseScenarioId}`); });
-    expect(await screen.findByRole('link', { name: 'Voltar à recomendação' })).toBeInTheDocument();
+    expect(await screen.findByRole('link', { name: 'Voltar à recomendação' }))
+      .toHaveAttribute('href', `/estudos/${study.id}/diagnostico`);
+    expect(screen.getByRole('region', { name: 'Resultado do motor' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /Custos por componente/ }));
     expect(screen.getByRole('region', { name: 'Tabela de decomposição de custos' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Qual carteira atende melhor?' })).not.toBeInTheDocument();
   });

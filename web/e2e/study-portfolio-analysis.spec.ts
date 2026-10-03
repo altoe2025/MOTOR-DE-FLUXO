@@ -34,7 +34,8 @@ test('63 carteiras sintéticas diagnosticadas pelo motor real permitem explorar 
     'Exportadora Sintética', 'Cripto Liquidação Sintética', 'Tesouraria Sintética',
   ]);
   await page.reload();
-  await page.getByRole('button', { name: 'Nova combinação de carteiras' }).click();
+  await page.getByRole('button', { name: 'Mais ações: criar' }).click();
+  await page.getByRole('menuitem', { name: 'Nova combinação de carteiras' }).click();
   await expect(page).toHaveURL(/\/carteira\/[0-9a-f-]+$/);
   const studyId = page.url().split('/').at(-1)!;
 
