@@ -28,6 +28,12 @@
   --focus: #43d3c3;
   --glow: 0 0 0 1px rgb(67 211 195 / 40%), 0 8px 28px rgb(67 211 195 / 12%);
   --shadow: inset 0 1px 0 rgb(255 255 255 / 3%), 0 12px 32px rgb(0 0 0 / 28%);
+  --well: linear-gradient(180deg, #070b10, #0a1016);
+  --well-shadow: inset 0 2px 8px rgb(0 0 0 / 65%), inset 0 -1px 0 rgb(255 255 255 / 3%), 0 1px 0 rgb(255 255 255 / 4%);
+  --ring-metal: conic-gradient(from 0deg, #0a3530, #5fe3d4 8%, #1f9a8d 18%, #146b62 30%, #5fe3d4 44%, #d4fbf6 50%, #1f9a8d 58%, #0a3530 70%, #5fe3d4 84%, #d4fbf6 90%, #0a3530);
+  --ring-shadow: 0 0 0 1px rgb(0 0 0 / 60%), 0 6px 16px rgb(0 0 0 / 50%), 0 0 20px rgb(67 211 195 / 14%);
+  --tile-core: radial-gradient(120% 90% at 30% 15%, #1f2a35, #0e151c 70%);
+  --tile-ink: #ffffff;
   --font-body: 'Geist Variable', 'Segoe UI', system-ui, sans-serif;
   --font-heading: 'Geist Variable', 'Segoe UI', system-ui, sans-serif;
   --font-mono: 'Geist Mono Variable', ui-monospace, 'Cascadia Mono', Consolas, monospace;
@@ -71,4 +77,10 @@
   --focus: #0b7a70;
   --glow: 0 0 0 1px rgb(11 122 112 / 35%), 0 8px 24px rgb(11 122 112 / 10%);
   --shadow: 0 1px 2px rgb(16 32 43 / 5%), 0 10px 28px rgb(16 32 43 / 6%);
+  --well: linear-gradient(180deg, #e9eef2, #f1f4f7);
+  --well-shadow: inset 0 2px 6px rgb(16 32 43 / 10%), inset 0 -1px 0 rgb(255 255 255 / 70%), 0 1px 0 rgb(255 255 255 / 90%);
+  --ring-metal: conic-gradient(from 0deg, #064d46, #43d3c3 8%, #0b7a70 18%, #075c54 30%, #43d3c3 44%, #e6fffb 50%, #0b7a70 58%, #064d46 70%, #43d3c3 84%, #e6fffb 90%, #064d46);
+  --ring-shadow: 0 0 0 1px rgb(6 77 70 / 30%), 0 4px 12px rgb(16 32 43 / 14%), 0 0 16px rgb(11 122 112 / 12%);
+  --tile-core: radial-gradient(120% 90% at 30% 15%, #ffffff, #eef3f5 70%);
+  --tile-ink: #0b3d38;
 }
