@@ -94,6 +94,13 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-10-05 — Percentuais de economia e resumo de premissas (MOT-99)
+
+1. **Sintoma.** A interface exigia interpretar bps para comparar a economia sobre o volume.
+2. **Causa.** A apresentação expunha a unidade técnica do resultado e, em algumas tabelas, duplicava o mesmo indicador em % e bps.
+3. **O que foi feito.** Na branch `codex/percentuais-painel`, a apresentação converte bps para % antes de arredondar. Comparações de percentuais usam p.p.; tabelas identificam o denominador como volume. A integração em `codex/premissas-sem-janela` também remove a indicação de janela do resumo de premissas em Estudos. O campo avançado permanece disponível. Contratos e cálculos do motor permanecem iguais.
+4. **O que isso invalida.** Apenas os textos e unidades anteriores na interface; nenhuma medição ou resultado calculado.
+
 ## 2026-10-03 — Caminho clicável no cabeçalho do front (MOT-99)
 
 **Sintoma.** O cabeçalho indicava a área atual, mas não permitia retornar aos níveis anteriores pelo caminho de navegação.

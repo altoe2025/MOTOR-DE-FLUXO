@@ -1,6 +1,6 @@
 import type { CommunicationDocumentV1 } from '../communication/domain';
 import type { CommunicationMetric } from '../communication/domain';
-import { formatBps, formatDecimal, formatFraction, formatMoney } from './format';
+import { formatBpsAsPercent, formatDecimal, formatFraction, formatMoney } from './format';
 
 export type PresentationSelection = Readonly<{ studyId: string } & Pick<CommunicationDocumentV1['selection'],
   'scenarioId' | 'diagnosticExecutionId' | 'comparisonExecutionId' | 'replayDay'>>;
@@ -25,7 +25,7 @@ export function formatCommunicationMetric(metric: CommunicationMetric): string {
   switch (metric.unit) {
     case 'BRL': return formatMoney(metric.value);
     case 'FRACTION': return formatFraction(metric.value);
-    case 'BPS': return formatBps(metric.value);
+    case 'BPS': return formatBpsAsPercent(metric.value);
     case 'DAYS': {
       const days = formatDecimal(metric.value, 1).replace(/,0$/, '');
       return `${days} ${days === '1' ? 'dia' : 'dias'}`;

@@ -2,7 +2,7 @@ import Decimal from 'decimal.js';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
-import { formatBps, formatDecimal, formatFraction, formatMoney } from '../presentation/format';
+import { formatDecimal, formatFraction, formatMoney } from '../presentation/format';
 import type { PortfolioMetrics } from './portfolioAnalysis';
 import type { PortfolioSelection } from './portfolioSelection';
 
@@ -32,7 +32,7 @@ const reasonLabels: Readonly<Record<string, string>> = {
 
 const headings: readonly [SortKey, string][] = [
   ['name', 'Composição'], ['companyCount', 'Empresas'], ['savings', 'Economia R$'],
-  ['efficiency', 'Economia %/bps'], ['costReduction', 'Redução do custo'],
+  ['efficiency', 'Economia sobre volume (%)'], ['costReduction', 'Redução do custo'],
   ['volume', 'Volume'], ['wait', 'Espera média'], ['waitP95Days', 'Espera P95'],
   ['netability', 'Netabilidade'], ['status', 'Atende aos filtros'],
 ];
@@ -117,7 +117,7 @@ export function PortfolioTable({ candidates, ineligible, selectedScenarioId, onS
               {row.companyIdentitySource === 'MIXED' ? <small>Identificação mista: cadastro e nome legado</small> : null}
             </th>
             <td>{row.companyIds.length}</td><td>{formatMoney(row.savings)}</td>
-            <td>{efficiency === null ? 'Não disponível' : <>{formatFraction(efficiency.toFixed())} / {formatBps(efficiency.times(10000).toFixed())}</>}</td>
+            <td>{efficiency === null ? 'Não disponível' : formatFraction(efficiency.toFixed())}</td>
             <td>{reduction === null ? 'Não disponível' : formatFraction(reduction.toFixed())}</td>
             <td>{formatMoney(row.volume)}</td>
             <td>{wait === null ? 'Não disponível' : `${formatDecimal(wait.toFixed(), 2)} dias`}</td>
