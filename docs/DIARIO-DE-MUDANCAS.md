@@ -33,10 +33,11 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-10-03, durante a publicação da MOT-100.
+Atualizada em 2026-10-05, durante a abertura do PR da navegação com anel e dos cartões de Empresas (MOT-99).
 
 | Branch | Situação | Dono |
 |---|---|---|
+| `feat/menu-anel-turquesa` | Navegação lateral com trilho e anel turquesa no destino ativo + cartões holográficos em Empresas; PR aberto para a `main`, merge e deploy com o Codex | Claude |
 | `codex/navegacao-caminho` | Caminho clicável no cabeçalho, com nome do estudo/empresa e retorno ao diagnóstico | Codex |
 | `codex/perf-combinacoes-deploy-record` | Registra o deploy Live de `77ceea2` e os smokes públicos da MOT-100 | Codex |
 | `codex/perf-combinacoes` | PR #75 mergeado na `main` em `77ceea2`; versão publicada no Render | Codex |
@@ -93,6 +94,13 @@ Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. 
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+## 2026-10-05 — Navegação com anel e cartões holográficos em Empresas (MOT-99)
+
+1. **Sintoma.** O Gabriel pediu um acabamento mais marcante no front: o destino ativo da barra lateral pouco se destacava dos demais, e os cartões de Empresas eram retângulos sem reação ao cursor.
+2. **Causa.** A barra lateral marcava o ativo só com fundo e cor do ícone; os cartões de Empresas tinham apenas uma borda acesa no hover.
+3. **O que foi feito.** Na branch `feat/menu-anel-turquesa`: os três destinos ficam num trilho rebaixado e o ícone do ativo ganha um anel metálico na cor de destaque, estático (`web/src/app/AppShell.tsx`, `web/src/styles/global.css`, `web/src/styles/tokens.css`). Os cartões de Empresas passam a usar `web/src/ui/HolographicCard.tsx`: anéis de contorno na família turquesa centrados no cursor e uma inclinação leve na direção dele, só enquanto o cursor está sobre o cartão. Em repouso o cartão fica plano; com `prefers-reduced-motion` não há inclinação. Conteúdo, papéis e ordem de foco não mudam. Os dois temas têm tokens próprios. Testes: 4 unitários novos do cartão; specs locais de empresas/perfis, fundação, importação e acessibilidade verdes.
+4. **O que isso invalida.** As referências visuais Linux do `stage6-visual` que mostram a barra lateral ou a página Empresas precisam ser regeneradas antes do merge. Nenhuma medição, contrato ou resultado calculado muda.
 
 ## 2026-10-05 — Percentuais de economia e resumo de premissas (MOT-99)
 

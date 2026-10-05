@@ -455,6 +455,28 @@ h1:focus { outline: none; }
 .board-breakdown { margin-top: var(--space-8); }
 .company-table td small, .company-table th small { color: var(--muted); display: block; font-size: 0.78rem; font-weight: 400; }
 .company-list__item { align-items: center; display: flex; gap: var(--space-3); justify-content: space-between; }
+/* Cartão holográfico (Empresas): anéis na família turquesa centrados no cursor + inclinação na direção dele.
+   Em repouso fica plano; o modo 3D (.holo-card--tilt) só existe enquanto o cartão se move. */
+.company-list li.holo-card { --holo-x: 78%; --holo-y: 18%; --holo-on: 0; --holo-rx: 0deg; --holo-ry: 0deg; --holo-dx: 0; --holo-dy: 0;
+  background: var(--holo-surface); isolation: isolate; min-height: 76px; overflow: hidden; position: relative; transform: none;
+  transition: transform .5s var(--ease), border-color .25s, box-shadow .25s; }
+.company-list li.holo-card:hover { box-shadow: var(--glow); transform: none; transition: transform .15s ease-out, border-color .25s, box-shadow .25s; }
+.company-list li.holo-card.holo-card--tilt { transform: perspective(900px) rotateX(var(--holo-rx)) rotateY(var(--holo-ry)) translate(calc(var(--holo-dx) * 5px), calc(var(--holo-dy) * 5px)) scale(calc(1 + var(--holo-on) * .02)); }
+.holo-card > :not([aria-hidden='true']) { position: relative; transition: transform .5s var(--ease); }
+.holo-card:hover > :not([aria-hidden='true']) { transition: transform .15s ease-out; }
+.holo-card.holo-card--tilt > :not([aria-hidden='true']) { transform: translate(calc(var(--holo-dx) * 4px), calc(var(--holo-dy) * 3px)); }
+.holo-card__rings { background: conic-gradient(from var(--holo-spin, 0deg) at var(--holo-x) var(--holo-y), var(--holo-1), var(--holo-2), var(--holo-3), var(--holo-4), var(--holo-1), var(--holo-2), var(--holo-1));
+  filter: url(#holo-warp); inset: -20px; pointer-events: none; position: absolute; z-index: -1;
+  -webkit-mask-composite: source-in; mask-composite: intersect;
+  -webkit-mask-image: repeating-radial-gradient(circle at var(--holo-x) var(--holo-y), #000 0 1.3px, transparent 1.9px 7px), radial-gradient(circle at var(--holo-x) var(--holo-y), #000 0, rgb(0 0 0 / 70%) 30%, transparent 70%);
+  mask-image: repeating-radial-gradient(circle at var(--holo-x) var(--holo-y), #000 0 1.3px, transparent 1.9px 7px), radial-gradient(circle at var(--holo-x) var(--holo-y), #000 0, rgb(0 0 0 / 70%) 30%, transparent 70%);
+  opacity: calc(var(--holo-rest) + var(--holo-on) * (var(--holo-peak) - var(--holo-rest))); transition: opacity .4s; }
+/* halo da cor da superfície em volta do nome: os anéis passam por trás sem tirar a leitura */
+.holo-card a { text-shadow: 0 0 4px var(--surface), 0 0 10px var(--surface), 0 0 18px var(--surface); }
+.holo-card__glow { background: radial-gradient(circle at var(--holo-x) var(--holo-y), color-mix(in srgb, var(--accent) 22%, transparent), transparent 55%);
+  inset: 0; opacity: calc(var(--holo-on) * .9); pointer-events: none; position: absolute; transition: opacity .4s; z-index: -2; }
+.holo-filter { height: 0; overflow: hidden; position: absolute; width: 0; }
+@media (prefers-reduced-motion: reduce) { .company-list li.holo-card, .company-list li.holo-card.holo-card--tilt, .holo-card > :not([aria-hidden='true']) { transform: none !important; } }
 
 /* Assistente (chat) — painel lateral no mesmo sistema visual */
 .chat-launcher { align-items: center; background: var(--accent); border: 0; border-radius: 999px; bottom: 24px; box-shadow: 0 10px 30px rgb(0 0 0 / 35%), 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent); color: var(--on-accent); cursor: pointer; display: flex; height: 52px; justify-content: center; position: fixed; right: 24px; transition: transform .25s var(--ease), box-shadow .25s; width: 52px; z-index: 70; }

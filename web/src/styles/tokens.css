@@ -34,6 +34,13 @@
   --ring-shadow: 0 0 0 1px rgb(0 0 0 / 60%), 0 6px 16px rgb(0 0 0 / 50%), 0 0 20px rgb(67 211 195 / 14%);
   --tile-core: radial-gradient(120% 90% at 30% 15%, #1f2a35, #0e151c 70%);
   --tile-ink: #ffffff;
+  --holo-surface: radial-gradient(140% 120% at 0% 0%, #16212c, var(--surface) 55%);
+  --holo-1: #43d3c3;
+  --holo-2: #b9f5ee;
+  --holo-3: #7cc4ff;
+  --holo-4: #1f9a8d;
+  --holo-rest: .22;
+  --holo-peak: .72;
   --font-body: 'Geist Variable', 'Segoe UI', system-ui, sans-serif;
   --font-heading: 'Geist Variable', 'Segoe UI', system-ui, sans-serif;
   --font-mono: 'Geist Mono Variable', ui-monospace, 'Cascadia Mono', Consolas, monospace;
@@ -83,4 +90,11 @@
   --ring-shadow: 0 0 0 1px rgb(6 77 70 / 30%), 0 4px 12px rgb(16 32 43 / 14%), 0 0 16px rgb(11 122 112 / 12%);
   --tile-core: radial-gradient(120% 90% at 30% 15%, #ffffff, #eef3f5 70%);
   --tile-ink: #0b3d38;
+  --holo-surface: radial-gradient(140% 120% at 0% 0%, #f4f8fa, var(--surface) 55%);
+  --holo-1: #0b7a70;
+  --holo-2: #43d3c3;
+  --holo-3: #2470b3;
+  --holo-4: #075c54;
+  --holo-rest: .16;
+  --holo-peak: .72;
 }

@@ -5,6 +5,7 @@ import { useStudyController } from '../app/providers';
 import { useAuth } from '../auth/AuthProvider';
 import type { CompanyRecord } from '../cases/domain';
 import { Button } from '../ui/Button';
+import { HolographicCard, HolographicFilter } from '../ui/HolographicCard';
 
 export function CompaniesPage() {
   const controller = useStudyController();
@@ -43,14 +44,17 @@ Os casos importados e os perfis dela serão apagados. Estudos já criados contin
       <p><Link to="/importar">Importar operações</Link></p>
       {error === null ? null : <p role="alert" className="inline-notice inline-notice--error">{error}</p>}
       {companies === null ? <p role="status">Carregando empresas…</p> : companies.length === 0 ? <p className="empty-copy">Nenhuma empresa disponível.</p> : (
-        <ul className="company-list">
-          {companies.map((company) => <li key={company.id} className="company-list__item">
-            <Link to={`/empresas/${company.id}`}>{company.displayName}</Link>
-            <Button variant="secondary" disabled={deleting !== null} onClick={() => void remove(company)} aria-label={`Excluir empresa ${company.displayName}`}>
-              {deleting === company.id ? 'Excluindo…' : 'Excluir'}
-            </Button>
-          </li>)}
-        </ul>
+        <>
+          <HolographicFilter />
+          <ul className="company-list">
+            {companies.map((company, index) => <HolographicCard key={company.id} className="company-list__item" seed={index}>
+              <Link to={`/empresas/${company.id}`}>{company.displayName}</Link>
+              <Button variant="secondary" disabled={deleting !== null} onClick={() => void remove(company)} aria-label={`Excluir empresa ${company.displayName}`}>
+                {deleting === company.id ? 'Excluindo…' : 'Excluir'}
+              </Button>
+            </HolographicCard>)}
+          </ul>
+        </>
       )}
     </article>
   );
