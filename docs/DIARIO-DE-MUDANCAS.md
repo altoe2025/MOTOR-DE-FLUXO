@@ -97,7 +97,7 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 
 ## 2026-10-05 — Navegação com anel e cartões holográficos em Empresas (MOT-99)
 
-**Preparação de publicação.** Captura das referências Linux pelo workflow visual existente, com gatilho temporário para `feat/menu-anel-turquesa`; o gatilho será restaurado no mesmo PR antes do merge. Código de produto preservado. Referências Windows também serão regeneradas e comparadas antes da publicação.
+**Referências verificadas.** Captura Linux `37390392538` aprovada e duas specs Windows aprovadas. Oito referências (import, demo, chat e presentation em Linux/Windows) foram revisadas visualmente; todos os pixels alterados estão dentro da barra lateral, até x=234. Login e páginas impressas permanecem idênticos. O gatilho temporário do workflow foi restaurado no mesmo PR. Código de produto preservado. CI final e publicação pendentes.
 
 1. **Sintoma.** O Gabriel pediu um acabamento mais marcante no front: o destino ativo da barra lateral pouco se destacava dos demais, e os cartões de Empresas eram retângulos sem reação ao cursor.
 2. **Causa.** A barra lateral marcava o ativo só com fundo e cor do ícone; os cartões de Empresas tinham apenas uma borda acesa no hover.
