@@ -95,7 +95,7 @@ function comparisonExplanation(winner: SelectablePortfolio, alternative: Selecta
     alternative.weightedWait, alternative.netability];
   const Exact = Decimal.clone({ precision: values.reduce((total, value) => total + value.length, 20) });
   const savings = new Exact(winner.savings).minus(alternative.savings);
-  const efficiency = new Exact(winner.savings).div(winner.volume).minus(new Exact(alternative.savings).div(alternative.volume)).times(10000);
+  const efficiency = new Exact(winner.savings).div(winner.volume).minus(new Exact(alternative.savings).div(alternative.volume)).times(100);
   const wait = new Exact(winner.weightedWait).div(winner.volume).minus(new Exact(alternative.weightedWait).div(alternative.volume));
   const reduction = new Exact(winner.baseline).isZero() || new Exact(alternative.baseline).isZero()
     ? 'redução do custo indisponível'
@@ -103,7 +103,7 @@ function comparisonExplanation(winner: SelectablePortfolio, alternative: Selecta
       .minus(new Exact(alternative.savings).div(alternative.baseline)).times(100), 2)} p.p.`;
   const netability = new Exact(winner.netability).minus(alternative.netability).times(100);
   const companies = winner.companyIds.length - alternative.companyIds.length;
-  return `Frente à alternativa ${alternative.name}: economia ${formatSignedMoney(savings.toFixed())}; eficiência ${signed(efficiency, 2)} bps; ${reduction}; espera ${signed(wait, 2)} dias; ${companies > 0 ? '+' : ''}${companies} empresas; netabilidade ${signed(netability, 2)} p.p.`;
+  return `Frente à alternativa ${alternative.name}: economia ${formatSignedMoney(savings.toFixed())}; economia sobre volume ${signed(efficiency, 2)} p.p.; ${reduction}; espera ${signed(wait, 2)} dias; ${companies > 0 ? '+' : ''}${companies} empresas; netabilidade ${signed(netability, 2)} p.p.`;
 }
 
 export function PortfolioRecommendation({ study, deferred = false }: Readonly<{ study: StudyDocument; deferred?: boolean }>) {

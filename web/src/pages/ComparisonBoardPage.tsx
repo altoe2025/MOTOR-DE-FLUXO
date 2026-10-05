@@ -1,4 +1,5 @@
 import Decimal from 'decimal.js';
+import { formatBpsAsPercent } from '../presentation/format';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -290,7 +291,7 @@ export function ComparisonBoardPage() {
     {board.length > 0 ? <>
       <div className="source-actions">
         <label>Ordenar por<select value={sortKey} onChange={(event) => setSortKey(event.target.value as SortKey)}>
-          <option value="bps">Maior economia em bps</option>
+          <option value="bps">Maior economia sobre volume (%)</option>
           <option value="savings">Maior economia em R$</option>
           <option value="netability">Maior netabilidade</option>
           <option value="name">Nome</option>
@@ -315,7 +316,7 @@ export function ComparisonBoardPage() {
             <th scope="col">Custo com pool</th>
             <th scope="col">Economia</th>
             <th scope="col" title="Volume bruto medido: soma das ordens do período medido, o que atravessaria a fronteira sem pool.">Volume medido</th>
-            <th scope="col" title="Economia ÷ volume medido × 10.000. 1 bp = 0,01% do volume. Compara carteiras de tamanhos e períodos diferentes.">Economia (bps)</th>
+            <th scope="col" title="Economia ÷ volume medido × 100. Compara carteiras de tamanhos e períodos diferentes.">Economia sobre volume (%)</th>
             <th scope="col"><span className="visually-hidden">Ações</span></th>
           </tr></thead>
           <tbody>{board.map((row) => <tr key={row.key}>
@@ -337,7 +338,7 @@ export function ComparisonBoardPage() {
             <td>{formatMoney(row.nettedTotal)}</td>
             <td>{formatMoney(row.savings)}</td>
             <td>{formatMoney(row.grossVolume)}</td>
-            <td>{row.savingsBps === null ? '—' : `${new Decimal(row.savingsBps).toFixed(2).replace('.', ',')} bps`}</td>
+            <td>{row.savingsBps === null ? '—' : formatBpsAsPercent(row.savingsBps)}</td>
             <td>
               <Button variant="secondary" onClick={() => toggle(row.key)} aria-label={`Remover ${row.studyName} · ${row.scenarioName} do quadro`}>Remover</Button>
             </td>

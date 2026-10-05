@@ -34,7 +34,7 @@ describe('PortfolioMarginalPanel', () => {
     expect(removeB).toHaveTextContent(/Antes: R\$\s100,00/);
     expect(removeB).toHaveTextContent(/Depois: R\$\s30,00/);
     expect(removeB).toHaveTextContent(/Δ: -R\$\s70,00/);
-    expect(removeB).toHaveTextContent(/Δ: -25,00 bps/);
+    expect(removeB).toHaveTextContent(/Δ: -0,25 p.p./);
     expect(removeB).toHaveTextContent(/Δ: -1,00 dias/);
     const addC = within(table).getByRole('row', { name: /Adicionar Homônima ID: C/ });
     expect(addC).toHaveTextContent(/Δ: \+R\$\s20,00/);

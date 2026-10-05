@@ -101,7 +101,6 @@ function ScenarioSettings({
       <span className="summary-line__value">IOF <strong>{percentText(premises.costs.iof_out)} / {percentText(premises.costs.iof_in)}</strong></span>
       <span className="summary-line__value">Carry <strong>{percentText(premises.costs.carry_cnr)}</strong></span>
       <span className="summary-line__value">PTAX <strong>{plainToBrText(premises.costs.ptax)}</strong></span>
-      <span className="summary-line__value">Janela <strong>{premises.windowDays} dias</strong></span>
       <span className="summary-line__actions"><Button variant="secondary" aria-expanded={editing} aria-controls="scenario-settings-form"
         onClick={() => setEditing((current) => !current)}>{editing ? 'Fechar premissas' : 'Editar premissas'}</Button></span>
     </div>

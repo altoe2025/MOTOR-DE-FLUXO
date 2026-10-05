@@ -30,8 +30,8 @@ export function formatFraction(value: DecimalText | null): string {
   return value === null ? unavailable : `${localized(fixed(new Decimal(value).times(100).toFixed(), 2))}%`;
 }
 
-export function formatBps(value: DecimalText | null): string {
-  return value === null ? unavailable : `${localized(fixed(value, 2))} bps`;
+export function formatBpsAsPercent(value: DecimalText | null): string {
+  return value === null ? unavailable : `${localized(fixed(new Decimal(value).div(100).toFixed(), 2))}%`;
 }
 
 export function formatDecimal(value: DecimalText, digits: number): string {

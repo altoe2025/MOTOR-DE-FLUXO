@@ -2,7 +2,7 @@ import Decimal from 'decimal.js';
 import { useId, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 
-import { formatBps, formatDecimal, formatMoney } from '../presentation/format';
+import { formatBpsAsPercent, formatDecimal, formatMoney } from '../presentation/format';
 import type { PortfolioMetrics } from './portfolioAnalysis';
 import { portfolioMarginals, type MarginalRow } from './portfolioMarginal';
 
@@ -18,6 +18,7 @@ export type PortfolioMarginalPanelProps = Readonly<{
 type Formatter = (value: string | null) => string;
 const unavailable = 'Não disponível';
 const days: Formatter = value => value === null ? unavailable : `${formatDecimal(value, 2)} dias`;
+const percentagePoints: Formatter = value => value === null ? unavailable : formatBpsAsPercent(value).replace('%', ' p.p.');
 const count: Formatter = value => value ?? unavailable;
 
 function signed(value: string | null, format: Formatter): string {
@@ -27,13 +28,13 @@ function signed(value: string | null, format: Formatter): string {
   return `${sign}${format(decimal.abs().toFixed())}`;
 }
 
-function Difference({ before, after, delta, format }: Readonly<{
-  before: string | null; after: string | null; delta: string | null; format: Formatter;
+function Difference({ before, after, delta, format, deltaFormat = format }: Readonly<{
+  before: string | null; after: string | null; delta: string | null; format: Formatter; deltaFormat?: Formatter;
 }>) {
   return <td>
     <div>Antes: {format(before)}</div>
     <div>Depois: {format(after)}</div>
-    <strong>Δ: {signed(delta, format)}</strong>
+    <strong>Δ: {signed(delta, deltaFormat)}</strong>
   </td>;
 }
 
@@ -104,7 +105,7 @@ export function PortfolioMarginalPanel({
           <caption>Efeito de adicionar ou remover empresas — antes, depois e diferença</caption>
           <thead><tr>
             <th scope="col">Ação e empresa</th><th scope="col">Economia (R$)</th>
-            <th scope="col">Economia sobre volume (bps)</th><th scope="col">Volume (R$)</th>
+            <th scope="col">Economia sobre volume (%)</th><th scope="col">Volume (R$)</th>
             <th scope="col">Espera média (dias)</th><th scope="col">Empresas</th><th scope="col">Contraparte</th>
           </tr></thead>
           <tbody>{rows.map(row => {
@@ -115,7 +116,7 @@ export function PortfolioMarginalPanel({
             return <tr key={row.companyId}>
               <th scope="row">{row.action === 'REMOVE' ? 'Remover' : 'Adicionar'} {row.companyName}{' '}<small>ID: {row.companyId}</small></th>
               <Difference before={row.before?.savings ?? null} after={row.after?.savings ?? null} delta={row.savingsDelta} format={formatMoney} />
-              <Difference before={row.before?.bps ?? null} after={row.after?.bps ?? null} delta={row.bpsDelta} format={formatBps} />
+              <Difference before={row.before?.bps ?? null} after={row.after?.bps ?? null} delta={row.bpsDelta} format={formatBpsAsPercent} deltaFormat={percentagePoints} />
               <Difference before={row.before?.volume ?? null} after={row.after?.volume ?? null} delta={row.volumeDelta} format={formatMoney} />
               <Difference before={row.before?.weightedMeanWait ?? null} after={row.after?.weightedMeanWait ?? null} delta={row.weightedMeanWaitDelta} format={days} />
               <Difference before={row.before === null ? null : String(row.before.companyCount)} after={row.after === null ? null : String(row.after.companyCount)}

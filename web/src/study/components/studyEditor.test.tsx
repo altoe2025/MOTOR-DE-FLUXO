@@ -240,7 +240,7 @@ describe('StudyEditor', () => {
     expect(summary).toHaveTextContent('IOF 3,5% / 0,38%');
     expect(summary).toHaveTextContent('Carry 0,04%');
     expect(summary).toHaveTextContent('PTAX 5,4');
-    expect(summary).toHaveTextContent(/Janela \d+ dias/);
+    expect(summary).not.toHaveTextContent(/Janela \d+ dias/);
     expect(screen.queryByLabelText('IOF OUT')).not.toBeInTheDocument();
     const edit = screen.getByRole('button', { name: 'Editar premissas' });
     expect(edit).toHaveAttribute('aria-expanded', 'false');

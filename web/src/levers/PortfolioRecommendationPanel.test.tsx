@@ -184,7 +184,7 @@ describe('PortfolioRecommendation', () => {
     await subject();
     const explanation = screen.getByText(/Frente à alternativa A/);
     expect(explanation).toHaveTextContent('+R$');
-    expect(explanation).toHaveTextContent('bps');
+    expect(explanation).toHaveTextContent('economia sobre volume');
     expect(explanation).toHaveTextContent('p.p.');
     expect(explanation).toHaveTextContent('dias');
     expect(explanation).toHaveTextContent('empresas');
