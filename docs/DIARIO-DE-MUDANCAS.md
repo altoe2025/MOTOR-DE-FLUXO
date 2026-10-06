@@ -33,10 +33,11 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-10-05, durante a abertura do PR da navegação com anel e dos cartões de Empresas (MOT-99).
+Atualizada em 2026-10-05, durante o ajuste do contorno dos cartões de Estudos (MOT-99).
 
 | Branch | Situação | Dono |
 |---|---|---|
+| `codex/estudos-anel-hover` | Cartões de Estudos usam o contorno metálico turquesa do menu durante hover e foco pelo teclado; verificado localmente, sem deploy | Codex |
 | `feat/menu-anel-turquesa` | Navegação lateral com trilho e anel turquesa no destino ativo + cartões holográficos em Empresas; PR aberto para a `main`, merge e deploy com o Codex | Claude |
 | `codex/navegacao-caminho` | Caminho clicável no cabeçalho, com nome do estudo/empresa e retorno ao diagnóstico | Codex |
 | `codex/perf-combinacoes-deploy-record` | Registra o deploy Live de `77ceea2` e os smokes públicos da MOT-100 | Codex |
@@ -94,6 +95,13 @@ Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. 
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+## 2026-10-05 — Contorno turquesa nos cartões de Estudos (MOT-99)
+
+1. **Sintoma.** O Gabriel pediu que os boxes de Estudos ganhassem, ao passar o mouse, o mesmo acabamento de borda do ícone ativo no menu Trabalho.
+2. **Causa.** O hover da lista usava apenas uma borda discreta e a sombra genérica, sem o anel metálico do menu.
+3. **O que foi feito.** `web/src/styles/global.css` reutiliza `--ring-metal` e `--ring-shadow` no contorno externo do cartão. Uma camada decorativa de 2,5 px aparece no hover ou no foco dos controles internos, sem interceptar cliques nem alterar dimensões. Verificação em prévia local com estudo sintético nos temas escuro e claro: contorno aparece e desaparece; dimensões idênticas em repouso e hover. Os 53 testes de `src/app/router.test.tsx` passaram antes e depois; TypeScript e build E2E passaram. Sem merge ou deploy nesta etapa.
+4. **O que isso invalida.** Apenas o acabamento anterior do hover dos cartões. Nada nos dados, cálculos ou ações dos estudos.
 
 ## 2026-10-05 — Navegação com anel e cartões holográficos em Empresas (MOT-99)
 
