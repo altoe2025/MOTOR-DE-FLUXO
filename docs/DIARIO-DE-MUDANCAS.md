@@ -33,6 +33,12 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
+Atualizada em 2026-10-05, após o merge e deploy do PR #80 (MOT-99).
+
+| Branch | Situação | Dono |
+|---|---|---|
+| `feat/menu-anel-turquesa` | PR #80 integrado por merge commit `821f734`; navegação com anel e cartões de Empresas publicados no Render | Claude |
+| `codex/pr80-deploy-record` | Registro separado do deploy de `821f734`, das verificações e da limitação do teste de exclusão | Codex |
 Atualizada em 2026-10-03, após a publicação do caminho de navegação.
 
 | Branch | Situação | Dono |
@@ -87,6 +93,7 @@ Atualizada em 2026-10-05, durante o ajuste do contorno dos cartões de Estudos (
 | `codex/carteira-criterios` | Integra estudo separado de combinações, últimas melhorias de `feat/bancada-exploracao` e chat já publicado do PR #57; deploy aguardando comando do Gabriel | Codex |
 | `codex/chat-interface-render` | PR #57 aberto (draft, base `feat/bancada-exploracao`); código `8d43695` publicado no Render com status Live em 2026-09-28; sem merge na `main` | Codex |
 | `codex/integracao-etapas-5-6` | Consolida `feat/bancada-exploracao` e `codex/finalidade-verificacao`, incluindo histórico de `origin/main`; publicação/CI em preparação, sem deploy | Codex |
+| `main` | `821f734`: PR #80 mergeado e publicado no Render; inclui percentuais e remoção da janela do resumo de premissas do PR #79 | os dois |
 | `main` | `bdae970`: PR #77 mergeado e publicado no Render; caminho de navegação Live | os dois |
 | `main` | `727d3ee`: PR #71 mergeado; mesma revisão confirmada Live no Render | os dois |
 | `main` | `c3620bf`: PR #66 mergeado e visual unificado publicado no Render | os dois |
@@ -128,6 +135,21 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-10-05 — Navegação com anel e cartões publicados no Render (MOT-99)
+
+**Sintoma:** o PR #80 estava pronto para integração, mas as referências visuais ainda descreviam a navegação anterior e a publicação precisava ser conferida.
+
+**Causa:** mudança intencional de pixels da sidebar; o serviço Render permanece com deploy automático desligado.
+
+**O que foi feito:** PR #80 integrado por merge commit `821f7340b689232396d1238a34faefac05553b55`, sem squash. Foram atualizadas oito referências visuais Linux/Windows de importação, demonstração, chat e apresentação. Comparação por pixels e abertura das imagens confirmaram alterações apenas na sidebar; login e páginas de impressão permaneceram idênticos. O workflow temporário de captura foi restaurado antes do merge. CI final [37390714380](https://github.com/altoe2025/MOTOR-DE-FLUXO/actions/runs/37390714380) aprovado, incluindo 68 testes de navegador e um ignorado. Uma execução intermediária teve timeout no teste `study-observed`: a opção `case-e2e` não estava disponível no seletor. Três repetições isoladas e o CI final passaram sem alterar código, retries ou timeout; a causa desse episódio não foi confirmada.
+
+Deploy manual do SHA acima no serviço `srv-dar8k7e0tbcc739eikog`: **`dep-db23nf3tqb8s73buje10`**, iniciado em **2026-10-05 21:07:24 GMT-3**, duração **1m03s**, confirmado **Deploy succeeded / Live**. Referência anterior para rollback: `dep-db1u1d2jnfac73e50av0`, SHA `4c48f3981a96990ee9598881e376149464339400`. Nenhuma configuração do serviço foi alterada.
+
+Verificação em produção: `/health` respondeu HTTP 200 com `{"status":"ok"}`; login disponível por HTTPS; sessão autenticada percorreu estudo demonstrativo sintético, editor, execução do diagnóstico sem erro visível, Replay avançando de D0 para D1, apresentação e chat. O chat retornou a economia da execução selecionada com link de evidência. Cards mostraram anéis em repouso, coordenadas de brilho e inclinação seguindo o cursor e variáveis de inclinação zeradas ao sair. Link de empresa abriu sua visão geral. Navegação ativa conferida nos temas escuro e claro; em viewport de 375 px os links ficaram em uma coluna e `scrollWidth` igual a `clientWidth`, sem overflow horizontal. Nenhum erro de console capturado nas abas do smoke.
+
+**Limitação e incidente do smoke:** ao clicar em Excluir na Empresa sintética 04 para conferir somente a confirmação, a automação perdeu acesso à aba durante o diálogo. Não houve chamada explícita de aceite; as tentativas de cancelar por API não funcionaram. Quando o acesso voltou, a empresa já não aparecia no catálogo. Não foi possível determinar como a confirmação foi encerrada nem validar o cancelamento. O Gabriel foi informado; a exclusão não foi repetida. O código preserva `window.confirm` antes de `deleteCompany`, mas isso não substitui a validação manual pendente. Não houve tentativa de recriar os casos/perfis ausentes ou modificar código de produto. Este registro não declara o smoke de exclusão aprovado.
+
+**O que isso invalida:** o status anterior de PR aberto/publicação pendente do PR #80. Nenhum resultado matemático ou premissa do motor foi alterado por esta publicação. A conclusão de que o cancelamento de exclusão foi verificado não pode ser feita.
 ## 2026-10-03 — Caminho de navegação publicado no Render (MOT-99)
 
 **Sintoma.** O PR #77 estava pronto para revisão, mas o caminho clicável ainda não estava publicado.
