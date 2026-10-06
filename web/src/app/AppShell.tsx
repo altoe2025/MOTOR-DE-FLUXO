@@ -72,7 +72,7 @@ export function AppShell() {
               <li key={destination.to}>
                 <NavLink to={destination.to} end={destination.to === '/empresas'} className={({ isActive }) => `destination-link${isActive || (destination.to === '/estudos' && studyArea) ? ' active' : ''}`}
                   {...(destination.to === '/estudos' && studyArea ? { 'aria-current': 'page' as const } : {})}>
-                  <Icon name={destination.icon} />
+                  <span className="destination-tile" aria-hidden="true"><span><Icon name={destination.icon} /></span></span>
                   {destination.label}
                 </NavLink>
               </li>
