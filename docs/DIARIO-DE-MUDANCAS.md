@@ -33,11 +33,12 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-10-05, durante o ajuste do contorno dos cartões de Estudos (MOT-99).
+Atualizada em 2026-10-06, após o deploy do contorno dos cartões de Estudos (MOT-99).
 
 | Branch | Situação | Dono |
 |---|---|---|
-| `codex/estudos-anel-hover` | Cartões de Estudos usam o contorno metálico turquesa do menu durante hover e foco pelo teclado; verificado localmente, sem deploy | Codex |
+| `codex/estudos-anel-hover` | PR #82 integrado em `1f9420b` e publicado no Render; contorno metálico turquesa nos cartões de Estudos | Codex |
+| `codex/estudos-hover-deploy-record` | Registro separado da publicação e da verificação do contorno em produção | Codex |
 | `feat/menu-anel-turquesa` | Navegação lateral com trilho e anel turquesa no destino ativo + cartões holográficos em Empresas; PR aberto para a `main`, merge e deploy com o Codex | Claude |
 | `codex/navegacao-caminho` | Caminho clicável no cabeçalho, com nome do estudo/empresa e retorno ao diagnóstico | Codex |
 | `codex/perf-combinacoes-deploy-record` | Registra o deploy Live de `77ceea2` e os smokes públicos da MOT-100 | Codex |
@@ -59,7 +60,7 @@ Atualizada em 2026-10-05, durante o ajuste do contorno dos cartões de Estudos (
 | `codex/carteira-criterios` | Integra estudo separado de combinações, últimas melhorias de `feat/bancada-exploracao` e chat já publicado do PR #57; deploy aguardando comando do Gabriel | Codex |
 | `codex/chat-interface-render` | PR #57 aberto (draft, base `feat/bancada-exploracao`); código `8d43695` publicado no Render com status Live em 2026-09-28; sem merge na `main` | Codex |
 | `codex/integracao-etapas-5-6` | Consolida `feat/bancada-exploracao` e `codex/finalidade-verificacao`, incluindo histórico de `origin/main`; publicação/CI em preparação, sem deploy | Codex |
-| `main` | `77ceea2`: PR #75 mergeado e publicado no Render; otimização das combinações Live | os dois |
+| `main` | `1f9420b`: PR #82 integrado e publicado no Render; contorno dos cartões de Estudos Live | os dois |
 | `netting/p1` | spike do P1, **NÃO MERGEAR** — dominado, e agora sabemos que a folga é zero em N ≥ 50. Só local, nunca foi pro GitHub | Felipe |
 | `fix/semantica-remessa-p0` | PR #11, mergeada | Felipe |
 | `fix/previsao-temporal-e-colunas-csv` | PR #12, mergeada | Gabriel |
@@ -95,6 +96,15 @@ Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. 
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+## 2026-10-06 — Contorno dos cartões de Estudos publicado (MOT-99)
+
+1. **Sintoma.** O ajuste visual do PR #82 estava verificado localmente e aguardava a publicação solicitada pelo Gabriel.
+2. **Causa.** O serviço Render usa deploy manual; era necessário integrar o PR com CI aprovado e publicar o SHA do merge.
+3. **O que foi feito.** PR #82 integrado por merge commit `1f9420b2fbc6cf7b5b9b0756b11371957169f7f4`. CI [37404381048](https://github.com/altoe2025/MOTOR-DE-FLUXO/actions/runs/37404381048), tentativa 2, aprovado com 68 testes de navegador e um ignorado. A tentativa 1 teve timeout no teste de contexto/citação do chat: o campo ficou vazio e Enviar desabilitado após o preenchimento pelo teste. O caso passou em três repetições isoladas e na segunda execução completa (4,6 s); a causa não foi confirmada. Não houve alteração de código, retries ou timeout para obter a aprovação.
+
+   Deploy manual **`dep-db269ojtqb8s73c7imt0`**, iniciado em **2026-10-06 00:02:58 GMT-3**, duração **48,2 s**, confirmado **Deploy succeeded / Live** no serviço `srv-dar8k7e0tbcc739eikog`. Referência anterior para rollback: `dep-db23nf3tqb8s73buje10`, SHA `821f7340b689232396d1238a34faefac05553b55`. Configuração do serviço preservada. Em produção, `/api/v1/health` retornou HTTP 200 com `{"status":"ok"}`; sessão autenticada preservada, contorno conferido em hover nos temas escuro e claro, opacity 0 em repouso e 1 no hover, retângulo de 960 × 98,08 px idêntico nos dois estados. O estudo demonstrativo abriu no editor normalmente e não foram capturados erros de console. Nenhuma exclusão foi testada nesta publicação.
+4. **O que isso invalida.** O status de publicação pendente do PR #82. Nenhum cálculo ou premissa do motor mudou.
 
 ## 2026-10-05 — Contorno turquesa nos cartões de Estudos (MOT-99)
 
