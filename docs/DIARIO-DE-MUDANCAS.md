@@ -33,13 +33,14 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-10-08, na limpeza do repositório (as tabelas que cada registro de deploy trazia foram unificadas aqui).
+Atualizada em 2026-10-08, depois do merge do #84 (as tabelas que cada registro de deploy trazia foram unificadas aqui).
 
 | Branch | Situação | Dono |
 |---|---|---|
-| `main` | `3c65dc9`: PR #61 mergeado (taxas por mecanismo sem segundo arredondamento); publicado no Render até `1f9420b` (PR #82), o #61 ainda não foi publicado | — |
-| `docs/registros-deploy-consolidados` | Junta os registros de deploy dos PRs #67, #68, #72, #74, #78, #81 e #83 numa única branch, com esta limpeza | Claude |
-| `docs/auditoria-2026-09-06` | PR #17: auditoria de fechamento e casos manuais de verificação do netting | Gabriel |
+| `main` | `87718e2`: PRs #61 e #84 mergeados; publicado no Render até `1f9420b` (PR #82), o #61 ainda não foi publicado (conta dona do Render ainda não identificada) | — |
+| `docs/agents-colaboracao` | Regras de colaboração e de diário no `AGENTS.md`, modelo de PR | Gabriel, com Claude |
+| `docs/auditoria-2026-09-06` | PR #17: auditoria de fechamento e casos manuais de verificação do netting. CI falhou duas vezes em testes E2E diferentes (timeout), sem relação com o diff | Gabriel |
+| `docs/registros-deploy-consolidados`, `fix/taxas-arredondadas`, 7 × `codex/*-deploy-record` | Conteúdo já na `main` (#84 e #61); branches remotas ainda não apagadas | — |
 
 Branches substituídas viraram tags `archive/<nome-da-branch>` (31 tags, no GitHub); o conteúdo continua acessível por elas.
 
@@ -47,6 +48,13 @@ Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. 
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+## 2026-10-08 — Gabriel, com Claude — Regras de colaboração e de diário no AGENTS.md
+
+1. **Sintoma.** As regras de trabalho em dupla (Gabriel e Felipe, cada um com seus assistentes) existiam só em prompts e memórias locais. O `AGENTS.md` não dizia quem autoriza merge e deploy, nem como "atualizar o contexto". O modelo de PR ainda pedia `GAB-XXX`.
+2. **Causa.** A divisão entre assistentes mudou em 2026-10-08 (fim da exclusividade Claude/Codex) e o Felipe passou a trabalhar no repositório com a própria IA; nada disso tinha sido escrito no repositório, que é o único lugar que os dois e todos os assistentes leem.
+3. **O que foi feito.** Novas seções "Quem trabalha neste repositório" e "Diário e atualização de contexto" no `AGENTS.md`. Decisão do Gabriel: merge e deploy com pedido explícito do Gabriel **ou** do Felipe; mudança de regra de simulação com acordo dos **dois**. A frase de "Limitações conhecidas" passou de "decisão do Gabriel" para "acordo do Gabriel e do Felipe". Modelo de PR com `MOT-N`, campo "quem pediu e quem executou" e item do diário. Tabela de branches atualizada após o #84. A partir desta entrada, o título traz quem pediu e qual assistente executou.
+4. **O que isso invalida.** Qualquer instrução anterior de que só o Gabriel autoriza merge/deploy, ou de que o Claude faz só o front e o Codex só o deploy. Nenhum cálculo ou premissa do motor mudou.
 
 ## 2026-10-08 — Limpeza de branches, worktrees e PRs parados
 

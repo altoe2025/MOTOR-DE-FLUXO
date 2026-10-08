@@ -177,14 +177,55 @@ Foram desenvolvidos nas branches `gabriel/metrica-tempo`,
 `analise/sensibilidade-custo` (PRs #21–#24), hoje integradas à `main`. Seus números
 continuam identificados como legado da política anterior.
 
-## Diário de mudanças
+## Quem trabalha neste repositório
+
+Duas pessoas, Gabriel (`altoe2025`, dono do repositório) e Felipe (`felipebisca`),
+cada uma com seus assistentes de IA (Claude, ChatGPT/Codex), em máquinas diferentes.
+Os commits podem sair todos pela conta `altoe2025`; por isso o diário registra quem
+pediu e qual assistente executou.
+
+Regras decididas pelo Gabriel em 2026-10-08:
+
+- **Sem exclusividade entre assistentes.** Qualquer assistente pode mexer em front,
+  motor, servidor, merge e deploy. Não recusar nem repassar uma tarefa por causa de
+  divisões antigas (antes, o Claude fazia o front e o Codex fazia o deploy).
+- **Quem autoriza.** Merge na `main` e deploy no Render só com pedido explícito do
+  Gabriel **ou** do Felipe para aquela mudança. Aprovação de uma mudança não vale para
+  a próxima. Mudar regra de simulação exige acordo **dos dois** e atualização dos
+  cenários de regressão; o número de aceitação não muda.
+- **Integração.** A `main` só recebe PR com o check `pytest` verde e a branch
+  atualizada com a `main`. Nada de `push --force` na `main`.
+- **Uma tarefa = uma branch + uma worktree.** Antes de editar: `git fetch`,
+  `git status` para ver mudanças alheias, e partir da `main` atual. Nunca editar a
+  worktree que outra sessão está usando.
+- **Branches remotas.** Antes de apagar, conferir se a branch é destino de PR aberto
+  (`gh pr list --base <branch>`): apagar o destino fecha o PR. Prefira transformar a
+  branch abandonada em tag `archive/<nome>`.
+- **Publicação.** Antes, anotar o deploy atual para rollback; depois, rodar o smoke
+  (`/api/v1/health` 200 e login) e registrar no diário o SHA publicado, o ID do
+  deploy e o resultado. Procedimento em `docs/deploy-render.md`.
+
+## Diário e atualização de contexto
 
 `docs/DIARIO-DE-MUDANCAS.md` é o estado compartilhado entre colaboradores deste
-repositório. **Leia a entrada do topo antes de começar qualquer tarefa** — uma tarefa
-escrita a partir do que está em `origin/main` pode estar descrevendo código que já
-mudou na `main` local.
+repositório. **Leia a entrada do topo e os PRs abertos antes de começar qualquer
+tarefa** — uma tarefa escrita a partir do que está em `origin/main` pode estar
+descrevendo código que já mudou na `main` local, ou algo que a outra pessoa está
+fazendo agora.
 
-Toda mudança que vai para o GitHub ganha uma entrada, no mesmo commit que a faz.
+- **Toda mudança que vai para o GitHub** (merge, deploy, branch nova, mudança de
+  decisão) ganha uma entrada no topo do diário, **no mesmo commit que a faz**. O
+  título traz a data, quem pediu e qual assistente executou:
+  `## 2026-10-08 — Gabriel, com Claude — <assunto>`.
+- **"Atualizar o contexto" = ler o diário.** Quando o Gabriel ou o Felipe pedirem
+  para atualizar o contexto (ou perguntarem "o que mudou?"):
+  1. `git pull` na `main`;
+  2. ler o diário do topo para baixo até a data indicada ou até a última atualização
+     já conhecida (não precisa ler o arquivo inteiro);
+  3. conferir no `git log` se entrou alguma mudança sem entrada no diário e, se
+     entrou, avisar;
+  4. responder com um resumo do que mudou, de quem, o que foi publicado e o que ficou
+     pendente, citando as entradas.
 
 ## Convenções de commit
 
@@ -194,9 +235,9 @@ tipo: descrição (MOT-N)
 
 Exemplo real do histórico: `fix: alocações REMETIDO em ordem canônica, não na ordem
 de entrada (MOT-11)`. Confirmado em `git log`: todos os commits do histórico atual
-usam o sufixo `(MOT-N)` — não há nenhum commit usando `(GAB-N)`; esse padrão só
-aparece hoje como placeholder no `.github/pull_request_template.md` e está
-desatualizado.
+usam o sufixo `(MOT-N)` — não há nenhum commit usando `(GAB-N)`. O placeholder
+`GAB-XXX` do `.github/pull_request_template.md` foi trocado por `MOT-N` em
+2026-10-08. Trabalho de documentação/infra sem issue sai sem o sufixo.
 
 ## Convenções de branch
 
@@ -272,7 +313,7 @@ Se uma tarefa exigir editar arquivo fora da coluna da branch atual, **pare e avi
 
 Auditadas e confirmadas no código em 2026-09-06. Cada uma é escolha de modelagem ou
 lacuna deliberada, não descuido — mudar qualquer uma altera os números da varredura e
-exige decisão do Gabriel + atualização dos cenários de regressão.
+exige acordo do Gabriel e do Felipe + atualização dos cenários de regressão.
 
 - **Ordem com `dia_limite` além do horizonte é drenada no último dia.** O gerador
   produz `dia_limite = dia_conhecida + buffer`, que pode passar do horizonte;
@@ -308,7 +349,8 @@ exige decisão do Gabriel + atualização dos cenários de regressão.
 
 ## Atualização
 
-Última revisão: 2026-09-16.
+Última revisão: 2026-10-08 (seções "Quem trabalha neste repositório" e "Diário e
+atualização de contexto").
 
 Sempre que uma decisão técnica desta lista mudar, atualizar esta seção no mesmo
 commit da mudança de código. Um AGENTS.md desatualizado é pior que nenhum, porque o
