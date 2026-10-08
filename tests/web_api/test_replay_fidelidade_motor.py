@@ -140,11 +140,11 @@ def conferir_contra_motor(document: ReplayDocumentV1, scenario: Cenario) -> dict
 
 SEEDS = range(120)
 
-# Defeito conhecido da análise do motor: motor/analise/modelo.py exige igualdade exata entre
-# taxa_autonetting + taxa_multilateral e a netabilidade, mas as três são divisões Decimal
-# arredondadas; em alguns valores diferem na 28ª casa e o diagnóstico é recusado.
-TAXAS_ARREDONDADAS = "taxas por mecanismo não reconciliam com netabilidade"
-DEFEITOS_CONHECIDOS = (TAXAS_ARREDONDADAS,)
+# Defeito conhecido do diagnóstico (fora do Replay): com aquecimento, OUT medido pode casar
+# com IN do aquecimento e o casado medido passa do "teto estrutural" calculado só com as
+# ordens medidas; servidor/diagnostics/analysis.py recusa o diagnóstico inteiro.
+TETO_ESTRUTURAL = "volume casado excede o potencial estrutural"
+DEFEITOS_CONHECIDOS = (TETO_ESTRUTURAL,)
 
 
 def replay_do_cenario(seed: int) -> ReplayRequestV1:
