@@ -1,6 +1,9 @@
 import type { DiagnosticRequest, PreviaRequest } from '../api/client';
 import { validateDiagnosticRequest } from '../api/validators';
+import { effectivePreparation } from './effectivePreparation';
 import type { ScenarioDocument } from '../study/model';
+
+export const MAX_DIAGNOSTIC_REQUEST_BYTES = 16 * 1024 * 1024;
 
 const MAX_SEED = 9223372036854775807n;
 type GeneratedSampling = Extract<DiagnosticRequest['sampling'], { kind: 'GENERATED_INPUT' }>;
@@ -17,7 +20,7 @@ export type BuildDiagnosticRequestInput = Readonly<{
 
 export class DiagnosticRequestBuildError extends Error {
   constructor(
-    readonly code: 'GENERATION_RECIPE_UNAVAILABLE' | 'INVALID_DIAGNOSTIC_REQUEST',
+    readonly code: 'GENERATION_RECIPE_UNAVAILABLE' | 'INVALID_DIAGNOSTIC_REQUEST' | 'INCOMPATIBLE_GENERATION_PREMISES' | 'DIAGNOSTIC_REQUEST_TOO_LARGE',
     details = '',
   ) {
     super(details === '' ? code : `${code}: ${details}`);
@@ -58,6 +61,12 @@ export async function buildDiagnosticRequest(
     if (preparation === undefined) {
       throw new DiagnosticRequestBuildError('GENERATION_RECIPE_UNAVAILABLE');
     }
+    let effective: ReturnType<typeof effectivePreparation>;
+    try {
+      effective = effectivePreparation(preparation, input.scenario.premises, input.scenario.period, input.previewRequest.proveniencia);
+    } catch {
+      throw new DiagnosticRequestBuildError('INCOMPATIBLE_GENERATION_PREMISES', 'Confira o período natural e a origem das premissas atuais.');
+    }
     const used = new Map(preparation.participants.map((participant) => [
       canonicalUuid(participant.id), new Set<string>(),
     ]));
@@ -82,7 +91,7 @@ export async function buildDiagnosticRequest(
       sampling: {
         kind: 'GENERATED_INPUT',
         count: input.count,
-        preparation_input: structuredClone(preparation) as GeneratedSampling['preparation_input'],
+        preparation_input: structuredClone(effective) as GeneratedSampling['preparation_input'],
         repetitions,
       },
     };
@@ -92,6 +101,9 @@ export async function buildDiagnosticRequest(
       'INVALID_DIAGNOSTIC_REQUEST',
       JSON.stringify(validateDiagnosticRequest.errors ?? []),
     );
+  }
+  if (new TextEncoder().encode(JSON.stringify(request)).byteLength > MAX_DIAGNOSTIC_REQUEST_BYTES) {
+    throw new DiagnosticRequestBuildError('DIAGNOSTIC_REQUEST_TOO_LARGE');
   }
   return request;
 }

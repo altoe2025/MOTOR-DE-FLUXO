@@ -12,6 +12,7 @@ import { buildDiagnosticRequest } from './buildDiagnosticRequest';
 import * as diagnosticDomain from './domain';
 import {
   cancelStudyDiagnostic,
+  computeDiagnosticAttempt,
   executeStudyDiagnostic,
   retryStudyDiagnostic,
   type DiagnosticStudyAuthority,
@@ -165,6 +166,75 @@ async function reservedFixture() {
   await preparing;
   return { request, reserved: preparingAuthority.edits[0]! };
 }
+
+describe('computeDiagnosticAttempt', () => {
+  it.each(['SUCCEEDED', 'FAILED', 'CANCELLED', 'SUBMISSION_FAILED', 'JOB_404', 'RESULT_404'] as const)(
+    'returns the same reservation/terminal identity as individual execution for %s without changing the study',
+    async (outcome) => {
+      const { study, request } = await studyFixture();
+      const before = structuredClone(study);
+      const envelope = structuredClone(observedSource.envelope) as DiagnosticEnvelope;
+      envelope.job_id = request.idempotency_key;
+      envelope.request_fingerprint = request.input_fingerprint;
+      envelope.selected_execution.study_id = study.id;
+      envelope.selected_execution.scenario_id = SCENARIO_ID;
+      envelope.selected_execution.scenario_revision = study.scenarios[0]!.revision;
+      const missing = new ApiError({ status: 404, code: 'JOB_NAO_ENCONTRADO', message: 'ausente' });
+      const denied = new ApiError({ status: 403, code: 'ACESSO_NAO_PERMITIDO', message: 'Sem acesso.' });
+      const api = {
+        submitDiagnostic: async () => {
+          if (outcome === 'SUBMISSION_FAILED') throw denied;
+          return snapshot('QUEUED', request);
+        },
+        getDiagnosticJob: async () => {
+          if (outcome === 'JOB_404') throw missing;
+          return snapshot(outcome === 'FAILED' || outcome === 'CANCELLED' ? outcome : 'SUCCEEDED', request);
+        },
+        getDiagnosticResult: async () => {
+          if (outcome === 'RESULT_404') throw missing;
+          return envelope;
+        },
+      };
+      const options = { scenarioId: SCENARIO_ID, buildRequest: async () => request, api, now: () => NOW };
+      const computed = await computeDiagnosticAttempt({ ...options, study, signal: new AbortController().signal,
+        nextId: idFactory(ATTEMPT_ID, RESERVATION_ID, TERMINAL_ID) });
+      expect(study).toEqual(before);
+      expect(computed.reservation).toMatchObject({ id: RESERVATION_ID, attemptId: ATTEMPT_ID,
+        scenarioId: SCENARIO_ID, jobId: JOB_ID, status: 'QUEUED', requestSnapshot: request });
+      expect(computed.terminal).toMatchObject({ id: TERMINAL_ID, attemptId: ATTEMPT_ID,
+        scenarioId: SCENARIO_ID, jobId: JOB_ID,
+        status: outcome.endsWith('404') ? 'INTERRUPTED' : outcome === 'SUBMISSION_FAILED' ? 'FAILED' : outcome });
+      const authority = new AuthorityDouble(study);
+      const individual = await executeStudyDiagnostic({ ...options, authority, persistence: 'TERMINAL_ONLY',
+        nextId: idFactory(ATTEMPT_ID, RESERVATION_ID, TERMINAL_ID) });
+      expect(computed.attempt).toEqual(individual);
+      expect([computed.reservation, computed.terminal]).toEqual(authority.snapshot.document!.executions);
+    },
+  );
+
+  it('rejects a mismatched job before polling or persistence', async () => {
+    const { study, request } = await studyFixture();
+    const getDiagnosticJob = vi.fn();
+    await expect(computeDiagnosticAttempt({ study, scenarioId: SCENARIO_ID,
+      signal: new AbortController().signal, buildRequest: async () => request,
+      api: { submitDiagnostic: async () => ({ ...snapshot('QUEUED', request), job_id: 'other' }),
+        getDiagnosticJob, getDiagnosticResult: vi.fn() },
+    })).rejects.toThrow('Job diagnóstico diverge');
+    expect(getDiagnosticJob).not.toHaveBeenCalled();
+    expect(study.executions).toHaveLength(0);
+  });
+
+  it('aborts before submitting when navigation occurs while building the request', async () => {
+    const { study, request } = await studyFixture();
+    const abort = new AbortController();
+    const submitDiagnostic = vi.fn();
+    await expect(computeDiagnosticAttempt({ study, scenarioId: SCENARIO_ID, signal: abort.signal,
+      buildRequest: async () => { abort.abort(); return request; },
+      api: { submitDiagnostic, getDiagnosticJob: vi.fn(), getDiagnosticResult: vi.fn() },
+    })).rejects.toMatchObject({ name: 'AbortError' });
+    expect(submitDiagnostic).not.toHaveBeenCalled();
+  });
+});
 
 describe('executeStudyDiagnostic', () => {
   it.each([
@@ -647,4 +717,59 @@ describe('cancel e retry diagnósticos', () => {
     expect(new Set(attempts).size).toBe(2);
     expect(retryDiagnostic).toHaveBeenCalledWith(JOB_ID, retryJobId, expect.any(AbortSignal));
   });
+});
+
+
+it.each(['http', 'envelope'] as const)('persists permanent result failure %s and permits a new attempt', async (kind) => {
+  const { study, request } = await studyFixture();
+  const authority = new AuthorityDouble(study);
+  const api = {
+    submitDiagnostic: vi.fn().mockResolvedValue(snapshot('QUEUED', request)),
+    getDiagnosticJob: vi.fn().mockResolvedValue(snapshot('SUCCEEDED', request)),
+    getDiagnosticResult: kind === 'http'
+      ? vi.fn().mockRejectedValue(new ApiError({ status: 413, code: 'RESPOSTA_GRANDE', message: 'too large' }))
+      : vi.fn().mockResolvedValue({}),
+  };
+  const result = await executeStudyDiagnostic({ authority, scenarioId: SCENARIO_ID, buildRequest: async () => request, api });
+  expect(result.status).toBe('FAILED');
+  expect(authority.snapshot.document?.executions.at(-1)?.status).toBe('FAILED');
+  const next = { ...request, idempotency_key: '00000000-0000-4000-8000-000000000999' };
+  await executeStudyDiagnostic({ authority, scenarioId: SCENARIO_ID, buildRequest: async () => next, api: { ...api, submitDiagnostic: vi.fn().mockResolvedValue(snapshot('QUEUED', next)), getDiagnosticJob: vi.fn().mockResolvedValue(snapshot('FAILED', next)) } });
+  expect(authority.snapshot.document?.executions).toHaveLength(4);
+});
+
+
+it.each([0, 408, 429, 503])('retains TERMINAL_ONLY reservation after transient download %i and resumes without POST', async (status) => {
+  const { study, request } = await studyFixture();
+  const authority = new AuthorityDouble(study);
+  const failure = new ApiError({ status, code: 'TRANSIENT', message: 'later' });
+  const api = { submitDiagnostic: vi.fn().mockResolvedValue(snapshot('QUEUED', request)), getDiagnosticJob: vi.fn().mockResolvedValue(snapshot('SUCCEEDED', request)), getDiagnosticResult: vi.fn().mockRejectedValue(failure) };
+  const options = { authority, scenarioId: SCENARIO_ID, buildRequest: async () => request, api, persistence: 'TERMINAL_ONLY' as const };
+  await expect(executeStudyDiagnostic(options)).rejects.toBe(failure);
+  expect(authority.snapshot.document?.executions).toHaveLength(1);
+  api.getDiagnosticJob.mockResolvedValue(snapshot('FAILED', request));
+  await executeStudyDiagnostic(options);
+  expect(api.submitDiagnostic).toHaveBeenCalledOnce();
+  expect(authority.snapshot.document?.executions).toHaveLength(2);
+});
+
+
+it('retry after a permanent local result failure submits a fresh server attempt', async () => {
+  const { study, request } = await studyFixture();
+  const authority = new AuthorityDouble(study);
+  await executeStudyDiagnostic({ authority, scenarioId: SCENARIO_ID, buildRequest: async () => request,
+    api: { submitDiagnostic: vi.fn().mockResolvedValue(snapshot('QUEUED', request)),
+      getDiagnosticJob: vi.fn().mockResolvedValue(snapshot('SUCCEEDED', request)),
+      getDiagnosticResult: vi.fn().mockRejectedValue(new ApiError({ status: 413, code: 'TOO_BIG', message: 'large' })) } });
+  const terminal = authority.snapshot.document!.executions.at(-1)!;
+  const next = { ...request, idempotency_key: '00000000-0000-4000-8000-000000000998' };
+  const api = { submitDiagnostic: vi.fn().mockResolvedValue(snapshot('QUEUED', next)),
+    retryDiagnostic: vi.fn().mockRejectedValue(new ApiError({ status: 409, code: 'JOB_NAO_REPETIVEL', message: 'already succeeded' })),
+    getDiagnosticJob: vi.fn().mockResolvedValue(snapshot('FAILED', next)), getDiagnosticResult: vi.fn() };
+  const retried = await retryStudyDiagnostic({ authority, executionId: terminal.id, idempotencyKey: next.idempotency_key, api });
+  expect(retried.jobId).toBe(next.idempotency_key);
+  expect(api.submitDiagnostic).toHaveBeenCalledWith(next, expect.any(AbortSignal));
+  expect(api.retryDiagnostic).not.toHaveBeenCalled();
+  expect(authority.snapshot.document?.executions).toHaveLength(4);
+  expect(authority.snapshot.document?.executions.at(-1)?.status).toBe('FAILED');
 });

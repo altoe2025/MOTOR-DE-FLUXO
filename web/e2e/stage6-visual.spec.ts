@@ -38,6 +38,9 @@ test('login, import, demo, chat and presentation match reviewed baselines', asyn
   await loadDemoIfEmpty(page);
   await expect(page.getByRole('heading', { name: 'Estudos' })).toBeVisible();
   await expect.poll(async () => (await page.evaluate(() => window.__MOTOR_E2E__!.demoAcceptanceSnapshot())).studies.length).toBe(1);
+  // The local showcase loader is absent from production; compare the shipped UI.
+  await page.addStyleTag({ content: '[data-local-preview-only] { display: none !important; }' });
+  await expect(page.locator('[data-local-preview-only]')).toBeHidden();
   await expect(page).toHaveScreenshot('demo.png', { fullPage: true });
   await page.getByRole('button', { name: 'Perguntar', exact: true }).click();
   await expect(page.getByRole('dialog', { name: 'ORKE AI' })).toBeVisible();

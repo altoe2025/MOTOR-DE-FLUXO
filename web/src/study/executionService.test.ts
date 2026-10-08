@@ -15,6 +15,7 @@ import type {
   ConfirmObservedCaseMutation,
 } from '../storage/applicationRepository';
 import { createStudy, updateScenario } from './domain';
+import { summarizeStudy } from '../storage/applicationRepository';
 import {
   FIXTURE_NOW,
   FIXTURE_OWNER,
@@ -61,6 +62,7 @@ function deferred<T>() {
 }
 
 class MemoryRepository implements ApplicationRepository {
+  async appendDiagnosticAttempt(): Promise<never> { throw new Error('Append diagnóstico fora do escopo deste double.'); }
   async getDemoInstallationStatus(): Promise<null> { return null; }
   async listChatConversations(): Promise<never[]> { return []; }
   async getChatConversation(): Promise<null> { return null; }
@@ -84,6 +86,11 @@ class MemoryRepository implements ApplicationRepository {
   }
   async listStudies(): Promise<StudyDocument[]> {
     return [...(this.document === null ? [] : [this.document]), ...this.additionalDocuments.values()];
+  }
+  async listStudySummaries(options?: { includeDeleted?: boolean }) {
+    return (await this.listStudies())
+      .filter((study) => options?.includeDeleted === true || study.deletedAt === null)
+      .map((study) => summarizeStudy(study, study.executions.length));
   }
   async getStudy(id: string): Promise<StudyDocument | null> {
     return this.document?.id === id ? this.document : this.additionalDocuments.get(id) ?? null;

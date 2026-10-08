@@ -33,17 +33,33 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-09-29, durante a preparação da atualização da bancada.
+Atualizada em 2026-10-05, durante o ajuste do contorno dos cartões de Estudos (MOT-99).
 
 | Branch | Situação | Dono |
 |---|---|---|
-| `fix/taxas-arredondadas` | Sobre `feat/replay-visual`; taxas por mecanismo reconciliadas sem duplo arredondamento; sem push, merge ou deploy | Claude |
-| `codex/replay-production-fix` | Reset total publicado; correção visual do Replay pronta para publicação | Codex |
+| `codex/estudos-anel-hover` | Cartões de Estudos usam o contorno metálico turquesa do menu durante hover e foco pelo teclado; verificado localmente, sem deploy | Codex |
+| `feat/menu-anel-turquesa` | Navegação lateral com trilho e anel turquesa no destino ativo + cartões holográficos em Empresas; PR aberto para a `main`, merge e deploy com o Codex | Claude |
+| `codex/navegacao-caminho` | Caminho clicável no cabeçalho, com nome do estudo/empresa e retorno ao diagnóstico | Codex |
+| `codex/perf-combinacoes-deploy-record` | Registra o deploy Live de `77ceea2` e os smokes públicos da MOT-100 | Codex |
+| `codex/perf-combinacoes` | PR #75 mergeado na `main` em `77ceea2`; versão publicada no Render | Codex |
+| `feat/front-mais-leve` | PR #73 mergeado em `66b7c6e`; front leve observado no Render com menus ⋯, detalhes recolhidos e diagnóstico com a resposta primeiro | Claude |
+| `codex/diagnostico-confiavel` | PR #71 mergeado na `main` em `727d3ee`; contratos incorporados à otimização de combinações | Codex |
+| `codex/carteiras-docker-fixture` | Corrige somente o empacotamento de um helper de testes após falha do build Render; versão Live anterior preservada | Codex |
+| `codex/carteiras-analise` | PR #69 mergeado em `9cc8b8e`, CI verde; primeiro deploy interrompido no build por helper de testes fora do padrão de exclusão | Codex |
+| `feat/front-visual` | visual do app inteiro no sistema do Replay; aprovado pelo Gabriel na prévia local; PR para a `main`, deploy com o Codex | Claude |
+| `codex/diagnostico-recolhivel` | Recolhe os cenários por estudo na aba Diagnóstico; PR #65 mergeado na `main` (`5483fab`), sem deploy próprio | Codex |
+| `codex/replay-timeline-deploy-record` | registra o deploy de `d4fec2f` e o smoke da nova régua; PR de documentação em preparação | Codex |
+| `feat/replay-linha-do-tempo` | PR #63 mergeado na `main`; merge `d4fec2f` publicado no Render | Codex |
+| `codex/replay-deploy-record` | PR #62 mergeado; registro do deploy anterior incorporado à `main` | Codex |
+| `feat/replay-visual` | PR #60 mergeado na `main`; merge `f70769c` publicado no Render | Codex |
+| `codex/main-render-sync` | PR #59 mergeado; base funcional incorporada pela `main` antes do PR #60 | Codex |
+| `codex/chat-front-context` | `29d955c` publicado no Render (Live); referência preservada da integração | Codex |
+| `codex/replay-production-fix` | `cb81781` incorporado no Live `29d955c`, incluindo reset local e Replay | Codex |
 | `codex/frontend-performance-fixes` | Integra as correções de travamento e `feat/estudo-vs-combinacao` sobre o release `829d224`; publicação no Render em preparação | Codex |
 | `codex/carteira-criterios` | Integra estudo separado de combinações, últimas melhorias de `feat/bancada-exploracao` e chat já publicado do PR #57; deploy aguardando comando do Gabriel | Codex |
 | `codex/chat-interface-render` | PR #57 aberto (draft, base `feat/bancada-exploracao`); código `8d43695` publicado no Render com status Live em 2026-09-28; sem merge na `main` | Codex |
 | `codex/integracao-etapas-5-6` | Consolida `feat/bancada-exploracao` e `codex/finalidade-verificacao`, incluindo histórico de `origin/main`; publicação/CI em preparação, sem deploy | Codex |
-| `main` | Autonetting preferencial e integração final incorporados até o PR #37 (`c2ad175`); grade histórica não regenerada | os dois |
+| `main` | `77ceea2`: PR #75 mergeado e publicado no Render; otimização das combinações Live | os dois |
 | `netting/p1` | spike do P1, **NÃO MERGEAR** — dominado, e agora sabemos que a folga é zero em N ≥ 50. Só local, nunca foi pro GitHub | Felipe |
 | `fix/semantica-remessa-p0` | PR #11, mergeada | Felipe |
 | `fix/previsao-temporal-e-colunas-csv` | PR #12, mergeada | Gabriel |
@@ -80,6 +96,290 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-10-05 — Contorno turquesa nos cartões de Estudos (MOT-99)
+
+1. **Sintoma.** O Gabriel pediu que os boxes de Estudos ganhassem, ao passar o mouse, o mesmo acabamento de borda do ícone ativo no menu Trabalho.
+2. **Causa.** O hover da lista usava apenas uma borda discreta e a sombra genérica, sem o anel metálico do menu.
+3. **O que foi feito.** `web/src/styles/global.css` reutiliza `--ring-metal` e `--ring-shadow` no contorno externo do cartão. Uma camada decorativa de 2,5 px aparece no hover ou no foco dos controles internos, sem interceptar cliques nem alterar dimensões. Verificação em prévia local com estudo sintético nos temas escuro e claro: contorno aparece e desaparece; dimensões idênticas em repouso e hover. Os 53 testes de `src/app/router.test.tsx` passaram antes e depois; TypeScript e build E2E passaram. Sem merge ou deploy nesta etapa.
+4. **O que isso invalida.** Apenas o acabamento anterior do hover dos cartões. Nada nos dados, cálculos ou ações dos estudos.
+
+## 2026-10-05 — Navegação com anel e cartões holográficos em Empresas (MOT-99)
+
+**Referências verificadas.** Captura Linux `37390392538` aprovada e duas specs Windows aprovadas. Oito referências (import, demo, chat e presentation em Linux/Windows) foram revisadas visualmente; todos os pixels alterados estão dentro da barra lateral, até x=234. Login e páginas impressas permanecem idênticos. O gatilho temporário do workflow foi restaurado no mesmo PR. Código de produto preservado. CI final e publicação pendentes.
+
+1. **Sintoma.** O Gabriel pediu um acabamento mais marcante no front: o destino ativo da barra lateral pouco se destacava dos demais, e os cartões de Empresas eram retângulos sem reação ao cursor.
+2. **Causa.** A barra lateral marcava o ativo só com fundo e cor do ícone; os cartões de Empresas tinham apenas uma borda acesa no hover.
+3. **O que foi feito.** Na branch `feat/menu-anel-turquesa`: os três destinos ficam num trilho rebaixado e o ícone do ativo ganha um anel metálico na cor de destaque, estático (`web/src/app/AppShell.tsx`, `web/src/styles/global.css`, `web/src/styles/tokens.css`). Os cartões de Empresas passam a usar `web/src/ui/HolographicCard.tsx`: anéis de contorno na família turquesa centrados no cursor e uma inclinação leve na direção dele, só enquanto o cursor está sobre o cartão. Em repouso o cartão fica plano; com `prefers-reduced-motion` não há inclinação. Conteúdo, papéis e ordem de foco não mudam. Os dois temas têm tokens próprios. Testes: 4 unitários novos do cartão; specs locais de empresas/perfis, fundação, importação e acessibilidade verdes.
+4. **O que isso invalida.** As referências visuais Linux do `stage6-visual` que mostram a barra lateral ou a página Empresas precisam ser regeneradas antes do merge. Nenhuma medição, contrato ou resultado calculado muda.
+
+## 2026-10-05 — Percentuais de economia e resumo de premissas (MOT-99)
+
+1. **Sintoma.** A interface exigia interpretar bps para comparar a economia sobre o volume.
+2. **Causa.** A apresentação expunha a unidade técnica do resultado e, em algumas tabelas, duplicava o mesmo indicador em % e bps.
+3. **O que foi feito.** Na branch `codex/percentuais-painel`, a apresentação converte bps para % antes de arredondar. Comparações de percentuais usam p.p.; tabelas identificam o denominador como volume. A integração em `codex/premissas-sem-janela` também remove a indicação de janela do resumo de premissas em Estudos. O campo avançado permanece disponível. Contratos e cálculos do motor permanecem iguais.
+4. **O que isso invalida.** Apenas os textos e unidades anteriores na interface; nenhuma medição ou resultado calculado.
+
+## 2026-10-03 — Caminho clicável no cabeçalho do front (MOT-99)
+
+**Sintoma.** O cabeçalho indicava a área atual, mas não permitia retornar aos níveis anteriores pelo caminho de navegação.
+
+**Causa.** A trilha era texto estático, sem links nem o nome do estudo ou da empresa abertos.
+
+**O que foi feito.** Na branch `codex/navegacao-caminho`, o cabeçalho passa a mostrar ancestrais clicáveis e a página atual: Estudos → nome do estudo → Diagnóstico → Replay/Apresentação. O retorno ao diagnóstico preserva cenário e execução, sem repetir comandos da URL. A criação mostra Novo estudo e permite voltar à lista. As páginas de empresa reutilizam o nome já carregado. O nome acompanha renomeações, há suporte a teclado e quebra de linha no celular. Testes cobrem navegação, seleção, renomeação, troca de estudo e criação; a referência visual da apresentação acompanha o novo cabeçalho.
+
+**O que isso invalida.** Apenas a referência visual anterior do cabeçalho da apresentação. Nada nos cálculos, contratos, persistência ou relatórios impressos. Sem deploy nesta tarefa.
+
+**Verificação.** PR #77: CI `37158959576` passou Python (normal e `-O`), 167 arquivos de testes web, tipos e build; no navegador, 67 testes passaram e somente a referência Linux antiga da apresentação divergiu. Captura revisada e incorporada: diferença restrita ao cabeçalho, impressão inalterada. Localmente, referências Windows e caminho em 375 px passaram. Os testes com porta fixa passaram na porta 8021; gates de desempenho passaram isoladamente, após comparação da apresentação com a base `f2e056b`. A atualização da referência Linux dispara nova execução do CI.
+
+## 2026-10-03 — Otimização de combinações publicada no Render (MOT-100)
+
+**Sintoma:** a otimização da navegação e dos diagnósticos já estava mergeada na `main`, mas o ambiente público ainda servia `66b7c6e` e o diário não registrava a publicação efetiva. **Causa:** o serviço usa deploy manual e exige validação operacional separada do merge. **O que foi feito:** o PR #75 foi mergeado em `77ceea2`; o deploy manual `dep-db08pqk9v7es73ad7gug` terminou `Live` em 57,2 s. O endpoint público `/api/v1/health` respondeu HTTP 200 com `{"status":"ok"}`, o bundle público mudou para `index-q8qhdbXB.js` e a rota protegida `/estudos` redirecionou para `/login`. **O que isso invalida:** o estado anterior em que o Render servia `66b7c6e` e a publicação da MOT-100 constava como pendente; não invalida medições locais nem contratos funcionais.
+
+## 2026-10-03 — Import do gate de desempenho segue o formato canônico (MOT-100)
+
+**Sintoma:** a primeira CI do PR #75 executou as duas suítes Python com sucesso, mas o passo `ruff` recusou uma linha de import longa em `test_measure_portfolio_performance.py`; o orçamento Stage 6 falhou em seguida porque seu relatório browser não foi gerado após o encerramento antecipado. **Causa:** o teste novo não havia sido submetido ao mesmo comando de lint executado pelo workflow antes do push. **O que foi feito:** o import foi quebrado no formato canônico indicado pelo próprio `ruff`, sem mudança de comportamento, e a falha foi reproduzida localmente antes da correção. **O que isso invalida:** apenas o resultado vermelho da primeira execução do PR #75; medições e resultados funcionais continuam válidos.
+
+## 2026-10-03 — Publicação da otimização de combinações autorizada (MOT-100)
+
+**Sintoma:** o gate técnico e a prévia local da MOT-100 estavam verdes, mas o Diário ainda registrava o aceite visual e a publicação como pendentes. **Causa:** a autorização final de push, PR, merge e deploy foi dada depois do último commit da implementação. **O que foi feito:** o estado da branch `codex/perf-combinacoes` foi alinhado ao aceite explícito do Gabriel; a publicação segue condicionada à repetição dos gates, CI verde e smoke test do ambiente publicado. **O que isso invalida:** o status de aceite pendente da tabela anterior; não altera resultados, contratos nem medições de desempenho.
+
+## 2026-10-02 — Gate de 255 diagnósticos fica responsivo no front leve (MOT-100)
+
+**Sintoma:** mesmo após o catálogo e o hub ficarem leves, abrir a recomendação reconstruía a análise em toda montagem e a primeira leitura clonava, validava e congelava 510 registros numa única tarefa; o menu de criação não mantinha feedback visível. **Causa:** o cache vivia apenas no `useMemo` do componente desmontado, `getStudy` usava `getAll` mais clones redundantes e a validação/projeção percorriam árvores grandes sem ceder à thread do navegador. **O que foi feito:** a branch `codex/perf-combinacoes`, já integrada a `origin/main@66b7c6e`, preserva o front leve e adiciona leitura de execuções por cursor, certificação integral cooperativa do snapshot destacado do IndexedDB, projeção cooperativa com cache por identidade+revisão, hub compacto e status persistente de criação. O gate Chromium com 8 empresas, 255 cenários e 510 registros ficou verde: p95 SPA 38,8 ms em Estudos, 33,6 ms no hub, 93,2 ms em objetivo/filtro, 26,1 ms para feedback de criação já após duas RAFs e 138,6 ms até o DOM da recomendação nas 20 reaberturas quentes. A primeira abertura terminou em 5.665,8/5.725,4 ms (DOM/duas RAFs), mas a maior tarefa local foi 142 ms e não houve nenhuma long task >200 ms; zero POST incidental. Python normal e `-O`: 1.416 passed, 3 skipped, 1 xfailed cada. **O que isso invalida:** o gate vermelho registrado logo abaixo e as medições com pausas de 1.270/463 ms não descrevem mais a branch; a primeira abertura continua sendo uma carga fria visível, agora cooperativa e não bloqueante. Ainda não se mediu throughput remoto de 255 jobs nem novo tempo do lote real de 63.
+
+## 2026-10-02 — Gate browser revela leitura pesada de 255 diagnósticos (MOT-100) — superado
+
+**Sintoma:** a navegação SPA de listas atende ao orçamento, mas a recomendação de 255 resultados ainda produz pausas locais; no front leve, a criação no menu ⋯ só mostra o novo estudo após 120,2 ms. **Causa:** o gate separa a abertura fria da reabertura sem reload; a função interna das long tasks ainda exige perfil dedicado. O menu fecha imediatamente, mas não conserva indicador de progresso de criação. **O que foi feito:** fixture E2E autocontida corrigiu o import de helper excluído do contexto Docker; os 8 empresas, 255 cenários e 510 registros permanecem válidos. O Playwright pós-main usa o link real de Estudos, volta ao hub compacto pelo histórico, mede abertura direta e 20 reaberturas quentes da recomendação por `page.goBack`, e preserva os budgets no verificador Python. Em Windows 10.0.26200, i7-1185G7, Node 24.19.0 e Chromium 153.0.8010.12, p95 SPA foi 53,5 ms em Estudos, 42,7 ms no hub e 126,8 ms em objetivo/filtro. Hub compacto: zero linhas/controles de expansão; zero POST incidental. A primeira recomendação levou 2.725,4/2.802,0 ms (heading/duas RAFs), com 3 long tasks >200 ms (máximo 1.270 ms). Reaberturas quentes: p95 468,5/633,6 ms, com 20 long tasks >200 ms (máximo 463 ms). Fixture/parser/contrato Docker 15/15, build verde; Playwright e `--assert-budget` vermelhos por feedback >100 ms e long tasks. **O que isso invalida:** as medições antigas de expansão e reabertura com reload não descrevem mais o hub compacto nem um caminho quente verdadeiro. O aceite de desempenho da MOT-100 segue vermelho; não se mediu throughput remoto de 255 jobs nem novo tempo do lote de 63.
+
+## 2026-10-02 — Conflito entre abas recupera lote após append durável (MOT-100)
+
+**Sintoma:** uma atualização recebida de outra aba enquanto um append terminava podia deixar o controller em `CONFLICT`; o próximo item falhava com erro genérico e o lote não recarregava. **Causa:** o append durável publicava conflito, mas retornava sucesso; a página só recuperava `RevisionConflictError`. **O que foi feito:** essa corrida agora produz conflito tipado depois de preservar/transmitir o delta já salvo; a página recarrega uma vez, reconhece a tentativa existente e continua sem POST/append duplicado. Edições locais pendentes não são descartadas. Regressão com BroadcastChannel/IndexedDB reais passou em 87/87 testes e foi re-revisada. **O que isso invalida:** conclusão anterior de que apenas conflitos CAS lançados pelo repositório precisavam de retry.
+
+## 2026-10-02 — Cobertura legada adotada sem apagar diagnósticos (MOT-100)
+
+**Sintoma:** o primeiro diagnóstico após a atualização podia reconstruir uma matriz antiga já completa só porque ela ainda não tinha o novo campo de cobertura, removendo IDs e execuções derivadas válidas. **Causa:** ausência de assinatura era tratada sempre como carteira obsoleta. **O que foi feito:** matrizes legadas são verificadas por cobertura exata baseada em IDs; quando completas e atuais, recebem apenas o metadado novo, preservando cenários e histórico. Matrizes incompletas, duplicadas ou ambíguas continuam no rebuild seguro. Regressão com o algoritmo antigo passou em 31/31 testes e a correção foi re-revisada. **O que isso invalida:** expectativa de que todo estudo sem assinatura precise ser reconstruído; a migração agora é não destrutiva quando a cobertura é comprovável.
+
+## 2026-10-02 — Lote de combinações usa dois workers com commit serial (MOT-100)
+
+**Sintoma:** o navegador submetia uma composição por vez, deixando um dos dois workers padrão ocioso; cancelamento/conflitos entre abas podiam ainda manter pendências antigas na fila. **Causa:** computação remota e persistência estavam acopladas no serviço individual e a fila era congelada no começo do lote. **O que foi feito:** extraída computação sem persistência; novo pool limita a dois computes e um commit incremental por vez, drena jobs ativos ao cancelar/falhar e revalida cada item antes do POST. Conflito recarrega uma vez e não reenvia resultado já atual. Após duas rodadas de revisão, 53/53 testes passaram em três execuções consecutivas, com typecheck e lint verdes. **O que isso invalida:** a medição de 3,7 minutos para 63 combinações como representação da agenda atual; ela precisa ser refeita no gate de navegador.
+
+## 2026-10-02 — Append diagnóstico incremental e schema local v5 (MOT-100)
+
+**Sintoma:** cada terminal do lote clonava, validava, serializava, comparava e registrava o estudo cumulativo inteiro, fazendo CPU e armazenamento crescerem com o histórico. **Causa:** diagnóstico usava o CAS estrutural genérico embora execuções já vivessem numa store separada. **O que foi feito:** schema v5 adiciona contagem no resumo e índice por tentativa; `appendDiagnosticAttempt` valida e grava somente reserva+terminal, revisão, resumo e operação compacta numa transação. O controller aplica delta certificado sem revalidar o histórico. Migrações v1–v4, rollback, owner, conflito e idempotência passaram 185 testes, typecheck e revisão. **O que isso invalida:** perfil anterior de persistência quadrática; saves estruturais continuam usando validação integral.
+
+## 2026-10-02 — Preparação idempotente das combinações (MOT-100)
+
+**Sintoma:** repetir “Diagnosticar combinações” reconstruía os 254 rascunhos mesmo quando a cobertura atual já estava completa; IDs diferentes com nomes iguais também podiam colapsar subconjuntos. **Causa:** não havia uma assinatura persistida da cobertura e a identidade de composição usava nome de empresa. **O que foi feito:** o estudo guarda cobertura opcional V3 validada; hit exato pula a construção, miss reconstrói todas as derivadas e descarta resultados obsoletos. Combinações usam IDs, nomes ficam só na apresentação e duplicatas são desambiguadas. Após corrigir dois achados da revisão, 27/27 testes e typecheck passaram. **O que isso invalida:** tempo anterior de um segundo clique já preparado; a cardinalidade por ID agora é rigorosamente `2^N - 1` mesmo com nomes repetidos.
+
+## 2026-10-02 — Estudos e Diagnóstico carregam sob demanda (MOT-100)
+
+**Sintoma:** mesmo com os cenários visualmente recolhidos, entrar nas páginas aguardava documentos e envelopes completos. **Causa:** as páginas consumiam `listStudies` e o hub recebia todos os `StudyDocument` antes da primeira interação. **O que foi feito:** Estudos e o hub usam `StudySummary`; o hub carrega somente o estudo expandido, com estados locais de carregamento/erro e proteção contra respostas obsoletas. Rótulos e ações foram preservados, inclusive a distinção de carteira observada, sintética, multiempresa e manual. Testes focados 49/49 e typecheck verdes; revisão aprovada. **O que isso invalida:** medições antigas de abertura dessas rotas que incluíam leitura/validação de todos os envelopes; importação explícita ainda lê documentos completos por necessidade do fluxo.
+
+## 2026-10-02 — Catálogo leve de estudos no IndexedDB (MOT-100)
+
+**Sintoma:** entrar em Estudos ou Diagnóstico carregava e validava todos os cenários e envelopes de todos os estudos antes de mostrar uma lista curta. **Causa:** o repositório só expunha `listStudies`, que reconstituía documentos completos. **O que foi feito:** schema local v4 adiciona `study_summaries`, atualizado atomicamente nos saves/restores/demo/purge e reconstruído de forma reparável para dados antigos sem validar envelopes; controller ganhou listagem resumida e leitura destacada que não altera a seleção. Migração e contratos passaram 111 testes, typecheck e lint; re-revisão aprovada. **O que isso invalida:** qualquer suposição de que telas de catálogo precisam receber `StudyDocument`; estudos e execuções persistidos continuam compatíveis.
+
+## 2026-10-02 — Fixture válida de desempenho para 255 combinações (MOT-100)
+
+**Sintoma:** não havia uma massa unitária persistível que representasse 63/255 composições já diagnosticadas, então regressões de CPU e identidade só apareciam no E2E longo. **Causa:** as fixtures menores não exercitavam o formato reserva `QUEUED` + terminal nem todas as identidades entre request, cenário e envelope. **O que foi feito:** criada uma fixture determinística validada pelo contrato de produção, com goldens independentes de projeção/ranking para seis e oito empresas; 4/4 testes direcionados passaram e os dois achados importantes da revisão foram corrigidos. **O que isso invalida:** nada nos resultados atuais; novos testes de desempenho podem reutilizar a massa sem chamar o motor.
+
+## 2026-10-02 — Projeção de carteiras deixa de crescer com o histórico (MOT-100)
+
+**Sintoma:** durante um lote, cada terminal invalidava a tela de recomendação e voltava a procurar a execução atual de cada composição em todo o histórico. **Causa:** a projeção fazia `reverse/find` por cenário e permanecia montada durante o progresso. **O que foi feito:** `portfolioAnalysis` passou a indexar execuções atuais em uma passagem; a recomendação completa é adiada enquanto o lote roda e reconstruída ao terminar, falhar ou cancelar. Testes direcionados: 50/50; revisão de tarefa aprovada. **O que isso invalida:** perfis anteriores de CPU da recomendação durante o lote; métricas financeiras, ranking e marginais permanecem iguais.
+
+## 2026-10-02 — Design de desempenho para 255 combinações (MOT-100)
+
+**Sintoma:** abrir Estudos, criar uma nova combinação e abrir Diagnóstico ficou lento em estudos grandes; o lote de oito empresas também mantém o navegador ocupado por muito tempo. **Causa:** as listas reconstroem e validam todos os envelopes salvos; cada terminal do lote repete clone, validação, serialização e comparação do estudo cumulativo; o agendamento usa só um dos dois workers; a recomendação é projetada a cada resultado. **O que foi feito:** criados na branch `codex/perf-combinacoes` a especificação `docs/superpowers/specs/2026-10-02-desempenho-combinacoes-design.md` e o plano `docs/superpowers/plans/2026-10-02-desempenho-combinacoes.md`, com catálogo leve, lazy load, preparação idempotente, append atômico, concorrência limitada a dois e gates para 255 composições. Nenhum código de produto foi alterado nesta entrada. **O que isso invalida:** nada nos números ou resultados atuais; medições futuras de desempenho devem separar leitura, persistência, projeção e tempo remoto conforme o novo protocolo.
+## 2026-10-02 — Front mais leve: uma ação principal por tela, o resto recolhido (MOT-99)
+
+1. **Sintoma.** Na conversa com o Sávio, as telas de Estudos, editor, alavancas, diagnóstico, Quadro e Importar pareciam poluídas: muitos botões lado a lado, premissas e janela sempre abertas, a Composição perdida no fim das alavancas e o resultado do diagnóstico enterrado em tabelas.
+2. **Causa.** Cada funcionalidade nova ganhou um botão ou bloco visível próprio, sem hierarquia entre a ação principal e as secundárias.
+3. **O que foi feito.** Protótipo aprovado pelo Gabriel (artifact "front mais leve"), levado ao front real, exceto Empresas e a tela de recomendação de carteiras, que ficam como estão. Componentes novos em `web/src/ui/` (`ActionMenu` ⋯ acessível por teclado, `Disclosure`, `HelpTip`).
+   - **Estudos:** "Novo estudo" à vista. Combinação, importar, demonstração e lixeira vão para o ⋯ "criar". Renomear, duplicar, exportar e excluir vão para o ⋯ de cada estudo.
+   - **Navegação:** Estudos, Empresas e Importar; o Quadro vira "Comparar estudos" dentro de Estudos.
+   - **Editor:** renomear e duplicar vão para o ⋯ do estudo. Origem e premissas viram linhas de resumo. "Editar premissas" abre o formulário, com janela, aquecimento e medição em "Avançado".
+   - **Alavancas e cenários:**
+     - a Composição vem primeiro e "Ajustar uma empresa" fica recolhido;
+     - os cenários vêm depois, com selo de diagnóstico e "Abrir/Executar diagnóstico" à vista;
+     - "Usar como base", renomear e apagar vão para o ⋯ e o rádio sai.
+   - **Combinação de carteiras:** empresas aplicadas viram um resumo com "Trocar". A escolha ganha busca, chips e "Selecionar todas".
+   - **Diagnóstico:**
+     - a resposta vem primeiro: economia, netabilidade e custo sem → com pool;
+     - P10–P90 numa linha;
+     - "Como a economia se forma" e "Custos por componente" ficam recolhidos;
+     - Replay e Apresentar ficam lado a lado;
+     - as tabelas por empresa dos quadros comparativos vão para "Detalhes por empresa".
+   - **Comparar estudos:** os cenários são agrupados por estudo, com "n de m" marcados. O "Apagar estudo" sai do Quadro e também do catálogo de ajuda (`control.quadro.apagar-estudo`); a exclusão continua na lista de Estudos.
+   - **Importar:**
+     - modelo no topo;
+     - passo 1, empresa, com "+ Nova empresa";
+     - passo 2, planilha;
+     - "Como montar a planilha" recolhido.
+   - **Testes:** unitários e e2e ajustados aos menus e aos painéis recolhidos.
+4. **O que isso invalida.**
+   - Roteiros e capturas que supõem os botões antigos sempre visíveis:
+     - lixeira, renomear e excluir na lista;
+     - "Apagar estudo" no Quadro;
+     - premissas e janela abertas;
+     - rádio de base dos cenários;
+     - "Passo 3/4".
+   - As referências visuais de `stage6-visual` (estudos, importação, demonstração, chat) foram regeneradas.
+   - Nada nos números: motor, servidor, contratos, regras e cálculos não mudaram. Os textos com testid `economia-brl`/`netabilidade` e o título "Resultado do motor" continuam.
+
+## 2026-10-02 — Confiabilidade de diagnóstico (MOT-70, MOT-72, MOT-73)
+
+**Sintoma:** entradas com proveniência completa eram recusadas, distribuições podiam
+usar premissas antigas, a morte de um worker inutilizava o pool, erros definitivos
+de download deixavam reservas ativas e jobs terminais retinham repetições completas.
+Falhas técnicas não tinham causa sanitizada observável.
+
+**Causa:** cota de 500 origens e orçamento HTTP incompatíveis com 1000 ordens;
+reutilização da receita histórica inteira; ausência de recuperação por geração do
+pool, classificação de erro de resultado e limites de retenção por quantidade/bytes.
+
+**O que foi feito:** `codex/diagnostico-confiavel` amplia os contratos e limites
+somente do diagnóstico, combina participantes preservados com premissas atuais,
+preserva histórico antigo sem considerá-lo atual quando divergente, recupera o pool,
+registra causa técnica sanitizada e permite retomada/reexecução no navegador.
+A revisão independente acrescentou a regressão do botão de repetir após falha local
+de download: esse caso cria um novo job, pois o job original terminou no servidor.
+O fixture de comparação passou a declarar a receita/período que pretende comparar.
+Terminais liberam intermediários; retenção máxima de 128 terminais/64 MiB, expulsando
+somente os mais antigos, e TTL máximo de 24 h. Operação documentada em
+`docs/deploy-render.md`; regressões incluem morte real de processo, callbacks tardios,
+fechamento concorrente, fontes Unicode e 100 repetições. Gates finais registrados no
+relatório de execução local: Python normal e otimizado com 1413 testes passando,
+build e três testes finais de diagnóstico no navegador aprovados. Commits `6d2c51a`
+e `dd3ab35` enviados no PR #71, aberto em rascunho; revisão independente aprovada.
+A validação automática está em andamento. Não houve merge nem deploy.
+
+**O que isso invalida:** a promessa de manter todo resultado no servidor por 24h e a
+indicação de atualidade de históricos cuja receita usou premissas diferentes do
+cenário salvo. Nada nas regras financeiras do motor ou nos resultados inalterados;
+histórico local preservado. Nenhum arquivo de `motor/` foi alterado.
+
+
+## 2026-10-02 — Fixture de carteiras fora do contexto de produção (MOT-100)
+
+1. **Sintoma:** após o merge autorizado do PR #69 (`9cc8b8e`), o deploy Render
+   `dep-davj7lpsrm7s73c7hsng` falhou no typecheck: `portfolioAnalysisFixtures.ts`
+   importava `communication/testFixtures.ts`, ausente no contexto Docker. O build
+   falhou antes da troca de versão; `c3620bf` permaneceu Live.
+2. **Causa:** o novo helper tinha nome fora dos padrões `testFixtures.*` e
+   `fixtures.*` já excluídos pelo `.dockerignore`. O CI completo em checkout passou
+   (run `36963490425`: 1399 testes Python, 1373 web, 66 navegador), mas esse recorte
+   específico de fontes ainda não era conferido.
+3. **O que foi feito:** na branch `codex/carteiras-docker-fixture`, renomeado o
+   helper para `web/src/levers/testFixtures.ts` e ajustados seus dois importadores
+   de teste. Sem ampliar o contexto Docker, sem modificar a interface ou o motor.
+   Adicionado teste de regressão dos imports TypeScript no contexto permitido:
+   reproduziu o import ausente antes da correção e passou depois (5 contratos).
+   Os 41 testes consumidores passaram; typecheck e Vite build passaram em cópia
+   temporária sem os arquivos de teste/fixtures excluídos do Docker. Revisão
+   independente sem bloqueadores. Docker local indisponível (daemon parado);
+   o build real será novamente conferido no Render, após o CI verde.
+4. **O que isso invalida:** a suposição de que o build no checkout, sozinho,
+   garante o build com o contexto Docker restrito; nenhuma métrica financeira.
+
+## 2026-10-02 — Preparação de publicação da análise de carteiras aprovada (MOT-100)
+
+1. **Sintoma:** Gabriel aprovou a prévia visual e autorizou inspeção, commit, merge e deploy quando seguros.
+2. **Causa:** a funcionalidade estava apenas no worktree local; a revisão encontrou contagens incluindo combinações antigas, valores do objetivo ativo pouco explícitos e ausência de retorno direto à recomendação após selecionar uma alternativa.
+3. **O que foi feito:** análise de carteiras com seis objetivos, restrições independentes, alternativas e contribuição marginal; interface console clara/escura aprovada, sem o gráfico economia × espera nem a tabela extensa na tela principal. As três lacunas de revisão receberam testes de regressão. Preparação na branch `codex/carteiras-analise`; integração com a `main`, CI e publicação ainda serão verificadas antes do deploy.
+4. **O que isso invalida:** a restrição anterior de manter esta entrega somente local foi substituída pela autorização explícita de publicação. Nenhuma regra, premissa ou número do motor foi alterado.
+
+### Integração validada sobre `c3620bf`
+
+- Shell, fontes Geist, tema, Replay, grupos de Diagnóstico e proteções de concorrência da `main` preservados. O CSS temporário `frontConsole.css` foi removido; somente o estilo específico de carteiras permanece.
+- Python normal e `-O`: 1.397 passando, 3 pulados e 1 xfail; web: 1.373 passando. Ruff, mypy, typecheck e lint passaram; contratos regenerados sem diferença e wheel construído.
+- Build de produção e scanner de credenciais passaram. Smoke CSP repetido com a configuração pública sintética exigida pelo harness: login visível, zero violações e zero chamadas ao provider. Sem configuração pública, o build local não serve como teste de login; nenhum segredo real foi necessário.
+- Jornada real das 63 combinações passou em 3,7 minutos; os dois testes visuais passaram sem regenerar referências. Os demais fluxos exercitados na suíte E2E inicial passaram; o CI executará novamente a suíte completa no candidato de merge.
+- Integração dos testes: cancelamento distingue os dois avisos de status da página; teste do Replay aguarda publicação inicial do dia; seletor marginal compara nome literal contendo `+`; capturas ocultam somente o controle de seed exclusivo da prévia.
+- Prévia reconstruída com as mesmas seis empresas sintéticas após a limpeza única já herdada da `main`; nenhum reset adicional, schema, configuração de acesso ou regra do motor foi alterado. Verificação manual de objetivos, retorno à recomendação, claro/escuro e reflow de celular sem overflow horizontal.
+- Dois alertas npm preexistentes foram triados, sem caminho vulnerável identificado no fluxo publicado; a atualização do lock fica pendente (detalhes no roteiro de aceite). Merge/deploy dependem do CI do PR; não são declarados concluídos neste registro.
+
+## 2026-10-01 — Prévia visual de carteiras no tema console (MOT-100)
+
+1. **Sintoma.** A análise local ainda usava a aparência antiga, distante do console claro/escuro de `feat/front-visual`.
+2. **Causa.** A branch de análise precede o redesenho e os novos componentes tinham apresentação básica.
+3. **O que foi feito.** Tokens, tema persistido e base visual do shell reaproveitados de `feat/front-visual` (`209bdbe`), com CSS de carteiras separado. Empresas obrigatórias passam a cartões pesquisáveis e acessíveis por teclado; recomendação e alternativas têm métricas hierarquizadas; contribuição marginal usa cartões de impacto na mesma escala e tabela detalhada recolhida. Sem mudança de motor, dados persistidos, ranking ou filtros. Testes focados e navegação: 99 passando. Conferência manual com os 63 resultados existentes nos temas claro/escuro e em larguras de desktop/celular. O E2E que recalcula os 63 diagnósticos foi adaptado, mas não repetido nesta revisão visual.
+4. **O que isso invalida.** Capturas da aparência anterior e passos que supõem IDs sempre visíveis, tabela marginal aberta ou botão de tema ausente. Nada nos números simulados. Continua somente local, sem push, PR, main ou deploy.
+
+## 2026-10-01 — Interface compacta da análise de carteiras (MOT-100)
+
+1. **Sintoma.** No aceite manual, o gráfico de economia × espera ficou pouco útil e a tabela com as 63 composições tornou a página excessivamente longa.
+2. **Causa.** A tela expunha simultaneamente recomendação, destaques, gráfico, tabela completa, detalhes e contribuição marginal, repetindo caminhos de exploração.
+3. **O que foi feito.** `PortfolioRecommendationPanel` deixou de renderizar e carregar o gráfico/Pareto e a tabela completa. Objetivos, filtros, recomendação, alternativas, detalhes e contribuição marginal permanecem. Os testes unitários e o E2E focado foram ajustados para o fluxo compacto.
+4. **O que isso invalida.** Evidências e roteiro que orientavam selecionar, ordenar ou conferir carteiras pelo gráfico e pela tabela completa. Os módulos isolados continuam no código, mas não fazem parte da tela principal.
+
+## 2026-09-30 — Showcase sintético ampliado da análise de carteiras (MOT-100)
+
+1. **Sintoma.** A documentação de aceite ainda descrevia o exercício antigo com três empresas e sete carteiras, enquanto o showcase E2E atual cobre uma busca completa maior.
+2. **Causa.** O fixture de aceitação foi ampliado para seis empresas sintéticas e 14 ordens, produzindo 63 combinações não vazias.
+3. **O que foi feito.** A documentação em `docs/frontend/carteiras-analise-aceitacao.md` e o índice em `docs/MAPA.md` agora registram os números atuais e identificam explicitamente as empresas e ordens como sintéticas.
+4. **O que isso invalida.** A descrição anterior de três empresas e sete carteiras como escopo do E2E focado. AstroPay continua apenas uma referência de escala já existente no repositório; nenhum fluxo real da AstroPay é descrito ou representado pelo showcase.
+
+## 2026-09-30 — Análise ampliada de combinações de carteiras (MOT-100)
+
+1. **Sintoma.** A recomendação existente escolhia pela maior economia, com limite opcional de espera, e não permitia comparar as combinações por outros objetivos ou explorar suas diferenças.
+2. **Causa.** A tela apresentava uma recomendação e poucas alternativas, embora os diagnósticos comparáveis já estivessem disponíveis no estudo.
+3. **O que foi feito.** Na branch local `codex/carteiras-analise`, `portfolioAnalysis.ts` projeta métricas dos resultados existentes; `portfolioSelection.ts` aplica objetivos e filtros; `portfolioFrontier.ts` e `PortfolioTradeoffChart.tsx` apresentam o gráfico e Pareto; `portfolioMarginal.ts` e `PortfolioMarginalPanel.tsx` calculam e exibem diferenças por empresa. A interface inclui tabela e detalhes em `web/src/levers/`. A prévia local usa `scripts/preview_carteiras.py`; o E2E focado está em `web/e2e/study-portfolio-analysis.spec.ts`. Na validação inicial, o E2E passou com sete carteiras comparáveis; a validação atual do showcase sintético ampliado cobre seis empresas, 14 ordens e 63 combinações. O teste reconcilia a tabela com os envelopes e observa zero novos POSTs de diagnóstico/preparação durante a exploração, sem mudança do snapshot salvo. A suíte web passou com 1.287/1.287 testes no modo serial; após os ajustes finais, 40/40 testes focados, typecheck, lint e build passaram e o E2E foi revalidado. A prévia foi inspecionada a 1280×800 e em reflow equivalente a zoom de 200%. Apenas o aceite manual do Gabriel permanece pendente. A branch não recebeu push, PR, integração à `main` nem deploy.
+4. **O que isso invalida.** Nada na `main` ou na versão publicada: a branch permanece local e não altera os resultados dos diagnósticos. Os gates técnicos e o E2E não substituem a experimentação manual pendente.
+
+## 2026-10-01 — Duplo clique em "Executar diagnóstico" podia sumir com o resultado (MOT-99)
+
+- **Sintoma:** o E2E `foundation.spec.ts` ("browser executes a generated study… exactly once") passou a falhar de forma intermitente no CI: depois do diagnóstico concluído, a tela ficava só com "Configuração", sem progresso nem "Resultado do motor". Falhou no PR #66 (`feat/front-visual`) e, no mesmo dia, em `codex/diagnostico-recolhivel`, que não tem nada em comum com o PR #66. Localmente: 2 em 5 rodadas na `feat/front-visual`, 0 em 6 na `main`.
+- **Causa:** `StudyDiagnosticPage.run` se protegia de execuções simultâneas com o estado `runInProgress`, que só muda no próximo render. Dois cliques no mesmo instante (o teste faz isso de propósito) iniciavam duas execuções. A segunda encontrava a reserva gravada pela primeira e consultava o job antes de o `POST /api/v1/diagnosticos` chegar ao servidor. O `404` virava um registro `INTERRUPTED` (`SERVER_RESTART_OR_JOB_EXPIRED`) e a tela não mostrava o resultado. Quem chega primeiro é questão de milissegundos; o visual novo (fontes, animação) só mudou o tempo e deixou a corrida mais frequente. Traces: só a rodada que falha tem `GET …/diagnosticos/{id}` 404 antes do `POST` 202.
+- **O que foi feito:** trava síncrona `runInFlightRef` em `run`, liberada no `finally`, além do `runInProgress` que continua controlando a tela. Teste novo `web/src/pages/StudyDiagnosticDoubleClick.test.tsx`, que falhava (2 execuções) antes da correção. Verificado: E2E `foundation` 12/12 seguidas, suíte E2E local completa 66/66, front 1284/1284, typecheck e lint.
+- **O que isso invalida:** nada nos números nem no motor. Falhas desse teste em outras branches de hoje (ex.: `codex/diagnostico-recolhivel`) têm esta causa e somem quando a branch incorporar a correção.
+
+## 2026-10-01 — Visual do app inteiro no sistema do Replay (MOT-99)
+
+- **Sintoma:** depois do novo Replay (console escuro), o resto do front continuava no visual antigo — fundo creme, títulos serifados, cartões com bordas fortes, chat com cara de WhatsApp e um cabeçalho fixo "Estudo · Ainda não iniciado" que não dizia nada. O Gabriel achou o conjunto desorganizado e pediu a mesma suavidade e modernidade do Replay em todas as telas, **sem mudar nenhuma funcionalidade**.
+- **Causa:** o Replay ganhou um sistema visual próprio (`--rp-*`) isolado em `.replay-page`; os tokens globais (`tokens.css`) e o `global.css` eram da etapa 1 e muitos componentes usavam cores literais.
+- **O que foi feito:** branch `feat/front-visual` (worktree `.worktrees/front-visual`, a partir de `c4ec0c9`), **só local, sem push**. `tokens.css` reescrito com a paleta do Replay como padrão escuro e um tema claro em `data-theme="light"`, mantendo os nomes antigos (`--canvas`, `--surface`, `--ink`…) para não tocar em cada componente; acrescenta `--space-5`, que era usado sem existir. `global.css` reescrito seletor a seletor (mesmas classes, nenhuma removida): cartões, botões, campos, tabelas, métricas em fonte mono, abas das empresas, importação e chat, sem cores literais fora do console do Replay. Fontes Geist e Geist Mono empacotadas pelo `@fontsource-variable` (a CSP `style-src 'self'` bloqueia Google Fonts). `AppShell` ganhou ícones na navegação, marca do produto, botão de tema (preferência em `localStorage`, escuro por padrão) e uma barra de contexto derivada só da rota (ex.: "Estudos / Diagnóstico") no lugar do texto fixo; links, nomes acessíveis, região "Perfil" e botão "Sair" iguais. `EChart` lê as cores do tema e acompanha a troca. `print.css` força tokens claros na impressão, então o PDF da apresentação continua em papel branco. As telas, o login e o chat não têm animação de entrada: um esmaecimento derrubava o contraste medido pelo axe, e um deslize deixava capturas e PDF dependentes do instante exato (no CI, o login saiu 7 px abaixo da referência). Ficam as transições de hover e foco. Na impressão, animações e transições também são desligadas. Verificado: front 1283/1283, typecheck, lint e build; e2e local 64/66 na primeira rodada completa, e as 2 falhas eram só as comparações de captura com o visual antigo; depois de regenerar as referências Windows, `stage6-visual` passou 3 vezes seguidas e `stage6-accessibility` (axe WCAG 2.2 AA) passou 3/3. Conferido no navegador em 1440 px e 375 px (sem rolagem lateral), nos temas escuro e claro: estudos, carteira, diagnóstico, Replay, apresentação, empresas, importação, quadro e chat.
+- **O que isso invalida:** todas as capturas de tela do front, inclusive as referências de `e2e/stage6-visual.spec.ts-snapshots` (Windows regeneradas localmente; `-linux` geradas no Ubuntu do GitHub Actions, run `36896314121`, com gatilho temporário do workflow já revertido). Não altera dados, cálculos, regras do motor, rotas, contratos, autenticação nem configuração do Render.
+
+## 2026-10-01 — Diagnóstico recolhível por estudo (MOT-99)
+
+1. **Sintoma** — a aba Diagnóstico exibia de imediato todos os cenários de todos os
+   estudos. Em carteiras grandes, isso criava uma lista extensa de combinações e
+   montava conteúdo que a pessoa talvez nem quisesse consultar.
+2. **Causa** — cada estudo renderizava incondicionalmente sua tabela completa e
+   percorria todos os cenários assim que a página era aberta.
+3. **O que foi feito** — na branch `codex/diagnostico-recolhivel`, cada estudo passa
+   a iniciar recolhido e informa quantos cenários possui. O botão acessível expande
+   somente o estudo escolhido, momento em que a tabela é montada; um segundo clique
+   recolhe e desmonta o conteúdo. O acesso direto ao estudo foi preservado. Foi
+   acrescentado teste de regressão para o comportamento, além de validação visual,
+   teste focado, lint, typecheck e build. A falha de timeout já observada no teste de
+   rota `/importar` da suíte completa foi autorizada pelo Gabriel como não bloqueante
+   para esta publicação.
+4. **O que isso invalida** — fica superada a expectativa visual de que todos os
+   estudos apareçam expandidos ao entrar na aba. Nenhuma métrica, regra do motor,
+   persistência ou publicação no Render foi alterada.
+
+## 2026-10-01 — Nova régua do Replay publicada no Render (MOT-99)
+
+- **Sintoma:** o PR #63 estava pronto e aprovado, mas o serviço `motor-de-fluxo-piloto` ainda servia `f70769c`, porque o Auto-Deploy está desligado.
+- **Causa:** o merge na `main` não publica o serviço; cada release exige selecionar manualmente o commit autorizado no Render.
+- **O que foi feito:** o PR #63 (`feat/replay-linha-do-tempo`) foi mergeado com commit de merge `d4fec2fde99ef9bc37693077b87582eca4e8d9a6`, depois de CI verde no SHA da branch (run `36815613835`); a CI pós-merge da `main` também passou (run `36821633326`). O commit de merge foi publicado manualmente no serviço `motor-de-fluxo-piloto` pelo deploy `dep-dauv9a0jo6nc73ep9980`, concluído como **Live** em 2026-10-01 às 02:50:32 GMT-3 (57,0 s), sem alterar configuração ou variáveis. Smoke público: `GET /api/v1/health` respondeu `200 {"status":"ok"}` e `/login` carregou via HTTPS. Gabriel confirmou manualmente que entrou numa conta autorizada e conferiu no Replay publicado que a nova régua está correta. O Codex não repetiu no Render o percurso completo de apresentação e chat porque a credencial efêmera disponível foi recusada; esses fluxos permanecem cobertos pela CI verde do PR, não por um novo smoke autenticado automatizado.
+- **O que isso invalida:** o deploy `f70769c` deixa de ser a versão ativa e passa a ser a referência imediata de rollback (`dep-daus8cvpn0mc738v07a0`). Capturas da régua com um rótulo por dia deixam de representar o site publicado. Nada nos números, nas regras do motor, na autenticação, no Supabase ou na configuração do Render mudou.
+
+## 2026-10-01 — Linha do tempo do Replay legível em qualquer número de dias (MOT-99)
+
+- **Sintoma:** no Replay publicado, com 36 dias (D0–D35), a régua da barra de controles escrevia um rótulo por dia; com ~16 px por dia, "D10 D11 D12…" se sobrepunham e ficavam ilegíveis.
+- **Causa:** `ReplayControls` rotulava todos os dias em réguas de até 45 dias (`DETAILED_DAYS`), em células de largura igual, sem considerar a largura disponível.
+- **O que foi feito:** nova função pura `web/src/replay/timeline.ts` (com testes) escolhe o passo entre rótulos pela largura medida (1, 2, 5, 7, 10, 14, 30, 60 ou 90 dias, ≥ 42 px entre rótulos), mantém sempre o último dia e esconde rótulos que encostariam na etiqueta do dia atual ou no do último dia. A régua (`ReplayTimeline` dentro de `ReplayControls.tsx`) passou a camadas posicionadas pelo centro de cada dia: chegadas em barras proporcionais, fechamento em losango vazado, remessa em losango cheio, trilho com marcador, etiqueta "D14 · 09/01" no dia atual e resumo do dia ao passar o mouse. A largura é medida com `ResizeObserver` e recalculada também no `resize` da janela. O deslizante acessível "Selecionar dia", o transporte, a velocidade e os atalhos não mudaram. Protótipo aprovado pelo Gabriel em `entregaveis/prototipo-replay-fronteira-viva.html` (fora do repo). Verificado: front 1283/1283 em duas rodadas, lint, typecheck e build; e2e `stage5-replay`, `stage6-performance`, `stage6-visual`, `stage6-demo-communication`, `stage6-acceptance` e `stage6-chat` 34/34; conferido no navegador com 83 dias em 1400 px (passo 7) e 375 px (passo 14), sem sobreposição nem rolagem lateral.
+- **O que isso invalida:** capturas da régua anterior (um rótulo por dia, marcas de chegada em bolinhas). Não altera dados, cálculos, regras do motor, contratos nem configuração do Render.
+
+## 2026-09-30 — Novo Replay publicado no Render (MOT-99)
+
+- **Sintoma:** o PR #60 estava pronto e aprovado, mas o serviço `motor-de-fluxo-piloto` continuava no deploy anterior `dep-dauqcqu0tbcc73c9gpd0` (`61bc193`), porque o Auto-Deploy está desligado.
+- **Causa:** a publicação do Render é manual e o merge na `main` não altera o serviço sozinho.
+- **O que foi feito:** o PR #60 (`feat/replay-visual`) foi mergeado com commit de merge `f70769caa64906970a81b7416ffa8ec491eec049`. A CI integral pós-merge, run `36804337810`, passou. O commit foi publicado manualmente no serviço `motor-de-fluxo-piloto` pelo deploy `dep-daus8cvpn0mc738v07a0`, concluído como **Live** em 2026-09-30 às 23:23:48 GMT-3 (57,8 s), sem alterar configuração ou variáveis. Smoke público: `GET /api/v1/health` respondeu `200 {"status":"ok"}` e `/login` carregou via HTTPS. O smoke autenticado de estudos, diagnóstico, Replay, apresentação e chat não foi concluído porque a credencial efêmera guardada no navegador foi recusada; precisa ser repetido com uma credencial de smoke vigente.
+- **O que isso invalida:** o deploy `61bc193` deixa de ser a versão ativa e passa a ser a referência imediata de rollback. Capturas e expectativas do Replay claro anterior deixam de representar o site publicado. Nada nos números, nas regras do motor, na autenticação, no Supabase ou na configuração do Render mudou.
+
 ## 2026-09-30 — Taxas por mecanismo reconciliam sem segundo arredondamento (MOT-99)
 
 - **Sintoma:** `AgregadoCanonico` recusava o diagnóstico inteiro com "taxas por mecanismo não reconciliam com netabilidade" em alguns cenários válidos (semente 48 de `tests/web_api/test_replay_fidelidade_motor.py`: casado 9353.52, intra 1537.60, inter 7815.92, bruto 23598.48 → soma das taxas `…1530` contra netabilidade `…1529`).
@@ -92,7 +392,7 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 - **Sintoma:** faltava prova de que a cena mostra o que o motor executou. Na conferência apareceram defeitos da própria cena nova: ao entrar num dia animado o saldo piscava o valor final e contava de trás para frente; as setas podiam ser medidas antes de os cartões estarem no lugar; e o roteamento quebrava quando o choque entre setas se propagava para uma terceira. Os controles e as três caixas de acumulados ainda estavam no visual antigo.
 - **Causa:** a etapa do dia (e as ordens que liquidam) vinham de um efeito, um quadro depois do render; as conexões mediam num efeito de layout que roda antes de a ref do palco existir; e `routeFlows` acrescentava ao conjunto de conflitos enquanto o percorria.
 - **O que foi feito:** `tests/web_api/test_replay_fidelidade_motor.py` executa 120 cenários aleatórios (semente fixa; LEGADO e NATURAL; poucos clientes para forçar autonetting; remessas OUT e IN) pelo caminho real do diagnóstico e confere o documento do Replay contra `executar_p0` independente: dias de fechamento, gatilhos, cada alocação por ordem/tipo/origem, setas somando o casado de cada ordem na mesma origem, saldos diários e conservação; também confirma que o motor só pula dia quando a regra P0 manda. Um teste de cobertura exige ≥ 20 casos de cada caminho. `tests/web_api/fixture_replay_fidelidade.py` grava quatro documentos gerados pelo motor em `web/src/replay/fixtures/replay-motor-fidelity.v1.json` (com teste que falha se a fixture ficar para trás), e `web/src/replay/motorFidelity.test.tsx` renderiza a cena em cada dia, pausada e tocando, e confere cartões, saldo de abertura e de fechamento, liquidadas, setas (origem, destino e valor) e "Ainda aberto" contra saldos recalculados dos eventos. Os três defeitos foram corrigidos com teste. Os controles ganharam transporte com ícones, régua com um segmento por dia (marcas de chegada, fechamento e remessa; contínua acima de 45 dias, sobre o mesmo deslizante acessível "Selecionar dia"), velocidade 0,5×–4× e atalhos espaço/←/→; os acumulados viraram cartões escuros com medidor da netabilidade. Dois testes de chat que conferiam um efeito de forma síncrona passaram a esperar por ele.
-- **O que isso invalida:** nomes de botões usados em testes — os controles agora são "Primeiro dia", "Anterior", "Reproduzir"/"Pausar reprodução"/"Recomeçar do início" e "Seguinte" (e2e ajustado). Não altera dados, cálculos ou regras do motor. **Dois defeitos antigos encontrados e não tratados aqui (fora do Replay), ambos recusam o diagnóstico inteiro:** (1) com aquecimento, OUT medido casa com IN do aquecimento e o casado medido passa do "teto estrutural" calculado só com ordens medidas — `servidor/diagnostics/analysis.py:281`, "volume casado excede o potencial estrutural" (4 de 120 cenários); (2) `motor/analise/modelo.py:193` exige igualdade exata entre taxa de autonetting + multilateral e a netabilidade, mas as três são divisões `Decimal` arredondadas e podem diferir na 28ª casa (1 de 120). Esses cenários estão marcados como `xfail` com o motivo. Verificado: front 1254 testes aprovados (11 falhas já existentes na base, `indexedDB`), typecheck, lint e build; Python 1355 aprovados, 5 `xfail` acima e 2 falhas de `test_demo_package.py` que já falham na base por o pacote não estar instalado no ambiente.
+- **O que isso invalida:** nomes de botões usados em testes — os controles agora são "Primeiro dia", "Anterior", "Reproduzir"/"Pausar reprodução"/"Recomeçar do início" e "Seguinte" (e2e ajustado). Não altera dados, cálculos ou regras do motor. **Dois defeitos antigos encontrados (fora do Replay), ambos recusavam o diagnóstico inteiro:** (1) com aquecimento, o casado medido passava do "teto estrutural" — já corrigido na main pela integração Live (PR #59); depois do merge, os 4 cenários afetados batem com o motor e saíram da lista de falhas conhecidas; (2) `motor/analise/modelo.py:193` exige igualdade exata entre taxa de autonetting + multilateral e a netabilidade, mas as três são divisões `Decimal` arredondadas e podem diferir na 28ª casa (1 de 120 cenários, marcado como `xfail`; correção em andamento em tarefa separada). Verificado após atualizar com a main (61bc193): front 1273/1273 em três rodadas seguidas, typecheck, lint e build; Python 1391 aprovados e 1 `xfail` (o caso 2). Nesta junção, a fixture do front passou a fixar também `motor_version`, que varia com o pacote instalado, e os testes de fidelidade tocando avançam o relógio em passos de 200 ms para não sobrecarregar a suíte.
 
 ## 2026-09-30 — Cena do Replay com setas roteadas, ritmo mais lento e visual de console (MOT-99)
 
@@ -100,6 +400,24 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 - **Causa:** cada seta era uma curva independente de borda a borda, sem noção das outras; o rótulo ia sempre 58 px acima do ponto médio; e o intervalo da reprodução era fixo, sem distinguir dia com evento de dia vazio.
 - **O que foi feito:** novo `web/src/replay/routing.ts` (puro, com testes): cada seta ganha uma porta própria no cartão, ordenada pela altura do destino, e usa o traçado mais simples (reta ou uma curva); só as que se chocariam passam para trilhos em ângulo reto dentro da CNR, na ordem com menos cruzamentos. As remessas descem até um portão "Remessa · câmbio" no pé da CNR. Os rótulos mostram o valor do fluxo, no trecho reto mais longo, e se afastam quando colidem. A cena anima em etapas: os cartões deslizam, as setas se desenham uma a uma com pontos de luz, os saldos contam até o novo valor, e as liquidadas saem aos 7 s. O ritmo passa a 8 s por dia com evento e 2 s por dia vazio em 1×, e as etapas escalam com a velocidade. Passar o mouse numa ordem isola o caminho dela. O visual da cena (só ela) virou um console escuro. Arquivos: `ReplayStage.tsx`, `ReplayConnections.tsx`, `ReplayOrderCard.tsx`, `useReplayPlayback.ts`, `global.css`, testes do Replay e uma asserção de `e2e/stage5-replay.spec.ts`. Branch `feat/replay-visual`, a partir de `codex/replay-production-fix`.
 - **O que isso invalida:** capturas visuais da cena anterior (fundo claro, rótulo "Autonetting/Netting" sobre a seta) e a expectativa de 4 s por dia. Não altera dados, cálculos ou regras do motor. Verificado: 58 testes do Replay, typecheck, lint e build aprovados; conferido em navegador com um cenário de 3 setas cruzadas. Falhas já existentes na base e não tratadas aqui: 11 testes unitários de rotas/login/`studyController` (`indexedDB is not defined`) e duas asserções antigas de `stage5-replay.spec.ts` (`Dia N de M`, `.replay-frontier__status`) que não batem mais com os controles atuais.
+
+## 2026-09-30 — Integração da versão Live na main (MOT-99)
+
+- **Retomada autorizada:** Gabriel autorizou corrigir os bloqueios encontrados e concluir a integração, sem deploy. `ApplicationProviders` trata falha do IndexedDB com retry; `StudyEditor` captura o valor da janela antes do updater; o diagnóstico limita cada lado medido pela capacidade oposta da execução completa; e o chat não envia uma seleção antes de seu contexto `STUDY` ficar pronto. Os guards continuam ativos e nenhuma seed, skip ou regra do motor foi alterada para esconder falha.
+- **Referências visuais:** a primeira captura Linux temporária foi inspecionada e incorporada. A correção do teto mudou somente três valores derivados no demonstrativo; as duas baselines Windows afetadas foram revisadas pixel a pixel e atualizadas. A captura Linux final `36787589692` confirmou e atualizou somente `presentation` e `print-page-02`; as outras cinco imagens ficaram idênticas por hash. O workflow temporário foi removido. Main e Render permanecem intactos.
+- **Evidências finais locais:** Python normal e `-O`: 1.270 passed / 3 skipped cada; Ruff, mypy, contratos/validadores, scanner, typecheck, lint e build PASS. Front unitário: 1.240 testes antes do último guard, mais 32 focados do chat depois. E2E: 7/7 Stage4/5, 7/7 demo/apresentação, 17/17 chat e 2/2 visuais Windows após as correções. A rodada integral teve 63/66 antes dessas últimas correções e identificou, sem mascarar, a corrida de contexto e as duas imagens com números antigos. Revisão Linux concluída; resta somente a CI integral do candidato sem workflow temporário. Detalhes no plano.
+- **Marco histórico, já superado pela retomada acima:** quando o PR #59 foi aberto, a CI 36779719966 aprovou Python normal e otimizado (1.264/1 skip), mas parou no alias de regex do teste, corrigido sem efeito runtime. Naquele ponto, o front unitário tinha 1.236/1.236 e o E2E acabara de revelar a rejeição do reset IndexedDB; a integração aguardava autorização e os patches E2E ainda eram parciais. A autorização, as correções e os gates vigentes são os três bullets anteriores.
+- **Sintoma:** o Render servia `29d955c`, enquanto a main permanecia em `3342059`, 52 commits atrás. Um deploy manual da ponta antiga da main poderia republicar a interface anterior.
+- **Causa:** os deploys específicos de commits avançaram em branches de desenvolvimento sem concluir a integração na main. Auto-Deploy está Off no serviço.
+- **O que foi feito:** Gabriel autorizou integrar toda a versão Live, sem novas mudanças de produto. `codex/main-render-sync` parte exatamente de `29d955c`; a auditoria confirmou 243 arquivos diferentes da main e nenhum em `motor/`, Dockerfile, render.yaml, dependências ou Supabase. Entram estudos/combinações, importação e backup, quadro/apresentação, diagnóstico P50, Replay, perfil/primeiro acesso e chat contextual. O ambiente unitário ganha IndexedDB simulado já disponível nas dependências, e o teste de sessão passa a verificar o reset publicado, em lugar da limpeza seletiva removida. Plano e gates em `docs/superpowers/plans/2026-09-30-main-render-sync.md`. A integração segue por PR protegido, sem novo deploy e sem mudança de runtime em relação ao Live.
+- **O que isso invalida:** a main antiga deixa de ser referência do front publicado após o merge. O reset único de todas as stores locais já existente no Live é preservado, não repetido por esta integração; não se altera seu marcador. As falhas históricas de Playwright continuam sendo limitações até validação atual, não aprovações presumidas. Abas antigas devem ser recarregadas para usar o contrato atual do chat. Nenhuma regra financeira ou dado de produção é alterado por esta tarefa.
+
+## 2026-09-30 — Ajuda do chat sincronizada com o front atual (MOT-99)
+
+- **Sintoma:** ao perguntar pelo botão “Nova combinação de carteiras”, o chat não encontrava o controle e podia pedir informações que já estavam na interface.
+- **Causa:** o catálogo de ajuda não continha os fluxos novos; o inventário enviado ao chat despejava todos os controles sem priorizar a rota atual ou o nome perguntado.
+- **O que foi feito:** em `codex/chat-front-context`, as fichas de controles novos foram adicionadas e os fluxos alterados foram corrigidos; os botões receberam IDs observáveis; o inventário prioriza controles da tela, controles globais e nomes citados, mantendo consulta direta aos demais. Contrato OpenAPI e validador do front foram regenerados. Testes focados de chat/API, typecheck e build passaram.
+- **O que isso invalida:** a orientação anterior de que o botão de combinação não está documentado no chat. Não altera dados, cálculos, autenticação nem o deploy do Render.
 
 ## 2026-09-29 — Controles e acumulados reposicionados no Replay (MOT-99)
 

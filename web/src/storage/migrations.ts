@@ -8,8 +8,9 @@ import type {
   StudyDocument,
   PreviewExecutionRecord,
 } from '../study/model';
-import { validateAndCertifyStudy } from '../study/certifiedStudy';
+import { validateAndCertifyDetachedStudy, validateAndCertifyStudy } from '../study/certifiedStudy';
 import type { ApplicationRepository } from './applicationRepository';
+import { summarizeStudy } from './applicationRepository';
 import {
   DocumentCorruptError,
   NotFoundError,
@@ -17,7 +18,7 @@ import {
   SchemaUnsupportedError,
 } from './errors';
 
-const DATABASE_SCHEMA_VERSION = 3;
+const DATABASE_SCHEMA_VERSION = 5;
 
 export type LegacySource = Readonly<{
   sourceKey: string;
@@ -373,6 +374,24 @@ export async function validateStoredStudy(
   return validation.value;
 }
 
+/** Only for a uniquely owned value returned by IndexedDB structured cloning. */
+export async function validateDetachedStoredStudy(
+  value: unknown,
+  ownerSub: string,
+): Promise<StudyDocument> {
+  if (isRecord(value) && typeof value.schemaVersion === 'string'
+    && value.schemaVersion !== '3.0.0') {
+    throw new SchemaUnsupportedError(`StudyDocument ${value.schemaVersion} não suportado.`);
+  }
+  const validation = await validateAndCertifyDetachedStudy(value, ownerSub);
+  if (!validation.ok) {
+    throw new DocumentCorruptError(
+      `StudyDocument persistido inválido: ${validation.issues.map((issue) => issue.code).join(', ')}.`,
+    );
+  }
+  return validation.value;
+}
+
 async function schemaVersion(database: IDBDatabase): Promise<number> {
   const transaction = database.transaction('meta', 'readonly');
   const row = await requestResult<MetaRow | undefined>(
@@ -423,7 +442,7 @@ export async function migrateDatabase(
 
   await transactionResult(
     database,
-    ['studies', 'executions', 'meta'],
+    ['studies', 'study_summaries', 'executions', 'meta'],
     'readwrite',
     async (transaction) => {
       const meta = transaction.objectStore('meta');
@@ -451,12 +470,18 @@ export async function migrateDatabase(
             deleted: item.study.deletedAt === null ? 0 : 1,
             document,
           });
+          transaction.objectStore('study_summaries').add({
+            study_id: item.study.id, owner_sub: item.study.ownerSub,
+            deleted: item.study.deletedAt === null ? 0 : 1,
+            document: summarizeStudy(document, executionDocuments.length),
+          });
           for (const [sequence, execution] of executionDocuments.entries()) {
             executions.add({
               study_id: item.study.id,
               execution_id: execution.id,
               owner_sub: item.study.ownerSub,
               sequence,
+              ...(execution.attemptId === undefined ? {} : { attempt_id: execution.attemptId }),
               document: execution,
             });
           }

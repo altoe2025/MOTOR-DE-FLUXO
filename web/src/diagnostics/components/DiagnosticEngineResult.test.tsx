@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
 import type { DiagnosticEnvelope } from '../../api/client';
@@ -27,10 +27,24 @@ const envelopeWith = (result: unknown) => ({
 } as unknown as DiagnosticEnvelope);
 
 describe('resultado do motor no diagnóstico', () => {
-  it('mostra resultado do motor e decomposição de custos da execução selecionada', () => {
+  it('responde primeiro (economia, netabilidade, custo) e recolhe os detalhes', () => {
     render(<DiagnosticEngineResult envelope={envelopeWith({ agregado })} />);
-    expect(screen.getByRole('heading', { name: 'Resultado do motor' })).toBeVisible();
+    const hero = screen.getByRole('region', { name: 'Resultado do motor' });
+    expect(within(hero).getByTestId('economia-brl')).toBeVisible();
+    expect(within(hero).getByTestId('netabilidade')).toBeVisible();
+    expect(hero).toHaveTextContent('sem pool → com pool');
+    expect(screen.queryByRole('heading', { name: 'Composição do fluxo' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Decomposição de custos' })).not.toBeInTheDocument();
+  });
+
+  it('abre "Como a economia se forma" e "Custos por componente" sob demanda', () => {
+    render(<DiagnosticEngineResult envelope={envelopeWith({ agregado })} />);
+    fireEvent.click(screen.getByRole('button', { name: /Como a economia se forma/ }));
+    expect(screen.getByRole('heading', { name: 'Composição do fluxo' })).toBeVisible();
+    expect(screen.getByTestId('autonetting-volume')).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: /Custos por componente/ }));
     expect(screen.getByRole('heading', { name: 'Decomposição de custos' })).toBeVisible();
+    expect(screen.getAllByTestId('economia-brl')).toHaveLength(1);
   });
 
   it('não renderiza nada quando a execução selecionada não traz resultado canônico', () => {
@@ -55,7 +69,8 @@ describe('resultado do motor no diagnóstico', () => {
     expect(region).toHaveTextContent('AmplitudeR$ 29,00');
     expect(region).toHaveTextContent('10 repetições');
     expect(region).toHaveTextContent('Execução selecionada para detalhamento/Replay: repetição 2 de 10');
-    expect(region).toHaveTextContent('não é probabilidade de desempenho futuro');
+    fireEvent.click(within(region).getByRole('button', { name: 'Ajuda: Faixa da economia' }));
+    expect(screen.getByRole('tooltip')).toHaveTextContent('não é probabilidade de desempenho futuro');
   });
 
   it('entrada fixa mostra execução única, sem intervalo', () => {

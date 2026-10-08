@@ -5,7 +5,11 @@ import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { canonical } from '../study/fingerprints';
+import { createStudy } from '../study/domain';
+import { FIXTURE_NOW, makeScenarioDraft } from '../study/fixtures';
 import { DocumentCorruptError, SchemaUnsupportedError } from './errors';
+import demoJson from '../demo/generated/demo-study.v1.json';
+import type { StudyDocument } from '../study/model';
 import { IndexedDbApplicationRepository } from './indexedDbApplicationRepository';
 import {
   migrateDatabase,
@@ -165,6 +169,98 @@ afterEach(async () => {
 });
 
 describe('physical schema 1 to 2', () => {
+  it('indexes optional attempt IDs while migrating v1 preview executions', async () => {
+    const attemptId = '00000000-0000-4000-8000-000000000077';
+    let studyId = '';
+    await installStage2V1((archive) => {
+      const row = archive.stores.executions![0]!;
+      studyId = String(row.study_id);
+      row.document = { ...row.document as Record<string, unknown>, attemptId };
+      archive.stores.operations = [];
+    });
+    const target = new IndexedDbApplicationRepository({ projectRef: STAGE2_PROJECT_REF, ownerSub: STAGE2_OWNER_SUB });
+    try {
+      await target.listStudySummaries();
+      const database = await openDatabase(STAGE2_DATABASE_NAME);
+      expect(await requestResult(database.transaction('executions').objectStore('executions')
+        .index('by_owner_study_attempt').count([STAGE2_OWNER_SUB, studyId, attemptId]))).toBe(1);
+    } finally { target.close(); }
+  });
+  it('upgrades v4 attempt keys and rebuilds summary metadata without changing source documents', async () => {
+    const document: StudyDocument = { ...structuredClone(demoJson.study) as StudyDocument,
+      ownerSub: OWNER_SUB, evidenceSnapshots: [] };
+    const { executions, ...part } = document;
+    const reservation = executions.find((item) => item.kind === 'DIAGNOSTIC' && item.status === 'QUEUED')!;
+    await new Promise<void>((resolve, reject) => {
+      const request = indexedDB.open(DATABASE_NAME, 4);
+      request.onerror = () => reject(request.error);
+      request.onupgradeneeded = () => {
+        createV1StoreSchema(request.result);
+        const summaries = request.result.createObjectStore('study_summaries', { keyPath: 'study_id' });
+        summaries.createIndex('by_owner', 'owner_sub');
+        summaries.createIndex('by_owner_deleted', ['owner_sub', 'deleted']);
+        const tx = request.transaction!;
+        tx.objectStore('meta').put({ key: 'schema_version', value: 4 });
+        tx.objectStore('studies').put({ study_id: part.id, owner_sub: OWNER_SUB, deleted: 0, document: part });
+        summaries.put({ study_id: part.id, owner_sub: OWNER_SUB, deleted: 0,
+          document: { id: part.id, ownerSub: OWNER_SUB, name: part.name, revision: part.revision,
+            createdAt: part.createdAt, updatedAt: part.updatedAt, deletedAt: null,
+            scenarioCount: part.scenarios.length, hasExecutions: true } });
+        for (const [sequence, execution] of executions.entries()) tx.objectStore('executions').put({
+          study_id: part.id, execution_id: execution.id, owner_sub: OWNER_SUB, sequence, document: execution,
+        });
+      };
+      request.onsuccess = () => { request.result.close(); resolve(); };
+    });
+    const target = new IndexedDbApplicationRepository({ projectRef: PROJECT_REF, ownerSub: OWNER_SUB });
+    try {
+      const summaries = await target.listStudySummaries();
+      expect(summaries).toMatchObject([{ id: part.id, revision: part.revision,
+        executionCount: executions.length, hasExecutions: true, baseSourceKind: 'SYNTHETIC' }]);
+      const database = await openDatabase(DATABASE_NAME);
+      const tx = database.transaction(['executions', 'studies'], 'readonly');
+      const [rows, stored] = await Promise.all([
+        requestResult(tx.objectStore('executions').index('by_owner_study_attempt')
+          .getAll([OWNER_SUB, part.id, reservation.attemptId!])),
+        requestResult(tx.objectStore('studies').get(part.id)),
+      ]);
+      expect(rows).toHaveLength(2);
+      expect(rows.sort((left, right) => left.sequence - right.sequence).map((row) => row.document))
+        .toEqual(executions.filter((item) => item.attemptId === reservation.attemptId));
+      expect(stored.document).toEqual(part);
+      expect((await target.getStudy(part.id))!.executions).toEqual(executions);
+    } finally { target.close(); }
+  });
+  it('upgrades physical and logical v3 to v5 without validating execution envelopes', async () => {
+    const document = await createStudy({ id: 'study-v3', ownerSub: OWNER_SUB, name: 'Legado',
+      now: FIXTURE_NOW, baseScenario: makeScenarioDraft() });
+    const { executions: ignored, ...part } = document;
+    void ignored;
+    await new Promise<void>((resolve, reject) => {
+      const request = indexedDB.open(DATABASE_NAME, 3);
+      request.onerror = () => reject(request.error);
+      request.onupgradeneeded = () => {
+        createV1StoreSchema(request.result);
+        const tx = request.transaction!;
+        tx.objectStore('meta').put({ key: 'schema_version', value: 3 });
+        tx.objectStore('studies').put({ study_id: document.id, owner_sub: OWNER_SUB, deleted: 0, document: part });
+        tx.objectStore('executions').put({ study_id: document.id, execution_id: 'legacy-invalid',
+          owner_sub: OWNER_SUB, sequence: 0, document: { envelope: 'invalid untouched' } });
+      };
+      request.onsuccess = () => { request.result.close(); resolve(); };
+    });
+    const target = new IndexedDbApplicationRepository({ projectRef: PROJECT_REF, ownerSub: OWNER_SUB });
+    try {
+      expect(await target.listStudySummaries()).toMatchObject([{ id: 'study-v3', scenarioCount: 1, hasExecutions: true }]);
+      await expect(target.getStudy(document.id)).rejects.toBeInstanceOf(DocumentCorruptError);
+      const database = await openDatabase(DATABASE_NAME);
+      expect(database.version).toBe(5);
+      expect(await requestResult(database.transaction('meta').objectStore('meta').get('schema_version')))
+        .toEqual({ key: 'schema_version', value: 5 });
+      expect(await requestResult(database.transaction('executions').objectStore('executions').get([document.id, 'legacy-invalid'])))
+        .toMatchObject({ document: { envelope: 'invalid untouched' } });
+    } finally { target.close(); }
+  });
   it('migrates the real Stage 2 fixture, execution rows and idempotent operation payloads', async () => {
     await installStage2V1();
     const target = new IndexedDbApplicationRepository({
@@ -196,12 +292,12 @@ describe('physical schema 1 to 2', () => {
     expect([...database.objectStoreNames]).toContain('profile_versions');
     expect([...database.objectStoreNames]).toContain('chat_conversations');
     expect([...database.objectStoreNames]).toContain('chat_operations');
-    expect(database.version).toBe(3);
+    expect(database.version).toBe(5);
     const [meta, operations] = await Promise.all([
       requestResult(metaRequest),
       requestResult<Array<Record<string, unknown>>>(operationsRequest),
     ]);
-    expect(meta).toEqual({ key: 'schema_version', value: 3 });
+    expect(meta).toEqual({ key: 'schema_version', value: 5 });
     expect(operations).toHaveLength(2);
     expect(operations.every((row) =>
       (row.result_document as Record<string, unknown>).schemaVersion === '3.0.0')).toBe(true);
@@ -276,6 +372,10 @@ describe('migrateDatabase', () => {
     const migrated = await target.getStudy('00000000-0000-4000-8000-000000000020');
 
     expect(migrated).toMatchObject({ schemaVersion: '3.0.0', ownerSub: OWNER_SUB });
+    const database = await openDatabase(DATABASE_NAME);
+    expect(await requestResult(database.transaction('study_summaries').objectStore('study_summaries')
+      .get('00000000-0000-4000-8000-000000000020')))
+      .toMatchObject({ document: { id: '00000000-0000-4000-8000-000000000020', scenarioCount: 1, hasExecutions: false } });
     target.close();
   });
 
@@ -439,7 +539,7 @@ describe('migrateDatabase', () => {
 
   it('maps a future IndexedDB version to SCHEMA_UNSUPPORTED', async () => {
     const future = await new Promise<IDBDatabase>((resolve, reject) => {
-      const request = indexedDB.open(DATABASE_NAME, 4);
+      const request = indexedDB.open(DATABASE_NAME, 6);
       request.onerror = () => reject(request.error);
       request.onsuccess = () => resolve(request.result);
     });

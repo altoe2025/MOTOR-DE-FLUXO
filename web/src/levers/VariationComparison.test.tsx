@@ -8,7 +8,12 @@ import { VariationComparison } from './VariationComparison';
 describe('VariationComparison', () => {
   it('warns that generated original and fixed variation do not isolate the lever effect', async () => {
     const input = await comparisonInput();
-    Object.assign(input.execution.requestSnapshot.sampling, { kind: 'GENERATED_INPUT', count: 10 });
+    input.execution.periodSnapshot = { httpPeriod: { modo: 'NATURAL', dias_aquecimento: 0, periodo_medicao_dias: 30 } };
+    Object.assign(input.execution.requestSnapshot.sampling, {
+      kind: 'GENERATED_INPUT', count: 10,
+      preparation_input: { window_days: input.execution.premisesSnapshot.windowDays,
+        warmup_days: 0, measurement_days: 30, costs: input.execution.premisesSnapshot.costs },
+    });
     const html = renderToStaticMarkup(<MemoryRouter><VariationComparison study={input.study}
       selectedScenarioId={input.scenarioId} running={false} progress={null} onRunAll={() => {}} />
     </MemoryRouter>);

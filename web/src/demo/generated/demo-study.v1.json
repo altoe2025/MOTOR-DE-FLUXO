@@ -27673,7 +27673,7 @@
                   "/axes/policy_capture/matched_brl"
                 ],
                 "state": "AVAILABLE",
-                "value": "0.8538905185512287425150480093"
+                "value": "0.6646177694763987017203880137"
               },
               "inter_client_brl": {
                 "evidence": [
@@ -27701,16 +27701,17 @@
                   "/axes/structural_potential/ceiling_brl"
                 ],
                 "state": "AVAILABLE",
-                "value": "359169.08"
+                "value": "1059231.37"
               }
             },
             "structural_potential": {
               "ceiling_brl": {
                 "evidence": [
-                  "/selected_execution/input_snapshot/cenario/ordens"
+                  "/selected_execution/input_snapshot/cenario/ordens",
+                  "/selected_execution/result/agregado/ids_ordens_medidas"
                 ],
                 "state": "AVAILABLE",
-                "value": "2458218.84"
+                "value": "3158281.13"
               },
               "gross_in_brl": {
                 "evidence": [
@@ -36830,7 +36831,7 @@
                   "/axes/policy_capture/matched_brl"
                 ],
                 "state": "AVAILABLE",
-                "value": "0.8271373437150554229125557313"
+                "value": "0.7715890503522131746727820756"
               },
               "inter_client_brl": {
                 "evidence": [
@@ -36858,16 +36859,17 @@
                   "/axes/structural_potential/ceiling_brl"
                 ],
                 "state": "AVAILABLE",
-                "value": "199261.93"
+                "value": "282248.5"
               }
             },
             "structural_potential": {
               "ceiling_brl": {
                 "evidence": [
-                  "/selected_execution/input_snapshot/cenario/ordens"
+                  "/selected_execution/input_snapshot/cenario/ordens",
+                  "/selected_execution/result/agregado/ids_ordens_medidas"
                 ],
                 "state": "AVAILABLE",
-                "value": "1152718.2"
+                "value": "1235704.77"
               },
               "gross_in_brl": {
                 "evidence": [
@@ -45328,7 +45330,7 @@
                   "/axes/policy_capture/matched_brl"
                 ],
                 "state": "AVAILABLE",
-                "value": "0.9994278245002481536468625079"
+                "value": "0.8541151590107672225624776636"
               },
               "inter_client_brl": {
                 "evidence": [
@@ -45356,16 +45358,17 @@
                   "/axes/structural_potential/ceiling_brl"
                 ],
                 "state": "AVAILABLE",
-                "value": "1286.69"
+                "value": "383875.01"
               }
             },
             "structural_potential": {
               "ceiling_brl": {
                 "evidence": [
-                  "/selected_execution/input_snapshot/cenario/ordens"
+                  "/selected_execution/input_snapshot/cenario/ordens",
+                  "/selected_execution/result/agregado/ids_ordens_medidas"
                 ],
                 "state": "AVAILABLE",
-                "value": "2248768.08"
+                "value": "2631356.4"
               },
               "gross_in_brl": {
                 "evidence": [
@@ -54127,7 +54130,7 @@
                   "/axes/policy_capture/matched_brl"
                 ],
                 "state": "AVAILABLE",
-                "value": "0.750728237389093350052018485"
+                "value": "0.735988322085609727334037776"
               },
               "inter_client_brl": {
                 "evidence": [
@@ -54155,16 +54158,17 @@
                   "/axes/structural_potential/ceiling_brl"
                 ],
                 "state": "AVAILABLE",
-                "value": "570730.12"
+                "value": "616584.6"
               }
             },
             "structural_potential": {
               "ceiling_brl": {
                 "evidence": [
-                  "/selected_execution/input_snapshot/cenario/ordens"
+                  "/selected_execution/input_snapshot/cenario/ordens",
+                  "/selected_execution/result/agregado/ids_ordens_medidas"
                 ],
                 "state": "AVAILABLE",
-                "value": "2289589.94"
+                "value": "2335444.42"
               },
               "gross_in_brl": {
                 "evidence": [
@@ -62421,7 +62425,7 @@
                   "/axes/policy_capture/matched_brl"
                 ],
                 "state": "AVAILABLE",
-                "value": "0.7051480632578829362590792813"
+                "value": "0.5183003369696005650594870558"
               },
               "inter_client_brl": {
                 "evidence": [
@@ -62449,16 +62453,17 @@
                   "/axes/structural_potential/ceiling_brl"
                 ],
                 "state": "AVAILABLE",
-                "value": "184258.89"
+                "value": "409543.12"
               }
             },
             "structural_potential": {
               "ceiling_brl": {
                 "evidence": [
-                  "/selected_execution/input_snapshot/cenario/ordens"
+                  "/selected_execution/input_snapshot/cenario/ordens",
+                  "/selected_execution/result/agregado/ids_ordens_medidas"
                 ],
                 "state": "AVAILABLE",
-                "value": "624920.06"
+                "value": "850204.29"
               },
               "gross_in_brl": {
                 "evidence": [

@@ -3,6 +3,9 @@ import '@testing-library/jest-dom/vitest';
 // Prepare the actual demo fixture before timing route assertions; its first Vite
 // transform is not navigation latency. The controller still runs its real loader.
 import '../demo/generated/demo-study.v1.json';
+// The route is lazy in production; pre-transform its module before timing a
+// one-second chat assertion in Vitest's cold module graph.
+import '../pages/DiagnosticsHubPage';
 
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -25,6 +28,7 @@ import type {
   ConfirmObservedCaseMutation,
 } from '../storage/applicationRepository';
 import { createStudy } from '../study/domain';
+import { summarizeStudy } from '../storage/applicationRepository';
 import { makeObservedCase, makeScenarioDraft } from '../study/fixtures';
 import type { StudyDocument } from '../study/model';
 import { parseCanonicalXlsx } from '../importer/workerClient';
@@ -68,6 +72,7 @@ function RouteSwitch({ to }: Readonly<{ to: string }>) {
 }
 
 class RepositoryDouble implements ApplicationRepository {
+  async appendDiagnosticAttempt(): Promise<never> { throw new Error('Append diagnóstico fora do escopo deste double.'); }
   async getDemoInstallationStatus(): Promise<'REMOVED'> { return 'REMOVED'; }
   async listChatConversations(): Promise<never[]> { return []; }
   async getChatConversation(): Promise<null> { return null; }
@@ -100,6 +105,10 @@ class RepositoryDouble implements ApplicationRepository {
     return input.document;
   }
   async listStudies() { return this.studies; }
+  async listStudySummaries(options?: { includeDeleted?: boolean }) {
+    return this.studies.filter((study) => options?.includeDeleted === true || study.deletedAt === null)
+      .map((study) => summarizeStudy(study, study.executions.length));
+  }
   async getStudy(id: string) { return this.studies.find((item) => item.id === id) ?? null; }
   async saveStudy(input: CASMutation<StudyDocument>) {
     const index = this.studies.findIndex((item) => item.id === input.document.id);
@@ -289,7 +298,7 @@ describe('application routes', () => {
     renderAppAt('/empresas/A/importar?companyId=B', client(session('user-a')), repository);
     expect(await screen.findByRole('heading', { name: 'Importar operações de Empresa A' })).toBeVisible();
     expect(screen.queryByRole('combobox', { name: 'Empresa' })).not.toBeInTheDocument();
-    expect(screen.getByText('Empresa A')).toBeVisible();
+    expect(screen.getByLabelText('Empresa')).toHaveTextContent('Empresa A');
     await user.upload(screen.getByLabelText('Planilha canônica XLSX'), new File(['planilha'], 'operacoes.xlsx'));
     await user.click(screen.getByRole('checkbox', { name: /linhas representam operações explícitas/i }));
     await user.click(screen.getByRole('button', { name: 'Ler planilha' }));
@@ -527,15 +536,10 @@ describe('application routes', () => {
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent(target));
   });
 
-  it('expõe Empresas, Estudos e Diagnóstico na navegação global', async () => {
+  it('expõe só Estudos, Empresas e Importar na navegação global', async () => {
     renderAppAt('/empresas', client(session('user-a')), new RepositoryDouble());
     const navigation = await screen.findByRole('navigation', { name: 'Navegação principal' });
-    expect(navigation).toHaveTextContent('Empresas');
-    expect(navigation).toHaveTextContent('Estudos');
-    expect(navigation).toHaveTextContent('Diagnóstico');
-    expect(navigation).toHaveTextContent('Importar');
-    expect(navigation).toHaveTextContent('Quadro comparativo');
-    expect(navigation.querySelectorAll('a')).toHaveLength(5);
+    expect([...navigation.querySelectorAll('a')].map((link) => link.textContent)).toEqual(['Estudos', 'Empresas', 'Importar']);
     expect(screen.getByRole('link', { name: 'Empresas' })).toHaveAttribute('aria-current', 'page');
   });
 

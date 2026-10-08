@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -35,6 +35,7 @@ describe('diagnostic chat context', () => {
     })));
     expect(screen.getByRole('link', { name: 'Apresentar esta execução' })).toHaveAttribute('href',
       `/estudos/${input.study.id}/apresentacao?cenario=${input.scenarioId}&execucao=${input.diagnosticExecutionId}`);
+    fireEvent.click(screen.getByRole('button', { name: /Custos por componente/ }));
     expect(screen.getByRole('region', { name: 'Tabela de decomposição de custos' })).toHaveAttribute('tabindex', '0');
   });
 

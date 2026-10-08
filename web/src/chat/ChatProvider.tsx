@@ -126,6 +126,9 @@ export function ChatProvider({ ownerSub, repository, client, catalog = null, chi
       && route.diagnosticExecutionId === null && route.replayDay === null;
   const context = publication?.routeKey === routeKey && contextMatchesRoute(publication.context, routeContext)
     ? publication.context : null;
+  const requiresStudyContext = routeContext !== null && routeContext.studyId !== null
+    && routeContext.scenarioId !== null && routeContext.diagnosticExecutionId !== null;
+  const contextReady = !requiresStudyContext || context?.kind === 'STUDY';
   const communication = context?.kind === 'STUDY' ? context.document : null;
   const sentContext = sentPublication?.routeKey === routeKey ? sentPublication.context : null;
   const currentContextFingerprint = routeContext?.routeId === 'board'
@@ -308,7 +311,7 @@ export function ChatProvider({ ownerSub, repository, client, catalog = null, chi
   const messageLimitReached = activeConversation !== null && activeConversation.messages.length > 98;
   const cancel = useCallback(() => request.current?.abort(), []);
   const send = useCallback(async (question: string, retryAssistantId?: string) => {
-    if (busyRef.current || creating.current || activeConversation === null || routeContext === null || catalog === null || client === undefined) {
+    if (busyRef.current || creating.current || activeConversation === null || routeContext === null || catalog === null || client === undefined || !contextReady) {
       throw new Error('Chat indisponível neste contexto.');
     }
     busyRef.current = true; setBusy(true);
@@ -346,7 +349,7 @@ export function ChatProvider({ ownerSub, repository, client, catalog = null, chi
       if (request.current === controller) { request.current = null; requestConversationId.current = null; }
       busyRef.current = false; setBusy(false);
     }
-  }, [activeConversation, catalog, client, context, intent, ownerSub, repository, routeContext, routeKey, scope, studyId, setHelpId]);
+  }, [activeConversation, catalog, client, context, contextReady, intent, ownerSub, repository, routeContext, routeKey, scope, studyId, setHelpId]);
   useEffect(() => {
     if (!open || activeConversation === null || !activeConversation.messages.some((item) => item.status === 'PENDING')) return;
     if (requestConversationId.current === activeConversation.id
@@ -372,7 +375,7 @@ export function ChatProvider({ ownerSub, repository, client, catalog = null, chi
   }, [activeConversation, open, ownerSub, repository, studyId]);
   const value: ChatState = { routeContext, contextFingerprint: currentContextFingerprint, conversations: visibleConversations, activeConversation,
     error, loading, open, busy, managing, actionError, conversationLimitReached: visibleConversations.length >= 20, messageLimitReached,
-    canSend: !loading && !error && !managing && !messageLimitReached && activeConversation !== null && client !== undefined && catalog !== null,
+    canSend: !loading && !error && !managing && !messageLimitReached && activeConversation !== null && client !== undefined && catalog !== null && contextReady,
     catalog, context, communication, sentContext, focusComposerToken, intent,
     show: () => setOpen(true), hide: () => setOpen(false),
     selectConversation: setActiveId, newConversation, deleteConversation, beginRequest, send, cancel, askAbout,

@@ -1,9 +1,17 @@
 # Mapa do repositório
 
 Índice para achar as coisas sem procurar. Estado técnico e planejamento do
-front-end atualizados em 2026-09-22.
+front-end atualizados em 2026-09-30.
 
 ## Comece por aqui
+
+**Integração do Live (2026-09-30):** referência publicada `29d955c`, com 52 commits
+posteriores à main `3342059`. A integração autorizada em `codex/main-render-sync`
+preserva o deploy do Render e acrescenta correções verificadas para falha do
+IndexedDB, edição da janela, teto da coorte com aquecimento e prontidão do contexto
+do chat. Plano e evidências em
+`docs/superpowers/plans/2026-09-30-main-render-sync.md`. Consulte o diário e o PR
+para o resultado dos gates e do merge. Os estados históricos abaixo são datados.
 
 **Consolidação em andamento (2026-09-25):** `codex/integracao-etapas-5-6`
 reúne as Etapas 5/6, finalidade opcional e a bancada do Claude
@@ -23,6 +31,40 @@ a Etapa 2 v2. A branch local `codex/frontend-etapa-3` chega ao candidato
 verde e o aceite técnico da Etapa 3 é **PASS**, incluindo prova browser específica
 de teclado e zoom a 200% na página nova de diagnóstico robusto. Não houve push, PR,
 CI publicado, aprovação de merge ou merge desta branch.
+
+**MOT-100 aprovada, em preparação de publicação:** a branch `codex/carteiras-analise` reúne a análise
+de combinações por objetivos e filtros, alternativas, detalhes, contribuição
+marginal e uma prévia local. Após o aceite visual de 2026-10-01, gráfico/Pareto e
+tabela completa deixaram de ser renderizados na tela principal. Métricas e seleção
+ficam em `web/src/levers/portfolioAnalysis.ts` e `portfolioSelection.ts`; diferenças
+marginais, em `portfolioMarginal.ts` e `PortfolioMarginalPanel.tsx`. A interface e
+a aceitação manual estão descritas em `docs/frontend/carteiras-analise-aceitacao.md`;
+o launcher é `scripts/preview_carteiras.py` e o aceite integrado está em
+`web/e2e/study-portfolio-analysis.spec.ts`, que exercita 6 empresas sintéticas,
+14 ordens e 63 combinações. Gabriel aprovou a interface em 2026-10-02 e autorizou
+commit, merge e deploy após validação. A integração preserva o shell/tema, Replay e
+proteções de concorrência da `main`; CI e publicação devem ser confirmados no PR
+e no registro de deploy, não inferidos do aceite visual.
+
+**Gate de desempenho local de 255 resultados (2026-10-02):**
+`web/e2e/portfolio-performance.spec.ts` semeia um estudo válido via IndexedDB e
+emite `web/test-results/portfolio-performance.json`; o verificador é
+`tests/web_api/measure_portfolio_performance.py --assert-budget`. No Windows
+10.0.26200, Core i7-1185G7, Node 24.19.0 e Chromium 153.0.8010.12,
+20 transições SPA quentes deram p95 38,8 ms em Estudos (link real do menu),
+33,6 ms no hub compacto (volta pelo histórico) e 93,2 ms em objetivo/filtro.
+O hub de combinações tem zero linhas e zero controles de expansão; a recomendação
+abre diretamente. A primeira abertura fria levou 5.665,8 ms ao resultado e
+5.725,4 ms após duas RAFs; a validação e a projeção agora cedem ao navegador e a
+maior tarefa local foi 142 ms, sem long task >200 ms. As 20 reaberturas quentes
+pelo histórico, sem reload, deram p95 138,6/271,9 ms (resultado/duas RAFs),
+também sem long task >200 ms. O feedback persistente de criação apareceu e foi
+confirmado após duas RAFs em 26,1 ms, dentro do limite de 100 ms. Zero POSTs
+incidentais; fixture Docker, build, testes e o verificador independente passaram.
+O gate estrito está **verde**. A carga fria ainda é visível, mas não congela a UI.
+O relatório completo e os limites de cobertura estão em
+`.superpowers/sdd/2026-10-02-desempenho-combinacoes/task-8-report.md`.
+Essa medição não executou 255 jobs remotos nem reavaliou o tempo do lote de 63.
 
 ```
 main
@@ -118,6 +160,7 @@ na ausência, aplicam-se os padrões da direção.
 
 | Pergunta | Arquivo |
 |---|---|
+| Escopo, dependências e execução local da análise de combinações (MOT-100) | `docs/superpowers/specs/2026-09-30-carteiras-analise-design.md`, `docs/superpowers/plans/2026-09-30-carteiras-analise.md`, `docs/frontend/carteiras-analise-aceitacao.md` |
 | Regras do repo, restrições, o que não mexer | `AGENTS.md` |
 | Onde a economia aparece (carteira, escala, prazo) | `docs/RELATORIO-VARREDURA.md` |
 | De que a economia é feita, e a que é sensível | `docs/RELATORIO-DECOMPOSICAO-CUSTO.md` |

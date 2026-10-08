@@ -1933,7 +1933,10 @@
           "type": "string"
         },
         "rule_version": {
-          "const": "1.0.0",
+          "enum": [
+            "1.0.0",
+            "1.1.0"
+          ],
           "title": "Rule Version",
           "type": "string"
         },
@@ -2091,7 +2094,7 @@
             "minLength": 1,
             "type": "string"
           },
-          "maxItems": 500,
+          "maxItems": 8309,
           "title": "Evidence Refs",
           "type": "array"
         },
@@ -2099,7 +2102,7 @@
           "additionalProperties": {
             "$ref": "#/$defs/OrigemValor"
           },
-          "maxProperties": 500,
+          "maxProperties": 8309,
           "title": "Request Paths",
           "type": "object"
         }
@@ -2133,7 +2136,7 @@
           "additionalProperties": {
             "$ref": "#/$defs/OrigemValor"
           },
-          "maxProperties": 500,
+          "maxProperties": 8309,
           "title": "Provenance",
           "type": "object"
         },
@@ -3900,7 +3903,7 @@
           "items": {
             "$ref": "#/$defs/ProductHelpItem"
           },
-          "maxItems": 200,
+          "maxItems": 300,
           "minItems": 1,
           "title": "Items",
           "type": "array"

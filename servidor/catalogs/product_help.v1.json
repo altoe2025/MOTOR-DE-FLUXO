@@ -237,8 +237,8 @@
       "routePattern": "/estudos/:studyId/diagnostico",
       "elementKind": "PAGE",
       "label": "Diagnóstico robusto",
-      "purpose": "Exibir resultados, disponibilidade, proveniência e limitações de uma execução.",
-      "changes": "Permite escolher o contexto publicado para inspeção e continuidade.",
+      "purpose": "Exibir resultados e limitações do Estudo comum; na Combinação de carteiras, mostrar a recomendação e as alternativas após o lote diagnóstico.",
+      "changes": "Permite inspecionar uma execução ou, no Estudo de combinações, avaliar as composições já diagnosticadas.",
       "doesNotChange": "Não recalcula métricas no navegador.",
       "disabledWhen": [
         "Não existe execução diagnóstica concluída para o cenário."
@@ -257,7 +257,7 @@
       "routePattern": "/comparar",
       "elementKind": "PAGE",
       "label": "Comparar cenários",
-      "purpose": "Endereço legado que agora redireciona ao Quadro comparativo (/quadro).",
+      "purpose": "Endereço legado que agora redireciona a Comparar estudos (/quadro).",
       "changes": "Abre o Quadro para selecionar linhas de diagnósticos já publicados; não existe mais o seletor antigo de duas execuções nessa rota.",
       "doesNotChange": "Não aproxima resultados incompatíveis nem cria valores ausentes.",
       "disabledWhen": [
@@ -276,7 +276,7 @@
       "id": "page.quadro",
       "routePattern": "/quadro",
       "elementKind": "PAGE",
-      "label": "Quadro comparativo",
+      "label": "Comparar estudos",
       "purpose": "Comparar no chat somente as linhas que a pessoa marcou no quadro.",
       "changes": "Atualiza o contexto do chat quando a seleção visível do quadro muda.",
       "doesNotChange": "Não envia estudos fora da seleção, não recalcula resultados e não altera execuções.",
@@ -369,8 +369,8 @@
       "routePattern": "/estudos",
       "elementKind": "PAGE",
       "label": "Estudos",
-      "purpose": "Criar, abrir e administrar estudos salvos da conta e sua lixeira.",
-      "changes": "Permite criar, renomear, duplicar, excluir e restaurar estudos.",
+      "purpose": "Criar Estudo comum ou Combinação de carteiras, abrir estudos salvos neste navegador e administrar cópias e lixeira.",
+      "changes": "Permite escolher a origem de um novo Estudo comum, criar uma Combinação separada, importar ou exportar cópias, renomear, duplicar, excluir e restaurar.",
       "doesNotChange": "Não executa diagnóstico ao abrir a lista.",
       "disabledWhen": [],
       "recovery": [],
@@ -383,8 +383,8 @@
       "routePattern": "/carteira/:id",
       "elementKind": "PAGE",
       "label": "Editor de estudo",
-      "purpose": "Revisar origem, premissas e cenários do Estudo em passos, selecionando o cenário base das alavancas. Os caminhos antigos de prévia e Criar hipótese não aparecem mais nesse editor.",
-      "changes": "Mantém alterações do Estudo e oferece execução e navegação para diagnóstico.",
+      "purpose": "Revisar origem e premissas do Estudo. No Estudo comum, criar variações; na Combinação de carteiras, aplicar alavancas à base e diagnosticar composições internamente.",
+      "changes": "Salva alterações do Estudo e oferece acesso ao diagnóstico correspondente ao tipo escolhido.",
       "doesNotChange": "Abrir o editor não executa cálculos.",
       "disabledWhen": [],
       "recovery": [],
@@ -893,15 +893,34 @@
       "routePattern": "/estudos",
       "elementKind": "CONTROL",
       "label": "Novo estudo",
-      "purpose": "Criar um Estudo com cenário inicial sintético.",
-      "changes": "Prepara a carteira oficial, salva o Estudo e abre o editor.",
-      "doesNotChange": "Não executa diagnóstico nem importa uma Empresa.",
+      "purpose": "Abrir a escolha da origem de um Estudo comum: caso importado, casos de empresas ou carteira gerada.",
+      "changes": "Exibe as opções de origem; só a escolha e confirmação seguintes criam e salvam o Estudo.",
+      "doesNotChange": "O clique não cria um Estudo nem executa diagnóstico.",
       "disabledWhen": [],
       "recovery": [
         "Se aparecer erro de sessão ou preparação, resolva a mensagem antes de tentar novamente."
       ],
       "relatedConceptIds": [
         "page.estudos"
+      ]
+    },
+    {
+      "id": "control.estudos.nova-combinacao",
+      "routePattern": "/estudos",
+      "elementKind": "CONTROL",
+      "label": "Nova combinação de carteiras",
+      "purpose": "Criar um Estudo separado para testar combinações das empresas escolhidas e avaliar carteiras alternativas.",
+      "changes": "Cria um Estudo do tipo Combinação de carteiras com carteira gerada inicial, salva-o neste navegador e abre seu editor; nele a pessoa escolhe as empresas e as premissas.",
+      "doesNotChange": "Não gera nem diagnostica todas as combinações só com este clique; não mistura o lote com um Estudo comum existente.",
+      "disabledWhen": [
+        "Enquanto outro Estudo está sendo criado."
+      ],
+      "recovery": [
+        "Aguarde a criação terminar; se falhar, leia a mensagem exibida na tela Estudos."
+      ],
+      "relatedConceptIds": [
+        "page.estudos",
+        "concept.composicao"
       ]
     },
     {
@@ -1425,7 +1444,7 @@
       "routePattern": "/carteira/:id",
       "elementKind": "CONTROL",
       "label": "Comparar resultados",
-      "purpose": "Controle legado removido do editor atual. Para comparar, use o Quadro comparativo na navegação; /comparar redireciona a /quadro.",
+      "purpose": "Controle legado removido do editor atual. Para comparar, use “Comparar estudos” na página Estudos; /comparar redireciona a /quadro.",
       "changes": "Confirma gravação antes de navegar para /comparar.",
       "doesNotChange": "Não seleciona nem compara execuções automaticamente.",
       "disabledWhen": [],
@@ -1608,9 +1627,9 @@
       "id": "control.alavancas.combinacoes",
       "routePattern": "/carteira/:id",
       "elementKind": "CONTROL",
-      "label": "Gerar todas as combinações",
-      "purpose": "Criar variações para os subconjuntos de Empresas do cenário.",
-      "changes": "Após confirmação, acrescenta cenários, incluindo Empresas sozinhas, ao Estudo.",
+      "label": "Fazer composição",
+      "purpose": "No Estudo comum, criar variações para os subconjuntos das empresas mantidas na composição.",
+      "changes": "Acrescenta cenários com as mesmas ordens, datas, período e premissas da base; cada empresa pode ser retirada ou devolvida clicando em seu nome.",
       "doesNotChange": "Não roda seus diagnósticos nem modifica a base.",
       "disabledWhen": [
         "Enquanto uma criação está em andamento.",
@@ -3056,6 +3075,186 @@
         "concept.composicao",
         "control.hipotese.criar"
       ]
+    },
+    {
+      "id": "control.estudos.importar",
+      "routePattern": "/estudos",
+      "elementKind": "CONTROL",
+      "label": "Importar estudo",
+      "purpose": "Selecionar uma cópia JSON de Estudo salva anteriormente no computador.",
+      "changes": "Após escolher e validar o arquivo, grava o Estudo neste navegador; um ID já existente é importado como cópia sem resultados.",
+      "doesNotChange": "Não importa planilha de operações, não executa diagnóstico e não substitui silenciosamente um Estudo existente.",
+      "disabledWhen": [],
+      "recovery": ["Escolha um arquivo JSON de Estudo válido; leia a mensagem da tela se a importação falhar."],
+      "relatedConceptIds": ["page.estudos"]
+    },
+    {
+      "id": "control.estudos.exportar",
+      "routePattern": "/estudos",
+      "elementKind": "CONTROL",
+      "label": "Exportar",
+      "purpose": "Baixar uma cópia JSON do Estudo escolhido para guardar fora deste navegador.",
+      "changes": "Inicia o download do Estudo com suas premissas, cenários e resultados guardados.",
+      "doesNotChange": "Não publica o Estudo no servidor, não compartilha com outra conta nem apaga a cópia local.",
+      "disabledWhen": [],
+      "recovery": ["Use o arquivo baixado em Importar estudo quando precisar restaurar uma cópia."],
+      "relatedConceptIds": ["page.estudos"]
+    },
+    {
+      "id": "control.estudos.criar-caso",
+      "routePattern": "/estudos",
+      "elementKind": "CONTROL",
+      "label": "Criar estudo",
+      "purpose": "Criar um Estudo comum a partir do Caso importado e confirmado escolhido.",
+      "changes": "Copia as operações do Caso para o Estudo, salva-o neste navegador e abre o editor.",
+      "doesNotChange": "Não altera o Caso original nem executa diagnóstico ao criar.",
+      "disabledWhen": ["Não há Caso confirmado escolhido ou outra criação está em andamento."],
+      "recovery": ["Selecione um Caso confirmado e aguarde a criação anterior terminar."],
+      "relatedConceptIds": ["page.estudos", "concept.caso"]
+    },
+    {
+      "id": "control.estudos.criar-carteira",
+      "routePattern": "/estudos",
+      "elementKind": "CONTROL",
+      "label": "Criar carteira",
+      "purpose": "Criar um Estudo comum juntando Casos confirmados de empresas diferentes.",
+      "changes": "Salva um novo Estudo com uma seleção explícita de Casos e abre o editor.",
+      "doesNotChange": "Não junta dois Casos da mesma empresa nem executa diagnóstico ao criar.",
+      "disabledWhen": ["Menos de dois Casos marcados, mais de um Caso da mesma empresa ou criação em andamento."],
+      "recovery": ["Marque Casos de pelo menos duas empresas, no máximo um por empresa."],
+      "relatedConceptIds": ["page.estudos", "concept.caso"]
+    },
+    {
+      "id": "control.estudos.criar-gerada",
+      "routePattern": "/estudos",
+      "elementKind": "CONTROL",
+      "label": "Criar com carteira gerada",
+      "purpose": "Criar um Estudo comum com carteira de exemplo preparada pelo servidor.",
+      "changes": "Prepara uma origem sintética, salva o Estudo neste navegador e abre seu editor.",
+      "doesNotChange": "Não usa operações reais da conta nem executa diagnóstico automaticamente.",
+      "disabledWhen": ["Enquanto outra criação está em andamento."],
+      "recovery": ["Aguarde a criação; se a preparação falhar, leia a mensagem exibida."],
+      "relatedConceptIds": ["page.estudos", "concept.mix-demonstrativo"]
+    },
+    {
+      "id": "control.carteira.trocar-origem",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Trocar origem",
+      "purpose": "No Estudo comum, abrir o seletor para substituir a origem da carteira.",
+      "changes": "Mostra opções de Caso importado, Casos de empresas, exemplo gerado ou autoria manual; a escolha posterior aplica a origem.",
+      "doesNotChange": "Abrir ou cancelar o seletor não altera a origem nem executa diagnóstico.",
+      "disabledWhen": [],
+      "recovery": ["Escolha e confirme a nova origem; na Combinação de carteiras o seletor já aparece diretamente."],
+      "relatedConceptIds": ["page.carteira"]
+    },
+    {
+      "id": "control.carteira.diagnosticar-combinacoes",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Diagnosticar combinações",
+      "purpose": "No editor da Combinação de carteiras, preparar as composições das empresas escolhidas e abrir a página de recomendação.",
+      "changes": "Salva as combinações atuais e navega para o diagnóstico com a execução do lote solicitada.",
+      "doesNotChange": "Não altera as regras do motor nem executa o lote diretamente no editor.",
+      "disabledWhen": ["Enquanto as combinações estão sendo preparadas."],
+      "recovery": ["Aguarde a preparação; se falhar, leia a mensagem no editor e tente novamente."],
+      "relatedConceptIds": ["page.carteira", "page.diagnostico"]
+    },
+    {
+      "id": "control.alavancas.aplicar-carteira",
+      "routePattern": "/carteira/:id",
+      "elementKind": "CONTROL",
+      "label": "Aplicar à carteira",
+      "purpose": "No Estudo de Combinação de carteiras, aplicar alavancas às operações da carteira-base.",
+      "changes": "Atualiza e salva a carteira-base usada para preparar as próximas combinações.",
+      "doesNotChange": "Não cria uma variação visível de Estudo comum nem roda diagnóstico por si só.",
+      "disabledWhen": ["Nenhuma alavanca mudou ou uma aplicação está em andamento."],
+      "recovery": ["Altere uma alavanca válida; depois use Diagnosticar combinações para avaliar a carteira."],
+      "relatedConceptIds": ["page.carteira", "concept.composicao"]
+    },
+    {
+      "id": "control.diagnostico.combinacoes",
+      "routePattern": "/estudos/:studyId/diagnostico",
+      "elementKind": "CONTROL",
+      "label": "Diagnosticar combinações",
+      "purpose": "Na página de recomendação, diagnosticar as composições atuais da Combinação de carteiras.",
+      "changes": "Executa os diagnósticos pendentes em sequência e reaproveita resultados atuais já concluídos.",
+      "doesNotChange": "Não refaz resultados atuais nem inclui composições antigas incompatíveis com a carteira-base.",
+      "disabledWhen": ["Enquanto um lote está rodando ou o armazenamento local falhou."],
+      "recovery": ["Aguarde o lote; se houver falha de armazenamento, resolva-a antes de iniciar outro."],
+      "relatedConceptIds": ["page.diagnostico", "concept.composicao"]
+    },
+    {
+      "id": "control.diagnostico.cancelar-lote",
+      "routePattern": "/estudos/:studyId/diagnostico",
+      "elementKind": "CONTROL",
+      "label": "Cancelar lote",
+      "purpose": "Parar um lote de diagnósticos de combinações depois da execução que já está em andamento.",
+      "changes": "Marca o lote para não iniciar as próximas composições quando a atual terminar.",
+      "doesNotChange": "Não executa novos diagnósticos, não cancela o job atual no servidor e não apaga resultados concluídos.",
+      "disabledWhen": ["O botão só aparece enquanto o lote está em andamento."],
+      "recovery": ["Aguarde a combinação atual terminar; os resultados já concluídos permanecem."],
+      "relatedConceptIds": ["page.diagnostico"]
+    },
+    {
+      "id": "control.diagnostico.mostrar-quadros",
+      "routePattern": "/estudos/:studyId/diagnostico",
+      "elementKind": "CONTROL",
+      "label": "Abrir quadros comparativos",
+      "purpose": "No diagnóstico de Estudo comum, abrir ou recolher os quadros de comparação entre cenários.",
+      "changes": "Alterna apenas a exibição dos quadros na página.",
+      "doesNotChange": "Não cria cenário, não executa diagnóstico nem muda resultados.",
+      "disabledWhen": ["Aparece quando o Estudo tem pelo menos dois cenários."],
+      "recovery": ["Crie uma variação para disponibilizar a comparação entre cenários."],
+      "relatedConceptIds": ["page.diagnostico"]
+    },
+    {
+      "id": "control.importacao.modelo",
+      "routePattern": "/importar",
+      "elementKind": "CONTROL",
+      "label": "Baixar modelo (.xlsx)",
+      "purpose": "Baixar a planilha-modelo com as colunas esperadas pela importação de operações.",
+      "changes": "Gera um arquivo XLSX de exemplo e inicia o download no navegador.",
+      "doesNotChange": "Não importa operações, não cria Caso e não envia arquivo ao servidor.",
+      "disabledWhen": [],
+      "recovery": ["Preencha o modelo conforme as instruções da tela e selecione o arquivo para leitura."],
+      "relatedConceptIds": ["page.importacao"]
+    },
+    {
+      "id": "control.importacao.analisar-caso",
+      "routePattern": "/importar",
+      "elementKind": "CONTROL",
+      "label": "Analisar este caso",
+      "purpose": "Criar um Estudo com o Caso importado e confirmado.",
+      "changes": "Copia o Caso para um novo Estudo salvo neste navegador e abre o editor da carteira.",
+      "doesNotChange": "Não modifica o Caso original nem executa o diagnóstico automaticamente.",
+      "disabledWhen": ["Enquanto outra ação de confirmação está em andamento."],
+      "recovery": ["Aguarde a criação; se falhar, leia a mensagem exibida e tente novamente."],
+      "relatedConceptIds": ["page.importacao", "concept.caso"]
+    },
+    {
+      "id": "control.importacao.adicionar-carteira",
+      "routePattern": "/importar",
+      "elementKind": "CONTROL",
+      "label": "Adicionar a uma carteira",
+      "purpose": "Listar Estudos existentes que podem receber o Caso confirmado.",
+      "changes": "Abre a seleção de carteira e indica quais Estudos estão indisponíveis para esta adição.",
+      "doesNotChange": "Não altera nenhum Estudo antes da confirmação em Adicionar e abrir o estudo.",
+      "disabledWhen": ["Enquanto outra ação de confirmação está em andamento."],
+      "recovery": ["Selecione um Estudo elegível; se não houver, crie um Estudo em Estudos."],
+      "relatedConceptIds": ["page.importacao", "page.estudos"]
+    },
+    {
+      "id": "control.importacao.confirmar-adicao",
+      "routePattern": "/importar",
+      "elementKind": "CONTROL",
+      "label": "Adicionar e abrir o estudo",
+      "purpose": "Confirmar a inclusão do Caso escolhido no Estudo selecionado.",
+      "changes": "Atualiza o cenário original da carteira, salva o Estudo e abre seu editor; variações já criadas permanecem como estavam.",
+      "doesNotChange": "Não atualiza automaticamente variações existentes nem roda o diagnóstico do cenário original.",
+      "disabledWhen": ["Nenhum Estudo elegível selecionado ou outra ação está em andamento."],
+      "recovery": ["Selecione um Estudo elegível e, depois de adicionar, rode novamente o diagnóstico do original."],
+      "relatedConceptIds": ["page.importacao", "page.carteira"]
     }
   ]
 }

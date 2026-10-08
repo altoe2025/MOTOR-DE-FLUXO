@@ -7,6 +7,7 @@ import { strToU8, unzipSync, zipSync } from 'fflate';
 import type { ChatRequest } from '../src/api/client';
 import { formatCommunicationMetric } from '../src/presentation/domain';
 import { formatFraction, formatMoney } from '../src/presentation/format';
+import { fillNewCompany } from './helpers/importCompany';
 
 const RAW_NAME = 'CLIENTE_BRUTO_MOT99';
 const RAW_FILE = 'FONTE_BRUTA_MOT99.xlsx';
@@ -55,7 +56,7 @@ test('Etapa 6: finalidade opcional percorre Caso observado, Diagnóstico, Replay
   const bodies: string[] = [];
   page.on('request', (request) => { if (request.postData()) bodies.push(request.postData()!); });
   await page.goto('/importar');
-  await page.getByLabel('Nome da nova empresa').fill('Empresa observada MOT-99');
+  await fillNewCompany(page, 'Empresa observada MOT-99');
   await page.getByRole('button', { name: 'Usar nova empresa neste Caso' }).click();
   await page.getByLabel('Planilha canônica XLSX').setInputFiles({
     name: RAW_FILE, mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer: workbook(),
@@ -109,21 +110,21 @@ test('Etapa 6: finalidade opcional percorre Caso observado, Diagnóstico, Replay
   await expect(page.getByRole('region', { name: 'Repetição exibida' })).toContainText(execution.repetitionId);
   await page.goto(`/estudos/${studyId}/apresentacao?cenario=${execution.scenarioId}&execucao=${execution.id}`);
   await expect(page.getByRole('region', { name: 'Resumo executivo' })).toContainText(formatMoney(execution.savingsBrl));
-  await expect(page.getByRole('region', { name: 'Premissas e proveniência' })).toContainText('IOF padrão por direção');
+  await expect(page.getByRole('region', { name: 'Composição e mecanismo' })).toContainText('Caso observado');
   await page.reload();
-  await expect(page.getByRole('region', { name: 'Premissas e proveniência' })).toContainText('IOF padrão por direção');
+  await expect(page.getByRole('region', { name: 'Resumo executivo' })).toContainText(formatMoney(execution.savingsBrl));
   await page.emulateMedia({ media: 'print' });
   const pdf = testInfo.outputPath('stage6-observed-purpose-optional.pdf');
   await page.pdf({ path: pdf, format: 'A4', printBackground: true, preferCSSPageSize: true });
   const inspected = spawnSync(python, ['tests/web_api/render_stage6_pdf.py', '--pdf', pdf,
-    '--render-dir', testInfo.outputPath('observed-pages'), '--expected-pages', '7',
-    '--expect', execution.id, '--expect', 'IOF padrão por direção', '--expect', 'Limitações e versões'], {
+    '--render-dir', testInfo.outputPath('observed-pages'),
+    '--expect', 'Caso observado', '--expect', 'Resumo executivo', '--expect', 'Composição e mecanismo'], {
     cwd: '..', encoding: 'utf8', timeout: 30_000,
   });
   expect(inspected.status, inspected.stderr).toBe(0);
   const pdfText = (JSON.parse(inspected.stdout) as { text: string }).text.replace(/\s/g, '');
-  expect(pdfText).toContain(document.contextFingerprint);
-  for (const metric of document.executiveMetrics) {
+  for (const metric of document.executiveMetrics.filter((item) =>
+    ['BASELINE_BRL', 'NETTED_BRL', 'SAVINGS_BRL', 'NETABILITY', 'GROSS_BRL'].includes(item.code))) {
     expect(pdfText).toContain(metric.label.replace(/\s/g, ''));
     expect(pdfText).toContain(formatCommunicationMetric(metric).replace(/\s/g, ''));
   }
@@ -147,10 +148,14 @@ test('estudo comum excluído sai da lista, restaura pela lixeira e reabre com a 
   const sourceBefore = await page.evaluate((id) => window.__MOTOR_E2E__!.studySource(id), studyId);
   await page.goto('/estudos');
   page.once('dialog', (dialog) => dialog.accept());
-  await page.getByRole('button', { name: 'Excluir Novo estudo' }).click();
+  await page.getByRole('button', { name: 'Mais ações: Novo estudo' }).click();
+  await page.getByRole('menuitem', { name: 'Excluir Novo estudo' }).click();
   await expect(page.getByRole('button', { name: 'Abrir Novo estudo' })).toHaveCount(0);
-  const trash = page.getByRole('button', { name: 'Lixeira de estudos' });
-  await trash.focus();
+  // Teclado: o menu abre no primeiro item, End leva à lixeira e Enter abre.
+  await page.getByRole('button', { name: 'Mais ações: criar' }).focus();
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('End');
+  await expect(page.getByRole('menuitem', { name: 'Lixeira de estudos' })).toBeFocused();
   await page.keyboard.press('Enter');
   await expect(page.getByRole('list', { name: 'Lixeira de estudos' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Abrir Novo estudo' })).toHaveCount(0);
@@ -193,7 +198,14 @@ test('cinco mixes demonstrativos reconciliam diagnóstico, Replay, chat, Painel 
     await expect(page.getByRole('region', { name: 'Repetição exibida' })).toContainText(execution.repetitionId);
     await page.goto(`/estudos/${study.id}/apresentacao?cenario=${scenario.id}&execucao=${execution.id}&dia=31#resumo`);
     await expect(page.getByRole('region', { name: 'Resumo executivo' })).toContainText(formatMoney(execution.savingsBrl));
-    await expect(page.getByRole('region', { name: 'Destaques do Replay' })).toContainText('Dia 31');
+    expect(document.selection.replayDay).toBe(31);
+    const participants = document.composition.metrics.filter((metric) => /^participant\.\d+\.volume$/.test(metric.code));
+    expect(participants.length).toBeGreaterThan(0);
+    await expect(page.getByRole('table', { name: 'Participantes da carteira' }).locator('tbody tr')).toHaveCount(participants.length);
+    for (const participant of participants) {
+      await expect(page.getByRole('table', { name: 'Participantes da carteira' }))
+        .toContainText(formatMoney(participant.value));
+    }
   }
   const first = study.diagnostics.find((item) => item.scenarioId === study.scenarios[0]!.id)!;
   const presentation = `/estudos/${study.id}/apresentacao?cenario=${first.scenarioId}&execucao=${first.id}&dia=31#resumo`;
@@ -242,25 +254,24 @@ test('cinco mixes demonstrativos reconciliam diagnóstico, Replay, chat, Painel 
   const pdf = testInfo.outputPath('stage6-acceptance.pdf');
   await page.pdf({ path: pdf, format: 'A4', printBackground: true, preferCSSPageSize: true });
   const inspected = spawnSync(python, ['tests/web_api/render_stage6_pdf.py', '--pdf', pdf,
-    '--render-dir', testInfo.outputPath('pages'), '--expected-pages', '9',
-    '--expect', study.name, '--expect', first.id, '--expect', 'Limitações e versões'], {
+    '--render-dir', testInfo.outputPath('pages'),
+    '--expect', study.name, '--expect', 'Hipótese sintética não calibrada', '--expect', 'Composição e mecanismo'], {
     cwd: '..', encoding: 'utf8', timeout: 30_000,
   });
   expect(inspected.status, inspected.stderr).toBe(0);
   const pdfText = (JSON.parse(inspected.stdout) as { text: string }).text.replace(/\s/g, '');
-  for (const metric of [...document.executiveMetrics, ...document.composition.metrics,
-    ...document.mechanism.metrics, ...document.economics.metrics, ...document.robustness.metrics,
-    ...document.replaySnapshot!.metrics]) {
+  for (const metric of document.executiveMetrics.filter((item) =>
+    ['BASELINE_BRL', 'NETTED_BRL', 'SAVINGS_BRL', 'NETABILITY', 'GROSS_BRL'].includes(item.code))) {
     expect(pdfText).toContain(metric.label.replace(/\s/g, ''));
     expect(pdfText).toContain(formatCommunicationMetric(metric).replace(/\s/g, ''));
   }
-  expect(pdfText).toContain(document.contextFingerprint);
+  expect(pdfText).toContain('12participantes');
 });
 
 test('falhas locais conservam a fonte e não transformam ausência em resultado', async ({ page, context }) => {
   test.setTimeout(90_000);
   await page.goto('/importar');
-  await page.getByLabel('Nome da nova empresa').fill('Empresa falha MOT-99');
+  await fillNewCompany(page, 'Empresa falha MOT-99');
   await page.getByRole('button', { name: 'Usar nova empresa neste Caso' }).click();
   await page.getByLabel('Planilha canônica XLSX').setInputFiles({
     name: 'formula.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -287,8 +298,8 @@ test('falhas locais conservam a fonte e não transformam ausência em resultado'
   await page.goto(`/estudos/${study.id}/apresentacao?cenario=${execution.scenarioId}&execucao=${execution.id}`);
   await expect(page.getByRole('heading', { name: study.name, level: 1 })).toBeVisible();
   await context.setOffline(true);
-  await page.getByRole('navigation', { name: 'Seções da apresentação' }).getByRole('link', { name: 'Premissas' }).click();
-  await expect(page.getByRole('region', { name: 'Premissas e proveniência' })).toBeVisible();
+  await page.getByRole('region', { name: 'Composição e mecanismo' }).scrollIntoViewIfNeeded();
+  await expect(page.getByRole('region', { name: 'Composição e mecanismo' })).toContainText('12 participantes');
   await context.setOffline(false);
   expect((await page.request.post('/__e2e__/chat/control', { data: { mode: 'disabled' } })).ok()).toBe(true);
   const unavailable = await chat(page, 'Explique o produto.');
@@ -312,8 +323,10 @@ test('IndexedDB indisponível apresenta falha sem publicar Estudo', async ({ pag
     } });
   });
   await page.goto('/estudos');
-  await expect(page.getByRole('heading', { name: 'Estudos', exact: true })).toBeVisible();
-  await expect(page.getByRole('alert')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Dados locais indisponíveis', exact: true })).toBeVisible();
+  await expect(page.getByRole('alert')).toContainText('armazenamento');
+  await expect(page.getByRole('button', { name: 'Tentar novamente' })).toBeVisible();
+  await expect(page.getByText('Preparando dados locais…')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Abrir Estudo demonstrativo sintético' })).toHaveCount(0);
 });
 

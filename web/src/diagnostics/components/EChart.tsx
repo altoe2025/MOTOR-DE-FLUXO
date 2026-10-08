@@ -8,6 +8,23 @@ import { chartPresentation, type ChartSeries } from '../presentation';
 
 echarts.use([BarChart, LineChart, AriaComponent, GridComponent, TooltipComponent, SVGRenderer]);
 
+/** Cores do gráfico tiradas dos tokens do tema, para que ele acompanhe o escuro/claro do app. */
+function themeColors(element: HTMLElement) {
+  const style = getComputedStyle(element);
+  const token = (name: string, fallback: string) => style.getPropertyValue(name).trim() || fallback;
+  const ink = token('--ink', '#252a28');
+  const muted = token('--muted', '#56615a');
+  const line = token('--border', '#d8e0e7');
+  const surface = token('--surface', '#ffffff');
+  return {
+    color: [token('--accent', '#295e58'), token('--inter', '#4855c4'), token('--warn', '#9a6200'), token('--flow-in', '#2470b3')],
+    textStyle: { color: muted, fontFamily: token('--font-mono', 'monospace') },
+    xAxis: { axisLine: { lineStyle: { color: line } }, axisTick: { lineStyle: { color: line } }, axisLabel: { color: muted } },
+    yAxis: { splitLine: { lineStyle: { color: line, type: 'dashed' as const } }, axisLabel: { color: muted } },
+    tooltip: { backgroundColor: surface, borderColor: line, textStyle: { color: ink } },
+  };
+}
+
 export function EChart({ series, description }: Readonly<{ series: ChartSeries; description: string }>) {
   const elementRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -16,11 +33,26 @@ export function EChart({ series, description }: Readonly<{ series: ChartSeries; 
     const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
     const chart = echarts.init(element, undefined, { renderer: 'svg' });
     const { option } = chartPresentation(series, !reducedMotion);
-    chart.setOption({ ...option, aria: { ...option.aria, description } });
+    const themed = () => {
+      const colors = themeColors(element);
+      return {
+        ...option,
+        color: colors.color,
+        textStyle: colors.textStyle,
+        xAxis: { ...option.xAxis, ...colors.xAxis },
+        yAxis: { ...option.yAxis, ...colors.yAxis },
+        tooltip: { ...option.tooltip, ...colors.tooltip },
+        aria: { ...option.aria, description },
+      };
+    };
+    chart.setOption(themed());
     const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(() => chart.resize());
     observer?.observe(element);
+    const themeObserver = typeof MutationObserver === 'undefined' ? null : new MutationObserver(() => chart.setOption(themed()));
+    themeObserver?.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
     return () => {
       observer?.disconnect();
+      themeObserver?.disconnect();
       chart.dispose();
     };
   }, [description, series]);

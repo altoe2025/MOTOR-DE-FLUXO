@@ -1,5 +1,6 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 
+import { useWorkspaceTrailLabel } from '../../app/WorkspaceBreadcrumbs';
 import type { CompanyRecord } from '../../cases/domain';
 import { CompanyNavigation } from './CompanyNavigation';
 
@@ -14,6 +15,7 @@ export function CompanyPageFrame({
   introduction: string;
   children: ReactNode;
 }) {
+  useWorkspaceTrailLabel(company.displayName);
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => heading.current?.focus(), [title]);
   return (

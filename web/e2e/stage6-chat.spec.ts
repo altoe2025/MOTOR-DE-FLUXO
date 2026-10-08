@@ -5,6 +5,7 @@ import { strToU8, unzipSync, zipSync } from 'fflate';
 import type { ChatConversation } from '../src/chat/domain';
 import type { ChatRequest, ChatResponse } from '../src/api/client';
 import { loadDemoIfEmpty } from './helpers/demo';
+import { fillNewCompany } from './helpers/importCompany';
 
 const OWNER = '00000000-0000-4000-8000-000000000021';
 const REFUSAL = 'Posso ajudar apenas com o Motor de Fluxo, o funcionamento da aplicação e os dados deste projeto.';
@@ -151,7 +152,7 @@ test('quatro classes, recusa server-side, histórico/reload e isolamento de cont
 test('Quadro envia só a seleção e o follow-up conserva o assunto no histórico', async ({ page }) => {
   await demo(page);
   await page.goto('/quadro');
-  await expect(page.getByRole('heading', { name: 'Quadro comparativo' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Comparar estudos', level: 1 })).toBeVisible();
   const choices = page.locator('.board-candidates input[type="checkbox"]');
   await expect.poll(() => choices.count()).toBeGreaterThanOrEqual(2);
   await choices.nth(0).check(); await choices.nth(1).check();
@@ -339,7 +340,7 @@ test('arquivo XLSX/raw, credenciais e dados não selecionados ficam fora de requ
   page.on('console', (message) => logs.push(message.text())); page.on('pageerror', (error) => logs.push(error.message));
   page.on('request', (request) => { if (request.postData()) bodies.push(request.postData()!); });
   await page.goto('/importar');
-  await page.getByLabel('Nome da nova empresa').fill('EMPRESA_PRIVADA_C6');
+  await fillNewCompany(page, 'EMPRESA_PRIVADA_C6');
   await page.getByRole('button', { name: 'Usar nova empresa neste Caso' }).click();
   const entries = unzipSync(readFileSync(fileURLToPath(new URL('../src/importer/__fixtures__/valid-minimal.xlsx', import.meta.url))));
   const rows = [

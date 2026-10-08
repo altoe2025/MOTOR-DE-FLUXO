@@ -36,11 +36,24 @@ function subject(companies: readonly string[]) {
 afterEach(() => vi.restoreAllMocks());
 
 describe('LeverBuilder · composição', () => {
+  it('mostra a composição primeiro e deixa o ajuste de uma empresa recolhido', async () => {
+    const { user } = subject(['A', 'B', 'C']);
+    expect(screen.getByRole('heading', { name: 'Composição' })).toBeInTheDocument();
+    expect(screen.queryByLabelText('Volume OUT ×')).not.toBeInTheDocument();
+    const adjust = screen.getByRole('button', { name: /Ajustar uma empresa/ });
+    expect(adjust).toHaveAttribute('aria-expanded', 'false');
+    await user.click(adjust);
+    expect(screen.getByLabelText('Volume OUT ×')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Criar variação' })).toBeInTheDocument();
+  });
+
   it('um só botão faz todas as combinações das empresas (3 empresas → 6)', async () => {
     const { onCreateCombinations, user } = subject(['A', 'B', 'C']);
     expect(screen.queryByRole('button', { name: /Cada empresa sozinha/ })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Retirar uma por vez/ })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Criar com as marcadas/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Fazer composição (6 combinações)' }))
+      .toHaveAttribute('data-chat-help-id', 'control.alavancas.combinacoes');
     await user.click(screen.getByRole('button', { name: 'Fazer composição (6 combinações)' }));
     expect(onCreateCombinations).toHaveBeenCalledWith(
       [['A'], ['B'], ['C'], ['A', 'B'], ['A', 'C'], ['B', 'C']], ['A', 'B', 'C'],
@@ -82,7 +95,9 @@ describe('LeverBuilder · aplicar à carteira (combinação de carteiras)', () =
   it('desabilita a aplicação neutra e não chama a persistência', async () => {
     const onCreate = vi.fn().mockResolvedValue(undefined);
     render(<LeverBuilder base={base(['A', 'B'])} applyToBase onCreate={onCreate} />);
+    await userEvent.setup().click(screen.getByRole('button', { name: /Ajustar uma empresa/ }));
     const apply = screen.getByRole('button', { name: 'Aplicar à carteira' });
+    expect(apply).toHaveAttribute('data-chat-help-id', 'control.alavancas.aplicar-carteira');
     expect(apply).toBeDisabled();
     await userEvent.setup().click(apply);
     expect(onCreate).not.toHaveBeenCalled();
@@ -92,8 +107,9 @@ describe('LeverBuilder · aplicar à carteira (combinação de carteiras)', () =
     const onCreate = vi.fn().mockResolvedValue(undefined);
     render(<LeverBuilder base={base(['A', 'B'])} applyToBase onCreate={onCreate} />);
     expect(screen.queryByRole('heading', { name: 'Composição' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('checkbox', { name: /Tirar a empresa inteira/ })).not.toBeInTheDocument();
     const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /Ajustar uma empresa/ }));
+    expect(screen.queryByRole('checkbox', { name: /Tirar a empresa inteira/ })).not.toBeInTheDocument();
     const volumeOut = screen.getByLabelText('Volume OUT ×');
     await user.clear(volumeOut);
     await user.type(volumeOut, '2');
