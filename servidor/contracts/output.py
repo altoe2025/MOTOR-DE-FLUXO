@@ -126,11 +126,9 @@ class AgregadoDTO(StrictModel):
             != self.volume_casado_periodo_brl
         ):
             raise ValueError("volumes por mecanismo não reconciliam")
-        if (
-            self.taxa_autonetting_periodo
-            + self.taxa_netting_multilateral_periodo
-            != self.taxa_netabilidade_periodo
-        ):
+        if somar_exato((
+            self.taxa_autonetting_periodo, self.taxa_netting_multilateral_periodo,
+        )) != self.taxa_netabilidade_periodo:
             raise ValueError("taxas por mecanismo não reconciliam")
         if [m.destino for m in self.mecanismos] != [
             "INTRA_CLIENTE", "INTER_CLIENTE", "REMETIDO",

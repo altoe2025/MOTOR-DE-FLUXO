@@ -17,6 +17,7 @@ from motor.analise import (
     ResultadoMecanismo,
     ResumoDiaCliente,
 )
+from motor.analise.pipeline import taxas_por_mecanismo
 from motor.custo import Custos
 from motor.dominio import Cenario, Direcao, Ordem, OrigemCasamento, ParametrosCusto
 from motor.simulacao import simular
@@ -216,6 +217,44 @@ def test_agregado_rejeita_decomposicao_de_taxa_inconsistente(resultado):
         replace(
             resultado.agregado,
             taxa_autonetting_periodo=Decimal("0.1"),
+        )
+
+
+def test_agregado_aceita_taxas_de_divisoes_arredondadas(resultado):
+    """Semente 48 da fidelidade do Replay: net − auto arredondado somava 1 ulp a mais."""
+    casado, intra, inter = Decimal("9353.52"), Decimal("1537.60"), Decimal("7815.92")
+    bruto = Decimal("23598.48")
+    netabilidade, autonetting, multilateral = taxas_por_mecanismo(casado, intra, bruto)
+
+    assert netabilidade == casado / bruto
+    assert autonetting == intra / bruto
+    assert abs(multilateral - inter / bruto) <= Decimal("1e-28")
+    mecanismos = resultado.agregado.mecanismos
+    replace(
+        resultado.agregado,
+        volume_bruto_periodo_brl=bruto,
+        volume_casado_periodo_brl=casado,
+        volume_autonetting_periodo_brl=intra,
+        volume_netting_multilateral_periodo_brl=inter,
+        taxa_netabilidade_periodo=netabilidade,
+        taxa_autonetting_periodo=autonetting,
+        taxa_netting_multilateral_periodo=multilateral,
+        mecanismos=(
+            replace(mecanismos[0], volume_brl=intra),
+            replace(mecanismos[1], volume_brl=inter),
+            mecanismos[2],
+        ),
+    )
+
+
+def test_agregado_rejeita_taxa_desviada_abaixo_do_ulp(resultado):
+    """O invariante continua exato: um desvio de 5e-29 ainda é recusado."""
+    with pytest.raises(ValueError, match="taxas por mecanismo"):
+        replace(
+            resultado.agregado,
+            taxa_netabilidade_periodo=Decimal("0.3963611215637617338065841529"),
+            taxa_autonetting_periodo=Decimal("0.06515673890860767303656845695"),
+            taxa_netting_multilateral_periodo=Decimal("0.3312043826551540607700156960"),
         )
 
 
