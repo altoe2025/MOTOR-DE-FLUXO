@@ -33,110 +33,23 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-10-06, após o deploy do contorno dos cartões de Estudos (MOT-99).
-Atualizada em 2026-10-05, após o merge e deploy do PR #80 (MOT-99).
+Atualizada em 2026-10-08, na limpeza do repositório (as tabelas que cada registro de deploy trazia foram unificadas aqui).
 
 | Branch | Situação | Dono |
 |---|---|---|
-| `feat/menu-anel-turquesa` | PR #80 integrado por merge commit `821f734`; navegação com anel e cartões de Empresas publicados no Render | Claude |
-| `codex/pr80-deploy-record` | Registro separado do deploy de `821f734`, das verificações e da limitação do teste de exclusão | Codex |
-Atualizada em 2026-10-03, após a publicação do caminho de navegação.
+| `main` | `1f9420b`: PR #82 mergeado e publicado no Render | — |
+| `docs/registros-deploy-consolidados` | Junta os registros de deploy dos PRs #67, #68, #72, #74, #78, #81 e #83 numa única branch, com esta limpeza | Claude |
+| `fix/taxas-arredondadas` | PR #61 em rascunho: taxas por mecanismo reconciliam sem segundo arredondamento | Claude |
+| `docs/auditoria-2026-09-06` | PR #17: auditoria de fechamento e casos manuais de verificação do netting | Gabriel |
 
-| Branch | Situação | Dono |
-|---|---|---|
-| `codex/navegacao-caminho-deploy-record` | Registra o deploy Live de `bdae970` e o smoke autenticado | Codex |
-| `codex/navegacao-caminho` | PR #77 mergeado em `bdae970` e publicado no Render; caminho clicável no cabeçalho | Codex |
-Atualizada em 2026-10-02, após a publicação das correções de diagnóstico.
+Branches substituídas viraram tags `archive/<nome-da-branch>` (31 tags, no GitHub); o conteúdo continua acessível por elas.
 
-| Branch | Situação | Dono |
-|---|---|---|
-| `codex/diagnostico-727d3ee-registro` | Registro documental do merge #71 e deploy Live `727d3ee`; sem alteração de produto ou novo deploy | Codex |
-| `codex/diagnostico-confiavel` | PR #71 mergeado em `727d3ee`, CI aprovada; publicado no Render com status Live | Codex |
-Atualizada em 2026-10-01, com a publicação do visual unificado no Render.
+## 2026-10-08 — Limpeza de branches, worktrees e PRs parados
 
-| Branch | Situação | Dono |
-|---|---|---|
-| `feat/front-mais-leve` | PR #73 mergeado em `66b7c6e` e publicado no Render; health/login aprovados, smoke autenticado pendente | Claude / Codex |
-| `codex/diagnostico-confiavel` | PR #71 aberto em rascunho; correções e revisão independente concluídas, validação automática em andamento; sem merge ou deploy | Codex |
-| `feat/front-visual` | PR #66 mergeado na `main`; merge `c3620bf` publicado no Render | Claude |
-| `codex/front-visual-deploy-record` | registra o deploy de `c3620bf` e os smokes públicos; PR #68 aberto | Codex |
-| `codex/front-visual-deploy-record` | registra o deploy de `c3620bf` e os smokes públicos; PR de documentação em preparação | Codex |
-Atualizada em 2026-10-01, após a publicação do diagnóstico recolhível no Render.
-
-| Branch | Situação | Dono |
-|---|---|---|
-| `codex/diagnostico-deploy-record` | Registra merge, CIs e deploy de `5483fab`; PR #67 aberto | Codex |
-| `codex/diagnostico-recolhivel` | PR #65 mergeado na `main`; merge `5483fab` publicado no Render | Codex |
-| `codex/replay-timeline-deploy-record` | PR #64 mergeado; registro do deploy de `d4fec2f` incorporado à `main` | Codex |
-Atualizada em 2026-10-05, durante o ajuste do contorno dos cartões de Estudos (MOT-99).
-
-| Branch | Situação | Dono |
-|---|---|---|
-| `codex/estudos-anel-hover` | PR #82 integrado em `1f9420b` e publicado no Render; contorno metálico turquesa nos cartões de Estudos | Codex |
-| `codex/estudos-hover-deploy-record` | Registro separado da publicação e da verificação do contorno em produção | Codex |
-| `feat/menu-anel-turquesa` | Navegação lateral com trilho e anel turquesa no destino ativo + cartões holográficos em Empresas; PR aberto para a `main`, merge e deploy com o Codex | Claude |
-| `codex/navegacao-caminho` | Caminho clicável no cabeçalho, com nome do estudo/empresa e retorno ao diagnóstico | Codex |
-| `codex/perf-combinacoes-deploy-record` | Registra o deploy Live de `77ceea2` e os smokes públicos da MOT-100 | Codex |
-| `codex/perf-combinacoes` | PR #75 mergeado na `main` em `77ceea2`; versão publicada no Render | Codex |
-| `feat/front-mais-leve` | PR #73 mergeado em `66b7c6e`; front leve observado no Render com menus ⋯, detalhes recolhidos e diagnóstico com a resposta primeiro | Claude |
-| `codex/diagnostico-confiavel` | PR #71 mergeado na `main` em `727d3ee`; contratos incorporados à otimização de combinações | Codex |
-| `codex/carteiras-docker-fixture` | Corrige somente o empacotamento de um helper de testes após falha do build Render; versão Live anterior preservada | Codex |
-| `codex/carteiras-analise` | PR #69 mergeado em `9cc8b8e`, CI verde; primeiro deploy interrompido no build por helper de testes fora do padrão de exclusão | Codex |
-| `feat/front-visual` | visual do app inteiro no sistema do Replay; aprovado pelo Gabriel na prévia local; PR para a `main`, deploy com o Codex | Claude |
-| `codex/diagnostico-recolhivel` | Recolhe os cenários por estudo na aba Diagnóstico; PR #65 mergeado na `main` (`5483fab`), sem deploy próprio | Codex |
-| `codex/replay-timeline-deploy-record` | registra o deploy de `d4fec2f` e o smoke da nova régua; PR de documentação em preparação | Codex |
-| `feat/replay-linha-do-tempo` | PR #63 mergeado na `main`; merge `d4fec2f` publicado no Render | Codex |
-| `codex/replay-deploy-record` | PR #62 mergeado; registro do deploy anterior incorporado à `main` | Codex |
-| `feat/replay-visual` | PR #60 mergeado na `main`; merge `f70769c` publicado no Render | Codex |
-| `codex/main-render-sync` | PR #59 mergeado; base funcional incorporada pela `main` antes do PR #60 | Codex |
-| `codex/chat-front-context` | `29d955c` publicado no Render (Live); referência preservada da integração | Codex |
-| `codex/replay-production-fix` | `cb81781` incorporado no Live `29d955c`, incluindo reset local e Replay | Codex |
-| `codex/frontend-performance-fixes` | Integra as correções de travamento e `feat/estudo-vs-combinacao` sobre o release `829d224`; publicação no Render em preparação | Codex |
-| `codex/carteira-criterios` | Integra estudo separado de combinações, últimas melhorias de `feat/bancada-exploracao` e chat já publicado do PR #57; deploy aguardando comando do Gabriel | Codex |
-| `codex/chat-interface-render` | PR #57 aberto (draft, base `feat/bancada-exploracao`); código `8d43695` publicado no Render com status Live em 2026-09-28; sem merge na `main` | Codex |
-| `codex/integracao-etapas-5-6` | Consolida `feat/bancada-exploracao` e `codex/finalidade-verificacao`, incluindo histórico de `origin/main`; publicação/CI em preparação, sem deploy | Codex |
-| `main` | `1f9420b`: PR #82 integrado e publicado no Render; contorno dos cartões de Estudos Live | os dois |
-| `main` | `821f734`: PR #80 mergeado e publicado no Render; inclui percentuais e remoção da janela do resumo de premissas do PR #79 | os dois |
-| `main` | `bdae970`: PR #77 mergeado e publicado no Render; caminho de navegação Live | os dois |
-| `main` | `727d3ee`: PR #71 mergeado; mesma revisão confirmada Live no Render | os dois |
-| `main` | `c3620bf`: PR #66 mergeado e visual unificado publicado no Render | os dois |
-| `main` | `5483fab`: PR #65 mergeado e diagnóstico recolhível publicado no Render | os dois |
-| `main` | `77ceea2`: PR #75 mergeado e publicado no Render; otimização das combinações Live | os dois |
-| `netting/p1` | spike do P1, **NÃO MERGEAR** — dominado, e agora sabemos que a folga é zero em N ≥ 50. Só local, nunca foi pro GitHub | Felipe |
-| `fix/semantica-remessa-p0` | PR #11, mergeada | Felipe |
-| `fix/previsao-temporal-e-colunas-csv` | PR #12, mergeada | Gabriel |
-| `feat/teto-e-eficiencia-no-csv` | PR #13, mergeada | Gabriel |
-| `feat/netting-incremental-no-csv` | PR #14, mergeada | Gabriel |
-| `perf/netting-sem-custo-quadratico` | PR #15, mergeada | Gabriel |
-| `docs/estado-das-branches` | PR #16, mergeada | Gabriel |
-| `geracao/arquetipos`, `modelo/*`, `varredura/grid-mix-janela` | mergeadas em 2026-09-04 | Gabriel |
-| `gabriel/metrica-tempo` | PR #21, mergeada na `main` | Gabriel |
-| `gabriel/varredura-completa` | PR #22, atualizada sobre `main`, CI verde e mergeada | Gabriel |
-| `gabriel/mix-outbound` | PR #23, atualizada sobre `main`, CI verde e mergeada | Gabriel |
-| `analise/sensibilidade-custo` | PR #24, sensibilidade, estresse, limites e fluxo hipotético mergeados | Codex |
-| `codex/frontend-base-docs` | PR #25, design, ambiente e planejamento da etapa 1 mergeados | Codex |
-| `codex/fechamento-funcional-integracao` | PR #26, fechamento funcional mergeado após 504 testes e CI verde | Codex |
-| `codex/mot16-contratos` | PR #27 mergeada; contratos HTTP, identidade, apresentação, locks e CI corrigido | Codex |
-| `codex/mot17-adaptador` | MOT-17 entregue pelo PR #30; implementação e verificação local concluídas | Codex |
-| `codex/mot18-api` | MOT-18 integrada pelo PR #31, CI verde | Codex |
-| `feat/mot19-shell-acessivel` | PR #29 atualizado sobre a MOT-18; shell e componentes preservam o proxy da API | Codex |
-| `codex/mot20-auth` | PR #32, mergeada na `main`; MOT-20 concluída com convite, rascunho e POST autenticado reais | Codex |
-| `codex/mot21-client-integracao` | PR #33 mergeado na `main`; implementação, CI e gate Supabase real verdes | Codex |
-| `codex/mot22-aceitacao-ci` | PR #34 mergeada na `main`; aceitação, CI e handoff da etapa 1 entregues | Codex |
-| `codex/autonetting-preferencial` | PR #36 mergeado na `main`; grade histórica não regenerada | Codex |
-| `codex/mot62-planejamento-etapa2-v2` | documentação da MOT-62; IDs, dependências e auditoria da Etapa 2 v2, sem código de produto | Codex |
-| `codex/mot63-observed-contracts` | implementação e documentação da Etapa 2 v2; aceite **CONDITIONAL**, sem push/PR/merge e sem início da Etapa 3 | Codex |
-| `codex/frontend-etapa-3` | T0–T12 concluídos localmente; gate global verde em `57be689`; aceite técnico **PASS**; sem push/PR/merge | Codex |
-| `codex/etapa-4-mvp` | MVP e Evolução B aceitos localmente até MOT-85; sem push/PR/merge/deploy | Codex |
-| `codex/fix-reconciliacao-decimal` | correção da aritmética exata dos mecanismos da análise, pronta para merge na `main` | Codex |
-| `codex/frontend-etapa-5` | MOT-86–MOT-89 concluídas e aceitas localmente; Replay Fronteira Viva funcional até o limite efetivo medido; sem push/PR/merge/deploy | Codex |
-| `codex/frontend-etapa-6-planejamento` | Etapas 6A/6B e D1/D2 da MOT-96 concluídas localmente; 6C tem aceite local separado; sem push, PR, merge ou deploy | Codex |
-| `codex/mot97-validation-worker` | MOT-97: profiling e estabilização local por certificado efêmero + uma cedência; worker revertido; sem push, PR, merge ou deploy | Codex |
-
-Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. O PR #17 continua aberto e
-separado deste trabalho. Apagada em 2026-09-06 a branch remota
-`github.com/altoe2025/MOTOR-DE-FLUXO`
-— push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+1. **Sintoma.** O repositório acumulava 106 branches locais, 85 no GitHub, 45 worktrees e 25 PRs abertos, a maioria já incorporada ou substituída. Não dava para saber de relance o que estava vivo.
+2. **Causa.** Cada tarefa abria branch e worktree próprias e os PRs empilhados (importação XLSX) ou de registro de deploy não eram fechados depois que o conteúdo chegava à `main` por outro caminho.
+3. **O que foi feito.** Cada branch foi comparada com a `main` por conteúdo. As que estavam 100% na `main` foram apagadas; as substituídas viraram tags `archive/...`; as worktrees foram movidas para uma pasta de quarentena fora do repositório. Os sete registros de deploy pendentes foram juntados nesta branch, em ordem cronológica. Antes de qualquer remoção foi feito um backup completo (`git bundle --all`, verificado) com o trabalho não commitado de cada worktree. Nada foi incorporado à `main` nem publicado.
+4. **O que isso invalida.** Referências a worktrees em `.worktrees/` e `~/.codex/worktrees/` (agora em quarentena) e a branches que só existem como tag `archive/`. Nenhum cálculo ou premissa do motor mudou.
 
 ## 2026-10-06 — Contorno dos cartões de Estudos publicado (MOT-99)
 
