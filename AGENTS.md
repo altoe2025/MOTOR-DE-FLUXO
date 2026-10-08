@@ -258,12 +258,14 @@ Se uma tarefa exigir editar arquivo fora da coluna da branch atual, **pare e avi
   invariante de correção neste repo não pode ser `assert`, porque `-O` os remove. Se
   você adicionar um invariante que garante correção do resultado (conservação,
   validação de entrada), use `raise`, não `assert`.
-- **Os 7 cenários manuais de validação, o runner `scripts/rodar_casos_manuais.py` e o
-  script `scripts/exportar_timeline.py` NÃO estão na `main`.** Estão na branch
-  `docs/auditoria-2026-09-06` (commit `cbc900d`), aberta como **PR #17** e
-  deliberadamente não mergeada. O `docs/DIARIO-DE-MUDANCAS.md` descreve esses
-  artefatos como escritos e rodados — o que é verdade naquela branch, não na `main`.
-  Não trate como regressão disponível até o PR #17 ser mergeado.
+- **Os 7 cenários manuais de validação** (`motor/cenarios/manuais/`), o runner
+  `scripts/rodar_casos_manuais.py` e o `scripts/exportar_timeline.py` estão na `main`
+  desde o PR #17 (2026-10-08). Reconferidos nessa data contra a política vigente
+  (autonetting preferencial): as alocações dos 7 casos batem com a previsão escrita
+  no topo de cada YAML. O runner só imprime os ciclos; a comparação com a previsão é
+  feita à mão. Cada ordem desses casos é de um cliente diferente, então eles **não
+  cobrem autonetting intracliente** — para isso, ver `motor/cenarios/fluxo_gabriel.yaml`
+  e os testes do `pytest`.
 - O dashboard "Fronteira Viva" **não está e nunca esteve neste repositório** — é um
   Artifact publicado fora do repo (ver `docs/DIARIO-DE-MUDANCAS.md`, entrada de
   2026-09-06). Não referenciar como parte do código-fonte.
@@ -308,7 +310,7 @@ exige decisão do Gabriel + atualização dos cenários de regressão.
 
 ## Atualização
 
-Última revisão: 2026-09-16.
+Última revisão: 2026-10-08.
 
 Sempre que uma decisão técnica desta lista mudar, atualizar esta seção no mesmo
 commit da mudança de código. Um AGENTS.md desatualizado é pior que nenhum, porque o

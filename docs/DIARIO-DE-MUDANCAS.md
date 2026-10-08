@@ -96,6 +96,13 @@ separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-10-08 — Cenários manuais de verificação do netting entram na `main` (PR #17)
+
+1. **Sintoma.** Os 7 cenários manuais e o runner estavam parados no PR #17 desde 2026-09-06; a `main` não tinha como rodá-los e o `AGENTS.md` avisava que não eram regressão disponível.
+2. **Causa.** O PR foi segurado a pedido do Gabriel enquanto a política de netting mudava (EDF global → autonetting preferencial).
+3. **O que foi feito.** A branch `docs/auditoria-2026-09-06` foi atualizada com a `main` e os 7 casos foram rodados contra o motor vigente: as alocações batem com a previsão escrita em cada YAML (caso 1: 3, caso 2: 1, caso 3: 4, caso 4: 5, caso 5: 3, caso 6: 3, caso 7: 20 alocações). `scripts/exportar_timeline.py` roda. `AGENTS.md`, `docs/testing.md` e `docs/MAPA.md` deixam de dizer que esses arquivos não estão na `main`.
+4. **O que isso invalida.** O aviso de que os cenários manuais não são regressão disponível. Nenhum cálculo do motor mudou. Os casos não cobrem autonetting intracliente (cada ordem é de um cliente próprio).
+
 ## 2026-10-05 — Contorno turquesa nos cartões de Estudos (MOT-99)
 
 1. **Sintoma.** O Gabriel pediu que os boxes de Estudos ganhassem, ao passar o mouse, o mesmo acabamento de borda do ícone ativo no menu Trabalho.

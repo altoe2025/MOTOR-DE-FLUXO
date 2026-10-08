@@ -800,21 +800,21 @@ justamente para provar que continuam valendo. `assert` segue válido em teste.
 3. Se a mudança de comportamento for intencional, atualizar o teste **e** registrar
    o motivo na entrada do diário do mesmo commit.
 
-### Pendência conhecida — cenários manuais presos no PR #17
+### Cenários manuais de verificação
 
-Os **7 cenários de verificação manual** (previsão feita à mão, ciclo a ciclo, antes
-de rodar o motor) e o runner `scripts/rodar_casos_manuais.py` existem apenas na
-branch `docs/auditoria-2026-09-06` (commit `cbc900d`), aberta como **PR #17 e
-deliberadamente não mergeada** — **não estão na `main`**. O mesmo vale para
-`scripts/exportar_timeline.py`. `docs/DIARIO-DE-MUDANCAS.md` narra esses 7 cenários
-como já escritos e rodados — o que é verdade naquela branch, não na `main`.
+Os **7 cenários de verificação manual** (`motor/cenarios/manuais/`, previsão feita à
+mão, ciclo a ciclo, antes de rodar o motor) e o runner `scripts/rodar_casos_manuais.py`
+entraram na `main` pelo PR #17 em 2026-10-08, junto com `scripts/exportar_timeline.py`.
 
-Enquanto o PR #17 não for mergeado, **não trate os 7 cenários manuais como regressão
-disponível** — não há arquivo para rodar na `main`. Decidir o destino do PR #17 é do
-Gabriel; até lá, a regressão efetiva do repo são os testes do `pytest` — com o
-oráculo diferencial cobrindo boa parte do que os 7 cenários manuais cobririam, já que
-ele confere a política contra uma segunda implementação em vez de contra uma previsão
-escrita à mão.
+```bash
+python scripts/rodar_casos_manuais.py
+```
+
+O runner imprime os ciclos e as alocações; a conferência contra a previsão escrita no
+topo de cada YAML é manual. Em 2026-10-08, sob a política vigente, as alocações dos 7
+casos bateram com a previsão. Como cada ordem é de um cliente diferente, eles não
+exercitam o autonetting intracliente; a regressão automática continua sendo o `pytest`,
+com o oráculo diferencial.
 
 Para contexto de negócio e proveniência, consultar o vault Obsidian.
 
