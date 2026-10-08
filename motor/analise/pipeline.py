@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 
+from motor.analise.aritmetica import subtrair_exato
 from motor.analise.clientes import (
     _somar_custos, _somar_exato, analisar_clientes, construir_ledger,
     filtrar_analise_clientes, filtrar_ledger, resultado_cliente_vazio,
@@ -18,6 +19,23 @@ from motor.analise.temporal import ConfiguracaoTemporal, preparar_execucao_tempo
 from motor.analise.serializacao import reidentificar_manifesto
 from motor.dominio import Cenario, OrigemCasamento, TipoAlocacao
 from motor.simulacao import simular
+
+
+def taxas_por_mecanismo(
+    volume_casado: Decimal, volume_autonetting: Decimal, volume_bruto: Decimal,
+) -> tuple[Decimal, Decimal, Decimal]:
+    """Netabilidade, autonetting e netting multilateral sobre o volume bruto.
+
+    As duas divisões são arredondadas na precisão do contexto; a parcela
+    multilateral é o complemento exato delas, para que autonetting + multilateral
+    reconstitua a netabilidade sem um segundo arredondamento. Diante da divisão
+    direta do volume multilateral, a diferença fica na última casa.
+    """
+    if not volume_bruto:
+        return Decimal(0), Decimal(0), Decimal(0)
+    netabilidade = volume_casado / volume_bruto
+    autonetting = volume_autonetting / volume_bruto
+    return netabilidade, autonetting, subtrair_exato(netabilidade, autonetting)
 
 
 def analisar(
@@ -85,7 +103,10 @@ def analisar(
             economia_periodo_brl=cheio.economia,
             taxa_netabilidade_periodo=cheio.taxa_netabilidade,
             taxa_autonetting_periodo=cheio.taxa_autonetting,
-            taxa_netting_multilateral_periodo=cheio.taxa_netting_multilateral,
+            # `simular` arredonda o complemento; aqui ele volta a ser exato.
+            taxa_netting_multilateral_periodo=subtrair_exato(
+                cheio.taxa_netabilidade, cheio.taxa_autonetting,
+            ),
             mecanismos=resultados_por_mecanismo(ledger_periodo),
         )
     else:
@@ -122,12 +143,10 @@ def analisar(
         )
         if autonetting_medido + multilateral_medido != casado_medido:
             raise ValueError("decomposição do casamento diverge da coorte medida")
-        taxa_netabilidade_medido = (
-            casado_medido / bruto_medido if bruto_medido else Decimal(0)
-        )
-        taxa_autonetting_medido = (
-            autonetting_medido / bruto_medido if bruto_medido else Decimal(0)
-        )
+        (
+            taxa_netabilidade_medido, taxa_autonetting_medido,
+            taxa_multilateral_medido,
+        ) = taxas_por_mecanismo(casado_medido, autonetting_medido, bruto_medido)
         agregado = AgregadoCanonico(
             execucao_completa=cheio,
             ids_ordens_medidas=execucao.ids_ordens_medidas,
@@ -145,9 +164,7 @@ def analisar(
             ),
             taxa_netabilidade_periodo=taxa_netabilidade_medido,
             taxa_autonetting_periodo=taxa_autonetting_medido,
-            taxa_netting_multilateral_periodo=(
-                taxa_netabilidade_medido - taxa_autonetting_medido
-            ),
+            taxa_netting_multilateral_periodo=taxa_multilateral_medido,
             mecanismos=resultados_por_mecanismo(ledger_periodo),
         )
         bruto = bruto_medido
