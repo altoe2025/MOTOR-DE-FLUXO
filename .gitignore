@@ -19,3 +19,7 @@ web/test-results/
 web/test-results-*/
 web/playwright-report/
 *.tsbuildinfo
+
+# saídas locais e rascunhos de trabalho
+/output/
+/scratch/

@@ -1,0 +1,92 @@
+# Fluxo montado à mão para testar UM caso específico: o MESMO cliente com ordens
+# nas DUAS direções dentro da mesma janela de fechamento.
+#
+# `wise` tem x-out (OUT 50, vence dia 7) e x-in (IN 20, vence dia 7). As duas
+# estão abertas no fechamento do dia 6. O motor neta posição AGREGADA de
+# tesouraria — ele não sabe que os dois lados são o mesmo CNPJ. Então 20 dos 50
+# casados no dia 6 são a wise casando consigo mesma, algo que ela faria sozinha
+# na tesouraria dela, sem produto nenhum. Ver `limite_intra_cliente_brl` em
+# motor/varredura.py.
+#
+# janela_dias (100) é maior que o horizonte DE PROPÓSITO: assim todo fechamento é
+# causado por uma ordem vencendo (dia_limite == dia), nunca pela janela, e o
+# resultado é previsível à mão antes de rodar.
+#
+# PREVISÃO (escrita antes de rodar; se o motor discordar, um dos dois está errado):
+#
+#   dia  6: {x-out OUT 50 | y IN 30, x-in IN 20}   50/50   casado 50   resíduo 0
+#     y vence hoje e força o fechamento. Os dois lados batem exatamente: nada
+#     atravessa. Mas 20 desse casado é intra-wise.
+#   dia 12: {K OUT 100 | j IN 30, f IN 20}        100/50   casado 50   resíduo 50 OUT
+#     K e j vencem hoje. f (limite 13) ainda teria folga, mas é consumida no
+#     casamento. Sobram 50 de K, que vence hoje — atravessa a fronteira.
+#
+#   volume bruto (as duas pernas) = 250
+#   volume casado = 50*2 + 50*2 = 200   ->  netabilidade      = 80%
+#   limite intra-cliente (wise)  =  40   ->  casado incremental = 160
+#                                            netabilidade incr. = 64%
+#
+# Os parâmetros de custo estão zerados: este cenário é sobre NETTING, não sobre
+# dinheiro. Nada aqui deve ser lido como estimativa de custo.
+
+janela_dias: 100
+horizonte_dias: 14
+
+custo:
+  iof_out: "0"
+  iof_in: "0"
+  carry_cnr: "0"
+  spread_rail_bps: "0"
+  custo_fixo_remessa: "0"
+  custo_oportunidade_aa: "0"
+  ptax: "5.40"
+
+ordens:
+  - id: "x-out"
+    cliente_id: "wise"
+    direcao: "OUT"
+    valor_brl: "50"
+    dia_conhecida: 1
+    dia_limite: 7
+    eh_efx: false
+    finalidade: "TODO-anexo-v"
+  - id: "y"
+    cliente_id: "nomad"
+    direcao: "IN"
+    valor_brl: "30"
+    dia_conhecida: 2
+    dia_limite: 6
+    eh_efx: false
+    finalidade: "TODO-anexo-v"
+  - id: "x-in"
+    cliente_id: "wise"
+    direcao: "IN"
+    valor_brl: "20"
+    dia_conhecida: 5
+    dia_limite: 7
+    eh_efx: false
+    finalidade: "TODO-anexo-v"
+  - id: "K"
+    cliente_id: "ASTRO"
+    direcao: "OUT"
+    valor_brl: "100"
+    dia_conhecida: 8
+    dia_limite: 12
+    eh_efx: false
+    finalidade: "TODO-anexo-v"
+  - id: "j"
+    cliente_id: "blabla"
+    direcao: "IN"
+    valor_brl: "30"
+    dia_conhecida: 10
+    dia_limite: 12
+    eh_efx: false
+    finalidade: "TODO-anexo-v"
+  - id: "f"
+    cliente_id: "kkkkk"
+    direcao: "IN"
+    valor_brl: "20"
+    dia_conhecida: 11
+    dia_limite: 13
+    eh_efx: false
+    finalidade: "TODO-anexo-v"
