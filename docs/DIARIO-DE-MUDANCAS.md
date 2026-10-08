@@ -33,69 +33,148 @@ Quatro partes, sempre nesta ordem. Entradas novas vão **no topo** da lista.
 
 Atualize esta tabela em todo push. A data é do último toque.
 
-Atualizada em 2026-10-05, durante o ajuste do contorno dos cartões de Estudos (MOT-99).
+Atualizada em 2026-10-08, na limpeza do repositório (as tabelas que cada registro de deploy trazia foram unificadas aqui).
 
 | Branch | Situação | Dono |
 |---|---|---|
-| `codex/estudos-anel-hover` | Cartões de Estudos usam o contorno metálico turquesa do menu durante hover e foco pelo teclado; verificado localmente, sem deploy | Codex |
-| `feat/menu-anel-turquesa` | Navegação lateral com trilho e anel turquesa no destino ativo + cartões holográficos em Empresas; PR aberto para a `main`, merge e deploy com o Codex | Claude |
-| `codex/navegacao-caminho` | Caminho clicável no cabeçalho, com nome do estudo/empresa e retorno ao diagnóstico | Codex |
-| `codex/perf-combinacoes-deploy-record` | Registra o deploy Live de `77ceea2` e os smokes públicos da MOT-100 | Codex |
-| `codex/perf-combinacoes` | PR #75 mergeado na `main` em `77ceea2`; versão publicada no Render | Codex |
-| `feat/front-mais-leve` | PR #73 mergeado em `66b7c6e`; front leve observado no Render com menus ⋯, detalhes recolhidos e diagnóstico com a resposta primeiro | Claude |
-| `codex/diagnostico-confiavel` | PR #71 mergeado na `main` em `727d3ee`; contratos incorporados à otimização de combinações | Codex |
-| `codex/carteiras-docker-fixture` | Corrige somente o empacotamento de um helper de testes após falha do build Render; versão Live anterior preservada | Codex |
-| `codex/carteiras-analise` | PR #69 mergeado em `9cc8b8e`, CI verde; primeiro deploy interrompido no build por helper de testes fora do padrão de exclusão | Codex |
-| `feat/front-visual` | visual do app inteiro no sistema do Replay; aprovado pelo Gabriel na prévia local; PR para a `main`, deploy com o Codex | Claude |
-| `codex/diagnostico-recolhivel` | Recolhe os cenários por estudo na aba Diagnóstico; PR #65 mergeado na `main` (`5483fab`), sem deploy próprio | Codex |
-| `codex/replay-timeline-deploy-record` | registra o deploy de `d4fec2f` e o smoke da nova régua; PR de documentação em preparação | Codex |
-| `feat/replay-linha-do-tempo` | PR #63 mergeado na `main`; merge `d4fec2f` publicado no Render | Codex |
-| `codex/replay-deploy-record` | PR #62 mergeado; registro do deploy anterior incorporado à `main` | Codex |
-| `feat/replay-visual` | PR #60 mergeado na `main`; merge `f70769c` publicado no Render | Codex |
-| `codex/main-render-sync` | PR #59 mergeado; base funcional incorporada pela `main` antes do PR #60 | Codex |
-| `codex/chat-front-context` | `29d955c` publicado no Render (Live); referência preservada da integração | Codex |
-| `codex/replay-production-fix` | `cb81781` incorporado no Live `29d955c`, incluindo reset local e Replay | Codex |
-| `codex/frontend-performance-fixes` | Integra as correções de travamento e `feat/estudo-vs-combinacao` sobre o release `829d224`; publicação no Render em preparação | Codex |
-| `codex/carteira-criterios` | Integra estudo separado de combinações, últimas melhorias de `feat/bancada-exploracao` e chat já publicado do PR #57; deploy aguardando comando do Gabriel | Codex |
-| `codex/chat-interface-render` | PR #57 aberto (draft, base `feat/bancada-exploracao`); código `8d43695` publicado no Render com status Live em 2026-09-28; sem merge na `main` | Codex |
-| `codex/integracao-etapas-5-6` | Consolida `feat/bancada-exploracao` e `codex/finalidade-verificacao`, incluindo histórico de `origin/main`; publicação/CI em preparação, sem deploy | Codex |
-| `main` | `77ceea2`: PR #75 mergeado e publicado no Render; otimização das combinações Live | os dois |
-| `netting/p1` | spike do P1, **NÃO MERGEAR** — dominado, e agora sabemos que a folga é zero em N ≥ 50. Só local, nunca foi pro GitHub | Felipe |
-| `fix/semantica-remessa-p0` | PR #11, mergeada | Felipe |
-| `fix/previsao-temporal-e-colunas-csv` | PR #12, mergeada | Gabriel |
-| `feat/teto-e-eficiencia-no-csv` | PR #13, mergeada | Gabriel |
-| `feat/netting-incremental-no-csv` | PR #14, mergeada | Gabriel |
-| `perf/netting-sem-custo-quadratico` | PR #15, mergeada | Gabriel |
-| `docs/estado-das-branches` | PR #16, mergeada | Gabriel |
-| `geracao/arquetipos`, `modelo/*`, `varredura/grid-mix-janela` | mergeadas em 2026-09-04 | Gabriel |
-| `gabriel/metrica-tempo` | PR #21, mergeada na `main` | Gabriel |
-| `gabriel/varredura-completa` | PR #22, atualizada sobre `main`, CI verde e mergeada | Gabriel |
-| `gabriel/mix-outbound` | PR #23, atualizada sobre `main`, CI verde e mergeada | Gabriel |
-| `analise/sensibilidade-custo` | PR #24, sensibilidade, estresse, limites e fluxo hipotético mergeados | Codex |
-| `codex/frontend-base-docs` | PR #25, design, ambiente e planejamento da etapa 1 mergeados | Codex |
-| `codex/fechamento-funcional-integracao` | PR #26, fechamento funcional mergeado após 504 testes e CI verde | Codex |
-| `codex/mot16-contratos` | PR #27 mergeada; contratos HTTP, identidade, apresentação, locks e CI corrigido | Codex |
-| `codex/mot17-adaptador` | MOT-17 entregue pelo PR #30; implementação e verificação local concluídas | Codex |
-| `codex/mot18-api` | MOT-18 integrada pelo PR #31, CI verde | Codex |
-| `feat/mot19-shell-acessivel` | PR #29 atualizado sobre a MOT-18; shell e componentes preservam o proxy da API | Codex |
-| `codex/mot20-auth` | PR #32, mergeada na `main`; MOT-20 concluída com convite, rascunho e POST autenticado reais | Codex |
-| `codex/mot21-client-integracao` | PR #33 mergeado na `main`; implementação, CI e gate Supabase real verdes | Codex |
-| `codex/mot22-aceitacao-ci` | PR #34 mergeada na `main`; aceitação, CI e handoff da etapa 1 entregues | Codex |
-| `codex/autonetting-preferencial` | PR #36 mergeado na `main`; grade histórica não regenerada | Codex |
-| `codex/mot62-planejamento-etapa2-v2` | documentação da MOT-62; IDs, dependências e auditoria da Etapa 2 v2, sem código de produto | Codex |
-| `codex/mot63-observed-contracts` | implementação e documentação da Etapa 2 v2; aceite **CONDITIONAL**, sem push/PR/merge e sem início da Etapa 3 | Codex |
-| `codex/frontend-etapa-3` | T0–T12 concluídos localmente; gate global verde em `57be689`; aceite técnico **PASS**; sem push/PR/merge | Codex |
-| `codex/etapa-4-mvp` | MVP e Evolução B aceitos localmente até MOT-85; sem push/PR/merge/deploy | Codex |
-| `codex/fix-reconciliacao-decimal` | correção da aritmética exata dos mecanismos da análise, pronta para merge na `main` | Codex |
-| `codex/frontend-etapa-5` | MOT-86–MOT-89 concluídas e aceitas localmente; Replay Fronteira Viva funcional até o limite efetivo medido; sem push/PR/merge/deploy | Codex |
-| `codex/frontend-etapa-6-planejamento` | Etapas 6A/6B e D1/D2 da MOT-96 concluídas localmente; 6C tem aceite local separado; sem push, PR, merge ou deploy | Codex |
-| `codex/mot97-validation-worker` | MOT-97: profiling e estabilização local por certificado efêmero + uma cedência; worker revertido; sem push, PR, merge ou deploy | Codex |
+| `main` | `3c65dc9`: PR #61 mergeado (taxas por mecanismo sem segundo arredondamento); publicado no Render até `1f9420b` (PR #82), o #61 ainda não foi publicado | — |
+| `docs/registros-deploy-consolidados` | Junta os registros de deploy dos PRs #67, #68, #72, #74, #78, #81 e #83 numa única branch, com esta limpeza | Claude |
+| `docs/auditoria-2026-09-06` | PR #17: auditoria de fechamento e casos manuais de verificação do netting | Gabriel |
+
+Branches substituídas viraram tags `archive/<nome-da-branch>` (31 tags, no GitHub); o conteúdo continua acessível por elas.
 
 Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. O PR #17 continua aberto e
 separado deste trabalho. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
 
+## 2026-10-08 — Limpeza de branches, worktrees e PRs parados
+
+1. **Sintoma.** O repositório acumulava 106 branches locais, 85 no GitHub, 45 worktrees e 25 PRs abertos, a maioria já incorporada ou substituída. Não dava para saber de relance o que estava vivo.
+2. **Causa.** Cada tarefa abria branch e worktree próprias e os PRs empilhados (importação XLSX) ou de registro de deploy não eram fechados depois que o conteúdo chegava à `main` por outro caminho.
+3. **O que foi feito.** Cada branch foi comparada com a `main` por conteúdo. As que estavam 100% na `main` foram apagadas; as substituídas viraram tags `archive/...`; as worktrees foram movidas para uma pasta de quarentena fora do repositório. Os sete registros de deploy pendentes foram juntados nesta branch, em ordem cronológica. Seis documentos de design do front e da importação que nunca tinham sido commitados (`docs/superpowers/plans/`) e o cenário manual `motor/cenarios/fluxo_gabriel.yaml` entraram no repositório; `output/` e `scratch/` foram para o `.gitignore`. Antes de qualquer remoção foi feito um backup completo (`git bundle --all`, verificado) com o trabalho não commitado de cada worktree. Nada foi incorporado à `main` nem publicado.
+4. **O que isso invalida.** Referências a worktrees em `.worktrees/` e `~/.codex/worktrees/` (agora em quarentena) e a branches que só existem como tag `archive/`. Nenhum cálculo ou premissa do motor mudou.
+
+## 2026-10-06 — Contorno dos cartões de Estudos publicado (MOT-99)
+
+1. **Sintoma.** O ajuste visual do PR #82 estava verificado localmente e aguardava a publicação solicitada pelo Gabriel.
+2. **Causa.** O serviço Render usa deploy manual; era necessário integrar o PR com CI aprovado e publicar o SHA do merge.
+3. **O que foi feito.** PR #82 integrado por merge commit `1f9420b2fbc6cf7b5b9b0756b11371957169f7f4`. CI [37404381048](https://github.com/altoe2025/MOTOR-DE-FLUXO/actions/runs/37404381048), tentativa 2, aprovado com 68 testes de navegador e um ignorado. A tentativa 1 teve timeout no teste de contexto/citação do chat: o campo ficou vazio e Enviar desabilitado após o preenchimento pelo teste. O caso passou em três repetições isoladas e na segunda execução completa (4,6 s); a causa não foi confirmada. Não houve alteração de código, retries ou timeout para obter a aprovação.
+
+   Deploy manual **`dep-db269ojtqb8s73c7imt0`**, iniciado em **2026-10-06 00:02:58 GMT-3**, duração **48,2 s**, confirmado **Deploy succeeded / Live** no serviço `srv-dar8k7e0tbcc739eikog`. Referência anterior para rollback: `dep-db23nf3tqb8s73buje10`, SHA `821f7340b689232396d1238a34faefac05553b55`. Configuração do serviço preservada. Em produção, `/api/v1/health` retornou HTTP 200 com `{"status":"ok"}`; sessão autenticada preservada, contorno conferido em hover nos temas escuro e claro, opacity 0 em repouso e 1 no hover, retângulo de 960 × 98,08 px idêntico nos dois estados. O estudo demonstrativo abriu no editor normalmente e não foram capturados erros de console. Nenhuma exclusão foi testada nesta publicação.
+4. **O que isso invalida.** O status de publicação pendente do PR #82. Nenhum cálculo ou premissa do motor mudou.
+
+## 2026-10-05 — Navegação com anel e cartões publicados no Render (MOT-99)
+
+**Sintoma:** o PR #80 estava pronto para integração, mas as referências visuais ainda descreviam a navegação anterior e a publicação precisava ser conferida.
+
+**Causa:** mudança intencional de pixels da sidebar; o serviço Render permanece com deploy automático desligado.
+
+**O que foi feito:** PR #80 integrado por merge commit `821f7340b689232396d1238a34faefac05553b55`, sem squash. Foram atualizadas oito referências visuais Linux/Windows de importação, demonstração, chat e apresentação. Comparação por pixels e abertura das imagens confirmaram alterações apenas na sidebar; login e páginas de impressão permaneceram idênticos. O workflow temporário de captura foi restaurado antes do merge. CI final [37390714380](https://github.com/altoe2025/MOTOR-DE-FLUXO/actions/runs/37390714380) aprovado, incluindo 68 testes de navegador e um ignorado. Uma execução intermediária teve timeout no teste `study-observed`: a opção `case-e2e` não estava disponível no seletor. Três repetições isoladas e o CI final passaram sem alterar código, retries ou timeout; a causa desse episódio não foi confirmada.
+
+Deploy manual do SHA acima no serviço `srv-dar8k7e0tbcc739eikog`: **`dep-db23nf3tqb8s73buje10`**, iniciado em **2026-10-05 21:07:24 GMT-3**, duração **1m03s**, confirmado **Deploy succeeded / Live**. Referência anterior para rollback: `dep-db1u1d2jnfac73e50av0`, SHA `4c48f3981a96990ee9598881e376149464339400`. Nenhuma configuração do serviço foi alterada.
+
+Verificação em produção: `/health` respondeu HTTP 200 com `{"status":"ok"}`; login disponível por HTTPS; sessão autenticada percorreu estudo demonstrativo sintético, editor, execução do diagnóstico sem erro visível, Replay avançando de D0 para D1, apresentação e chat. O chat retornou a economia da execução selecionada com link de evidência. Cards mostraram anéis em repouso, coordenadas de brilho e inclinação seguindo o cursor e variáveis de inclinação zeradas ao sair. Link de empresa abriu sua visão geral. Navegação ativa conferida nos temas escuro e claro; em viewport de 375 px os links ficaram em uma coluna e `scrollWidth` igual a `clientWidth`, sem overflow horizontal. Nenhum erro de console capturado nas abas do smoke.
+
+**Limitação e incidente do smoke:** ao clicar em Excluir na Empresa sintética 04 para conferir somente a confirmação, a automação perdeu acesso à aba durante o diálogo. Não houve chamada explícita de aceite; as tentativas de cancelar por API não funcionaram. Quando o acesso voltou, a empresa já não aparecia no catálogo. Não foi possível determinar como a confirmação foi encerrada nem validar o cancelamento. O Gabriel foi informado; a exclusão não foi repetida. O código preserva `window.confirm` antes de `deleteCompany`, mas isso não substitui a validação manual pendente. Não houve tentativa de recriar os casos/perfis ausentes ou modificar código de produto. Este registro não declara o smoke de exclusão aprovado.
+
+**O que isso invalida:** o status anterior de PR aberto/publicação pendente do PR #80. Nenhum resultado matemático ou premissa do motor foi alterado por esta publicação. A conclusão de que o cancelamento de exclusão foi verificado não pode ser feita.
+## 2026-10-03 — Caminho de navegação publicado no Render (MOT-99)
+
+**Sintoma.** O PR #77 estava pronto para revisão, mas o caminho clicável ainda não estava publicado.
+
+**Causa.** O serviço usa deploy manual; merge e publicação aguardavam autorização do Gabriel e conclusão do CI.
+
+**O que foi feito.** Após autorização explícita, o CI `37159898286` concluiu com sucesso e o PR ficou `MERGEABLE/CLEAN`. Merge com commit `bdae970bfc8b271025258ec78e253be2f6429433`, em 2026-10-03 às 20:07:51 GMT-3. No serviço `motor-de-fluxo-piloto`, esse SHA foi selecionado explicitamente no painel. Deploy `dep-db0olvnavr4c738m4n1g`, iniciado às 20:08:46 GMT-3, terminou em 48,2 s; o log confirmou Live às 20:09:35 GMT-3. Sem alteração de variáveis ou Auto-Deploy.
+
+Smoke público: `/api/v1/health` retornou HTTP 200 com `{"status":"ok"}` e `/login` HTTP 200 via HTTPS. Bundle mudou de `index-q8qhdbXB.js` para `index-BF3k7smw.js`. Smoke autenticado, com sessão aberta pelo Gabriel e somente estudo demonstrativo sintético: editor → diagnóstico → Replay → apresentação → chat. Retornos pelo breadcrumb conservaram cenário e execução; o nome do estudo levou ao editor, Estudos levou à lista, e Estudos / Novo estudo permitiu cancelar a criação pelo ancestral. O chat respondeu com fontes; nenhum erro capturado no console. Nenhuma nova credencial foi criada ou copiada.
+
+Rollback anotado antes de publicar: deploy `dep-db08pqk9v7es73ad7gug`, commit `77ceea26dd92803255966bae044ba560471288e0`. Não foi necessário acioná-lo. Este registro segue em PR próprio, na branch `codex/navegacao-caminho-deploy-record`.
+
+**O que isso invalida.** O status anterior de publicação pendente do PR #77 e a referência Live em `77ceea2`. Nada nos cálculos, contratos ou dados existentes.
+## 2026-10-02 — Publicação das correções de diagnóstico (MOT-73)
+
+1. **Sintoma:** as correções do PR #71 estavam revisadas, mas o serviço publicado
+   ainda executava `09a979e`, com a cota antiga de 500 campos de proveniência.
+2. **Causa:** publicação manual separada da entrega de código, aguardando autorização.
+3. **O que foi feito:** após autorização explícita do Gabriel, CI integral
+   `37073143867` aprovada e merge do PR #71 em
+   `727d3ee7c6918cd74f2a578d17302add3df03d71`. A árvore do merge é idêntica à revisão
+   testada `8258e36`. Deploy manual específico no serviço `motor-de-fluxo-piloto`,
+   ID `dep-db03bn9srm7s73duha40`, iniciado às 19:53:17 GMT-3 e concluído como **Live**
+   em 51,1 segundos. Nenhuma configuração, variável, plano ou permissão foi alterada.
+   Smoke público após publicação: health `200 {"status":"ok"}`, `/login` HTTP 200
+   e OpenAPI com `DiagnosticRequest.provenance.maxProperties = 8309`.
+   A CI anterior do mesmo código (`37072489030`) também passou: 1415 testes Python
+   em cada modo, 1385 web, 66 navegador e orçamentos de desempenho. Não foi executado
+   diagnóstico autenticado em produção; o exemplo e os logs do incidente de Sávio
+   não estavam disponíveis. Este registro é exclusivamente documental.
+4. **O que isso invalida:** a indicação de que o PR #71 aguardava integração e
+   publicação. Resultados financeiros e histórico local continuam preservados;
+   a retenção transitória segue os limites documentados na entrada abaixo.
+## 2026-10-02 — Front mais leve publicado no Render (MOT-99)
+
+1. **Sintoma.** O PR #73 estava aprovado e validado, mas a versão Live ainda era
+   `727d3ee`, pois o serviço usa publicação manual.
+2. **Causa.** O merge na `main` não publica automaticamente no Render.
+3. **O que foi feito.** Com autorização explícita do Gabriel, o PR #73 foi
+   mergeado em `66b7c6e5340681a0d7116f17780c4e50951824c8`, com commit de merge
+   (pais `727d3ee` e `c5517a1`), em 2026-10-02 às 21:37:11 GMT-3.
+   Antes do merge, o GitHub confirmou `MERGEABLE/CLEAN` e o workflow `test.yml`
+   verde no HEAD `c5517a188c0e61d558c5aa58b18f800cb5fd56ec`
+   ([run 37081224985](https://github.com/altoe2025/MOTOR-DE-FLUXO/actions/runs/37081224985)).
+   A base não havia avançado; nenhuma atualização de branch ou correção foi necessária.
+   O commit exato de merge foi selecionado no painel do Render e publicado
+   manualmente no serviço `motor-de-fluxo-piloto`, deploy
+   `dep-db04t7e7bikc7386sun0`: iniciado às 21:38:53 GMT-3, duração 56,9 s,
+   com confirmação de Live no log às 21:39:50 GMT-3 em 2026-10-02.
+   Health HTTPS respondeu `200 {"status":"ok"}`; `/login` respondeu 200 e
+   exibiu o formulário no navegador. Nenhum erro de console foi observado
+   na página de login. **Smoke autenticado pendente:** não há credencial de
+   smoke configurada nesta sessão e o navegador abriu sem sessão autenticada.
+   Foi solicitado ao Gabriel entrar com uma conta autorizada. Estudos, editor,
+   diagnóstico, Replay, apresentação, chat e os controles novos ainda não foram
+   verificados no ambiente publicado nesta rodada; não declarar aceite completo.
+   A CI pós-merge da `main` foi iniciada
+   ([run 37082823150](https://github.com/altoe2025/MOTOR-DE-FLUXO/actions/runs/37082823150));
+   seu resultado não substitui o smoke autenticado.
+   Nenhum código de produto, configuração, segredo, variável, Supabase ou
+   workflow foi alterado nesta publicação. Auto-Deploy confirmado como Off no painel.
+   A árvore de `motor/` é idêntica
+   entre base e HEAD do PR (`fddeb1f1737533cab305a27b32c59cabbe726150`).
+4. **O que isso invalida.** `727d3ee` deixa de ser a versão ativa e passa a ser
+   a referência imediata de rollback, registrada antes da publicação:
+   `dep-db03bn9srm7s73duha40`. Nenhum rollback foi necessário. Capturas e roteiros
+   anteriores ao front mais leve não representam a interface publicada.
+   Nada nos cálculos do motor foi alterado. O smoke autenticado continua pendente.
+
+## 2026-10-01 — Visual unificado do app publicado no Render (MOT-99)
+
+- **Sintoma:** o PR #66 estava mergeado e aprovado, mas o serviço `motor-de-fluxo-piloto` ainda servia o merge do PR #65 (`5483fab`), porque o Auto-Deploy está desligado. Assim, o tema escuro no sistema visual do Replay, o tema claro opcional, as fontes Geist empacotadas, os ícones e a barra de contexto ainda não estavam no site; a correção que impede duas execuções por duplo clique em "Executar diagnóstico" também aguardava publicação.
+- **Causa:** o merge na `main` não publica o serviço; cada release exige selecionar manualmente no Render o commit autorizado.
+- **O que foi feito:** confirmado que o PR #66 (`feat/front-visual`) foi mergeado em `c3620bfad15b8bb20562268c6a9340af7e193c64` e que a CI pós-merge da `main` passou (run `36916440730`). O commit exato foi publicado manualmente no serviço `motor-de-fluxo-piloto` pelo deploy `dep-davc5enavr4c73bdok3g`, iniciado em 2026-10-01 às 17:29:46 GMT-3 e concluído como **Live** às 17:30:45 (59,0 s), sem alterar configuração, variáveis, plano ou Blueprint. Smoke público: `GET /api/v1/health` respondeu `200 {"status":"ok"}` e `/login` respondeu 200 por HTTPS, com fundo e cartão escuros e botão verde-água. A credencial de smoke preenchida no navegador foi recusada; por isso Estudos, execução de diagnóstico, grupos recolhíveis da aba Diagnóstico, Replay, apresentação/PDF, chat e troca de tema ficaram cobertos pela CI verde do PR, não por um novo percurso autenticado no Render.
+- **O que isso invalida:** o deploy anterior `dep-dav9nhl9fdbs73betopg` (`5483fab85a9e7c53552fe904ed0d6fa3d87fe4a2`) deixa de ser a versão ativa e passa a ser a referência imediata de rollback. Capturas do visual claro antigo deixam de representar o site publicado. Nada no Python, motor, API, autenticação, Supabase, variáveis de ambiente, `render.yaml` ou `Dockerfile` mudou.
+## 2026-10-01 — Diagnóstico recolhível publicado no Render (MOT-99)
+
+1. **Sintoma** — o PR #65 estava pronto, mas a `main` e o serviço público ainda
+   serviam a aba Diagnóstico com todos os cenários expandidos de uma vez.
+2. **Causa** — a proteção da `main` e o Auto-Deploy desligado exigem merge e
+   publicação manual separados.
+3. **O que foi feito** — o PR #65 foi mergeado com commit
+   `5483fab85a9e7c53552fe904ed0d6fa3d87fe4a2`. A primeira tentativa da CI do PR
+   (run `36896483420`) teve um timeout isolado no E2E antigo
+   `foundation.spec.ts`, fora dos arquivos alterados; sua repetição passou inteira
+   em 12m24s, inclusive os 66 testes de navegador. A CI pós-merge da `main` (run
+   `36899893188`) também passou inteira em 12m31s. O commit foi publicado
+   manualmente no `motor-de-fluxo-piloto` pelo deploy
+   `dep-dav9nhl9fdbs73betopg`, concluído como **Deploy succeeded** em 2026-10-01
+   às 14:43:34 GMT-3, em 57,9s, sem alterar configuração ou variáveis. Smoke
+   público: `GET /api/v1/health` respondeu `200 {"status":"ok"}`; `/login` e
+   `/diagnostico` responderam HTTP 200 com HTML.
+4. **O que isso invalida** — a afirmação de que o PR #65 ainda estava aberto e sem
+   deploy. O release anterior `d4fec2f` (`dep-dauv9a0jo6nc73ep9980`) passa a ser
+   a referência imediata de rollback. Nada em métricas, regras do motor,
+   autenticação, Supabase ou configuração do Render mudou.
 ## 2026-10-05 — Contorno turquesa nos cartões de Estudos (MOT-99)
 
 1. **Sintoma.** O Gabriel pediu que os boxes de Estudos ganhassem, ao passar o mouse, o mesmo acabamento de borda do ícone ativo no menu Trabalho.
