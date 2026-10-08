@@ -1,0 +1,356 @@
+{
+  "api_version": "1.0.0",
+  "execution_fingerprint": "cc0f8ba33ea9ed0fb9be5e8a796296a8ded247a6c24ced43221a618cc234907d",
+  "execution_id": "00000000-0000-4000-8000-000000000010",
+  "input_snapshot": {
+    "cenario": {
+      "custo": {
+        "carry_cnr": "0.0004",
+        "custo_fixo_remessa": "0",
+        "custo_oportunidade_aa": "0",
+        "iof_in": "0.0038",
+        "iof_out": "0.035",
+        "iof_por_finalidade": [],
+        "ptax": "5.40",
+        "spread_rail_bps": "0"
+      },
+      "horizonte_dias": 1,
+      "janela_dias": 1,
+      "ordens": [
+        {
+          "cliente_id": "astropay",
+          "dia_conhecida": 0,
+          "dia_limite": 0,
+          "direcao": "OUT",
+          "eh_efx": false,
+          "finalidade": "TODO-anexo-v",
+          "id": "astropay-1",
+          "valor_brl": "10800000.00"
+        },
+        {
+          "cliente_id": "nomad",
+          "dia_conhecida": 0,
+          "dia_limite": 0,
+          "direcao": "IN",
+          "eh_efx": false,
+          "finalidade": "TODO-anexo-v",
+          "id": "nomad-1",
+          "valor_brl": "27000000.00"
+        },
+        {
+          "cliente_id": "wise",
+          "dia_conhecida": 0,
+          "dia_limite": 0,
+          "direcao": "OUT",
+          "eh_efx": false,
+          "finalidade": "TODO-anexo-v",
+          "id": "wise-1",
+          "valor_brl": "54000000.00"
+        }
+      ]
+    },
+    "periodo": {
+      "modo": "LEGADO"
+    },
+    "proveniencia": {
+      "/custo/carry_cnr": {
+        "fonte": "motor/cenarios/exemplo_amanda.yaml",
+        "registrado_em_utc": "2026-09-11T00:00:00Z",
+        "tipo": "PADRAO_SINTETICO"
+      },
+      "/custo/custo_fixo_remessa": {
+        "fonte": "motor/cenarios/exemplo_amanda.yaml",
+        "registrado_em_utc": "2026-09-11T00:00:00Z",
+        "tipo": "PADRAO_SINTETICO"
+      },
+      "/custo/custo_oportunidade_aa": {
+        "fonte": "motor/cenarios/exemplo_amanda.yaml",
+        "registrado_em_utc": "2026-09-11T00:00:00Z",
+        "tipo": "PADRAO_SINTETICO"
+      },
+      "/custo/iof_in": {
+        "fonte": "motor/cenarios/exemplo_amanda.yaml",
+        "registrado_em_utc": "2026-09-11T00:00:00Z",
+        "tipo": "PADRAO_SINTETICO"
+      },
+      "/custo/iof_out": {
+        "fonte": "motor/cenarios/exemplo_amanda.yaml",
+        "registrado_em_utc": "2026-09-11T00:00:00Z",
+        "tipo": "PADRAO_SINTETICO"
+      },
+      "/custo/ptax": {
+        "fonte": "motor/cenarios/exemplo_amanda.yaml",
+        "registrado_em_utc": "2026-09-11T00:00:00Z",
+        "tipo": "PADRAO_SINTETICO"
+      },
+      "/custo/spread_rail_bps": {
+        "fonte": "motor/cenarios/exemplo_amanda.yaml",
+        "registrado_em_utc": "2026-09-11T00:00:00Z",
+        "tipo": "PADRAO_SINTETICO"
+      },
+      "/horizonte_dias": {
+        "fonte": "motor/cenarios/exemplo_amanda.yaml",
+        "registrado_em_utc": "2026-09-11T00:00:00Z",
+        "tipo": "PADRAO_SINTETICO"
+      },
+      "/janela_dias": {
+        "fonte": "motor/cenarios/exemplo_amanda.yaml",
+        "registrado_em_utc": "2026-09-11T00:00:00Z",
+        "tipo": "PADRAO_SINTETICO"
+      },
+      "/ordens/0/dia_conhecida": {
+        "fonte": "motor/cenarios/exemplo_amanda.yaml",
+        "registrado_em_utc": "2026-09-11T00:00:00Z",
+        "tipo": "PADRAO_SINTETICO"
+      },
+      "/ordens/0/dia_limite": {
+        "fonte": "motor/cenarios/exemplo_amanda.yaml",
+        "registrado_em_utc": "2026-09-11T00:00:00Z",
+        "tipo": "PADRAO_SINTETICO"
+      },
+      "/ordens/0/eh_efx": {
+        "fonte": "motor/cenarios/exemplo_amanda.yaml",
+        "registrado_em_utc": "2026-09-11T00:00:00Z",
+        "tipo": "PADRAO_SINTETICO"
+      },
+      "/ordens/0/finalidade": {
+        "fonte": "motor/cenarios/exemplo_amanda.yaml",
+        "registrado_em_utc": "2026-09-11T00:00:00Z",
+        "tipo": "PADRAO_SINTETICO"
+      },
+      "/ordens/0/valor_brl": {
+        "fonte": "motor/cenarios/exemplo_amanda.yaml",
+        "registrado_em_utc": "2026-09-11T00:00:00Z",
+        "tipo": "PADRAO_SINTETICO"
+      },
+      "/ordens/1/dia_conhecida": {
+        "fonte": "motor/cenarios/exemplo_amanda.yaml",
+        "registrado_em_utc": "2026-09-11T00:00:00Z",
+        "tipo": "PADRAO_SINTETICO"
+      },
+      "/ordens/1/dia_limite": {
+        "fonte": "motor/cenarios/exemplo_amanda.yaml",
+        "registrado_em_utc": "2026-09-11T00:00:00Z",
+        "tipo": "PADRAO_SINTETICO"
+      },
+      "/ordens/1/eh_efx": {
+        "fonte": "motor/cenarios/exemplo_amanda.yaml",
+        "registrado_em_utc": "2026-09-11T00:00:00Z",
+        "tipo": "PADRAO_SINTETICO"
+      },
+      "/ordens/1/finalidade": {
+        "fonte": "motor/cenarios/exemplo_amanda.yaml",
+        "registrado_em_utc": "2026-09-11T00:00:00Z",
+        "tipo": "PADRAO_SINTETICO"
+      },
+      "/ordens/1/valor_brl": {
+        "fonte": "motor/cenarios/exemplo_amanda.yaml",
+        "registrado_em_utc": "2026-09-11T00:00:00Z",
+        "tipo": "PADRAO_SINTETICO"
+      },
+      "/ordens/2/dia_conhecida": {
+        "fonte": "motor/cenarios/exemplo_amanda.yaml",
+        "registrado_em_utc": "2026-09-11T00:00:00Z",
+        "tipo": "PADRAO_SINTETICO"
+      },
+      "/ordens/2/dia_limite": {
+        "fonte": "motor/cenarios/exemplo_amanda.yaml",
+        "registrado_em_utc": "2026-09-11T00:00:00Z",
+        "tipo": "PADRAO_SINTETICO"
+      },
+      "/ordens/2/eh_efx": {
+        "fonte": "motor/cenarios/exemplo_amanda.yaml",
+        "registrado_em_utc": "2026-09-11T00:00:00Z",
+        "tipo": "PADRAO_SINTETICO"
+      },
+      "/ordens/2/finalidade": {
+        "fonte": "motor/cenarios/exemplo_amanda.yaml",
+        "registrado_em_utc": "2026-09-11T00:00:00Z",
+        "tipo": "PADRAO_SINTETICO"
+      },
+      "/ordens/2/valor_brl": {
+        "fonte": "motor/cenarios/exemplo_amanda.yaml",
+        "registrado_em_utc": "2026-09-11T00:00:00Z",
+        "tipo": "PADRAO_SINTETICO"
+      }
+    }
+  },
+  "kind": "PREVIA",
+  "motor_build_sha": "0000000000000000000000000000000000000000",
+  "presentation": {
+    "currency": "BRL",
+    "fraction_percent_digits": 2,
+    "locale": "pt-BR",
+    "money_digits": 2,
+    "rounding": "HALF_UP"
+  },
+  "presentation_version": "1.0.0",
+  "provenance_fingerprint": "0d2a18c7464d7b117a1b2f73ec4608cfcc9f8f0532e634cfb13d00c75485f3cc",
+  "request_id": "00000000-0000-4000-8000-000000000001",
+  "result": {
+    "agregado": {
+      "baseline_periodo": {
+        "carry": "0",
+        "espera": "0",
+        "fixo": "0",
+        "iof": "2370600.000000",
+        "spread": "0.00",
+        "total": "2370600.000000"
+      },
+      "economia_periodo_brl": "1026000.000000",
+      "execucao_completa": {
+        "baseline": {
+          "carry": "0",
+          "espera": "0",
+          "fixo": "0",
+          "iof": "2370600.000000",
+          "spread": "0.00",
+          "total": "2370600.000000"
+        },
+        "ciclos": [
+          {
+            "alocacoes": [
+              {
+                "dia": 0,
+                "ordem_id": "astropay-1",
+                "origem_casamento": "INTER_CLIENTE",
+                "tipo": "CASADO",
+                "valor_brl": "10800000.00"
+              },
+              {
+                "dia": 0,
+                "ordem_id": "wise-1",
+                "origem_casamento": "INTER_CLIENTE",
+                "tipo": "CASADO",
+                "valor_brl": "16200000.00"
+              },
+              {
+                "dia": 0,
+                "ordem_id": "nomad-1",
+                "origem_casamento": "INTER_CLIENTE",
+                "tipo": "CASADO",
+                "valor_brl": "27000000.00"
+              },
+              {
+                "dia": 0,
+                "ordem_id": "wise-1",
+                "origem_casamento": null,
+                "tipo": "REMETIDO",
+                "valor_brl": "37800000.00"
+              }
+            ],
+            "bruto_in": "27000000.00",
+            "bruto_out": "64800000.00",
+            "casado": "27000000.00",
+            "dia": 0,
+            "direcao_residuo": "OUT",
+            "residuo": "37800000.00"
+          }
+        ],
+        "economia": "1026000.000000",
+        "netado": {
+          "carry": "21600.000000",
+          "espera": "0",
+          "fixo": "0",
+          "iof": "1323000.00000",
+          "spread": "0.00",
+          "total": "1344600.000000"
+        },
+        "taxa_autonetting": "0",
+        "taxa_netabilidade": "0.5882352941176470588235294118",
+        "taxa_netting_multilateral": "0.5882352941176470588235294118",
+        "volume_autonetting_brl": "0",
+        "volume_casado_brl": "54000000.00",
+        "volume_netting_multilateral_brl": "54000000.00"
+      },
+      "ids_ordens_medidas": [
+        "astropay-1",
+        "nomad-1",
+        "wise-1"
+      ],
+      "mecanismos": [
+        {
+          "baseline_atribuido_brl": "0",
+          "custo_netado_brl": "0",
+          "destino": "INTRA_CLIENTE",
+          "economia_brl": "0",
+          "volume_brl": "0"
+        },
+        {
+          "baseline_atribuido_brl": "1047600.000000",
+          "custo_netado_brl": "21600.000000",
+          "destino": "INTER_CLIENTE",
+          "economia_brl": "1026000.000000",
+          "volume_brl": "54000000.00"
+        },
+        {
+          "baseline_atribuido_brl": "1323000.000000",
+          "custo_netado_brl": "1323000.000000",
+          "destino": "REMETIDO",
+          "economia_brl": "0.000000",
+          "volume_brl": "37800000.00"
+        }
+      ],
+      "netado_periodo": {
+        "carry": "21600.000000",
+        "espera": "0",
+        "fixo": "0",
+        "iof": "1323000.00000",
+        "spread": "0.00",
+        "total": "1344600.000000"
+      },
+      "taxa_autonetting_periodo": "0",
+      "taxa_netabilidade_periodo": "0.5882352941176470588235294118",
+      "taxa_netting_multilateral_periodo": "0.5882352941176470588235294118",
+      "volume_autonetting_periodo_brl": "0",
+      "volume_bruto_periodo_brl": "91800000.00",
+      "volume_casado_periodo_brl": "54000000.00",
+      "volume_netting_multilateral_periodo_brl": "54000000.00",
+      "volume_remetido_periodo_brl": "37800000.00"
+    },
+    "avisos": [],
+    "clientes": [],
+    "contribuicoes_marginais": [],
+    "diagnosticos_experimentais": {},
+    "ledger_eventos": [],
+    "manifesto": {
+      "arquetipos": [],
+      "avisos": [],
+      "criado_em_utc": "2026-09-12T20:00:00.000000Z",
+      "custo_calibrado": false,
+      "drenagem": "LEGADO",
+      "hash_configuracao": "de676071029e899ec35817c979c2bce6509054bf2044b53dd00d7844c1108032",
+      "horizonte_dias": 1,
+      "janela_dias": 1,
+      "metodo_percentil": "NAO_APLICAVEL",
+      "mixes": [],
+      "modo_analise": "AGREGADO",
+      "parametros_custo": {
+        "carry_cnr": "0.0004",
+        "custo_fixo_remessa": "0",
+        "custo_oportunidade_aa": "0",
+        "iof_in": "0.0038",
+        "iof_out": "0.035",
+        "iof_por_finalidade": [],
+        "ptax": "5.40",
+        "spread_rail_bps": "0"
+      },
+      "periodo_medicao_dias": 2,
+      "run_id": "20260912T200000.000000Z-de676071029e",
+      "run_ids_origem": [],
+      "schema_version": "2.0.0",
+      "seeds": [],
+      "versao_motor": "0.1.0+0000000000000000000000000000000000000000"
+    }
+  },
+  "scenario_id": "00000000-0000-4000-8000-000000000003",
+  "scenario_revision": 1,
+  "statistics": {
+    "count": 1,
+    "kind": "SINGLE_EXECUTION",
+    "percentile_method": null,
+    "repetition_id": "00000000-0000-4000-8000-000000000010",
+    "seed": null
+  },
+  "study_id": "00000000-0000-4000-8000-000000000002"
+}

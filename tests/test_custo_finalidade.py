@@ -57,7 +57,7 @@ def _com_tabela(tabela: dict) -> ParametrosCusto:
     return dataclasses.replace(BASE, iof_por_finalidade=tabela)
 
 
-def _ordem(id_: str, direcao: Direcao, valor: str, finalidade: str) -> Ordem:
+def _ordem(id_: str, direcao: Direcao, valor: str, finalidade: str | None) -> Ordem:
     return Ordem(id_, f"c-{id_}", direcao, Decimal(valor), 0, 0, True, finalidade)
 
 
@@ -101,6 +101,11 @@ def test_tabela_que_repete_os_padroes_nao_muda_nada():
 def test_aliquota_cai_no_padrao_quando_a_finalidade_nao_tem_regra():
     assert aliquota_iof(BASE, DISPONIB, Direcao.OUT) == Decimal("0.035")
     assert aliquota_iof(BASE, DISPONIB, Direcao.IN) == Decimal("0.0038")
+
+
+def test_aliquota_sem_finalidade_usa_fallback_distinto_por_direcao():
+    assert aliquota_iof(BASE, None, Direcao.OUT) == Decimal("0.035")
+    assert aliquota_iof(BASE, None, Direcao.IN) == Decimal("0.0038")
 
 
 def test_aliquota_usa_a_tabela_quando_a_finalidade_tem_regra():

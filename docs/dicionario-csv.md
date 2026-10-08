@@ -1,0 +1,202 @@
+# Dicionário do CSV da varredura
+
+As colunas são derivadas dos dataclasses de `motor/varredura.py` — `COLUNAS` é
+`dataclasses.fields(PontoVarredura)`, na ordem de declaração. Acrescentar um campo ao
+dataclass acrescenta a coluna; este documento não é a fonte da ordem, ele explica o
+significado.
+
+Dois arquivos saem da CLI:
+
+- `--saida` — a **grade crua**, um `PontoVarredura` por (mix, N, W, semente).
+- `--saida-resumo` — o **agregado**, um `ResumoCelula` por (mix, N, W), com o eixo de
+  sementes colapsado em mediana e faixa.
+
+Dinheiro sai com 2 casas; fração, com 6 (`_CASAS_DECIMAIS`). Uma fração com 2 casas
+viraria degrau: 0,05% e 0,00% seriam a mesma linha.
+
+## Grade crua (`PontoVarredura`)
+
+### Identificação da célula
+
+| Coluna | Significado |
+|---|---|
+| `nome_mix` | mix de arquétipos (`motor/mixes.py`) |
+| `n_clientes` | N de clientes da pool |
+| `janela_dias` | W da política P0 |
+| `horizonte_dias` | duração da simulação |
+| `seed_base` | semente da célula; a pool é a mesma para todos os W deste (mix, N, semente) |
+
+### Volume
+
+| Coluna | Significado |
+|---|---|
+| `n_ordens` | ordens geradas na pool |
+| `n_ciclos` | fechamentos de lote |
+| `volume_bruto_brl` | soma de `valor_brl` das ordens |
+| `volume_casado_brl` | volume que não atravessou a fronteira, **contando as duas pernas** |
+| `volume_residuo_brl` | volume que atravessou |
+| `taxa_netabilidade` | `volume_casado_brl / volume_bruto_brl` |
+| `teto_netabilidade` | o melhor que QUALQUER política conseguiria nesta pool |
+| `eficiencia_vs_teto` | quanto do teto a política extraiu |
+| `volume_autonetting_brl` | volume `CASADO` observado entre OUT e IN simultaneamente abertos do mesmo cliente, contando as duas pernas |
+| `volume_netting_multilateral_brl` | volume `CASADO` observado na fase residual entre clientes, contando as duas pernas |
+| `taxa_autonetting` | `volume_autonetting_brl / volume_bruto_brl` |
+| `taxa_netting_multilateral` | `volume_netting_multilateral_brl / volume_bruto_brl` |
+
+As identidades são exatas:
+
+```text
+volume_autonetting_brl + volume_netting_multilateral_brl = volume_casado_brl
+taxa_autonetting + taxa_netting_multilateral = taxa_netabilidade
+```
+
+As três colunas antigas `limite_intra_cliente_brl`,
+`volume_casado_incremental_brl` e `taxa_netabilidade_incremental` eram estimativas
+anuais sem sobreposição temporal. Elas só existem em CSVs legados e não são
+convertidas nas métricas observadas novas.
+
+### Custo
+
+`baseline_*` é cada ordem executando sozinha, no dia em que é conhecida; `netado_*` é
+o mesmo cenário sob a política P0. Os sufixos são os cinco termos de `Custos`
+(`motor/custo.py`): `iof`, `carry`, `spread`, `espera`, `fixo`, mais o `total`.
+
+| Coluna | Significado |
+|---|---|
+| `baseline_total_brl` … `baseline_fixo_brl` | decomposição do custo sem netting |
+| `netado_total_brl` … `netado_fixo_brl` | decomposição do custo com netting |
+| `economia_brl` | `baseline_total_brl - netado_total_brl` |
+| `economia_pct` | economia sobre o baseline |
+| `economia_por_ordem_brl` | economia dividida pelo número de ordens |
+
+`baseline_espera_brl` é sempre 0 (no baseline `dia_exec == dia_conhecida`) e
+`baseline_carry_brl` também (não há posição em CNR sem netting). `netado_espera_brl` é
+0 enquanto `custo_oportunidade_aa` for 0 — que é o padrão, por decisão de produto.
+
+### Tempo até resolução
+
+O que foi **pago** pela economia acima. Sem estas colunas a grade mede metade do
+trade-off: esperar mais sempre neta mais, então com custo como métrica única o ótimo é
+"espere o máximo possível", que nenhum cliente aceita.
+
+A unidade é a **alocação, ponderada por volume**, não a ordem: uma ordem coberta em
+tranches esperou prazos diferentes, e cada real conta o tempo que ele ficou parado.
+
+| Coluna | Significado |
+|---|---|
+| `dias_espera_p90_volume_casado` | p90, ponderado por volume, dos dias de espera das alocações `CASADO` |
+| `dias_espera_p90_volume_remetido` | o mesmo, sobre as alocações `REMETIDO` |
+| `dias_espera_media_por_real` | média ponderada por volume, sobre todas as alocações |
+| `pct_volume_espera_truncada` | fração do volume bruto em ordens com `dia_limite > horizonte_dias` |
+
+p90 e não média nas duas primeiras porque a média esconde a cauda: média de 4 dias com
+uma ordem que esperou 30 é um relatório bom sobre um cliente que cancela contrato. A
+promessa que o produto consegue fazer é sobre a cauda.
+
+`CASADO` e `REMETIDO` separados porque são coisas diferentes: o volume casado esperou e
+economizou; o remetido esperou e atravessou a fronteira assim mesmo — espera que não
+comprou nada. Numa coluna só esse custo desaparece.
+
+`pct_volume_espera_truncada` é a ressalva de confiabilidade das outras três.
+`executar_p0` drena no último dia as ordens cujo `dia_limite` cai depois do horizonte,
+senão a conservação quebraria; a espera delas sai **menor** do que teria sido, porque
+foram resolvidas por fim de simulação e não por prazo. Essas alocações continuam dentro
+dos percentis — excluí-las trocaria um viés por outro — então a coluna diz qual fatia
+dos tempos está encurtada. Na pool de referência (mix `equilibrado`, N=12, horizonte
+365) são 3,62%; o efeito encolhe com horizontes maiores.
+
+Quando não existe alocação de um tipo, o p90 daquele tipo sai 0 — indistinguível de
+"tudo resolveu no mesmo dia" olhando só a coluna. Desempate: `volume_casado_brl` da
+mesma linha.
+
+**Não existe coluna de volume sem alocação.** Ela seria zero em toda linha:
+`executar_p0` drena o que sobrou no fim do horizonte e levanta exceção se alguma ordem
+ficar aberta. A invariante vive em
+`tests/test_tempo.py::test_toda_ordem_recebe_alocacao_dentro_do_horizonte`.
+
+## Resumo por célula (`ResumoCelula`)
+
+Uma célula rodada com uma semente só é UMA amostra. Em N baixo a dispersão entre
+sementes é maior que a diferença entre mixes, então o resumo reporta mediana **e**
+faixa, nunca uma estatística sozinha.
+
+| Coluna | Significado |
+|---|---|
+| `nome_mix`, `n_clientes`, `janela_dias`, `horizonte_dias` | a célula |
+| `n_seeds` | quantas sementes entraram |
+| `n_ordens_p50` | mediana do tamanho da pool |
+| `taxa_netabilidade_p50`, `teto_netabilidade_p50`, `eficiencia_vs_teto_p50` | medianas |
+| `taxa_autonetting_p50`, `taxa_netting_multilateral_p50` | medianas das parcelas observadas por mecanismo |
+| `economia_pct_min` … `economia_pct_max` | faixa da economia entre sementes (min, p25, p50, p75, max) |
+| `economia_brl_min`, `economia_brl_p50` | pior semente e mediana, em reais |
+| `frac_seeds_positiva` | fração das sementes em que a economia foi positiva |
+
+`economia_pct_min`/`max` são a pior e a melhor semente, **não** intervalo de confiança.
+Com poucas sementes a faixa é o resultado. Barra de erro estreita num estimador
+enviesado continua enviesada: isto separa ruído de sinal, não corrige viés.
+
+O resumo **não carrega as colunas de tempo**. Quem precisar de prazo por célula lê a
+grade crua.
+
+## CSVs de cenários de estresse
+
+Os arquivos em `resultados/sensibilidade/` são derivados das 6.000 linhas de
+produto, sem nova execução do motor.
+
+### `cenarios_estresse_bruta.csv`
+
+Uma linha por carteira e cenário. `spread_bps`, `tarifa_fixa_brl`, `carry_bps` e
+as duas colunas `iof_*_bps` registram as hipóteses utilizadas. As colunas
+`efeito_*_bps` mostram quanto cada alteração adicionou ou retirou da
+`economia_base_bps`. `economia_estressada_bps` é o resultado recomposto e
+`economia_positiva` informa se ele ficou acima de zero.
+
+### `cenarios_estresse_agregada.csv`
+
+Uma linha por `(cenário, mix, N, W)`. Traz p10, p50 e p90 da economia estressada e
+`fracao_economia_positiva`, a proporção das 300 carteiras-ano com resultado acima
+de zero.
+
+### `limites_break_even_bruta.csv` e `limites_break_even_agregada.csv`
+
+O bruto calcula por carteira e o agregado apresenta p10, p50 e p90. Os campos
+`carry_break_even_base_bps` e `carry_break_even_piso_bps` são o nível de carry que
+faz a economia chegar exatamente a zero, respectivamente nas hipóteses atuais e
+depois de zerar spread, tarifa e os dois IOFs incertos.
+
+`spread_minimo_no_piso_bps` é o spread necessário para a economia não ficar
+negativa nesse piso, mantendo carry em 4 bps. Zero significa que as demais parcelas
+do modelo já mantêm o resultado positivo; não significa spread real igual a zero.
+
+## CSVs de fluxo hipotético
+
+Todos esses arquivos começam com a ressalva de que os fluxos são suposições
+sintéticas. Nenhuma coluna representa volume real da Amanda, Wise, Nomad,
+AstroPay ou bancos.
+
+### `referencias_fluxo_publicas.csv`
+
+Registra a métrica pública, período, geografia, fonte e limitação de cada
+comparável. `uso_no_modelo` explica que a referência serve para conferir ordem de
+grandeza. Ela não alimenta diretamente o fluxo projetado.
+
+### `premissas_fluxo_arquetipos.csv`
+
+Uma linha por arquétipo e faixa baixa, central ou alta. O fluxo central usa
+`ticket_mediana_brl × exp(ticket_sigma²/2) × cadencia_mensal × 12`.
+`multiplicador_fluxo` vale 0,5, 1 ou 2 e `natureza_do_fluxo` marca a hipótese que
+deverá ser substituída.
+
+### `projecao_fluxo_hipotetico_bruta.csv`
+
+Uma linha por carteira, cenário de custo e cenário de fluxo.
+`volume_anual_central_brl` é o volume gerado originalmente;
+`volume_anual_assumido_brl` aplica o multiplicador. A economia em bps é ajustada
+porque a tarifa fixa não cresce com o ticket. `economia_anual_assumida_brl`
+converte o bps ajustado pelo volume assumido.
+
+### `projecao_fluxo_hipotetico_agregada.csv`
+
+Uma linha por `(cenário de custo, mix, N, W, cenário de fluxo)`. Traz p10, p50 e
+p90 do volume, da economia ajustada em bps e da economia anual hipotética em BRL,
+além da fração de carteiras com economia positiva.

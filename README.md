@@ -15,7 +15,17 @@ Simulador de **netting multilateral de fluxo cross-border** em contas de não re
 Fase atual: política **P0** (janela fixa) e **mono-corredor USD**. Sem UI, banco ou
 framework — o objetivo é descobrir com que mistura de clientes o netting compensa.
 
+Cada ordem recebida pelo motor representa a **posição líquida que o cliente decidiu
+colocar na pool**. O baseline executa cada uma dessas posições sozinha; não há uma
+segunda dedução de netting dentro do cliente.
+
 ## Uso
+
+O piloto web pode ser empacotado em uma imagem Vite + FastAPI, com autenticação
+Supabase e execução sem root. O [guia Render free](docs/deploy-render.md) descreve
+build/smoke locais, configuração, cold start e rollback. `render.yaml` é apenas
+declarativo, com auto deploy desligado; nenhuma publicação foi executada pela
+MOT-98. O estado dos gates está em [docs/testing.md](docs/testing.md).
 
 ```bash
 make test       # pytest -q
@@ -31,6 +41,23 @@ para a maioria das perguntas o recorte basta, já que o eixo W está degenerado:
 
 ```bash
 python -m motor varredura --saida g.csv --mixes psp_dominante --n 50,200 --w 1,7
+```
+
+A análise de sensibilidade de custo reaproveita a grade publicada e abre as bases de
+IOF por finalidade/direção na faixa de lançamento N=8/12:
+
+```bash
+python -m scripts.sensibilidade_custo --saida resultados/sensibilidade --n 8,12 --w 1,7 --sementes 1:300
+```
+
+Ver `docs/RELATORIO-SENSIBILIDADE-CUSTO.md` para método, resultados e ressalvas.
+O material curto para conversa com a Amanda está em
+`docs/RESUMO-EXECUTIVO-AMANDA.md`.
+
+Os cenários de estresse reutilizam esses arquivos e não regeneram carteiras:
+
+```bash
+python -m scripts.estresse_sensibilidade --saida resultados/sensibilidade
 ```
 
 Os pesos dos mixes (`motor/mixes.py`) e os parâmetros de custo da varredura

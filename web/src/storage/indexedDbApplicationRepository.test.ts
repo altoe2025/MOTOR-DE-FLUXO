@@ -1,0 +1,1476 @@
+import 'fake-indexeddb/auto';
+
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import type { CompanyRecord, ObservedCase } from '../cases/domain';
+import generatedDemo from '../demo/generated/demo-study.v1.json';
+import type { DemoStudyPackageV1 } from '../demo/domain';
+import { calculateOperationalProfile } from '../profiles/calculateOperationalProfile';
+import type { OperationalProfileVersion } from '../profiles/domain';
+import { buildDiagnosticRequest } from '../diagnostics/buildDiagnosticRequest';
+import { appendDiagnosticExecution } from '../diagnostics/domain';
+import { buildPreviewRequest, type PreviewRequestProvenance } from '../preparation/buildPreviewRequest';
+import {
+  appendExecution,
+  appendScenario,
+  createStudy,
+  moveStudyToTrash,
+  removeScenario,
+  renameStudy,
+  updateScenario,
+} from '../study/domain';
+import {
+  FIXTURE_NOW,
+  makeAuthoredSnapshot,
+  makeObservedCase,
+  makeScenarioDraft,
+} from '../study/fixtures';
+import type { DeepMutable, DiagnosticExecutionRecord, ExecutionRecord, StudyDocument } from '../study/model';
+import { isCertifiedStudy } from '../study/certifiedStudy';
+import {
+  BinaryDataNotAllowedError,
+  InvalidDocumentError,
+  DocumentCorruptError,
+  OperationConflictError,
+  OwnerMismatchError,
+  RevisionConflictError,
+  StorageClosedError,
+} from './errors';
+import { IndexedDbApplicationRepository } from './indexedDbApplicationRepository';
+import * as repositoryModule from './indexedDbApplicationRepository';
+import { summarizeStudy } from './applicationRepository';
+
+const PROJECT_REF = 'project-alpha';
+const OWNER_SUB = 'owner-a';
+const DATABASE_NAME = `motor-fluxo:app:v2:${PROJECT_REF}:${OWNER_SUB}`;
+const OPERATION_A = 'operation-a';
+const OPERATION_B = 'operation-b';
+const OPERATION_C = 'operation-c';
+const OPERATION_D = 'operation-d';
+const OPERATION_E = 'operation-e';
+
+const syntheticProvenance = {
+  kind: 'SYNTHETIC_DEFAULT' as const,
+  source: 'fixture', version: '1', recordedAt: FIXTURE_NOW, rule: 'fixture',
+};
+const previewProvenance: PreviewRequestProvenance = {
+  premises: {
+    windowDays: syntheticProvenance,
+    costs: {
+      iof_out: syntheticProvenance, iof_in: syntheticProvenance,
+      carry_cnr: syntheticProvenance, custo_fixo_remessa: syntheticProvenance,
+      custo_oportunidade_aa: syntheticProvenance, spread_rail_bps: syntheticProvenance,
+      ptax: syntheticProvenance,
+    },
+  },
+  period: { horizonDays: syntheticProvenance },
+};
+
+function company(ownerSub = OWNER_SUB): CompanyRecord {
+  return {
+    id: 'company-1',
+    ownerSub,
+    displayName: 'Empresa A',
+    aliases: ['A'],
+    createdAt: FIXTURE_NOW,
+    updatedAt: FIXTURE_NOW,
+    revision: 1,
+  };
+}
+
+function observedCase(
+  overrides: Partial<ObservedCase> = {},
+): ObservedCase {
+  return {
+    ...makeObservedCase(),
+    ownerSub: OWNER_SUB,
+    revision: 1,
+    ...overrides,
+  };
+}
+
+async function study(
+  id = '00000000-0000-4000-8000-000000000020',
+  ownerSub = OWNER_SUB,
+): Promise<StudyDocument> {
+  return createStudy({
+    id,
+    ownerSub,
+    name: 'Estudo A',
+    baseScenario: makeScenarioDraft(),
+    now: FIXTURE_NOW,
+  });
+}
+
+async function profile(
+  version = 1,
+  id = `profile-${version}`,
+  ownerSub = OWNER_SUB,
+  companyId = 'company-1',
+): Promise<OperationalProfileVersion> {
+  const source = { ...makeObservedCase(), ownerSub, companyId };
+  return calculateOperationalProfile({
+    id,
+    ownerSub,
+    companyId,
+    version,
+    createdAt: `2026-09-20T1${version}:00:00Z`,
+    cases: [source],
+  });
+}
+
+function executionFor(document: StudyDocument): ExecutionRecord {
+  const scenario = document.scenarios[0]!;
+  return {
+    id: '00000000-0000-4000-8000-000000000030',
+    scenarioId: scenario.id,
+    scenarioRevision: scenario.revision,
+    inputFingerprint: scenario.inputFingerprint,
+    requestSnapshot: {
+      api_version: '1.0.0',
+      request_id: '00000000-0000-4000-8000-000000000031',
+      study_id: document.id,
+      scenario_id: scenario.id,
+      scenario_revision: scenario.revision,
+      cenario: {
+        ordens: structuredClone(scenario.sourceSnapshot.orders),
+        horizonte_dias: 30,
+        janela_dias: scenario.premises.windowDays,
+        custo: structuredClone(scenario.premises.costs) as ExecutionRecord['requestSnapshot']['cenario']['custo'],
+      },
+      periodo: structuredClone(scenario.period.httpPeriod),
+      proveniencia: {},
+    },
+    engineVersion: 'a'.repeat(40),
+    contractVersion: '1.0.0',
+    status: 'RUNNING',
+    envelope: null,
+    observedComparison: null,
+    createdAt: '2026-09-19T12:01:00Z',
+    finishedAt: null,
+  };
+}
+
+async function diagnosticReservationFor(document: StudyDocument): Promise<DiagnosticExecutionRecord> {
+  const scenario = document.scenarios[0]!;
+  const jobId = '00000000-0000-4000-8000-000000000041';
+  const previewRequest = buildPreviewRequest(
+    scenario.sourceSnapshot,
+    scenario.premises,
+    scenario.period,
+    {
+      requestId: '00000000-0000-4000-8000-000000000042',
+      studyId: document.id,
+      scenarioId: scenario.id,
+      scenarioRevision: scenario.revision,
+    },
+    previewProvenance,
+  );
+  const request = await buildDiagnosticRequest({
+    requestId: '00000000-0000-4000-8000-000000000043',
+    idempotencyKey: jobId,
+    studyId: document.id,
+    scenario,
+    count: 1,
+    baseSeed: 'storage',
+    previewRequest,
+  });
+  return {
+    kind: 'DIAGNOSTIC',
+    id: '00000000-0000-4000-8000-000000000044',
+    attemptId: '00000000-0000-4000-8000-000000000045',
+    scenarioId: scenario.id,
+    scenarioRevision: scenario.revision,
+    inputFingerprint: scenario.inputFingerprint,
+    requestSnapshot: request,
+    sourceSnapshot: structuredClone(scenario.sourceSnapshot),
+    premisesSnapshot: structuredClone(scenario.premises),
+    periodSnapshot: structuredClone(scenario.period),
+    status: 'QUEUED',
+    jobId,
+    envelope: null,
+    error: null,
+    createdAt: '2026-09-19T12:01:00Z',
+    finishedAt: null,
+  };
+}
+
+const repositories: IndexedDbApplicationRepository[] = [];
+
+function repository(
+  projectRef = PROJECT_REF,
+  ownerSub = OWNER_SUB,
+): IndexedDbApplicationRepository {
+  const result = new IndexedDbApplicationRepository({ projectRef, ownerSub });
+  repositories.push(result);
+  return result;
+}
+
+function openDatabase(name: string): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(name);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+  });
+}
+
+function requestResult<T>(request: IDBRequest<T>): Promise<T> {
+  return new Promise((resolve, reject) => {
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+  });
+}
+
+function deleteDatabase(name: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.deleteDatabase(name);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve();
+    request.onblocked = () => reject(new Error(`Database deletion blocked: ${name}`));
+  });
+}
+
+afterEach(async () => {
+  for (const item of repositories.splice(0)) item.close();
+  const databases = await indexedDB.databases();
+  await Promise.all(databases
+    .map((database) => database.name)
+    .filter((name): name is string => name !== undefined)
+    .map(deleteDatabase));
+});
+
+async function diagnosticPair(document: StudyDocument) {
+  const reservation = await diagnosticReservationFor(document);
+  const terminal: DiagnosticExecutionRecord = {
+    ...reservation, id: '00000000-0000-4000-8000-000000000046', status: 'FAILED',
+    error: { code: 'DIAGNOSTICO_INVALIDO', message: 'Falhou.' }, finishedAt: '2026-09-19T12:02:00Z',
+  };
+  return { reservation, terminal };
+}
+
+describe('incremental diagnostic append', () => {
+  async function setup() {
+    const target = repository();
+    const initial = await study();
+    await target.saveStudy({ document: initial, expectedRevision: 0, operationId: OPERATION_A });
+    const input = { studyId: initial.id, expectedRevision: 1, operationId: OPERATION_B,
+      ...await diagnosticPair(initial) };
+    return { target, initial, input };
+  }
+
+  it('appends exactly two rows, updates the catalogue and stores only compact operation metadata', async () => {
+    const { target, initial, input } = await setup();
+    const delta = await target.appendDiagnosticAttempt(input);
+    expect(delta).toEqual({ studyId: initial.id, revision: 2,
+      updatedAt: '2026-09-19T12:02:00Z', executions: [input.reservation, input.terminal] });
+    expect(await target.getStudy(initial.id)).toEqual({ ...initial, revision: 2,
+      updatedAt: delta.updatedAt, executions: delta.executions });
+    expect(await target.listStudySummaries()).toMatchObject([{ revision: 2,
+      executionCount: 2, hasExecutions: true, baseSourceKind: 'SYNTHETIC' }]);
+    const database = await openDatabase(DATABASE_NAME);
+    try {
+      const transaction = database.transaction(['executions', 'operations'], 'readonly');
+      const [rows, operation] = await Promise.all([
+        requestResult(transaction.objectStore('executions').getAll()),
+        requestResult(transaction.objectStore('operations').get(OPERATION_B)),
+      ]);
+      expect(rows.map((row) => [row.execution_id, row.sequence])).toEqual([
+        [input.reservation.id, 0], [input.terminal.id, 1],
+      ]);
+      expect(operation.result_document).toBeUndefined();
+      expect(JSON.stringify(operation)).not.toContain('requestSnapshot');
+      expect(JSON.stringify(operation)).not.toContain('sourceSnapshot');
+      expect(JSON.stringify(operation)).not.toContain('scenarios');
+      expect(JSON.stringify(operation).length).toBeLessThan(1500);
+    } finally { database.close(); }
+  });
+
+  it('replays the exact delta after later saves without reading historical envelopes', async () => {
+    const { target, initial, input } = await setup();
+    const first = await target.appendDiagnosticAttempt(input);
+    const saved = (await target.getStudy(initial.id))!;
+    await target.saveStudy({ document: await renameStudy(saved, 'Novo nome', FIXTURE_NOW),
+      expectedRevision: 2, operationId: OPERATION_C });
+    const getAll = vi.spyOn(IDBIndex.prototype, 'getAll');
+    try {
+      expect(await target.appendDiagnosticAttempt(input)).toEqual(first);
+      expect(getAll.mock.contexts.some((index) => (index as IDBIndex).objectStore.name === 'executions')).toBe(false);
+    } finally { getAll.mockRestore(); }
+    expect((await target.getStudy(initial.id))!.executions).toHaveLength(2);
+  });
+
+  it('preserves exact append order and does not read or rewrite earlier execution payloads', async () => {
+    const { target, initial, input } = await setup();
+    await target.appendDiagnosticAttempt(input);
+    const patch = { attemptId: '00000000-0000-4000-8000-000000000050' };
+    const second = { ...input, expectedRevision: 2, operationId: OPERATION_C,
+      reservation: { ...input.reservation, ...patch, id: '00000000-0000-4000-8000-000000000051' },
+      terminal: { ...input.terminal, ...patch, id: '00000000-0000-4000-8000-000000000052' } };
+    const originalGet = IDBObjectStore.prototype.get;
+    const originalPut = IDBObjectStore.prototype.put;
+    const originalGetAll = IDBIndex.prototype.getAll;
+    const get = vi.spyOn(IDBObjectStore.prototype, 'get').mockImplementation(function (this: IDBObjectStore, ...args) {
+      if (this.name === 'executions') throw new Error('Historical payload read');
+      return originalGet.apply(this, args);
+    });
+    const put = vi.spyOn(IDBObjectStore.prototype, 'put').mockImplementation(function (this: IDBObjectStore, ...args) {
+      if (this.name === 'executions') throw new Error('Existing execution rewritten');
+      return originalPut.apply(this, args);
+    });
+    const getAll = vi.spyOn(IDBIndex.prototype, 'getAll').mockImplementation(function (this: IDBIndex, ...args) {
+      if (this.objectStore.name === 'executions') throw new Error('History loaded');
+      return originalGetAll.apply(this, args);
+    });
+    try { await target.appendDiagnosticAttempt(second); }
+    finally { get.mockRestore(); put.mockRestore(); getAll.mockRestore(); }
+    expect((await target.getStudy(initial.id))!.executions.map((item) => item.id)).toEqual([
+      input.reservation.id, input.terminal.id, second.reservation.id, second.terminal.id,
+    ]);
+    expect(await target.listStudySummaries()).toMatchObject([{ revision: 3, executionCount: 4 }]);
+  });
+
+  it('captures input before asynchronous hashing and does not allow purged operations to recreate a study', async () => {
+    const { target, initial, input } = await setup();
+    const mutable = structuredClone(input) as DeepMutable<typeof input>;
+    const work = target.appendDiagnosticAttempt(mutable);
+    mutable.terminal.error!.message = 'Changed during hashing';
+    expect((await work).executions[1].error!.message).toBe('Falhou.');
+    await target.purgeStudy(initial.id);
+    await expect(target.appendDiagnosticAttempt(input)).rejects.toBeInstanceOf(OperationConflictError);
+    expect(await target.getStudy(initial.id)).toBeNull();
+  });
+
+  it('serializes concurrent writers: exactly one revision commits and the other conflicts', async () => {
+    const { target, initial, input } = await setup();
+    const another = repository();
+    const results = await Promise.allSettled([
+      target.appendDiagnosticAttempt(input), another.appendDiagnosticAttempt({ ...input, operationId: OPERATION_C }),
+    ]);
+    expect(results.filter((item) => item.status === 'fulfilled')).toHaveLength(1);
+    const rejected = results.find((item) => item.status === 'rejected');
+    expect(rejected?.reason).toBeInstanceOf(RevisionConflictError);
+    expect(await target.listStudySummaries()).toMatchObject([{ revision: 2, executionCount: 2 }]);
+    expect((await target.getStudy(initial.id))!.executions).toHaveLength(2);
+  });
+
+  it('rejects reused operation ID with different terminal content', async () => {
+    const { target, input } = await setup();
+    await target.appendDiagnosticAttempt(input);
+    await expect(target.appendDiagnosticAttempt({ ...input, terminal: { ...input.terminal,
+      error: { code: 'DIAGNOSTICO_INVALIDO', message: 'Outra falha.' } } }))
+      .rejects.toBeInstanceOf(OperationConflictError);
+  });
+
+  it('surfaces the original revision conflict and preserves every row', async () => {
+    const { target, initial, input } = await setup();
+    await expect(target.appendDiagnosticAttempt({ ...input, expectedRevision: 0 }))
+      .rejects.toBeInstanceOf(RevisionConflictError);
+    expect(await target.getStudy(initial.id)).toEqual(initial);
+    expect(await target.listStudySummaries()).toMatchObject([{ revision: 1, executionCount: 0 }]);
+  });
+
+  it.each(['indexed', 'document'] as const)('rejects foreign %s owner', async (field) => {
+    const { target, initial, input } = await setup();
+    const database = await openDatabase(DATABASE_NAME);
+    try {
+      const store = database.transaction('studies', 'readwrite').objectStore('studies');
+      const row = await requestResult(store.get(initial.id));
+      await requestResult(store.put(field === 'indexed' ? { ...row, owner_sub: 'foreign' }
+        : { ...row, document: { ...row.document, ownerSub: 'foreign' } }));
+      await expect(target.appendDiagnosticAttempt(input)).rejects.toBeInstanceOf(OwnerMismatchError);
+    } finally { database.close(); }
+  });
+
+  it.each(['scenarioId', 'scenarioRevision', 'inputFingerprint'] as const)(
+    'rejects stale or unknown %s without changing the study', async (field) => {
+      const { target, initial, input } = await setup();
+      const patch = field === 'scenarioRevision' ? { scenarioRevision: 2 }
+        : field === 'inputFingerprint' ? { inputFingerprint: 'b'.repeat(64) }
+          : { scenarioId: '00000000-0000-4000-8000-000000000099' };
+      await expect(target.appendDiagnosticAttempt({ ...input,
+        reservation: { ...input.reservation, ...patch }, terminal: { ...input.terminal, ...patch },
+      })).rejects.toBeInstanceOf(InvalidDocumentError);
+      expect(await target.getStudy(initial.id)).toEqual(initial);
+    },
+  );
+
+  it.each(['id', 'attempt'] as const)('rejects duplicate %s from a prior individual reservation', async (field) => {
+    const { target, initial, input } = await setup();
+    const reserved = await appendDiagnosticExecution(initial, input.reservation, input.reservation.createdAt);
+    await target.saveStudy({ document: reserved, expectedRevision: 1, operationId: OPERATION_C });
+    const patch = field === 'id' ? { attemptId: '00000000-0000-4000-8000-000000000098' } : {};
+    const reservation = { ...input.reservation, ...patch,
+      ...(field === 'attempt' ? { id: '00000000-0000-4000-8000-000000000097' } : {}) };
+    await expect(target.appendDiagnosticAttempt({ ...input, expectedRevision: 2, reservation,
+      terminal: { ...input.terminal, ...patch } })).rejects.toBeInstanceOf(OperationConflictError);
+    expect(await target.getStudy(initial.id)).toEqual(reserved);
+  });
+
+  it('rejects a terminal that changes the reservation identity', async () => {
+    const { target, input } = await setup();
+    await expect(target.appendDiagnosticAttempt({ ...input, terminal: { ...input.terminal,
+      createdAt: '2026-09-19T12:01:01Z' } })).rejects.toBeInstanceOf(InvalidDocumentError);
+  });
+
+  it.each(['study_summaries', 'operations'] as const)('rolls back both executions, revision and summary when %s fails', async (storeName) => {
+    const { target, initial, input } = await setup();
+    const original = storeName === 'operations' ? IDBObjectStore.prototype.add : IDBObjectStore.prototype.put;
+    const failure = new DOMException('quota', 'QuotaExceededError');
+    const spy = vi.spyOn(IDBObjectStore.prototype, storeName === 'operations' ? 'add' : 'put')
+      .mockImplementation(function (this: IDBObjectStore, ...args) {
+        if (this.name === storeName) throw failure;
+        return original.apply(this, args);
+      });
+    try { await expect(target.appendDiagnosticAttempt(input)).rejects.toBe(failure); }
+    finally { spy.mockRestore(); }
+    expect(await target.getStudy(initial.id)).toEqual(initial);
+    expect(await target.listStudySummaries()).toMatchObject([{ revision: 1, executionCount: 0 }]);
+    await target.appendDiagnosticAttempt(input);
+    expect((await target.getStudy(initial.id))!.executions).toHaveLength(2);
+  });
+});
+
+describe('IndexedDbApplicationRepository schema', () => {
+  it('opens the scoped database with schema-5 stores and listing indexes', async () => {
+    await repository().listCompanies();
+
+    const databases = await indexedDB.databases();
+    expect(databases.map((database) => database.name)).toContain(DATABASE_NAME);
+
+    const database = await openDatabase(DATABASE_NAME);
+    const storeNames = [...database.objectStoreNames];
+    const initialTransaction = database.transaction(storeNames, 'readonly');
+    const profileIndexes = [...initialTransaction.objectStore('profile_versions').indexNames];
+    const meta = await requestResult<{ value: number }>(
+      initialTransaction.objectStore('meta').get('schema_version'),
+    );
+    database.close();
+    expect(storeNames).toEqual([
+      'chat_conversations',
+      'chat_operations',
+      'companies',
+      'executions',
+      'import_batches',
+      'import_events',
+      'meta',
+      'observed_cases',
+      'operations',
+      'profile_versions',
+      'studies',
+      'study_summaries',
+    ]);
+    const databaseForIndexes = await openDatabase(DATABASE_NAME);
+    const transaction = databaseForIndexes.transaction(storeNames, 'readonly');
+    expect([...transaction.objectStore('companies').indexNames]).toEqual([
+      'by_owner',
+      'by_owner_display_name',
+    ]);
+    expect([...transaction.objectStore('observed_cases').indexNames]).toEqual([
+      'by_owner',
+      'by_owner_company',
+    ]);
+    expect([...transaction.objectStore('studies').indexNames]).toEqual([
+      'by_owner',
+      'by_owner_deleted',
+    ]);
+    expect([...transaction.objectStore('study_summaries').indexNames]).toEqual([
+      'by_owner',
+      'by_owner_deleted',
+    ]);
+    expect([...transaction.objectStore('executions').indexNames]).toEqual([
+      'by_owner',
+      'by_owner_study',
+      'by_owner_study_attempt',
+    ]);
+    expect([...transaction.objectStore('import_batches').indexNames]).toEqual([
+      'by_owner',
+      'by_owner_case',
+      'by_owner_company',
+    ]);
+    expect([...transaction.objectStore('import_events').indexNames]).toEqual([
+      'by_owner',
+      'by_owner_case',
+      'by_owner_company',
+    ]);
+    expect([...transaction.objectStore('operations').indexNames]).toEqual([
+      'by_owner',
+      'by_owner_entity',
+    ]);
+    expect(profileIndexes).toEqual([
+      'by_owner',
+      'by_owner_company',
+      'by_owner_company_version',
+    ]);
+    expect(meta).toEqual({ key: 'schema_version', value: 5 });
+    databaseForIndexes.close();
+  });
+
+  it('encodes delimiters so distinct project and owner pairs never share a database', async () => {
+    const first = repository('alpha:beta', 'gamma');
+    await first.listCompanies();
+    first.close();
+    await Promise.resolve();
+    await repository('alpha', 'beta:gamma').listCompanies();
+
+    const databaseNames = (await indexedDB.databases()).map((database) => database.name);
+    expect(databaseNames).toContain('motor-fluxo:app:v2:alpha%3Abeta:gamma');
+    expect(databaseNames).toContain('motor-fluxo:app:v2:alpha:beta%3Agamma');
+    expect(new Set(databaseNames).size).toBe(databaseNames.length);
+  });
+});
+
+describe('operational profile versions', () => {
+  it('appends sequential immutable versions and returns detached filtered reads', async () => {
+    const target = repository();
+    const first = await profile();
+    const second = await profile(2);
+    const otherCompany = await profile(1, 'other-profile-1', OWNER_SUB, 'company-2');
+
+    expect(await target.appendOperationalProfileVersion({ operationId: OPERATION_A, document: first }))
+      .toEqual(first);
+    await target.appendOperationalProfileVersion({ operationId: OPERATION_B, document: second });
+    await target.appendOperationalProfileVersion({ operationId: OPERATION_C, document: otherCompany });
+
+    const listed = await target.listOperationalProfileVersions('company-1');
+    expect(listed.map((item) => [item.id, item.version])).toEqual([
+      ['profile-1', 1],
+      ['profile-2', 2],
+    ]);
+    expect(await target.getOperationalProfileVersion(first.id)).toEqual(first);
+    expect(listed[0]).not.toBe(first);
+    expect(await target.listOperationalProfileVersions()).toHaveLength(3);
+  });
+
+  it('rejects version gaps, changed duplicate identities and invalid fingerprints', async () => {
+    const target = repository();
+    const gap = await profile(2);
+    await expect(target.appendOperationalProfileVersion({ operationId: OPERATION_A, document: gap }))
+      .rejects.toBeInstanceOf(InvalidDocumentError);
+
+    const first = await profile();
+    await target.appendOperationalProfileVersion({ operationId: OPERATION_B, document: first });
+    const changed = await calculateOperationalProfile({
+      id: first.id,
+      ownerSub: first.ownerSub,
+      companyId: first.companyId,
+      version: first.version,
+      createdAt: '2026-09-20T19:00:00Z',
+      cases: [{ ...makeObservedCase(), ownerSub: OWNER_SUB }],
+    });
+    await expect(target.appendOperationalProfileVersion({ operationId: OPERATION_C, document: changed }))
+      .rejects.toBeInstanceOf(OperationConflictError);
+
+    const corrupt = structuredClone(await profile(2)) as DeepMutable<OperationalProfileVersion>;
+    corrupt.documentFingerprint = '0'.repeat(64);
+    await expect(target.appendOperationalProfileVersion({ operationId: OPERATION_D, document: corrupt }))
+      .rejects.toBeInstanceOf(InvalidDocumentError);
+  });
+
+  it('replays only the identical canonical operation and isolates owners', async () => {
+    const target = repository();
+    const first = await profile();
+    const mutation = { operationId: OPERATION_A, document: first };
+    const stored = await target.appendOperationalProfileVersion(mutation);
+    expect(await target.appendOperationalProfileVersion(structuredClone(mutation))).toEqual(stored);
+
+    await expect(target.appendOperationalProfileVersion({
+      operationId: OPERATION_A,
+      document: await profile(2),
+    })).rejects.toBeInstanceOf(OperationConflictError);
+    await expect(target.appendOperationalProfileVersion({
+      operationId: OPERATION_B,
+      document: await profile(1, 'foreign-profile', 'owner-b'),
+    })).rejects.toBeInstanceOf(OwnerMismatchError);
+
+    const foreign = repository(PROJECT_REF, 'owner-b');
+    expect(await foreign.listOperationalProfileVersions()).toEqual([]);
+    expect(await foreign.getOperationalProfileVersion(first.id)).toBeNull();
+  });
+});
+
+describe('observed cases', () => {
+  it('deletes a company with its cases, batches and events, and frees the name', async () => {
+    const target = repository();
+    const caseDocument = observedCase();
+    const mutation = (operationId: string) => ({
+      expectedRevision: 0, operationId, company: company(), observedCase: caseDocument,
+      batches: [{
+        id: 'batch-1', sha256: 'a'.repeat(64), byteSize: 123, layout: 'xlsx-operacoes/1.0.0',
+        counts: { total: 1, valid: 1, invalid: 0 }, caseId: caseDocument.id, batchSequence: 1,
+        ownerSub: OWNER_SUB, companyId: caseDocument.companyId,
+      }],
+      events: [{
+        id: 'event-1', occurredAt: FIXTURE_NOW, kind: 'BATCH_IMPORTED', path: 'batches/batch-1', audit: null,
+        caseId: caseDocument.id, eventSequence: 1, ownerSub: OWNER_SUB, companyId: caseDocument.companyId,
+      }],
+    } as const);
+    await target.confirmObservedCase(mutation(OPERATION_A));
+
+    await repository(PROJECT_REF, 'owner-b').deleteCompany(company().id);
+    expect(await target.listCompanies()).toEqual([company()]);
+
+    await target.deleteCompany(company().id);
+    expect(await target.listCompanies()).toEqual([]);
+    expect(await target.listObservedCases()).toEqual([]);
+    expect(await target.getObservedCase(caseDocument.id)).toBeNull();
+
+    expect(await target.confirmObservedCase(mutation('reimport-after-delete'))).toEqual(caseDocument);
+    expect(await target.listObservedCases()).toEqual([caseDocument]);
+  });
+
+  it('confirms company, case, batches and events atomically and repeats the operation idempotently', async () => {
+    const target = repository();
+    const caseDocument = observedCase();
+    const mutation = {
+      expectedRevision: 0,
+      operationId: OPERATION_A,
+      company: company(),
+      observedCase: caseDocument,
+      batches: [{
+        id: 'batch-1', sha256: 'a'.repeat(64), byteSize: 123, layout: 'xlsx-operacoes/1.0.0',
+        counts: { total: 1, valid: 1, invalid: 0 },
+        caseId: caseDocument.id,
+        batchSequence: 1,
+        ownerSub: OWNER_SUB,
+        companyId: caseDocument.companyId,
+      }],
+      events: [{
+        id: 'event-1', occurredAt: FIXTURE_NOW, kind: 'BATCH_IMPORTED', path: 'batches/batch-1', audit: null,
+        caseId: caseDocument.id,
+        eventSequence: 1,
+        ownerSub: OWNER_SUB,
+        companyId: caseDocument.companyId,
+      }],
+    } as const;
+
+    expect(await target.confirmObservedCase(mutation)).toEqual(caseDocument);
+    expect(await target.confirmObservedCase(structuredClone(mutation))).toEqual(caseDocument);
+    expect(await target.listCompanies()).toEqual([company()]);
+    expect(await target.listObservedCases()).toEqual([caseDocument]);
+    expect(await target.listObservedCases('company-1')).toEqual([caseDocument]);
+    expect(await target.listObservedCases('company-2')).toEqual([]);
+    expect(await target.getObservedCase(caseDocument.id)).toEqual(caseDocument);
+
+    const database = await openDatabase(DATABASE_NAME);
+    const transaction = database.transaction(
+      ['import_batches', 'import_events', 'operations'],
+      'readonly',
+    );
+    const [batches, events, operationCount] = await Promise.all([
+      requestResult<Array<{ document: typeof mutation.batches[number] }>>(
+        transaction.objectStore('import_batches').getAll(),
+      ),
+      requestResult<Array<{ document: typeof mutation.events[number] }>>(
+        transaction.objectStore('import_events').getAll(),
+      ),
+      requestResult(transaction.objectStore('operations').count()),
+    ]);
+    expect(batches.map((row) => row.document)).toEqual(mutation.batches);
+    expect(events.map((row) => row.document)).toEqual(mutation.events);
+    expect(operationCount).toBe(1);
+    database.close();
+  });
+
+  it('keeps stale confirmation atomic and isolates owners in inputs and databases', async () => {
+    const ownerA = repository();
+    const first = observedCase();
+    await ownerA.confirmObservedCase({
+      expectedRevision: 0,
+      operationId: OPERATION_A,
+      company: company(),
+      observedCase: first,
+      batches: [],
+      events: [],
+    });
+
+    await expect(ownerA.confirmObservedCase({
+      expectedRevision: 0,
+      operationId: OPERATION_B,
+      company: { ...company(), displayName: 'Não deve persistir' },
+      observedCase: observedCase({ revision: 1, confirmedAt: '2026-09-19T13:00:00Z' }),
+      batches: [],
+      events: [],
+    })).rejects.toBeInstanceOf(RevisionConflictError);
+    expect(await ownerA.listCompanies()).toEqual([company()]);
+    expect(await ownerA.getObservedCase(first.id)).toEqual(first);
+
+    const ownerB = repository(PROJECT_REF, 'owner-b');
+    expect(await ownerB.listCompanies()).toEqual([]);
+    expect(await ownerB.listObservedCases()).toEqual([]);
+    await expect(ownerB.confirmObservedCase({
+      expectedRevision: 0,
+      operationId: OPERATION_C,
+      company: company(),
+      observedCase: first,
+      batches: [],
+      events: [],
+    })).rejects.toBeInstanceOf(OwnerMismatchError);
+  });
+
+  it('rejects recursive binary values before opening a transaction', async () => {
+    const target = repository();
+    const binaryMutation = {
+      expectedRevision: 0,
+      operationId: OPERATION_A,
+      company: company(),
+      observedCase: observedCase(),
+      batches: [],
+      events: [{
+        id: 'event-1', occurredAt: FIXTURE_NOW, kind: 'BATCH_IMPORTED' as const, path: 'batches/batch-1', audit: null,
+        caseId: 'case-1',
+        eventSequence: 1,
+        ownerSub: OWNER_SUB,
+        companyId: 'company-1',
+        nested: [{ binary: new Blob(['not persisted']) }],
+      }],
+    };
+
+    await expect(target.confirmObservedCase(binaryMutation))
+      .rejects.toBeInstanceOf(BinaryDataNotAllowedError);
+    if (typeof File !== 'undefined') {
+      const fileMutation = structuredClone(binaryMutation);
+      fileMutation.events[0]!.nested = [{ binary: new File(['not persisted'], 'source.xlsx') }];
+      await expect(target.confirmObservedCase(fileMutation))
+        .rejects.toBeInstanceOf(BinaryDataNotAllowedError);
+    }
+    for (const container of [
+      new Map<unknown, unknown>([[new Blob(['map-key']), { source: 'map-value' }]]),
+      new Map<unknown, unknown>([[{ source: 'map-key' }, new Blob(['map-value'])]]),
+      new Set<unknown>([{ nested: new Blob(['set-value']) }]),
+    ]) {
+      const containerMutation = {
+        ...binaryMutation,
+        events: [{ ...binaryMutation.events[0]!, nested: container }],
+      };
+      await expect(target.confirmObservedCase(containerMutation))
+        .rejects.toBeInstanceOf(BinaryDataNotAllowedError);
+    }
+    expect(await target.listCompanies()).toEqual([]);
+  });
+});
+
+describe('studies', () => {
+  it('lê o histórico por cursor para não desserializar todos os envelopes numa única tarefa', async () => {
+    const target = repository();
+    const initial = await study();
+    const withExecution = await appendExecution(initial, executionFor(initial), FIXTURE_NOW);
+    await target.saveStudy({ document: initial, expectedRevision: 0, operationId: OPERATION_A });
+    await target.saveStudy({ document: withExecution, expectedRevision: 1, operationId: OPERATION_B });
+    const getAll = vi.spyOn(IDBIndex.prototype, 'getAll');
+    const openCursor = vi.spyOn(IDBIndex.prototype, 'openCursor');
+    try {
+      const loaded = await target.getStudy(initial.id);
+      expect(loaded).toEqual(withExecution);
+      expect(isCertifiedStudy(loaded, OWNER_SUB)).toBe(true);
+      expect(Object.isFrozen(loaded!.executions[0])).toBe(true);
+      expect(openCursor.mock.contexts.some((index) => (index as IDBIndex).objectStore.name === 'executions')).toBe(true);
+      expect(getAll.mock.contexts.some((index) => (index as IDBIndex).objectStore.name === 'executions')).toBe(false);
+    } finally {
+      getAll.mockRestore();
+      openCursor.mockRestore();
+    }
+  });
+
+  it('preserves the four source labels in display metadata', async () => {
+    const initial = await study();
+    const snapshot = initial.scenarios[0]!.sourceSnapshot;
+    const sources = [
+      [{ kind: 'OBSERVED_CASE', caseId: 'case-1', caseRevision: 1 }, 'OBSERVED_CASE'],
+      [snapshot.source, 'SYNTHETIC'],
+      [{ kind: 'AUTHORED', authoredPortfolioId: 'portfolio-1' }, 'AUTHORED'],
+      [{ kind: 'AUTHORED', authoredPortfolioId: 'portfolio-1', definition: { kind: 'EXPLICIT_ORDERS',
+        orders: snapshot.orders, provenanceByOrder: {}, sourceCases: [{ caseId: 'case-1', caseRevision: 1, companyId: 'company-1' }] } }, 'AUTHORED_MULTI_COMPANY'],
+    ] as const;
+    for (const [source, expected] of sources) {
+      const summary = summarizeStudy({ ...initial, scenarios: [{ ...initial.scenarios[0]!,
+        sourceSnapshot: { ...snapshot, source } }] }, 0);
+      expect(summary.baseSourceKind).toBe(expected);
+    }
+  });
+  it('stores demo installation and restoration summaries before any catalogue read', async () => {
+    const target = repository();
+    const packageValue = generatedDemo as unknown as DemoStudyPackageV1;
+    const installed = await target.installDemoStudy({ package: packageValue, mode: 'EXPLICIT_RESTORE', operationId: 'demo-install' });
+    const database = await openDatabase(DATABASE_NAME);
+    const storedSummary = () => requestResult(database.transaction('study_summaries')
+      .objectStore('study_summaries').get(installed.id));
+    try {
+      expect(await storedSummary()).toMatchObject({ document: { id: installed.id,
+        revision: installed.revision, hasExecutions: true, deletedAt: null } });
+      const trashed = await moveStudyToTrash(installed, FIXTURE_NOW);
+      await target.saveStudy({ document: trashed, expectedRevision: installed.revision, operationId: 'demo-trash' });
+      const restored = await target.installDemoStudy({ package: packageValue, mode: 'EXPLICIT_RESTORE', operationId: 'demo-restore' });
+      expect(await storedSummary()).toMatchObject({ document: { revision: restored.revision, deletedAt: null, hasExecutions: true } });
+      await target.purgeStudy(installed.id);
+      expect(await storedSummary()).toBeUndefined();
+    } finally { database.close(); }
+  }, 30_000);
+
+  it('rolls back study, execution and operation writes when the summary write fails', async () => {
+    const target = repository();
+    const initial = await study();
+    await target.saveStudy({ document: initial, expectedRevision: 0, operationId: OPERATION_A });
+    const next = await appendExecution(initial, executionFor(initial), '2026-09-19T13:00:00Z');
+    const originalPut = IDBObjectStore.prototype.put;
+    const failure = new DOMException('quota', 'QuotaExceededError');
+    const put = vi.spyOn(IDBObjectStore.prototype, 'put').mockImplementation(function (this: IDBObjectStore, ...args) {
+      if (this.name === 'study_summaries') throw failure;
+      return originalPut.apply(this, args);
+    });
+    try {
+      await expect(target.saveStudy({ document: next, expectedRevision: 1, operationId: OPERATION_B })).rejects.toBe(failure);
+    } finally { put.mockRestore(); }
+    expect(await target.getStudy(initial.id)).toEqual(initial);
+    expect(await target.listStudySummaries()).toMatchObject([{ revision: 1, hasExecutions: false }]);
+    await target.saveStudy({ document: next, expectedRevision: 1, operationId: OPERATION_B });
+    expect(await target.listStudySummaries()).toMatchObject([{ revision: 2, hasExecutions: true }]);
+  });
+
+  it('sorts summaries by id, preserves study type, and isolates owners', async () => {
+    const target = repository();
+    const later = await study('study-z');
+    const earlier = await createStudy({ id: 'study-a', ownerSub: OWNER_SUB, name: 'Combinações',
+      studyType: 'PORTFOLIO_COMBINATIONS', baseScenario: makeScenarioDraft(), now: FIXTURE_NOW });
+    await target.saveStudy({ document: later, expectedRevision: 0, operationId: OPERATION_A });
+    await target.saveStudy({ document: earlier, expectedRevision: 0, operationId: OPERATION_B });
+    expect((await target.listStudySummaries()).map((item) => [item.id, item.studyType]))
+      .toEqual([['study-a', 'PORTFOLIO_COMBINATIONS'], ['study-z', undefined]]);
+    expect(await repository(PROJECT_REF, 'owner-b').listStudySummaries()).toEqual([]);
+  });
+
+  it.each([
+    { scenarioCount: -1 }, { revision: 0 }, { hasExecutions: 1 },
+    { executionCount: -1 }, { executionCount: 2 }, { baseSourceKind: 'UNKNOWN' },
+    { executions: [] }, { updatedAt: 'invalid' }, { studyType: 'UNKNOWN' },
+  ])('rejects malformed catalogue metadata %j without touching the study', async (patch) => {
+    const target = repository();
+    const initial = await study();
+    await target.saveStudy({ document: initial, expectedRevision: 0, operationId: OPERATION_A });
+    const database = await openDatabase(DATABASE_NAME);
+    try {
+      const store = database.transaction('study_summaries', 'readwrite').objectStore('study_summaries');
+      const row = await requestResult(store.get(initial.id));
+      await requestResult(store.put({ ...row, document: { ...row.document, ...patch } }));
+      await expect(target.listStudySummaries()).rejects.toBeInstanceOf(DocumentCorruptError);
+      expect(await target.getStudy(initial.id)).toEqual(initial);
+    } finally { database.close(); }
+  });
+
+  it('does not overwrite a foreign summary while repairing the owner catalogue', async () => {
+    const target = repository();
+    const initial = await study();
+    await target.saveStudy({ document: initial, expectedRevision: 0, operationId: OPERATION_A });
+    const database = await openDatabase(DATABASE_NAME);
+    try {
+      const store = database.transaction('study_summaries', 'readwrite').objectStore('study_summaries');
+      const row = await requestResult(store.get(initial.id));
+      await requestResult(store.put({ ...row, owner_sub: 'intruder', document: { ...row.document, ownerSub: 'intruder' } }));
+      await expect(target.listStudySummaries()).rejects.toBeInstanceOf(OwnerMismatchError);
+      expect(await requestResult(database.transaction('study_summaries').objectStore('study_summaries').get(initial.id)))
+        .toMatchObject({ owner_sub: 'intruder' });
+    } finally { database.close(); }
+  });
+
+  it('lists only lightweight summaries and keeps them atomic with structural saves, trash, restore and purge', async () => {
+    const target = repository();
+    const initial = await study();
+    await target.saveStudy({ document: initial, expectedRevision: 0, operationId: OPERATION_A });
+    expect(await target.listStudySummaries()).toEqual([{
+      id: initial.id, ownerSub: OWNER_SUB, name: 'Estudo A', revision: 1,
+      createdAt: FIXTURE_NOW, updatedAt: FIXTURE_NOW, deletedAt: null,
+      scenarioCount: 1, hasExecutions: false, executionCount: 0, baseSourceKind: 'SYNTHETIC',
+    }]);
+    const renamed = await renameStudy(initial, 'Novo nome', FIXTURE_NOW);
+    await target.saveStudy({ document: renamed, expectedRevision: 1, operationId: OPERATION_B });
+    const trashed = await moveStudyToTrash(renamed, FIXTURE_NOW);
+    await target.saveStudy({ document: trashed, expectedRevision: 2, operationId: OPERATION_C });
+    expect(await target.listStudySummaries()).toEqual([]);
+    expect(await target.listStudySummaries({ includeDeleted: true })).toMatchObject([
+      { name: 'Novo nome', revision: 3, deletedAt: FIXTURE_NOW },
+    ]);
+    await target.restoreStudy(initial.id, 3, OPERATION_D);
+    expect(await target.listStudySummaries()).toMatchObject([{ revision: 4, deletedAt: null }]);
+    await target.purgeStudy(initial.id);
+    expect(await target.listStudySummaries({ includeDeleted: true })).toEqual([]);
+  });
+
+  it('repairs missing summaries once using execution keys without loading envelopes', async () => {
+    const target = repository();
+    const initial = await study();
+    await target.saveStudy({ document: initial, expectedRevision: 0, operationId: OPERATION_A });
+    const database = await openDatabase(DATABASE_NAME);
+    try {
+      const transaction = database.transaction(['study_summaries', 'executions'], 'readwrite');
+      await requestResult(transaction.objectStore('study_summaries').delete(initial.id));
+      await requestResult(transaction.objectStore('executions').add({
+        study_id: initial.id, execution_id: 'malformed', owner_sub: OWNER_SUB,
+        sequence: 0, document: { envelope: 'invalid payload kept untouched' },
+      }));
+      const getAll = vi.spyOn(IDBIndex.prototype, 'getAll');
+      const getStudy = vi.spyOn(IDBObjectStore.prototype, 'get');
+      try {
+        expect(await target.listStudySummaries()).toMatchObject([{ hasExecutions: true }]);
+        const firstStudyReads = getStudy.mock.contexts.filter((store) => (store as IDBObjectStore).name === 'studies').length;
+        expect(firstStudyReads).toBe(1);
+        expect(await target.listStudySummaries()).toMatchObject([{ hasExecutions: true }]);
+        expect(getStudy.mock.contexts.filter((store) => (store as IDBObjectStore).name === 'studies')).toHaveLength(1);
+        expect(getAll.mock.contexts.some((index) => (index as IDBIndex).objectStore.name === 'executions')).toBe(false);
+      } finally { getAll.mockRestore(); getStudy.mockRestore(); }
+      await expect(target.getStudy(initial.id)).rejects.toBeInstanceOf(DocumentCorruptError);
+    } finally { database.close(); }
+  });
+
+  it('rejects a summary whose owner disagrees with its indexed owner', async () => {
+    const target = repository();
+    const initial = await study();
+    await target.saveStudy({ document: initial, expectedRevision: 0, operationId: OPERATION_A });
+    const database = await openDatabase(DATABASE_NAME);
+    try {
+      const store = database.transaction('study_summaries', 'readwrite').objectStore('study_summaries');
+      const row = await requestResult(store.get(initial.id));
+      await requestResult(store.put({ ...row, document: { ...row.document, ownerSub: 'intruder' } }));
+      await expect(target.listStudySummaries()).rejects.toBeInstanceOf(OwnerMismatchError);
+    } finally { database.close(); }
+  });
+  it('indexa cada execução uma vez e preserva a associação ao estudo em escala', () => {
+    const groupExecutions = Reflect.get(repositoryModule, 'groupExecutionsByStudyId');
+    expect(groupExecutions).toBeTypeOf('function');
+    if (typeof groupExecutions !== 'function') return;
+
+    let studyIdReads = 0;
+    const rows = Array.from({ length: 1_000 }, (_, index) => {
+      const row = { execution_id: `execution-${index}`, study_id: '' };
+      Object.defineProperty(row, 'study_id', {
+        enumerable: true,
+        get: () => {
+          studyIdReads += 1;
+          return `study-${index % 25}`;
+        },
+      });
+      return row;
+    });
+
+    const grouped = groupExecutions(rows) as Map<string, typeof rows>;
+
+    expect(studyIdReads).toBe(rows.length);
+    expect(grouped).toHaveLength(25);
+    expect(grouped.get('study-7')?.map((row) => row.execution_id)).toEqual(
+      Array.from({ length: 40 }, (_, index) => `execution-${7 + index * 25}`),
+    );
+  });
+
+  it('round-trips exact documents, filters trash, restores and purges', async () => {
+    const target = repository();
+    const original = await study();
+    expect(await target.saveStudy({
+      expectedRevision: 0,
+      operationId: OPERATION_A,
+      document: original,
+    })).toEqual(original);
+    expect(await target.getStudy(original.id)).toEqual(original);
+    expect(await target.listStudies()).toEqual([original]);
+
+    const trashed = await moveStudyToTrash(original, '2026-09-19T13:00:00Z');
+    expect(await target.saveStudy({
+      expectedRevision: 1,
+      operationId: OPERATION_B,
+      document: trashed,
+    })).toEqual(trashed);
+    expect(await target.listStudies()).toEqual([]);
+    expect(await target.listStudies({ includeDeleted: true })).toEqual([trashed]);
+
+    const restored = await target.restoreStudy(trashed.id, 2, OPERATION_C);
+    expect(restored).toEqual({ ...trashed, revision: 3, deletedAt: null });
+    expect(await target.restoreStudy(trashed.id, 2, OPERATION_C)).toEqual(restored);
+    await target.purgeStudy(restored.id);
+    expect(await target.getStudy(restored.id)).toBeNull();
+
+    const database = await openDatabase(DATABASE_NAME);
+    try {
+      const transaction = database.transaction('operations', 'readonly');
+      const operationStore = transaction.objectStore('operations');
+      const [operations, indexedStudyOperations, indexedRestoreOperations] = await Promise.all([
+        requestResult<Array<Record<string, unknown>>>(operationStore.getAll()),
+        requestResult(operationStore.index('by_owner_entity')
+          .getAll([OWNER_SUB, 'study', restored.id])),
+        requestResult(operationStore.index('by_owner_entity')
+          .getAll([OWNER_SUB, 'restore_study', restored.id])),
+      ]);
+      expect(operations).toHaveLength(3);
+      expect(operations).toEqual(expect.arrayContaining([
+        { operation_id: OPERATION_A, owner_sub: OWNER_SUB, entity_kind: 'purged' },
+        { operation_id: OPERATION_B, owner_sub: OWNER_SUB, entity_kind: 'purged' },
+        { operation_id: OPERATION_C, owner_sub: OWNER_SUB, entity_kind: 'purged' },
+      ]));
+      expect(indexedStudyOperations).toEqual([]);
+      expect(indexedRestoreOperations).toEqual([]);
+    } finally {
+      database.close();
+    }
+
+    await expect(target.saveStudy({
+      expectedRevision: 0,
+      operationId: OPERATION_A,
+      document: original,
+    })).rejects.toBeInstanceOf(OperationConflictError);
+    expect(await target.getStudy(restored.id)).toBeNull();
+  });
+
+  it('reidrata autoria, herança e decimais para uma segunda edição após reload', async () => {
+    const target = repository();
+    const sourceSnapshot = makeAuthoredSnapshot();
+    if (sourceSnapshot.source.kind !== 'AUTHORED') throw new Error('fixture');
+    sourceSnapshot.source.definition = {
+      kind: 'PARAMETRIC',
+      groups: [{
+        id: 'group-1', name: 'Grupo 1',
+        parameters: {
+          frequency: '12.00', ticket: '1500.50', direction: 'MIXED', deadline: '7',
+          purpose: 'ANEXO_V_REMESSA_TERCEIRO', profile: 'tesouraria_corporativa',
+        },
+        participants: [{
+          id: 'participant-1', name: 'Participante 1', override: false,
+          parameters: {
+            frequency: '12.00', ticket: '1500.50', direction: 'MIXED', deadline: '7',
+            purpose: 'ANEXO_V_REMESSA_TERCEIRO', profile: 'tesouraria_corporativa',
+          },
+        }],
+      }],
+    };
+    const original = await createStudy({
+      id: 'authored-roundtrip', ownerSub: OWNER_SUB, name: 'Autoria',
+      baseScenario: makeScenarioDraft({ sourceSnapshot }), now: FIXTURE_NOW,
+    });
+    await target.saveStudy({ expectedRevision: 0, operationId: OPERATION_A, document: original });
+    const reopened = (await target.getStudy(original.id))!;
+    const editedSnapshot = structuredClone(reopened.scenarios[0]!.sourceSnapshot) as DeepMutable<typeof sourceSnapshot>;
+    if (editedSnapshot.source.kind !== 'AUTHORED'
+      || editedSnapshot.source.definition?.kind !== 'PARAMETRIC') throw new Error('autoria ausente');
+    editedSnapshot.source.definition.groups[0]!.parameters.ticket = '1750.5000';
+    const edited = await updateScenario(
+      reopened,
+      reopened.baseScenarioId,
+      { sourceSnapshot: editedSnapshot },
+      '2026-09-19T13:00:00Z',
+    );
+    await target.saveStudy({ expectedRevision: 1, operationId: OPERATION_B, document: edited });
+
+    const reloaded = (await target.getStudy(original.id))!;
+    const definition = reloaded.scenarios[0]!.sourceSnapshot.source;
+    expect(definition.kind === 'AUTHORED' && definition.definition?.kind === 'PARAMETRIC'
+      ? definition.definition.groups[0]!.parameters.ticket
+      : null).toBe('1750.5000');
+  });
+
+  it('purges only operations of the selected study', async () => {
+    const target = repository();
+    const selected = await study();
+    const preserved = await study('00000000-0000-4000-8000-000000000099');
+    await target.saveStudy({
+      expectedRevision: 0,
+      operationId: OPERATION_A,
+      document: selected,
+    });
+    await target.saveStudy({
+      expectedRevision: 0,
+      operationId: OPERATION_B,
+      document: preserved,
+    });
+
+    await target.purgeStudy(selected.id);
+
+    expect(await target.saveStudy({
+      expectedRevision: 0,
+      operationId: OPERATION_B,
+      document: preserved,
+    })).toEqual(preserved);
+    expect(await target.getStudy(preserved.id)).toEqual(preserved);
+  });
+
+  it('stores executions separately and never rewrites an existing execution', async () => {
+    const target = repository();
+    const original = await study();
+    await target.saveStudy({ expectedRevision: 0, operationId: OPERATION_A, document: original });
+    const execution = executionFor(original);
+    const withExecution = await appendExecution(original, execution, '2026-09-19T13:00:00Z');
+    await target.saveStudy({
+      expectedRevision: 1,
+      operationId: OPERATION_B,
+      document: withExecution,
+    });
+
+    const database = await openDatabase(DATABASE_NAME);
+    const transaction = database.transaction(['studies', 'executions'], 'readonly');
+    const studyRow = await requestResult<Record<string, unknown>>(
+      transaction.objectStore('studies').get(original.id),
+    );
+    const executionRows = await requestResult<Array<{ document: ExecutionRecord }>>(
+      transaction.objectStore('executions').index('by_owner_study')
+        .getAll([OWNER_SUB, original.id]),
+    );
+    expect((studyRow.document as Record<string, unknown>).executions).toBeUndefined();
+    expect(executionRows.map((row) => row.document)).toEqual([{ ...execution, kind: 'PREVIEW' }]);
+    database.close();
+
+    const changed = structuredClone(withExecution) as DeepMutable<StudyDocument>;
+    changed.revision = 3;
+    changed.updatedAt = '2026-09-19T14:00:00Z';
+    changed.executions[0]!.createdAt = '2026-09-19T12:02:00Z';
+    await expect(target.saveStudy({
+      expectedRevision: 2,
+      operationId: OPERATION_C,
+      document: changed,
+    })).rejects.toBeInstanceOf(OperationConflictError);
+    expect(await target.getStudy(original.id)).toEqual(withExecution);
+  });
+
+  it('apaga um cenário com as execuções dele e mantém as outras imutáveis', async () => {
+    const target = repository();
+    const original = await study();
+    const withVariation = await appendScenario(original, {
+      ...makeScenarioDraft(), id: '00000000-0000-4000-8000-000000000040', name: 'Variação',
+    }, '2026-09-19T12:30:00Z');
+    const variation = withVariation.scenarios[1]!;
+    const variationExecution = {
+      ...executionFor(withVariation), id: '00000000-0000-4000-8000-000000000041',
+      scenarioId: variation.id, scenarioRevision: variation.revision, inputFingerprint: variation.inputFingerprint,
+      requestSnapshot: { ...executionFor(withVariation).requestSnapshot, request_id: '00000000-0000-4000-8000-000000000042', scenario_id: variation.id },
+    } satisfies ExecutionRecord;
+    const step1 = await appendExecution(withVariation, variationExecution, '2026-09-19T13:00:00Z');
+    const baseExecution = executionFor(step1);
+    const step2 = await appendExecution(step1, baseExecution, '2026-09-19T13:10:00Z');
+    for (const [index, document] of [original, withVariation, step1, step2].entries()) {
+      await target.saveStudy({ expectedRevision: document.revision - 1, operationId: `save-${index}`, document });
+    }
+
+    const removed = await removeScenario(step2, variation.id, '2026-09-19T14:00:00Z');
+    expect(removed.scenarios.map((item) => item.id)).toEqual([original.scenarios[0]!.id]);
+    expect(removed.executions.map((item) => item.id)).toEqual([baseExecution.id]);
+    await target.saveStudy({ expectedRevision: step2.revision, operationId: OPERATION_B, document: removed });
+    expect(await target.getStudy(original.id)).toEqual(removed);
+
+    const tampered = structuredClone(removed) as DeepMutable<StudyDocument>;
+    tampered.revision = removed.revision + 1;
+    tampered.executions = [];
+    await expect(target.saveStudy({ expectedRevision: removed.revision, operationId: OPERATION_C, document: tampered }))
+      .rejects.toBeInstanceOf(OperationConflictError);
+    await expect(removeScenario(removed, original.baseScenarioId, '2026-09-19T15:00:00Z')).rejects.toThrow('base');
+  });
+
+  it('preserva reserva e terminal diagnósticos e rejeita reescrita ou terminal duplicado', async () => {
+    const target = repository();
+    const original = await study();
+    await target.saveStudy({ expectedRevision: 0, operationId: OPERATION_A, document: original });
+    const reservation = await diagnosticReservationFor(original);
+    const reserved = await appendDiagnosticExecution(original, reservation, reservation.createdAt);
+    await target.saveStudy({ expectedRevision: 1, operationId: OPERATION_B, document: reserved });
+
+    const changed = structuredClone(reserved) as DeepMutable<StudyDocument>;
+    changed.revision += 1;
+    changed.updatedAt = '2026-09-19T12:02:00Z';
+    if (changed.executions[0]?.kind !== 'DIAGNOSTIC') throw new Error('fixture');
+    changed.executions[0].status = 'RUNNING';
+    await expect(target.saveStudy({
+      expectedRevision: 2, operationId: OPERATION_C, document: changed,
+    })).rejects.toBeInstanceOf(InvalidDocumentError);
+
+    const terminal: DiagnosticExecutionRecord = {
+      ...structuredClone(reservation),
+      id: '00000000-0000-4000-8000-000000000046',
+      status: 'FAILED',
+      error: { code: 'DIAGNOSTICO_INVALIDO', message: 'Falha controlada.' },
+      finishedAt: '2026-09-19T12:03:00Z',
+    };
+    const completed = await appendDiagnosticExecution(reserved, terminal, terminal.finishedAt!);
+    await expect(target.saveStudy({
+      expectedRevision: 2, operationId: OPERATION_D, document: completed,
+    })).resolves.toEqual(completed);
+
+    await expect(appendDiagnosticExecution(completed, {
+      ...terminal, id: '00000000-0000-4000-8000-000000000047',
+    }, '2026-09-19T12:04:00Z')).rejects.toThrow('terminal');
+  });
+
+  it('persiste reserva fixa canônica sem exigir a ordem física do sourceSnapshot', async () => {
+    const target = repository();
+    const original = await study();
+    await target.saveStudy({ expectedRevision: 0, operationId: OPERATION_A, document: original });
+    const reservation = await diagnosticReservationFor(original);
+    if (reservation.requestSnapshot.sampling.kind !== 'FIXED_INPUT') throw new Error('fixture');
+    expect(reservation.sourceSnapshot.orders.map((order) => order.id)).toEqual(['order-b', 'order-a']);
+    expect(reservation.requestSnapshot.sampling.preview_request.cenario.ordens
+      .map((order) => order.id)).toEqual(['order-a', 'order-b']);
+    const candidate: StudyDocument = {
+      ...structuredClone(original),
+      revision: original.revision + 1,
+      updatedAt: reservation.createdAt,
+      executions: [reservation],
+    };
+
+    await expect(target.saveStudy({
+      expectedRevision: original.revision,
+      operationId: OPERATION_B,
+      document: candidate,
+    })).resolves.toEqual(candidate);
+    await expect(target.getStudy(original.id)).resolves.toEqual(candidate);
+  });
+
+  it('rejeita documento artesanal cujo terminal diverge da reserva diagnóstica', async () => {
+    const target = repository();
+    const original = await study();
+    await target.saveStudy({ expectedRevision: 0, operationId: OPERATION_A, document: original });
+    const reservation = await diagnosticReservationFor(original);
+    const reserved = await appendDiagnosticExecution(original, reservation, reservation.createdAt);
+    await target.saveStudy({ expectedRevision: 1, operationId: OPERATION_B, document: reserved });
+    const terminal: DiagnosticExecutionRecord = {
+      ...structuredClone(reservation),
+      id: '00000000-0000-4000-8000-000000000046',
+      requestSnapshot: {
+        ...structuredClone(reservation.requestSnapshot),
+        request_id: '00000000-0000-4000-8000-000000000049',
+      },
+      status: 'FAILED',
+      error: { code: 'DIAGNOSTICO_INVALIDO', message: 'Falha controlada.' },
+      finishedAt: '2026-09-19T12:03:00Z',
+    };
+    const handcrafted: StudyDocument = {
+      ...structuredClone(reserved),
+      revision: reserved.revision + 1,
+      updatedAt: terminal.finishedAt!,
+      executions: [...reserved.executions, terminal],
+    };
+
+    await expect(target.saveStudy({
+      expectedRevision: reserved.revision,
+      operationId: OPERATION_C,
+      document: handcrafted,
+    })).rejects.toBeInstanceOf(InvalidDocumentError);
+  });
+
+  it('rejeita RUNNING artesanal e reserva QUEUED duplicada antes do CAS', async () => {
+    const target = repository();
+    const original = await study();
+    await target.saveStudy({ expectedRevision: 0, operationId: OPERATION_A, document: original });
+    const reservation = await diagnosticReservationFor(original);
+    const running: DiagnosticExecutionRecord = {
+      ...structuredClone(reservation),
+      status: 'RUNNING',
+    };
+    const runningDocument: StudyDocument = {
+      ...structuredClone(original),
+      revision: original.revision + 1,
+      updatedAt: '2026-09-19T12:02:00Z',
+      executions: [running],
+    };
+    await expect(target.saveStudy({
+      expectedRevision: original.revision,
+      operationId: OPERATION_B,
+      document: runningDocument,
+    })).rejects.toBeInstanceOf(InvalidDocumentError);
+
+    const reserved = await appendDiagnosticExecution(original, reservation, reservation.createdAt);
+    await target.saveStudy({ expectedRevision: original.revision, operationId: OPERATION_C, document: reserved });
+    const duplicate: DiagnosticExecutionRecord = {
+      ...structuredClone(reservation),
+      id: '00000000-0000-4000-8000-000000000048',
+    };
+    const duplicateDocument: StudyDocument = {
+      ...structuredClone(reserved),
+      revision: reserved.revision + 1,
+      updatedAt: '2026-09-19T12:03:00Z',
+      executions: [...reserved.executions, duplicate],
+    };
+    await expect(target.saveStudy({
+      expectedRevision: reserved.revision,
+      operationId: OPERATION_D,
+      document: duplicateDocument,
+    })).rejects.toBeInstanceOf(InvalidDocumentError);
+  });
+
+  it('has one winner in a real CAS race between repository instances', async () => {
+    const first = repository();
+    const second = repository();
+    const original = await study();
+    await first.saveStudy({ expectedRevision: 0, operationId: OPERATION_A, document: original });
+    const revision2 = await renameStudy(original, 'Revisão 2', '2026-09-19T12:10:00Z');
+    await first.saveStudy({ expectedRevision: 1, operationId: OPERATION_B, document: revision2 });
+    const revision3 = await renameStudy(revision2, 'Revisão 3', '2026-09-19T12:20:00Z');
+    await first.saveStudy({ expectedRevision: 2, operationId: OPERATION_C, document: revision3 });
+    const candidateA = await renameStudy(revision3, 'Candidato A', '2026-09-19T13:00:00Z');
+    const candidateB = await renameStudy(revision3, 'Candidato B', '2026-09-19T13:00:00Z');
+
+    const results = await Promise.allSettled([
+      first.saveStudy({ expectedRevision: 3, operationId: OPERATION_D, document: candidateA }),
+      second.saveStudy({ expectedRevision: 3, operationId: OPERATION_E, document: candidateB }),
+    ]);
+
+    expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
+    const rejected = results.find((result) => result.status === 'rejected');
+    expect(rejected).toMatchObject({ reason: expect.any(RevisionConflictError) });
+    const stored = await first.getStudy(original.id);
+    expect(stored?.revision).toBe(4);
+    expect(['Candidato A', 'Candidato B']).toContain(stored?.name);
+  });
+
+  it('makes operation ids globally idempotent and rejects reuse for another intent', async () => {
+    const target = repository();
+    const original = await study();
+    const mutation = { expectedRevision: 0, operationId: OPERATION_A, document: original };
+    expect(await target.saveStudy(mutation)).toEqual(original);
+    expect(await target.saveStudy(structuredClone(mutation))).toEqual(original);
+
+    const other = await study('00000000-0000-4000-8000-000000000099');
+    await expect(target.saveStudy({
+      expectedRevision: 0,
+      operationId: OPERATION_A,
+      document: other,
+    })).rejects.toBeInstanceOf(OperationConflictError);
+    expect(await target.getStudy(other.id)).toBeNull();
+  });
+
+  it('rejects foreign owners and binary values before persistence', async () => {
+    const target = repository();
+    const foreign = await study('00000000-0000-4000-8000-000000000099', 'owner-b');
+    await expect(target.saveStudy({
+      expectedRevision: 0,
+      operationId: OPERATION_A,
+      document: foreign,
+    })).rejects.toBeInstanceOf(OwnerMismatchError);
+
+    const binary = structuredClone(await study()) as DeepMutable<StudyDocument> & { nested?: unknown };
+    binary.nested = { values: [new Blob(['not persisted'])] };
+    await expect(target.saveStudy({
+      expectedRevision: 0,
+      operationId: OPERATION_B,
+      document: binary,
+    })).rejects.toBeInstanceOf(BinaryDataNotAllowedError);
+    expect(await target.listStudies({ includeDeleted: true })).toEqual([]);
+  });
+});
+
+describe('lifecycle', () => {
+  it.each(['orders', 'aliases', 'warnings', 'blockers', 'provenance', 'inputs', 'totals', 'files', 'corrections', 'metrics', 'batches', 'events'])('rejects named raw properties on %s arrays before opening the database', async (location) => {
+    const document = observedCase();
+    const mutation = { expectedRevision: 0, operationId: 'array-extra', company: company(), observedCase: document, batches: [], events: [] };
+    const derived = { kind: 'DERIVED' as const, source: 'fixture', version: '1', recordedAt: FIXTURE_NOW, rule: 'sum', inputs: [] as string[] };
+    if (location === 'inputs') (document as DeepMutable<ObservedCase>).controlTotals[0]!.provenance = derived;
+    const arrays: Record<string, readonly unknown[]> = {
+      orders: document.orders, aliases: mutation.company.aliases, warnings: document.quality.warnings,
+      blockers: document.quality.blockers, provenance: document.orders[0]!.provenance, inputs: derived.inputs,
+      totals: document.controlTotals, files: document.sourceManifest.files, corrections: document.corrections,
+      metrics: document.observedOutcome!.metrics, batches: mutation.batches, events: mutation.events,
+    };
+    Object.assign(arrays[location]!, { raw: 'PRIVATE ARRAY SOURCE' });
+    await expect(repository().confirmObservedCase(mutation)).rejects.toBeInstanceOf(InvalidDocumentError);
+    expect(await indexedDB.databases()).toEqual([]);
+  });
+
+  it.each([
+    { kind: 'BATCH_IMPORTED', path: 'raw/PRIVATE', audit: null },
+    { kind: 'BATCH_REVERTED', path: 'versions/version-1', audit: null },
+    { kind: 'CONFLICT_RESOLVED', path: 'raw/PRIVATE', audit: null },
+    { kind: 'CLIENT_ALIAS_ASSOCIATED', path: 'raw/PRIVATE', audit: null },
+    { kind: 'OPERATION_EXCLUDED', path: 'orders/../PRIVATE', audit: null },
+    { kind: 'OPERATION_EXCLUDED', path: 'orders/%2E%2E/PRIVATE', audit: null },
+    { kind: 'OPERATION_EXCLUDED', path: 'orders/%2e%2e', audit: null },
+    { kind: 'OPERATION_RESTORED', path: 'raw/PRIVATE', audit: null },
+    { kind: 'OPERATION_CORRECTED', path: 'versions/version-1/rawValue', audit: { originalValue: null, previousValue: null, nextValue: 'PRIVATE' } },
+    { kind: 'OPERATION_CORRECTED', path: 'versions/version-1/direction', audit: { originalValue: 'PRIVATE', previousValue: null, nextValue: 'OUT' } },
+    { kind: 'OPERATION_CORRECTED', path: 'versions/version-1/valueBrl', audit: { originalValue: '100,50', previousValue: null, nextValue: '100.5' } },
+    { kind: 'OPERATION_CORRECTED', path: 'versions/version-1/knownDate', audit: { originalValue: '2026-02-30', previousValue: null, nextValue: '2026-02-28' } },
+    { kind: 'OPERATION_CORRECTED', path: 'versions/version-1/purposeCode', audit: { originalValue: ' PRIVATE ', previousValue: null, nextValue: 'CODE' } },
+  ])('rejects noncanonical $kind path/audit before opening the database', async (invalid) => {
+    const document = observedCase();
+    const mutation = {
+      expectedRevision: 0, operationId: 'invalid-audit', company: company(), observedCase: document,
+      batches: [], events: [{ id: 'event-1', caseId: document.id, companyId: document.companyId, ownerSub: OWNER_SUB,
+        eventSequence: 1, occurredAt: FIXTURE_NOW, ...invalid }],
+    } as Parameters<IndexedDbApplicationRepository['confirmObservedCase']>[0];
+    await expect(repository().confirmObservedCase(mutation)).rejects.toBeInstanceOf(InvalidDocumentError);
+    expect(await indexedDB.databases()).toEqual([]);
+  });
+
+  it('does not overwrite a newer company while confirming a different case from a stale snapshot', async () => {
+    const target = repository();
+    const latest = { ...company(), displayName: 'Empresa atualizada', revision: 2 };
+    await target.confirmObservedCase({ expectedRevision: 0, operationId: 'new-company', company: latest,
+      observedCase: observedCase(), batches: [], events: [] });
+    await expect(target.confirmObservedCase({ expectedRevision: 0, operationId: 'stale-company', company: company(),
+      observedCase: observedCase({ id: 'another-case' }), batches: [], events: [] })).rejects.toBeInstanceOf(RevisionConflictError);
+    expect(await target.listCompanies()).toEqual([latest]);
+    expect(await target.getObservedCase('another-case')).toBeNull();
+  });
+
+  it('rejects conflicting company content at the same revision and keeps the case unpublished', async () => {
+    const target = repository();
+    await target.confirmObservedCase({ expectedRevision: 0, operationId: 'first-company', company: company(),
+      observedCase: observedCase(), batches: [], events: [] });
+    await expect(target.confirmObservedCase({ expectedRevision: 0, operationId: 'conflicting-company', company: { ...company(), displayName: 'Conflicting' },
+      observedCase: observedCase({ id: 'conflicting-case' }), batches: [], events: [] })).rejects.toBeInstanceOf(OperationConflictError);
+    expect(await target.listCompanies()).toEqual([company()]);
+    expect(await target.getObservedCase('conflicting-case')).toBeNull();
+  });
+
+  it.each([new ArrayBuffer(8), new Uint8Array(8), new DataView(new ArrayBuffer(8))])('rejects binary buffers before database creation', async (binary) => {
+    await expect(repository().confirmObservedCase({
+      expectedRevision: 0, operationId: 'buffer', company: company(),
+      observedCase: observedCase(), batches: [], events: [], binary,
+    } as Parameters<IndexedDbApplicationRepository['confirmObservedCase']>[0]))
+      .rejects.toBeInstanceOf(BinaryDataNotAllowedError);
+    expect(await indexedDB.databases()).toEqual([]);
+  });
+
+  it('rejects raw extra properties in import metadata before opening a database', async () => {
+    const document = observedCase();
+    await expect(repository().confirmObservedCase({
+      expectedRevision: 0, operationId: 'raw', company: company(), observedCase: document,
+      batches: [{ caseId: document.id, batchSequence: 1, ownerSub: OWNER_SUB, companyId: document.companyId,
+        id: 'batch-1', sha256: 'a'.repeat(64), byteSize: 123, layout: 'xlsx-operacoes/1.0.0', counts: { total: 1, valid: 1, invalid: 0 }, raw: 'PRIVATE RAW CELL' }], events: [],
+    } as unknown as Parameters<IndexedDbApplicationRepository['confirmObservedCase']>[0])).rejects.toBeInstanceOf(InvalidDocumentError);
+    expect(await indexedDB.databases()).toEqual([]);
+  });
+
+  it('snapshots a validated confirmation before asynchronous database opening', async () => {
+    const document = observedCase();
+    const mutation = { expectedRevision: 0, operationId: 'snapshot', company: company(), observedCase: document, batches: [], events: [] };
+    const promise = repository().confirmObservedCase(mutation);
+    mutation.company = { ...company(), displayName: 'MUTATED AFTER VALIDATION' };
+    (document as DeepMutable<ObservedCase>).orders[0]!.valueBrl = '999';
+    const stored = await promise;
+    expect(stored.orders[0]!.valueBrl).toBe('100');
+    expect(await repository().listCompanies()).toEqual([company()]);
+  });
+
+  it('rejects non-scalar company aliases before database creation', async () => {
+    await expect(repository().confirmObservedCase({
+      expectedRevision: 0, operationId: 'raw-company',
+      company: { ...company(), aliases: [{ raw: 'PRIVATE CELL' }] },
+      observedCase: observedCase(), batches: [], events: [],
+    } as unknown as Parameters<IndexedDbApplicationRepository['confirmObservedCase']>[0])).rejects.toBeInstanceOf(InvalidDocumentError);
+    expect(await indexedDB.databases()).toEqual([]);
+  });
+
+  it('closes on logout without deleting data', async () => {
+    const first = repository();
+    const original = await study();
+    await first.saveStudy({ expectedRevision: 0, operationId: OPERATION_A, document: original });
+    first.close();
+    await expect(first.getStudy(original.id)).rejects.toBeInstanceOf(StorageClosedError);
+
+    const reopened = repository();
+    expect(await reopened.getStudy(original.id)).toEqual(original);
+  });
+
+  it('closes the repository connection on versionchange', async () => {
+    const target = repository();
+    await target.listCompanies();
+    const upgrade = indexedDB.open(DATABASE_NAME, 6);
+    const upgraded = await new Promise<IDBDatabase>((resolve, reject) => {
+      upgrade.onerror = () => reject(upgrade.error);
+      upgrade.onsuccess = () => resolve(upgrade.result);
+    });
+    upgraded.close();
+
+    await expect(target.listCompanies()).rejects.toBeInstanceOf(StorageClosedError);
+  });
+});

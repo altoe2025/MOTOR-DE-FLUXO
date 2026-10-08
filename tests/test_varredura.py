@@ -22,12 +22,15 @@ from motor.simulacao import simular
 from motor.varredura import (
     PARAMETROS_VARREDURA,
     PontoVarredura,
+    _formatar,
     escrever_csv,
     montar_especificacao_pool,
     montar_ponto,
     montar_pool_do_ponto,
+    resumir,
     rodar_varredura,
 )
+from scripts import varredura_completa
 
 CENARIO_AMANDA = Path(__file__).parent.parent / "motor" / "cenarios" / "exemplo_amanda.yaml"
 HORIZONTE_CURTO = 90
@@ -468,23 +471,7 @@ def _cenario_de(ordens, horizonte=0):
     )
 
 
-def test_limite_intra_cliente_e_o_que_cada_cliente_casaria_sozinho():
-    """Para cada cliente, `2 × min(o que ele manda, o que ele recebe)`.
-
-    É o teto do que a tesouraria DELE resolveria sem contraparte externa — e
-    portanto não é valor que o produto cria.
-    """
-    for ponto, pool in _pontos_com_pool():
-        por_cliente = {}
-        for o in pool:
-            lados = por_cliente.setdefault(o.cliente_id, [Decimal(0), Decimal(0)])
-            lados[0 if o.direcao is Direcao.OUT else 1] += o.valor_brl
-        esperado = sum((2 * min(out, ent) for out, ent in por_cliente.values()), Decimal(0))
-        assert ponto.limite_intra_cliente_brl == esperado
-
-
-def test_cliente_de_uma_direcao_so_nao_tem_nada_a_casar_sozinho():
-    """Dois clientes opostos: tudo que casa só casou porque um achou o outro."""
+def test_clientes_de_uma_direcao_publicam_netting_multilateral_observado():
     cenario = _cenario_de(
         [
             _ordem("a", "cliente-a", Direcao.OUT, 100),
@@ -493,14 +480,12 @@ def test_cliente_de_uma_direcao_so_nao_tem_nada_a_casar_sozinho():
     )
     ponto = montar_ponto(nome_mix="t", n_clientes=2, cenario=cenario, seed_base=0)
 
-    assert ponto.limite_intra_cliente_brl == Decimal(0)
-    assert ponto.volume_casado_incremental_brl == ponto.volume_casado_brl
-    assert ponto.taxa_netabilidade_incremental == ponto.taxa_netabilidade
+    assert ponto.volume_autonetting_brl == Decimal(0)
+    assert ponto.volume_netting_multilateral_brl == ponto.volume_casado_brl
+    assert ponto.taxa_netting_multilateral == ponto.taxa_netabilidade
 
 
-def test_cliente_que_se_basta_nao_gera_netting_incremental():
-    """Um cliente só, com os dois lados iguais. O motor casa 100% — e o valor que
-    ele adiciona é ZERO: essa pessoa faria isso sozinha na própria tesouraria."""
+def test_cliente_com_duas_pontas_publica_autonetting_observado():
     cenario = _cenario_de(
         [
             _ordem("a", "cliente-unico", Direcao.OUT, 100),
@@ -509,19 +494,38 @@ def test_cliente_que_se_basta_nao_gera_netting_incremental():
     )
     ponto = montar_ponto(nome_mix="t", n_clientes=1, cenario=cenario, seed_base=0)
 
-    assert ponto.taxa_netabilidade == Decimal(1)  # o motor neta tudo...
-    assert ponto.volume_casado_incremental_brl == Decimal(0)  # ...e não serve de nada
-    assert ponto.taxa_netabilidade_incremental == Decimal(0)
+    assert ponto.taxa_netabilidade == Decimal(1)
+    assert ponto.volume_autonetting_brl == ponto.volume_casado_brl == Decimal(200)
+    assert ponto.volume_netting_multilateral_brl == Decimal(0)
+    assert ponto.taxa_autonetting == Decimal(1)
 
 
-def test_incremental_nunca_e_negativo():
-    """Quando o tempo impede um cliente de casar o próprio fluxo, o motor casa
-    MENOS que o limite intra. A medida é um piso do valor criado, então o chão
-    é zero — nunca um número negativo, que não significaria nada."""
+def test_autonetting_e_multilateral_reconciliam_com_o_casado():
     for ponto, _pool in _pontos_com_pool():
-        assert ponto.volume_casado_incremental_brl >= Decimal(0)
-        assert ponto.taxa_netabilidade_incremental >= Decimal(0)
-        assert ponto.taxa_netabilidade_incremental <= ponto.taxa_netabilidade
+        assert (
+            ponto.volume_autonetting_brl
+            + ponto.volume_netting_multilateral_brl
+            == ponto.volume_casado_brl
+        )
+        assert (
+            ponto.taxa_autonetting + ponto.taxa_netting_multilateral
+            == ponto.taxa_netabilidade
+        )
+
+
+def test_fluxos_do_mesmo_cliente_sem_sobreposicao_nao_viram_autonetting():
+    cenario = _cenario_de(
+        [
+            _ordem("a-out", "a", Direcao.OUT, 100, conhecida=0, limite=0),
+            _ordem("a-in", "a", Direcao.IN, 100, conhecida=1, limite=1),
+        ],
+        horizonte=1,
+    )
+
+    ponto = montar_ponto(nome_mix="t", n_clientes=1, cenario=cenario, seed_base=0)
+
+    assert ponto.volume_autonetting_brl == Decimal(0)
+    assert ponto.volume_netting_multilateral_brl == Decimal(0)
 
 
 def test_varredura_registra_os_parametros_do_ponto():
@@ -577,3 +581,79 @@ def test_csv_sem_ponto_nenhum_ainda_escreve_o_cabecalho(tmp_path):
     escrever_csv((), str(destino))
     linhas = destino.read_text(encoding="utf-8").strip().splitlines()
     assert len(linhas) == 1
+
+
+def test_seeds_duplicadas_falham_antes_de_percorrer_a_grade():
+    with pytest.raises(ValueError, match=r"seeds duplicadas: \[1\]"):
+        rodar_varredura(
+            mixes={},
+            valores_n=(),
+            valores_w=(),
+            valores_seed=(1, 1),
+            horizonte_dias=HORIZONTE_CURTO,
+            custo=PARAMETROS_VARREDURA,
+        )
+
+
+@pytest.mark.parametrize(
+    "campo",
+    [
+        "taxa_autonetting",
+        "taxa_autonetting_p50",
+        "taxa_netting_multilateral",
+        "taxa_netting_multilateral_p50",
+    ],
+)
+def test_csv_preserva_seis_casas_nas_taxas_por_mecanismo(campo):
+    assert _formatar(campo, Decimal("0.0049")) == Decimal("0.004900")
+
+
+def test_varredura_completa_usa_percentil_empirico_nearest_rank():
+    linhas = [
+        {
+            "nome_mix": "teste",
+            "n_clientes": 8,
+            "janela_dias": 7,
+            "economia_bps": Decimal(valor),
+            "dias_espera_p90_volume_casado": Decimal(valor),
+            "dias_espera_p90_volume_remetido": Decimal(valor),
+            "pct_volume_espera_truncada": Decimal(valor),
+            "fracao_in_realizada": Decimal(valor),
+            "taxa_autonetting": Decimal(valor),
+            "taxa_netting_multilateral": Decimal(valor),
+            "taxa_netabilidade": Decimal(valor),
+        }
+        for valor in ("10", "20", "30", "40")
+    ]
+
+    assert varredura_completa.agregar(linhas)[0]["economia_bps_p50"] == Decimal("20")
+
+
+def test_varredura_completa_rejeita_sementes_duplicadas_antes_da_grade(monkeypatch):
+    monkeypatch.setattr(varredura_completa, "SEMENTES", (1, 1))
+    monkeypatch.setattr(varredura_completa, "TODOS", {})
+
+    with pytest.raises(ValueError, match=r"seeds duplicadas: \[1\]"):
+        varredura_completa.rodar()
+
+
+def test_resumir_nao_mistura_horizontes_diferentes():
+    """(mix, N, W) não identifica uma célula: dois horizontes diferentes com a mesma
+    chave eram colapsados num resumo só, que reportava o horizonte do primeiro ponto
+    e a mediana dos dois misturados."""
+    base = {
+        campo.name: (Decimal("1") if campo.type == "Decimal" else 1)
+        for campo in dataclasses.fields(PontoVarredura)
+    }
+    base.update(nome_mix="equilibrado", n_clientes=2, janela_dias=1)
+    base.pop("horizonte_dias")
+
+    pontos = (
+        PontoVarredura(horizonte_dias=60, **base),
+        PontoVarredura(horizonte_dias=365, **base),
+    )
+
+    resumos = resumir(pontos)
+
+    assert len(resumos) == 2
+    assert {resumo.horizonte_dias for resumo in resumos} == {60, 365}

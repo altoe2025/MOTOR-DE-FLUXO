@@ -91,8 +91,10 @@ def _varredura(argv: list[str]) -> int:
 
     try:
         args = parser.parse_args(argv)
-    except SystemExit:  # argparse já imprimiu a mensagem; a CLI devolve código, não sai
-        return 1
+    except SystemExit as saida:  # argparse já imprimiu; a CLI devolve código, não sai
+        # `--help` sai com 0 e não é erro. Só erro de parse vira 1 (argparse usaria 2,
+        # mas 1 é o código que o resto desta CLI já usa para "não deu para rodar").
+        return 0 if saida.code == 0 else 1
 
     nomes = [parte.strip() for parte in args.mixes.split(",") if parte.strip()]
     desconhecidos = [nome for nome in nomes if nome not in MIXES]
@@ -149,13 +151,10 @@ def _varredura(argv: list[str]) -> int:
             f"de um teto de {melhor.teto_netabilidade_p50:.1%}; "
             f"a política extraiu {melhor.eficiencia_vs_teto_p50:.1%} do possível"
         )
-        # A netabilidade bruta inclui o cliente casando o próprio fluxo, que ele
-        # faria sozinho na tesouraria. Sem esta linha, é a bruta que vai para a
-        # conversa comercial.
         print(
-            f"      descontado o que cada cliente casaria sozinho, sobram "
-            f"{melhor.taxa_netabilidade_incremental_p50:.1%} de netting que só "
-            f"existe por juntar clientes diferentes"
+            f"      composição observada: autonetting "
+            f"{melhor.taxa_autonetting_p50:.1%}; netting multilateral "
+            f"{melhor.taxa_netting_multilateral_p50:.1%}"
         )
 
     return 0
@@ -165,6 +164,12 @@ def main(argv: list[str]) -> int:
     """Entrada da CLI. Devolve o código de saída em vez de chamá-lo, para ser testável."""
     if len(argv) >= 2 and argv[1] == "varredura":
         return _varredura(argv[2:])
+
+    # Sem isto, `--help` cai no caminho do cenário e o loader tenta abrir um arquivo
+    # chamado "--help", derrubando a CLI com FileNotFoundError em vez de ajudar.
+    if len(argv) >= 2 and argv[1] in ("--help", "-h"):
+        print(USO)
+        return 0
 
     if len(argv) != 2:
         print(USO, file=sys.stderr)

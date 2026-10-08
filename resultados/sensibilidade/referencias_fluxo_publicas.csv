@@ -1,0 +1,12 @@
+# ATENCAO: todos os fluxos deste arquivo sao SUPOSICOES; nao sao dados reais da Amanda nem das empresas citadas.
+# O caso central reaproveita tickets, cadencias e dispersoes sinteticas de motor/arquetipos.py.
+# Os casos baixo e alto aplicam 0,5x e 2,0x ao volume central; esses multiplicadores nao vieram de dados observados.
+# Wise, Nomad, AstroPay e BCB sao referencias publicas de escala, nao fontes do fluxo projetado.
+# Cada Ordem continua sendo a posicao liquida que o cliente decidiu enviar; nao ha autonetting adicional.
+empresa_ou_fonte,metrica_publica,valor_publico,unidade,periodo,geografia,natureza,uso_no_modelo,limitacao,fonte
+Wise,volume transfronteirico anual,243.5,USD bilhoes,FY26 encerrado em 2026-03-31,global,dado publico divulgado,teste de ordem de grandeza; nao entra como fluxo da carteira,inclui pessoas e empresas no mundo; nao isola Brasil nem clientes candidatos,https://owners.wise.com/news-releases/news-release-details/wise-fy26-results
+Wise Business,volume transfronteirico anual aproximado pela soma dos quatro trimestres,70.6,USD bilhoes,FY26,global,inferencia aritmetica sobre dados publicos,referencia de escala para plataformas e empresas,572 mil clientes ativos refere-se ao Q4; nao e base anual unica nem recorte Brasil,https://owners.wise.com/news-releases/news-release-details/wise-fy26-results
+Nomad,clientes,mais de 3.8,milhoes de clientes,pagina consultada em 2026-09-07,brasileiros com produtos globais,dado publico divulgado,teste de escala da base atendida,clientes nao equivalem a volume anual de cambio,https://www.nomadglobal.com/quem-somos
+Nomad,gasto informado em cartao de debito,50,BRL bilhoes,sem periodo anual informado na pagina,base Nomad,dado publico divulgado,teste de ordem de grandeza,nao e fluxo anual de cambio e nao deve ser anualizado,https://www.nomadglobal.com/quem-somos
+AstroPay,usuarios acessiveis por empresas,milhoes; sem numero exato,usuarios,pagina consultada em 2026-09-07,global,dado publico qualitativo,confirma perfil de PSP/plataforma internacional,nao ha volume transacionado publico na pagina,https://www.astropay.com/business
+Banco Central do Brasil,ranking mensal de cambio por instituicao financeira,quantidade e valor por categoria,USD equivalente,mensal,Brasil,base publica oficial,referencia futura para calibracao por banco,mede operacoes registradas pelas IFs; nao e fluxo enviado ao orquestrador,https://www.bcb.gov.br/estatisticas/rankingcambioinstituicoes?ano=2026

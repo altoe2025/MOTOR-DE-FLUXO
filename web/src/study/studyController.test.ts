@@ -1,0 +1,1114 @@
+import { describe, expect, it, vi } from 'vitest';
+
+import type { CompanyRecord, ObservedCase } from '../cases/domain';
+import type { OperationalProfileVersion } from '../profiles/domain';
+import type { DemoStudyPackageV1 } from '../demo/domain';
+import generatedDemo from '../demo/generated/demo-study.v1.json';
+import type {
+  ApplicationRepository,
+  AppendDiagnosticAttemptMutation,
+  DiagnosticAppendDelta,
+  AppendProfileVersionMutation,
+  CASMutation,
+  ConfirmObservedCaseMutation,
+} from '../storage/applicationRepository';
+import { calculateOperationalProfile } from '../profiles/calculateOperationalProfile';
+import { createImportReview } from '../importer/eligibility';
+import { DemoInstallSkippedError, OperationConflictError, RevisionConflictError } from '../storage/errors';
+import { attachOperationalProfileEvidence, createStudy, moveStudyToTrash, renameStudy } from './domain';
+import { FIXTURE_NOW, FIXTURE_OWNER, makeObservedCase, makeScenarioDraft } from './fixtures';
+import type { DiagnosticExecutionRecord, StudyDocument } from './model';
+import { validateStoredStudy } from '../storage/migrations';
+import { applyCertifiedDiagnosticAppend, isCertifiedStudy } from './certifiedStudy';
+import { summarizeStudy } from '../storage/applicationRepository';
+import {
+  StudyController,
+  StudyControllerClosedError,
+  StudyControllerSessionError,
+  type StudyBroadcastMessage,
+  type StudyChannel,
+  type StudyChannelFactory,
+  type StudyControllerScheduler,
+} from './studyController';
+
+const OWNER_B = '00000000-0000-4000-8000-000000000002';
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, resolve, reject };
+}
+
+async function makeStudy(ownerSub = FIXTURE_OWNER, id = 'study-1'): Promise<StudyDocument> {
+  return createStudy({
+    id,
+    ownerSub,
+    name: `Estudo ${ownerSub.slice(-1)}`,
+    baseScenario: makeScenarioDraft(),
+    now: FIXTURE_NOW,
+  });
+}
+
+class RepositoryDouble implements ApplicationRepository {
+  async getDemoInstallationStatus(): Promise<null> { return null; }
+  async listChatConversations(): Promise<never[]> { return []; }
+  async getChatConversation(): Promise<null> { return null; }
+  async saveChatConversation(): Promise<never> { throw new Error('Chat outside fixture scope'); }
+  async deleteChatConversation(): Promise<void> { throw new Error('Chat outside fixture scope'); }
+  closed = false;
+  readonly saveCalls: CASMutation<StudyDocument>[] = [];
+  readonly getStudyCalls: string[] = [];
+  readonly appendProfileCalls: AppendProfileVersionMutation[] = [];
+  readonly appendDiagnosticCalls: AppendDiagnosticAttemptMutation[] = [];
+  appendDiagnosticImplementation: (input: AppendDiagnosticAttemptMutation) => Promise<DiagnosticAppendDelta> = async (input) => ({
+    studyId: input.studyId, revision: input.expectedRevision + 1,
+    updatedAt: input.terminal.finishedAt!, executions: [input.reservation, input.terminal],
+  });
+  async appendDiagnosticAttempt(input: AppendDiagnosticAttemptMutation): Promise<DiagnosticAppendDelta> {
+    this.appendDiagnosticCalls.push(input);
+    return this.appendDiagnosticImplementation(input);
+  }
+  getStudyImplementation: (id: string) => Promise<StudyDocument | null>;
+  saveStudyImplementation: (input: CASMutation<StudyDocument>) => Promise<StudyDocument>;
+
+  constructor(
+    readonly ownerSub: string,
+    initial: StudyDocument | null = null,
+    readonly profiles: OperationalProfileVersion[] = [],
+  ) {
+    this.studies = initial === null ? [] : [initial];
+    this.getStudyImplementation = async () => initial;
+    this.saveStudyImplementation = async (input) => input.document;
+  }
+
+  async listCompanies(): Promise<CompanyRecord[]> { return []; }
+  async listObservedCases(): Promise<ObservedCase[]> { return []; }
+  async getObservedCase(): Promise<ObservedCase | null> { return null; }
+  async confirmObservedCase(input: ConfirmObservedCaseMutation): Promise<ObservedCase> {
+    return input.observedCase;
+  }
+  async listOperationalProfileVersions(companyId?: string): Promise<OperationalProfileVersion[]> {
+    return this.profiles.filter((profile) => companyId === undefined || profile.companyId === companyId);
+  }
+  async getOperationalProfileVersion(): Promise<OperationalProfileVersion | null> { return null; }
+  async appendOperationalProfileVersion(input: AppendProfileVersionMutation): Promise<OperationalProfileVersion> {
+    this.appendProfileCalls.push(input);
+    if (this.profiles.some((profile) => profile.companyId === input.document.companyId && profile.version === input.document.version)) {
+      throw new OperationConflictError('Versão da empresa já foi alocada.');
+    }
+    this.profiles.push(structuredClone(input.document));
+    return input.document;
+  }
+  studies: StudyDocument[] = [];
+  installDemoImplementation: ApplicationRepository['installDemoStudy'] = async () => {
+    throw new DemoInstallSkippedError();
+  };
+  async installDemoStudy(input: Parameters<ApplicationRepository['installDemoStudy']>[0]): Promise<StudyDocument> {
+    return this.installDemoImplementation(input);
+  }
+  async listStudies(): Promise<StudyDocument[]> { return this.studies; }
+  async listStudySummaries(): Promise<Awaited<ReturnType<ApplicationRepository['listStudySummaries']>>> {
+    return this.studies.map((document) => summarizeStudy(document, document.executions.length));
+  }
+  async getStudy(id: string): Promise<StudyDocument | null> {
+    this.getStudyCalls.push(id);
+    return this.getStudyImplementation(id);
+  }
+  async saveStudy(input: CASMutation<StudyDocument>): Promise<StudyDocument> {
+    this.saveCalls.push(input);
+    return this.saveStudyImplementation(input);
+  }
+  async restoreStudy(): Promise<StudyDocument> { throw new Error('não usado'); }
+  async purgeStudy(): Promise<void> {}
+  close(): void { this.closed = true; }
+}
+
+class ManualScheduler implements StudyControllerScheduler {
+  readonly pending = new Set<() => void>();
+  setTimeout(callback: () => void): object {
+    this.pending.add(callback);
+    return callback;
+  }
+  clearTimeout(handle: unknown): void {
+    this.pending.delete(handle as () => void);
+  }
+  runAll(): void {
+    const callbacks = [...this.pending];
+    this.pending.clear();
+    callbacks.forEach((callback) => callback());
+  }
+}
+
+class ChannelHub {
+  readonly messages: StudyBroadcastMessage[] = [];
+  readonly channels = new Map<string, Set<FakeChannel>>();
+
+  readonly factory: StudyChannelFactory = (name) => {
+    const channel = new FakeChannel(name, this);
+    const group = this.channels.get(name) ?? new Set<FakeChannel>();
+    group.add(channel);
+    this.channels.set(name, group);
+    return channel;
+  };
+
+  send(sender: FakeChannel, message: StudyBroadcastMessage): void {
+    this.messages.push(structuredClone(message));
+    for (const channel of this.channels.get(sender.name) ?? []) {
+      if (channel !== sender && !channel.closed) channel.deliver(message);
+    }
+  }
+}
+
+class FakeChannel implements StudyChannel {
+  closed = false;
+  readonly listeners = new Set<(event: MessageEvent<StudyBroadcastMessage>) => void>();
+
+  constructor(readonly name: string, private readonly hub: ChannelHub) {}
+  postMessage(message: StudyBroadcastMessage): void { this.hub.send(this, message); }
+  addEventListener(_type: 'message', listener: (event: MessageEvent<StudyBroadcastMessage>) => void): void {
+    this.listeners.add(listener);
+  }
+  removeEventListener(_type: 'message', listener: (event: MessageEvent<StudyBroadcastMessage>) => void): void {
+    this.listeners.delete(listener);
+  }
+  close(): void {
+    this.closed = true;
+    this.hub.channels.get(this.name)?.delete(this);
+  }
+  deliver(message: StudyBroadcastMessage): void {
+    const event = { data: structuredClone(message) } as MessageEvent<StudyBroadcastMessage>;
+    this.listeners.forEach((listener) => listener(event));
+  }
+}
+
+function controller(input: {
+  repositories: RepositoryDouble[];
+  scheduler?: ManualScheduler;
+  hub?: ChannelHub;
+  cancelPending?: () => Promise<void> | void;
+}) {
+  let operation = 0;
+  return new StudyController({
+    repositoryFactory: (ownerSub) => {
+      const repository = input.repositories.find((candidate) =>
+        candidate.ownerSub === ownerSub && !candidate.closed);
+      if (repository === undefined) throw new Error(`repo ausente: ${ownerSub}`);
+      return repository;
+    },
+    operationId: () => `operation-${++operation}`,
+    now: () => FIXTURE_NOW,
+    autosaveDelayMs: 10,
+    channelScope: 'test-project',
+    ...(input.hub === undefined ? {} : { channelFactory: input.hub.factory }),
+    ...(input.scheduler === undefined ? {} : { scheduler: input.scheduler }),
+    ...(input.cancelPending === undefined ? {} : { cancelPending: input.cancelPending }),
+  });
+}
+
+describe('StudyController', () => {
+  async function appendFixture(scheduler?: ManualScheduler) {
+    const complete = structuredClone(generatedDemo.study) as StudyDocument;
+    const reservation = complete.executions.find((item) => item.kind === 'DIAGNOSTIC' && item.status === 'QUEUED')! as DiagnosticExecutionRecord;
+    const terminal = complete.executions.find((item) => item.kind === 'DIAGNOSTIC'
+      && item.attemptId === reservation.attemptId && item.status === 'SUCCEEDED')! as DiagnosticExecutionRecord;
+    const initial = await validateStoredStudy({ ...complete,
+      executions: complete.executions.filter((item) => item.attemptId !== reservation.attemptId) }, complete.ownerSub);
+    const repository = new RepositoryDouble(initial.ownerSub, initial);
+    const hub = new ChannelHub();
+    const subject = controller({ repositories: [repository], hub, ...(scheduler === undefined ? {} : { scheduler }) });
+    await subject.switchSession(initial.ownerSub);
+    await subject.loadStudy(initial.id);
+    return { initial, reservation, terminal, repository, hub, subject };
+  }
+
+  it('publica append certificado, transmite revisão e continua autosave sem save integral do append', async () => {
+    const { initial, reservation, terminal, repository, hub, subject } = await appendFixture();
+    const states: string[] = [];
+    subject.subscribe(() => states.push(subject.snapshot.status));
+    const result = await subject.appendDiagnosticAttempt(reservation, terminal);
+    expect(result.executions).toEqual([...initial.executions, reservation, terminal]);
+    expect(result.scenarios).toBe(initial.scenarios);
+    expect(isCertifiedStudy(result, result.ownerSub)).toBe(true);
+    expect(states).toEqual(['SAVING', 'SAVED']);
+    expect(repository.saveCalls).toHaveLength(0);
+    expect(repository.appendDiagnosticCalls[0]).toMatchObject({ studyId: initial.id,
+      expectedRevision: initial.revision, operationId: 'operation-1' });
+    expect(hub.messages).toEqual([{ studyId: initial.id, revision: initial.revision + 1, operationId: 'operation-1' }]);
+    subject.edit(await renameStudy(result, 'Editado', FIXTURE_NOW));
+    await subject.flush();
+    expect(repository.saveCalls[0]!.expectedRevision).toBe(result.revision);
+    subject.close();
+  });
+
+  it('expõe conflito de revisão sem retentar e sem publicar um delta', async () => {
+    const { initial, reservation, terminal, repository, hub, subject } = await appendFixture();
+    const conflict = new RevisionConflictError(initial.revision, initial.revision + 1);
+    repository.appendDiagnosticImplementation = async () => { throw conflict; };
+    await expect(subject.appendDiagnosticAttempt(reservation, terminal)).rejects.toBe(conflict);
+    expect(subject.snapshot).toMatchObject({ status: 'CONFLICT', document: initial, error: conflict });
+    expect(repository.appendDiagnosticCalls).toHaveLength(1);
+    expect(hub.messages).toEqual([]);
+    subject.close();
+  });
+
+  it('não aplica append de uma sessão encerrada', async () => {
+    const { reservation, terminal, repository, hub, subject } = await appendFixture();
+    const pending = deferred<DiagnosticAppendDelta>();
+    repository.appendDiagnosticImplementation = () => pending.promise;
+    const work = subject.appendDiagnosticAttempt(reservation, terminal);
+    await subject.switchSession(null);
+    const input = repository.appendDiagnosticCalls[0]!;
+    pending.resolve({ studyId: input.studyId, revision: input.expectedRevision + 1,
+      updatedAt: terminal.finishedAt!, executions: [reservation, terminal] });
+    await expect(work).rejects.toBeInstanceOf(StudyControllerSessionError);
+    expect(subject.snapshot).toMatchObject({ status: 'IDLE', document: null });
+    expect(hub.messages).toEqual([]);
+    subject.close();
+  });
+
+  it('notifica outra aba limpa e preserva a edição pendente de uma aba suja', async () => {
+    const { initial, reservation, terminal, repository, hub, subject } = await appendFixture();
+    let stored = initial;
+    const cleanRepository = new RepositoryDouble(initial.ownerSub, initial);
+    const dirtyRepository = new RepositoryDouble(initial.ownerSub, initial);
+    cleanRepository.getStudyImplementation = async () => stored;
+    const clean = controller({ repositories: [cleanRepository], hub });
+    const dirty = controller({ repositories: [dirtyRepository], hub, scheduler: new ManualScheduler() });
+    await clean.switchSession(initial.ownerSub);
+    await dirty.switchSession(initial.ownerSub);
+    await clean.loadStudy(initial.id);
+    await dirty.loadStudy(initial.id);
+    const edited = await renameStudy(initial, 'Nome de outra aba', FIXTURE_NOW);
+    dirty.edit(edited);
+    repository.appendDiagnosticImplementation = async (input) => {
+      const delta: DiagnosticAppendDelta = { studyId: initial.id, revision: initial.revision + 1,
+        updatedAt: input.terminal.finishedAt!, executions: [input.reservation, input.terminal] };
+      stored = applyCertifiedDiagnosticAppend(initial, delta);
+      return delta;
+    };
+    await subject.appendDiagnosticAttempt(reservation, terminal);
+    await vi.waitFor(() => expect(clean.snapshot.document?.revision).toBe(initial.revision + 1));
+    expect(clean.snapshot).toMatchObject({ status: 'SAVED', document: stored });
+    expect(dirty.snapshot).toMatchObject({ status: 'CONFLICT', document: edited });
+    subject.close(); clean.close(); dirty.close();
+  });
+
+  it('expõe conflito recuperável recebido durante o commit sem perder o delta salvo e recusa base não certificada', async () => {
+    const { initial, reservation, terminal, repository, hub, subject } = await appendFixture();
+    const pending = deferred<DiagnosticAppendDelta>();
+    repository.appendDiagnosticImplementation = () => pending.promise;
+    const work = subject.appendDiagnosticAttempt(reservation, terminal);
+    for (const group of hub.channels.values()) for (const channel of group) channel.deliver({
+      studyId: initial.id, revision: initial.revision + 2, operationId: 'other-tab',
+    });
+    pending.resolve({ studyId: initial.id, revision: initial.revision + 1,
+      updatedAt: terminal.finishedAt!, executions: [reservation, terminal] });
+    await expect(work).rejects.toBeInstanceOf(RevisionConflictError);
+    expect(subject.snapshot.status).toBe('CONFLICT');
+    expect(subject.snapshot.document!.executions).toEqual([...initial.executions, reservation, terminal]);
+    expect(repository.appendDiagnosticCalls).toHaveLength(1);
+    expect(hub.messages).toEqual([{ studyId: initial.id, revision: initial.revision + 1, operationId: 'operation-1' }]);
+    subject.close();
+    const rawRepository = new RepositoryDouble(initial.ownerSub, structuredClone(initial));
+    const raw = controller({ repositories: [rawRepository] });
+    await raw.switchSession(initial.ownerSub);
+    await raw.loadStudy(initial.id);
+    await expect(raw.appendDiagnosticAttempt(reservation, terminal)).rejects.toThrow('certificado');
+    expect(rawRepository.appendDiagnosticCalls).toHaveLength(0);
+    raw.close();
+  });
+  it('preserva edição local durante append e broadcast sem oferecer reload automático destrutivo', async () => {
+    const { initial, reservation, terminal, repository, hub, subject } = await appendFixture(new ManualScheduler());
+    const pending = deferred<DiagnosticAppendDelta>();
+    repository.appendDiagnosticImplementation = () => pending.promise;
+    const edited = await renameStudy(initial, 'Edição local pendente', FIXTURE_NOW);
+    const work = subject.appendDiagnosticAttempt(reservation, terminal);
+    subject.edit(edited);
+    for (const group of hub.channels.values()) for (const channel of group) channel.deliver({
+      studyId: initial.id, revision: initial.revision + 2, operationId: 'other-tab',
+    });
+    pending.resolve({ studyId: initial.id, revision: initial.revision + 1,
+      updatedAt: terminal.finishedAt!, executions: [reservation, terminal] });
+    await work;
+    expect(subject.snapshot).toMatchObject({ status: 'CONFLICT', document: edited, error: null });
+    expect(subject.snapshot.document).toBe(edited);
+    expect(repository.saveCalls).toHaveLength(0);
+    expect(repository.appendDiagnosticCalls).toHaveLength(1);
+    subject.close();
+  });
+
+  it('reads another study without changing the selected dirty document or queued revision', async () => {
+    const selected = await makeStudy();
+    const other = await makeStudy(FIXTURE_OWNER, 'study-2');
+    const repository = new RepositoryDouble(FIXTURE_OWNER, selected);
+    const subject = controller({ repositories: [repository], scheduler: new ManualScheduler() });
+    await subject.switchSession(FIXTURE_OWNER);
+    await subject.loadStudy(selected.id);
+    const dirty = await renameStudy(selected, 'Editado', FIXTURE_NOW);
+    subject.edit(dirty);
+    const snapshot = subject.snapshot;
+    repository.getStudyImplementation = async () => other;
+    expect(await subject.readStudy(other.id)).toBe(other);
+    expect(subject.snapshot).toBe(snapshot);
+    await subject.flush();
+    expect(subject.snapshot.document).toBe(dirty);
+    expect(repository.saveCalls[0]?.expectedRevision).toBe(1);
+    subject.close();
+  });
+
+  it('reutiliza o estudo certificado já selecionado ao carregá-lo novamente', async () => {
+    const stored = await validateStoredStudy(await makeStudy(), FIXTURE_OWNER);
+    const repository = new RepositoryDouble(FIXTURE_OWNER, stored);
+    const subject = controller({ repositories: [repository] });
+    await subject.switchSession(FIXTURE_OWNER);
+
+    expect(await subject.loadStudy(stored.id)).toBe(stored);
+    expect(await subject.loadStudy(stored.id)).toBe(stored);
+    expect(repository.getStudyCalls).toEqual([stored.id]);
+    subject.close();
+  });
+
+  it('mantém a seleção atual quando uma carga anterior termina atrasada', async () => {
+    const selected = await validateStoredStudy(await makeStudy(), FIXTURE_OWNER);
+    const other = await validateStoredStudy(await makeStudy(FIXTURE_OWNER, 'study-other'), FIXTURE_OWNER);
+    const delayed = deferred<StudyDocument | null>();
+    const repository = new RepositoryDouble(FIXTURE_OWNER, selected);
+    repository.getStudyImplementation = (id) => id === other.id ? delayed.promise : Promise.resolve(selected);
+    const subject = controller({ repositories: [repository] });
+    await subject.switchSession(FIXTURE_OWNER);
+    await subject.loadStudy(selected.id);
+
+    const staleLoad = subject.loadStudy(other.id);
+    expect(await subject.loadStudy(selected.id)).toBe(selected);
+    delayed.resolve(other);
+
+    await expect(staleLoad).resolves.toBeNull();
+    expect(subject.snapshot.document).toBe(selected);
+    subject.close();
+  });
+
+  it('reutiliza o estudo certificado selecionado numa leitura sem trocar o snapshot', async () => {
+    const selected = await validateStoredStudy(await makeStudy(), FIXTURE_OWNER);
+    const repository = new RepositoryDouble(FIXTURE_OWNER, selected);
+    const subject = controller({ repositories: [repository] });
+    await subject.switchSession(FIXTURE_OWNER);
+    await subject.loadStudy(selected.id);
+    const snapshot = subject.snapshot;
+
+    expect(await subject.readStudy(selected.id)).toBe(selected);
+    expect(repository.getStudyCalls).toEqual([selected.id]);
+    expect(subject.snapshot).toBe(snapshot);
+    subject.close();
+  });
+
+  it('não reutiliza o estudo selecionado enquanto uma revisão remota mais nova é carregada', async () => {
+    const revision1 = await validateStoredStudy(await makeStudy(), FIXTURE_OWNER);
+    const revision2 = await validateStoredStudy(
+      await renameStudy(revision1, 'Revisão remota', '2026-09-19T12:01:00Z'),
+      FIXTURE_OWNER,
+    );
+    let stored = revision1;
+    const repository = new RepositoryDouble(FIXTURE_OWNER, revision1);
+    repository.getStudyImplementation = async () => stored;
+    const hub = new ChannelHub();
+    const subject = controller({ repositories: [repository], hub });
+    await subject.switchSession(FIXTURE_OWNER);
+    expect(await subject.loadStudy(revision1.id)).toBe(revision1);
+    stored = revision2;
+
+    for (const group of hub.channels.values()) for (const channel of group) channel.deliver({
+      studyId: revision1.id, revision: revision2.revision, operationId: 'other-tab',
+    });
+
+    await vi.waitFor(() => expect(subject.snapshot.document).toBe(revision2));
+    expect(await subject.readStudy(revision1.id)).toBe(revision2);
+    expect(repository.getStudyCalls).toEqual([revision1.id, revision1.id]);
+    subject.close();
+  });
+
+  it('não devolve uma revisão abaixo da anunciada durante a atualização remota', async () => {
+    const revision1 = await validateStoredStudy(await makeStudy(), FIXTURE_OWNER);
+    const revision2 = await validateStoredStudy(
+      await renameStudy(revision1, 'Revisão remota', '2026-09-19T12:01:00Z'),
+      FIXTURE_OWNER,
+    );
+    const remoteRead = deferred<StudyDocument | null>();
+    let readsAfterBroadcast = 0;
+    const repository = new RepositoryDouble(FIXTURE_OWNER, revision1);
+    const hub = new ChannelHub();
+    const subject = controller({ repositories: [repository], hub });
+    await subject.switchSession(FIXTURE_OWNER);
+    await subject.loadStudy(revision1.id);
+    repository.getStudyImplementation = () => ++readsAfterBroadcast === 1
+      ? remoteRead.promise
+      : Promise.resolve(revision1);
+
+    for (const group of hub.channels.values()) for (const channel of group) channel.deliver({
+      studyId: revision1.id, revision: revision2.revision, operationId: 'other-tab',
+    });
+
+    expect(await subject.readStudy(revision1.id)).toBeNull();
+    remoteRead.resolve(revision2);
+    await vi.waitFor(() => expect(subject.snapshot.document).toBe(revision2));
+    subject.close();
+  });
+
+  it('não reaproveita cache de uma sessão anterior da mesma conta', async () => {
+    const revision1 = await validateStoredStudy(await makeStudy(), FIXTURE_OWNER);
+    const revision2 = await validateStoredStudy(
+      await renameStudy(revision1, 'Reaberto', '2026-09-19T12:01:00Z'),
+      FIXTURE_OWNER,
+    );
+    const firstRepository = new RepositoryDouble(FIXTURE_OWNER, revision1);
+    const reopenedRepository = new RepositoryDouble(FIXTURE_OWNER, revision2);
+    const subject = controller({ repositories: [firstRepository, reopenedRepository] });
+    await subject.switchSession(FIXTURE_OWNER);
+    expect(await subject.loadStudy(revision1.id)).toBe(revision1);
+
+    await subject.switchSession(null);
+    await subject.switchSession(FIXTURE_OWNER);
+
+    expect(await subject.loadStudy(revision1.id)).toBe(revision2);
+    expect(firstRepository.getStudyCalls).toEqual([revision1.id]);
+    expect(reopenedRepository.getStudyCalls).toEqual([revision1.id]);
+    subject.close();
+  });
+
+  it('não devolve cache persistido depois de uma edição local', async () => {
+    const stored = await validateStoredStudy(await makeStudy(), FIXTURE_OWNER);
+    const repository = new RepositoryDouble(FIXTURE_OWNER, stored);
+    const subject = controller({ repositories: [repository], scheduler: new ManualScheduler() });
+    await subject.switchSession(FIXTURE_OWNER);
+    await subject.loadStudy(stored.id);
+    subject.edit(await renameStudy(stored, 'Edição local', '2026-09-19T12:01:00Z'));
+
+    expect(await subject.readStudy(stored.id)).toBe(stored);
+    expect(repository.getStudyCalls).toEqual([stored.id, stored.id]);
+    subject.close();
+  });
+
+  it('publica a restauração para outra aba com o mesmo estudo selecionado', async () => {
+    const original = await validateStoredStudy(await makeStudy(), FIXTURE_OWNER);
+    const deleted = await validateStoredStudy(
+      await moveStudyToTrash(original, '2026-09-19T12:01:00Z'),
+      FIXTURE_OWNER,
+    );
+    const restored = await validateStoredStudy({
+      ...structuredClone(deleted),
+      deletedAt: null,
+      revision: deleted.revision + 1,
+      updatedAt: '2026-09-19T12:02:00Z',
+    }, FIXTURE_OWNER);
+    let stored = deleted;
+    const repositoryA = new RepositoryDouble(FIXTURE_OWNER, deleted);
+    const repositoryB = new RepositoryDouble(FIXTURE_OWNER, deleted);
+    repositoryA.getStudyImplementation = async () => stored;
+    repositoryB.getStudyImplementation = async () => stored;
+    repositoryA.restoreStudy = async () => { stored = restored; return restored; };
+    const hub = new ChannelHub();
+    const first = controller({ repositories: [repositoryA], hub });
+    const second = controller({ repositories: [repositoryB], hub });
+    await first.switchSession(FIXTURE_OWNER);
+    await second.switchSession(FIXTURE_OWNER);
+    await first.loadStudy(deleted.id);
+    await second.loadStudy(deleted.id);
+
+    await expect(first.restoreStudy(deleted.id, deleted.revision)).resolves.toBe(restored);
+
+    await vi.waitFor(() => expect(second.snapshot.document).toBe(restored));
+    expect(hub.messages).toContainEqual({
+      studyId: restored.id,
+      revision: restored.revision,
+      operationId: 'operation-1',
+    });
+    first.close();
+    second.close();
+  });
+
+  it('discards summary and detached reads when the session changes', async () => {
+    const initial = await makeStudy();
+    const repository = new RepositoryDouble(FIXTURE_OWNER, initial);
+    const pending = deferred<StudyDocument | null>();
+    const summaries = deferred<Awaited<ReturnType<ApplicationRepository['listStudySummaries']>>>();
+    repository.getStudyImplementation = () => pending.promise;
+    Object.assign(repository, { listStudySummaries: () => summaries.promise });
+    const subject = controller({ repositories: [repository, new RepositoryDouble(OWNER_B)] });
+    await subject.switchSession(FIXTURE_OWNER);
+    const reading = subject.readStudy(initial.id);
+    const listing = subject.listStudySummaries(true);
+    await subject.switchSession(OWNER_B);
+    pending.resolve(initial);
+    summaries.resolve([{ id: initial.id, ownerSub: FIXTURE_OWNER, name: initial.name,
+      revision: 1, createdAt: FIXTURE_NOW, updatedAt: FIXTURE_NOW, deletedAt: null,
+      scenarioCount: 1, hasExecutions: false, executionCount: 0, baseSourceKind: 'AUTHORED' }]);
+    expect(await reading).toBeNull();
+    expect(await listing).toEqual([]);
+    expect(subject.snapshot).toMatchObject({ ownerSub: OWNER_B, document: null, status: 'IDLE' });
+    subject.close();
+  });
+  it('publica revisão importada somente na sessão e empresa proprietárias', async () => {
+    const repository = new RepositoryDouble(FIXTURE_OWNER);
+    const subject = controller({ repositories: [repository, new RepositoryDouble(OWNER_B)] });
+    await subject.switchSession(FIXTURE_OWNER);
+    const company: CompanyRecord = { id: 'company-1', ownerSub: FIXTURE_OWNER, displayName: 'Empresa', aliases: [], createdAt: FIXTURE_NOW, updatedAt: FIXTURE_NOW, revision: 1 };
+    const review = createImportReview({
+      parsed: { layout: 'xlsx-operacoes/1.0.0', sha256: 'a'.repeat(64), byteSize: 100, rows: [{ operacao_id: 'OP-1', cliente_nome: 'Cliente', classificacao_perfil: null, direcao: 'OUT', data_conhecida: '2026-09-22', data_limite: '2026-09-23', valor_brl: '100', finalidade_codigo: null }] },
+      company, ownerSub: FIXTURE_OWNER, now: FIXTURE_NOW, positionIdentified: true,
+    });
+    await expect(subject.confirmImportedCase(review, 'stable-id')).resolves.toMatchObject({ status: 'CONFIRMED', companyId: 'company-1' });
+    await subject.switchSession(OWNER_B);
+    await expect(subject.confirmImportedCase(review, 'stable-id')).rejects.toBeInstanceOf(StudyControllerSessionError);
+  });
+
+  it('primeira sessão vazia começa sem estudo nem empresas de demonstração', async () => {
+    const demo = await makeStudy(FIXTURE_OWNER, 'demo');
+    const repository = new RepositoryDouble(FIXTURE_OWNER);
+    let installs = 0;
+    repository.installDemoImplementation = async () => {
+      installs += 1;
+      repository.studies = [demo];
+      return demo;
+    };
+    const subject = controller({ repositories: [repository] });
+
+    await subject.switchSession(FIXTURE_OWNER);
+
+    expect(installs).toBe(0);
+    expect(await subject.listStudies()).toEqual([]);
+    expect(subject.snapshot).toMatchObject({ status: 'IDLE', document: null, error: null });
+    subject.close();
+  });
+
+  it('aguarda o reset local publicado ao abrir a sessão sem carregar demonstração', async () => {
+    const repository = new RepositoryDouble(FIXTURE_OWNER);
+    const reset = deferred<boolean>();
+    const resetAllLocalDataOnce = vi.fn(() => reset.promise);
+    const compatibleRepository = Object.assign(repository, {
+      resetAllLocalDataOnce,
+    });
+    const loadPackage = vi.fn(async () => generatedDemo as unknown as DemoStudyPackageV1);
+    const subject = new StudyController({
+      repositoryFactory: () => compatibleRepository,
+      demoPackageLoader: loadPackage,
+    });
+
+    let sessionReady = false;
+    const switching = subject.switchSession(FIXTURE_OWNER).then(() => { sessionReady = true; });
+    await vi.waitFor(() => expect(resetAllLocalDataOnce).toHaveBeenCalledOnce());
+    expect(sessionReady).toBe(false);
+    reset.resolve(true);
+    await switching;
+
+    expect(sessionReady).toBe(true);
+    expect(loadPackage).not.toHaveBeenCalled();
+    expect(subject.snapshot).toMatchObject({ ownerSub: FIXTURE_OWNER, status: 'IDLE', document: null });
+    subject.close();
+  });
+
+  it('mantém falha de instalação visível e permite recuperação explícita', async () => {
+    const repository = new RepositoryDouble(FIXTURE_OWNER);
+    const failure = new Error('QuotaExceededError');
+    repository.installDemoImplementation = async () => { throw failure; };
+    const subject = controller({ repositories: [repository] });
+    await subject.switchSession(FIXTURE_OWNER);
+    await expect(subject.restoreDemoStudy()).rejects.toBe(failure);
+    expect(subject.snapshot).toMatchObject({ status: 'STORAGE_FAILURE', error: failure });
+
+    const demo = await makeStudy(FIXTURE_OWNER, 'demo');
+    repository.installDemoImplementation = async () => {
+      repository.studies = [demo];
+      return demo;
+    };
+    expect(await subject.restoreDemoStudy()).toEqual(demo);
+    expect(subject.snapshot).toMatchObject({ status: 'SAVED', document: demo, error: null });
+    subject.close();
+  });
+
+  it('cancela instalação antes da persistência se a conta mudar durante carga do pacote', async () => {
+    const packageLoad = deferred<DemoStudyPackageV1>();
+    const repositoryA = new RepositoryDouble(FIXTURE_OWNER);
+    const repositoryB = new RepositoryDouble(OWNER_B);
+    repositoryB.studies = [await makeStudy(OWNER_B)];
+    let installed = false;
+    repositoryA.installDemoImplementation = async () => { installed = true; return makeStudy(); };
+    let loading = false;
+    const subject = new StudyController({
+      repositoryFactory: (owner) => owner === FIXTURE_OWNER ? repositoryA : repositoryB,
+      demoPackageLoader: () => { loading = true; return packageLoad.promise; },
+    });
+    await subject.switchSession(FIXTURE_OWNER);
+    const previous = subject.restoreDemoStudy().catch(() => null);
+    await vi.waitFor(() => expect(loading).toBe(true));
+    await subject.switchSession(OWNER_B);
+    packageLoad.resolve(generatedDemo as unknown as DemoStudyPackageV1);
+    await previous;
+    expect(installed).toBe(false);
+    expect(subject.snapshot).toMatchObject({ ownerSub: OWNER_B, status: 'IDLE', document: null });
+    subject.close();
+  });
+
+  it('não publica instalação da conta antiga após troca de sessão', async () => {
+    const installation = deferred<StudyDocument>();
+    const repositoryA = new RepositoryDouble(FIXTURE_OWNER);
+    const repositoryB = new RepositoryDouble(OWNER_B);
+    repositoryB.studies = [await makeStudy(OWNER_B)];
+    let installing = false;
+    repositoryA.installDemoImplementation = () => { installing = true; return installation.promise; };
+    const subject = controller({ repositories: [repositoryA, repositoryB] });
+    await subject.switchSession(FIXTURE_OWNER);
+    const previous = subject.restoreDemoStudy().catch(() => null);
+    await vi.waitFor(() => expect(installing).toBe(true));
+    await subject.switchSession(OWNER_B);
+    installation.resolve(await makeStudy(FIXTURE_OWNER, 'demo'));
+    await previous;
+    expect(subject.snapshot).toMatchObject({ ownerSub: OWNER_B, status: 'IDLE', document: null });
+    subject.close();
+  });
+
+  it('não substitui edição corrente quando restauração explícita termina', async () => {
+    const original = await makeStudy();
+    const repository = new RepositoryDouble(FIXTURE_OWNER, original);
+    repository.studies = [original];
+    const scheduler = new ManualScheduler();
+    const subject = controller({ repositories: [repository], scheduler });
+    await subject.switchSession(FIXTURE_OWNER);
+    const installation = deferred<StudyDocument>();
+    repository.installDemoImplementation = () => installation.promise;
+    const restoring = subject.restoreDemoStudy();
+    await subject.loadStudy(original.id);
+    const edited = await renameStudy(original, 'Nome em edição', FIXTURE_NOW);
+    subject.edit(edited);
+    installation.resolve(await makeStudy(FIXTURE_OWNER, 'demo'));
+    expect(await restoring).toBeNull();
+    expect(subject.snapshot).toMatchObject({ status: 'DIRTY', document: edited });
+    expect(scheduler.pending.size).toBe(1);
+    subject.close();
+  });
+
+  it('preserva autosave pendente quando restauração começa com um estudo em edição', async () => {
+    const original = await makeStudy();
+    const repository = new RepositoryDouble(FIXTURE_OWNER, original);
+    const scheduler = new ManualScheduler();
+    const subject = controller({ repositories: [repository], scheduler });
+    await subject.switchSession(FIXTURE_OWNER);
+    await subject.loadStudy(original.id);
+    const edited = await renameStudy(original, 'Edição ainda não salva', FIXTURE_NOW);
+    subject.edit(edited);
+    repository.installDemoImplementation = () => makeStudy(FIXTURE_OWNER, 'demo');
+
+    expect(await subject.restoreDemoStudy()).toBeNull();
+    expect(subject.snapshot).toMatchObject({ status: 'DIRTY', document: edited });
+    expect(await subject.flush()).toEqual(edited);
+    expect(repository.saveCalls).toHaveLength(1);
+    subject.close();
+  });
+
+  async function profile(ownerSub = FIXTURE_OWNER, version = 1, id = `profile-${version}`): Promise<OperationalProfileVersion> {
+    const observed = makeObservedCase();
+    return calculateOperationalProfile({
+      id, ownerSub, companyId: observed.companyId, version,
+      createdAt: FIXTURE_NOW, cases: [{ ...observed, ownerSub }],
+    });
+  }
+
+  it('gera operationId ao confirmar perfil e preserva versões no reload', async () => {
+    const repository = new RepositoryDouble(FIXTURE_OWNER);
+    const subject = controller({ repositories: [repository] });
+    await subject.switchSession(FIXTURE_OWNER);
+    const document = await profile();
+
+    await expect(subject.appendOperationalProfileVersion(document)).resolves.toEqual(document);
+    expect(repository.appendProfileCalls[0]).toEqual({ operationId: 'operation-1', document });
+    expect(await subject.listOperationalProfileVersions(document.companyId)).toEqual([document]);
+  });
+
+  it('propaga conflito quando duas abas confirmam a mesma próxima versão', async () => {
+    const repository = new RepositoryDouble(FIXTURE_OWNER);
+    const first = controller({ repositories: [repository] });
+    const second = controller({ repositories: [repository] });
+    await first.switchSession(FIXTURE_OWNER);
+    await second.switchSession(FIXTURE_OWNER);
+    const document = await profile();
+
+    await first.appendOperationalProfileVersion(document);
+    await expect(second.appendOperationalProfileVersion(await profile(FIXTURE_OWNER, 1, 'profile-rival')))
+      .rejects.toBeInstanceOf(OperationConflictError);
+  });
+
+  it('anexa cópia integral do perfil ao estudo atual usando CAS', async () => {
+    const study = await makeStudy();
+    const repository = new RepositoryDouble(FIXTURE_OWNER, study);
+    const subject = controller({ repositories: [repository] });
+    await subject.switchSession(FIXTURE_OWNER);
+    await subject.loadStudy(study.id);
+    const document = await profile();
+
+    const attached = await subject.attachProfileToCurrentStudy(document);
+
+    expect(attached.revision).toBe(2);
+    expect(attached.evidenceSnapshots[0]).toMatchObject({ kind: 'OPERATIONAL_PROFILE', profile: document });
+    expect(attached.scenarios[0]?.sourceSnapshot).toEqual(study.scenarios[0]?.sourceSnapshot);
+    expect(repository.saveCalls[0]).toMatchObject({ expectedRevision: 1, operationId: 'operation-1' });
+    expect(subject.snapshot).toMatchObject({ status: 'SAVED', document: attached });
+  });
+
+  it('não retorna anexação idempotente da sessão A depois da troca para B', async () => {
+    const document = await profile();
+    const attached = await attachOperationalProfileEvidence(await makeStudy(), document, FIXTURE_NOW);
+    const repositoryA = new RepositoryDouble(FIXTURE_OWNER, attached);
+    const repositoryB = new RepositoryDouble(OWNER_B);
+    const subject = controller({ repositories: [repositoryA, repositoryB] });
+    await subject.switchSession(FIXTURE_OWNER);
+    await subject.loadStudy(attached.id);
+
+    const staleAttach = subject.attachProfileToCurrentStudy(document);
+    await subject.switchSession(OWNER_B);
+
+    await expect(staleAttach).rejects.toBeInstanceOf(StudyControllerSessionError);
+    expect(subject.snapshot.ownerSub).toBe(OWNER_B);
+  });
+
+  it('rejeita perfil de outra conta e preserva isolamento no reload A → B → A', async () => {
+    const study = await makeStudy();
+    const persistedProfiles: OperationalProfileVersion[] = [];
+    const repositoryA = new RepositoryDouble(FIXTURE_OWNER, study, persistedProfiles);
+    const repositoryB = new RepositoryDouble(OWNER_B);
+    const reopenedA = new RepositoryDouble(FIXTURE_OWNER, study, persistedProfiles);
+    const subject = controller({ repositories: [repositoryA, repositoryB, reopenedA] });
+    await subject.switchSession(FIXTURE_OWNER);
+    await subject.loadStudy(study.id);
+    await expect(subject.attachProfileToCurrentStudy(await profile(OWNER_B))).rejects.toThrow(/Owner/);
+    const document = await profile();
+    await subject.appendOperationalProfileVersion(document);
+
+    await subject.switchSession(OWNER_B);
+    expect(await subject.listOperationalProfileVersions()).toEqual([]);
+    await expect(subject.attachProfileToCurrentStudy(await profile(FIXTURE_OWNER))).rejects.toThrow();
+
+    await subject.switchSession(FIXTURE_OWNER);
+    expect(await subject.listOperationalProfileVersions()).toEqual([document]);
+  });
+
+  it('salva um estudo novo a partir de IDLE com CAS de criação', async () => {
+    const created = await makeStudy();
+    const repository = new RepositoryDouble(FIXTURE_OWNER);
+    const subject = controller({ repositories: [repository] });
+    await subject.switchSession(FIXTURE_OWNER);
+
+    subject.edit(created);
+    await expect(subject.flush()).resolves.toEqual(created);
+
+    expect(repository.saveCalls).toHaveLength(1);
+    expect(repository.saveCalls[0]).toMatchObject({ expectedRevision: 0, document: created });
+    expect(subject.snapshot).toMatchObject({ status: 'SAVED', document: created });
+  });
+
+  it('percorre IDLE, DIRTY, SAVING e SAVED, e rejeita uso após close', async () => {
+    const original = await makeStudy();
+    const edited = await renameStudy(original, 'Nome editado', '2026-09-19T12:01:00Z');
+    const repository = new RepositoryDouble(FIXTURE_OWNER, original);
+    const commit = deferred<StudyDocument>();
+    repository.saveStudyImplementation = () => commit.promise;
+    const scheduler = new ManualScheduler();
+    const subject = controller({ repositories: [repository], scheduler });
+
+    await subject.switchSession(FIXTURE_OWNER);
+    await subject.loadStudy(original.id);
+    expect(subject.snapshot.status).toBe('SAVED');
+
+    subject.edit(edited);
+    expect(subject.snapshot.status).toBe('DIRTY');
+    scheduler.runAll();
+    await Promise.resolve();
+    expect(subject.snapshot.status).toBe('SAVING');
+
+    commit.resolve(edited);
+    await subject.flush();
+    expect(subject.snapshot).toMatchObject({ status: 'SAVED', document: edited });
+
+    subject.close();
+    expect(subject.snapshot.status).toBe('CLOSED');
+    expect(() => subject.edit(edited)).toThrow(StudyControllerClosedError);
+    await expect(subject.flush()).rejects.toBeInstanceOf(StudyControllerClosedError);
+    await expect(subject.loadStudy(original.id)).rejects.toBeInstanceOf(StudyControllerClosedError);
+    await expect(subject.switchSession(OWNER_B)).rejects.toBeInstanceOf(StudyControllerClosedError);
+  });
+
+  it('serializa autosaves e flush aguarda o commit da última edição', async () => {
+    const revision1 = await makeStudy();
+    const revision2 = await renameStudy(revision1, 'Revisão 2', '2026-09-19T12:01:00Z');
+    const revision3 = await renameStudy(revision2, 'Revisão 3', '2026-09-19T12:02:00Z');
+    const first = deferred<StudyDocument>();
+    const second = deferred<StudyDocument>();
+    const repository = new RepositoryDouble(FIXTURE_OWNER, revision1);
+    repository.saveStudyImplementation = (input) => input.document.revision === 2
+      ? first.promise
+      : second.promise;
+    const subject = controller({ repositories: [repository] });
+    await subject.switchSession(FIXTURE_OWNER);
+    await subject.loadStudy(revision1.id);
+
+    subject.edit(revision2);
+    subject.edit(revision3);
+    const flushed = subject.flush();
+    await Promise.resolve();
+    expect(repository.saveCalls.map((call) => call.document.revision)).toEqual([2]);
+
+    first.resolve(revision2);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(repository.saveCalls.map((call) => call.document.revision)).toEqual([2, 3]);
+    let settled = false;
+    void flushed.then(() => { settled = true; });
+    await Promise.resolve();
+    expect(settled).toBe(false);
+
+    second.resolve(revision3);
+    await expect(flushed).resolves.toEqual(revision3);
+    expect(repository.saveCalls.map((call) => call.expectedRevision)).toEqual([1, 2]);
+  });
+
+  it('preserva a edição em memória quando o storage falha', async () => {
+    const original = await makeStudy();
+    const edited = await renameStudy(original, 'Ainda em memória', '2026-09-19T12:01:00Z');
+    const repository = new RepositoryDouble(FIXTURE_OWNER, original);
+    const failure = new Error('quota');
+    repository.saveStudyImplementation = async () => { throw failure; };
+    const subject = controller({ repositories: [repository] });
+    await subject.switchSession(FIXTURE_OWNER);
+    await subject.loadStudy(original.id);
+
+    subject.edit(edited);
+    await expect(subject.flush()).rejects.toBe(failure);
+    expect(subject.snapshot).toMatchObject({
+      status: 'STORAGE_FAILURE',
+      document: edited,
+      error: failure,
+    });
+  });
+
+  it('trata falha CAS como CONFLICT e mantém a edição local', async () => {
+    const original = await makeStudy();
+    const edited = await renameStudy(original, 'Conflito local', '2026-09-19T12:01:00Z');
+    const repository = new RepositoryDouble(FIXTURE_OWNER, original);
+    repository.saveStudyImplementation = async () => { throw new RevisionConflictError(1, 2); };
+    const subject = controller({ repositories: [repository] });
+    await subject.switchSession(FIXTURE_OWNER);
+    await subject.loadStudy(original.id);
+
+    subject.edit(edited);
+    await expect(subject.flush()).rejects.toBeInstanceOf(RevisionConflictError);
+    expect(subject.snapshot).toMatchObject({ status: 'CONFLICT', document: edited });
+  });
+
+  it('publica somente identificadores e revisão e faz aba limpa reler a autoridade CAS', async () => {
+    const revision1 = await makeStudy();
+    const revision2 = await renameStudy(revision1, 'Remoto', '2026-09-19T12:01:00Z');
+    const hub = new ChannelHub();
+    const repositoryA = new RepositoryDouble(FIXTURE_OWNER, revision1);
+    const repositoryB = new RepositoryDouble(FIXTURE_OWNER, revision1);
+    let persisted = revision1;
+    repositoryA.saveStudyImplementation = async (input) => {
+      persisted = input.document;
+      return persisted;
+    };
+    repositoryB.getStudyImplementation = async () => persisted;
+    const first = controller({ repositories: [repositoryA], hub });
+    const second = controller({ repositories: [repositoryB], hub });
+    await first.switchSession(FIXTURE_OWNER);
+    await second.switchSession(FIXTURE_OWNER);
+    await first.loadStudy(revision1.id);
+    await second.loadStudy(revision1.id);
+
+    first.edit(revision2);
+    await first.flush();
+    await vi.waitFor(() => expect(second.snapshot.document?.revision).toBe(2));
+
+    expect(hub.messages).toEqual([{
+      studyId: revision1.id,
+      revision: 2,
+      operationId: 'operation-1',
+    }]);
+    expect(Object.keys(hub.messages[0]!).sort()).toEqual(['operationId', 'revision', 'studyId']);
+    expect(second.snapshot).toMatchObject({ status: 'SAVED', document: revision2 });
+  });
+
+  it('faz aba suja entrar em CONFLICT ao receber revisão remota', async () => {
+    const revision1 = await makeStudy();
+    const local = await renameStudy(revision1, 'Local', '2026-09-19T12:01:00Z');
+    const remote = await renameStudy(revision1, 'Remoto', '2026-09-19T12:02:00Z');
+    const hub = new ChannelHub();
+    const repositoryA = new RepositoryDouble(FIXTURE_OWNER, revision1);
+    const repositoryB = new RepositoryDouble(FIXTURE_OWNER, revision1);
+    repositoryA.saveStudyImplementation = async (input) => input.document;
+    const first = controller({ repositories: [repositoryA], hub });
+    const second = controller({ repositories: [repositoryB], hub });
+    await first.switchSession(FIXTURE_OWNER);
+    await second.switchSession(FIXTURE_OWNER);
+    await first.loadStudy(revision1.id);
+    await second.loadStudy(revision1.id);
+
+    second.edit(local);
+    first.edit(remote);
+    await first.flush();
+
+    expect(second.snapshot).toMatchObject({ status: 'CONFLICT', document: local });
+    expect(repositoryB.saveCalls).toHaveLength(0);
+  });
+
+  it('preserva CONFLICT quando revisão remota maior chega durante save local', async () => {
+    const original = await makeStudy();
+    const local = await renameStudy(original, 'Commit local', '2026-09-19T12:01:00Z');
+    const commit = deferred<StudyDocument>();
+    const hub = new ChannelHub();
+    const repository = new RepositoryDouble(FIXTURE_OWNER, original);
+    repository.saveStudyImplementation = () => commit.promise;
+    const subject = controller({ repositories: [repository], hub });
+    await subject.switchSession(FIXTURE_OWNER);
+    await subject.loadStudy(original.id);
+
+    subject.edit(local);
+    const flushed = subject.flush();
+    await vi.waitFor(() => expect(subject.snapshot.status).toBe('SAVING'));
+    const channelName = [...hub.channels.keys()][0]!;
+    const remote = hub.factory(channelName);
+    remote.postMessage({
+      studyId: original.id,
+      revision: 3,
+      operationId: 'remote-operation-3',
+    });
+    expect(subject.snapshot.status).toBe('CONFLICT');
+
+    commit.resolve(local);
+    await expect(flushed).resolves.toEqual(local);
+    expect(subject.snapshot).toMatchObject({ status: 'CONFLICT', document: local });
+  });
+
+  it('isola A → B → A, fecha recursos e ignora retorno tardio da sessão antiga', async () => {
+    const studyA = await makeStudy(FIXTURE_OWNER, 'study-a');
+    const studyB = await makeStudy(OWNER_B, 'study-b');
+    const lateA = deferred<StudyDocument | null>();
+    const firstA = new RepositoryDouble(FIXTURE_OWNER, studyA);
+    firstA.getStudyImplementation = () => lateA.promise;
+    const repositoryB = new RepositoryDouble(OWNER_B, studyB);
+    const reopenedA = new RepositoryDouble(FIXTURE_OWNER, studyA);
+    const repositories = [firstA, repositoryB, reopenedA];
+    const created: RepositoryDouble[] = [];
+    const hub = new ChannelHub();
+    let cancels = 0;
+    let operation = 0;
+    const subject = new StudyController({
+      repositoryFactory: (ownerSub) => {
+        const repository = repositories.find((candidate) =>
+          candidate.ownerSub === ownerSub && !created.includes(candidate));
+        if (repository === undefined) throw new Error('repo ausente');
+        created.push(repository);
+        return repository;
+      },
+      channelFactory: hub.factory,
+      cancelPending: async () => { cancels += 1; },
+      operationId: () => `operation-${++operation}`,
+      channelScope: 'test-project',
+    });
+
+    await subject.switchSession(FIXTURE_OWNER);
+    const staleLoad = subject.loadStudy(studyA.id);
+    await subject.switchSession(OWNER_B);
+    expect(firstA.closed).toBe(true);
+    expect(subject.snapshot).toMatchObject({ ownerSub: OWNER_B, sessionEpoch: 2, document: null });
+
+    lateA.resolve(studyA);
+    await expect(staleLoad).resolves.toBeNull();
+    expect(subject.snapshot.document).toBeNull();
+    await expect(subject.loadStudy(studyB.id)).resolves.toEqual(studyB);
+
+    await subject.switchSession(FIXTURE_OWNER);
+    expect(repositoryB.closed).toBe(true);
+    expect(subject.snapshot).toMatchObject({ ownerSub: FIXTURE_OWNER, sessionEpoch: 3, document: null });
+    await expect(subject.loadStudy(studyA.id)).resolves.toEqual(studyA);
+    expect(created).toEqual([firstA, repositoryB, reopenedA]);
+    expect(cancels).toBe(3);
+    expect([...hub.channels.values()].flatMap((channels) => [...channels])).toHaveLength(1);
+  });
+
+  it('não deixa autosave pendente de A bloquear uma escrita de B', async () => {
+    const studyA = await makeStudy(FIXTURE_OWNER, 'study-a');
+    const editedA = await renameStudy(studyA, 'A pendente', '2026-09-19T12:01:00Z');
+    const studyB = await makeStudy(OWNER_B, 'study-b');
+    const editedB = await renameStudy(studyB, 'B salvo', '2026-09-19T12:02:00Z');
+    const lateSaveA = deferred<StudyDocument>();
+    const repositoryA = new RepositoryDouble(FIXTURE_OWNER, studyA);
+    repositoryA.saveStudyImplementation = () => lateSaveA.promise;
+    const repositoryB = new RepositoryDouble(OWNER_B, studyB);
+    const subject = controller({ repositories: [repositoryA, repositoryB] });
+
+    await subject.switchSession(FIXTURE_OWNER);
+    await subject.loadStudy(studyA.id);
+    subject.edit(editedA);
+    const staleFlush = subject.flush();
+    await Promise.resolve();
+
+    await subject.switchSession(OWNER_B);
+    await subject.loadStudy(studyB.id);
+    subject.edit(editedB);
+    await expect(subject.flush()).resolves.toEqual(editedB);
+
+    lateSaveA.resolve(editedA);
+    await expect(staleFlush).resolves.toBeNull();
+    expect(subject.snapshot).toMatchObject({
+      ownerSub: OWNER_B,
+      status: 'SAVED',
+      document: editedB,
+    });
+  });
+
+  it('ignora um carregamento antigo quando outro estudo já foi selecionado', async () => {
+    const firstStudy = await makeStudy(FIXTURE_OWNER, 'study-1');
+    const secondStudy = await makeStudy(FIXTURE_OWNER, 'study-2');
+    const lateFirst = deferred<StudyDocument | null>();
+    const repository = new RepositoryDouble(FIXTURE_OWNER);
+    repository.getStudyImplementation = (id) => id === firstStudy.id
+      ? lateFirst.promise
+      : Promise.resolve(secondStudy);
+    const subject = controller({ repositories: [repository] });
+    await subject.switchSession(FIXTURE_OWNER);
+
+    const staleLoad = subject.loadStudy(firstStudy.id);
+    await expect(subject.loadStudy(secondStudy.id)).resolves.toEqual(secondStudy);
+    lateFirst.resolve(firstStudy);
+
+    await expect(staleLoad).resolves.toBeNull();
+    expect(subject.snapshot.document).toEqual(secondStudy);
+  });
+
+  it('não deixa o autosave do estudo anterior bloquear o estudo recém-selecionado', async () => {
+    const firstStudy = await makeStudy(FIXTURE_OWNER, 'study-1');
+    const editedFirst = await renameStudy(firstStudy, 'Primeiro pendente', '2026-09-19T12:01:00Z');
+    const secondStudy = await makeStudy(FIXTURE_OWNER, 'study-2');
+    const editedSecond = await renameStudy(secondStudy, 'Segundo salvo', '2026-09-19T12:02:00Z');
+    const lateFirst = deferred<StudyDocument>();
+    const repository = new RepositoryDouble(FIXTURE_OWNER);
+    repository.getStudyImplementation = async (id) => id === firstStudy.id ? firstStudy : secondStudy;
+    repository.saveStudyImplementation = (input) => input.document.id === firstStudy.id
+      ? lateFirst.promise
+      : Promise.resolve(input.document);
+    const subject = controller({ repositories: [repository] });
+    await subject.switchSession(FIXTURE_OWNER);
+    await subject.loadStudy(firstStudy.id);
+    subject.edit(editedFirst);
+    const staleFlush = subject.flush();
+    await Promise.resolve();
+
+    await subject.loadStudy(secondStudy.id);
+    subject.edit(editedSecond);
+    await expect(subject.flush()).resolves.toEqual(editedSecond);
+
+    lateFirst.resolve(editedFirst);
+    await expect(staleFlush).resolves.toBeNull();
+    expect(subject.snapshot.document).toEqual(editedSecond);
+  });
+});

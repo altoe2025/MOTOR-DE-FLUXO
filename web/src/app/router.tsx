@@ -1,0 +1,93 @@
+import { lazy, Suspense } from 'react';
+import { Navigate, Route, Routes, useParams } from 'react-router-dom';
+
+import { useAuth } from '../auth/AuthProvider';
+import { CallbackPage, LoginPage, PasswordPage } from '../auth/AuthPages';
+
+const AppShell = lazy(async () => ({ default: (await import('./AppShell')).AppShell }));
+const CompaniesPage = lazy(async () => ({ default: (await import('../companies/CompaniesPage')).CompaniesPage }));
+const CompanyCasesPage = lazy(async () => ({ default: (await import('../companies/CompanyCasesPage')).CompanyCasesPage }));
+const CompanyPage = lazy(async () => ({ default: (await import('../companies/CompanyPage')).CompanyPage }));
+const CompanyProfilesPage = lazy(async () => ({ default: (await import('../companies/CompanyProfilesPage')).CompanyProfilesPage }));
+const ImportFlowPage = lazy(async () => ({ default: (await import('../importer/components/ImportFlowPage')).ImportFlowPage }));
+const CompanyStudiesPage = lazy(async () => ({ default: (await import('../companies/CompanyStudiesPage')).CompanyStudiesPage }));
+const DiagnosticsHubPage = lazy(async () => ({ default: (await import('../pages/DiagnosticsHubPage')).DiagnosticsHubPage }));
+const StudiesPage = lazy(async () => ({ default: (await import('../pages/StudiesPage')).StudiesPage }));
+const StudyPortfolioPage = lazy(async () => ({ default: (await import('../pages/StudyPortfolioPage')).StudyPortfolioPage }));
+const ComparisonBoardPage = lazy(async () => ({ default: (await import('../pages/ComparisonBoardPage')).ComparisonBoardPage }));
+
+const StudyDiagnosticPage = lazy(async () => {
+  const module = await import('../pages/StudyDiagnosticPage');
+  return { default: module.StudyDiagnosticPage };
+});
+
+const ReplayPage = lazy(async () => {
+  const module = await import('../replay/ReplayPage');
+  return { default: module.ReplayPage };
+});
+
+const PresentationRoute = lazy(async () => {
+  const module = await import('../presentation/PresentationRoute');
+  return { default: module.PresentationRoute };
+});
+
+function DiagnosticRoute() {
+  return <Suspense fallback={<p role="status">Carregando diagnóstico…</p>}><StudyDiagnosticPage /></Suspense>;
+}
+
+function ReplayRoute() {
+  return <Suspense fallback={<p role="status">Carregando Replay…</p>}><ReplayPage /></Suspense>;
+}
+
+
+function SessionRoot() {
+  const { status } = useAuth();
+  if (status === 'loading') return <p className="session-loading" role="status">Verificando sessão…</p>;
+  return <Navigate to={status === 'authenticated' ? '/estudos' : '/login'} replace />;
+}
+
+function ProtectedShell() {
+  const { status } = useAuth();
+  if (status === 'loading') return <p className="session-loading" role="status">Verificando sessão…</p>;
+  if (status !== 'authenticated') return <Navigate to="/login" replace state={{ expired: status === 'expired' }} />;
+  return <Suspense fallback={<p className="session-loading" role="status">Carregando área protegida…</p>}><AppShell /></Suspense>;
+}
+
+function LegacyStudyRedirect() {
+  const { studyId } = useParams();
+  return <Navigate to={studyId === undefined ? '/estudos' : `/carteira/${studyId}`} replace />;
+}
+
+export function AppRoutes() {
+  return (
+    <Routes>
+      <Route path="/" element={<SessionRoot />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/auth/callback" element={<CallbackPage />} />
+      <Route path="/auth/definir-senha" element={<PasswordPage />} />
+      <Route element={<ProtectedShell />}>
+        <Route path="/empresas" element={<CompaniesPage />} />
+        <Route path="/empresas/:companyId" element={<CompanyPage />} />
+        <Route path="/empresas/:companyId/casos" element={<CompanyCasesPage />} />
+        {/* Criação de Perfil está pausada: sem aba na empresa, só por endereço direto. */}
+        <Route path="/empresas/:companyId/perfis" element={<CompanyProfilesPage />} />
+        <Route path="/empresas/:companyId/estudos" element={<CompanyStudiesPage />} />
+        <Route path="/empresas/:companyId/importar" element={<ImportFlowPage />} />
+        <Route path="/importar" element={<ImportFlowPage />} />
+        <Route path="/carteira" element={<Navigate to="/estudos" replace />} />
+        <Route path="/carteira/:id" element={<StudyPortfolioPage />} />
+        <Route path="/estudos" element={<StudiesPage />} />
+        <Route path="/estudos/:studyId" element={<LegacyStudyRedirect />} />
+        <Route path="/estudos/:studyId/diagnostico" element={<DiagnosticRoute />} />
+        <Route path="/estudos/:studyId/replay" element={<ReplayRoute />} />
+        <Route path="/estudos/:studyId/apresentacao" element={<Suspense fallback={<p role="status">Carregando apresentação…</p>}><PresentationRoute /></Suspense>} />
+        <Route path="/diagnostico" element={<DiagnosticsHubPage />} />
+        <Route path="/comparar" element={<Navigate to="/quadro" replace />} />
+        <Route path="/quadro" element={<ComparisonBoardPage />} />
+        <Route path="/replay" element={<Navigate to="/estudos" replace />} />
+        <Route path="/premissas" element={<Navigate to="/estudos" replace />} />
+      </Route>
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}

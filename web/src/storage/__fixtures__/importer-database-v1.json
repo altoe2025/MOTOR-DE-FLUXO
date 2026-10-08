@@ -1,0 +1,112 @@
+{
+  "databaseName": "motor-fluxo:imports:v1:project-test:owner-a",
+  "version": 1,
+  "stores": {
+    "studies": [
+      {
+        "id": "study-1",
+        "ownerSub": "owner-a",
+        "document": {
+          "schemaVersion": "1.0.0",
+          "id": "study-1",
+          "revision": 1,
+          "name": "Operações reais",
+          "createdAtUtc": "2026-09-18T10:00:00.000Z",
+          "updatedAtUtc": "2026-09-18T10:00:00.000Z",
+          "batches": [
+            {
+              "schemaVersion": "1.0.0",
+              "id": "batch-1",
+              "studyId": "study-1",
+              "revision": 1,
+              "batchSequence": 1,
+              "importedAtUtc": "2026-09-18T10:00:00.000Z",
+              "file": {
+                "fileName": "operacoes.xlsx",
+                "fileSize": 100,
+                "fileLastModified": 1800000000000,
+                "sha256": "sha-256"
+              },
+              "rows": [
+                {
+                  "versionId": "version-1",
+                  "canonicalClientId": "client-1",
+                  "rowNumber": 2,
+                  "raw": {
+                    "operacao_id": "OP-1",
+                    "cliente_nome": "Cliente Á",
+                    "classificacao_perfil": null,
+                    "direcao": "OUT",
+                    "data_conhecida": "18/09/2026",
+                    "data_limite": "20/09/2026",
+                    "valor_brl": "100,00",
+                    "finalidade_codigo": "SERVICO"
+                  },
+                  "normalized": {
+                    "operationId": "OP-1",
+                    "clientName": "Cliente Á",
+                    "profileClassification": null,
+                    "direction": "OUT",
+                    "knownDate": "2026-09-18",
+                    "deadlineDate": "2026-09-20",
+                    "valueBrl": "100",
+                    "purposeCode": "SERVICO"
+                  },
+                  "errors": []
+                },
+                {
+                  "versionId": "version-invalid",
+                  "canonicalClientId": "client-1",
+                  "rowNumber": 3,
+                  "raw": {
+                    "operacao_id": "OP-2",
+                    "cliente_nome": "Cliente Á",
+                    "classificacao_perfil": null,
+                    "direcao": "???",
+                    "data_conhecida": null,
+                    "data_limite": null,
+                    "valor_brl": "x",
+                    "finalidade_codigo": null
+                  },
+                  "normalized": null,
+                  "errors": [
+                    {
+                      "code": "DIRECTION_INVALID",
+                      "field": "direcao",
+                      "rowNumber": 3,
+                      "value": "???",
+                      "message": "direção inválida"
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "events": [
+            {
+              "kind": "BATCH_IMPORTED",
+              "id": "event-1",
+              "eventSequence": 1,
+              "occurredAtUtc": "2026-09-18T10:00:00.000Z",
+              "batchId": "batch-1"
+            }
+          ]
+        },
+        "appliedOperations": []
+      }
+    ],
+    "executions": [
+      {
+        "id": "execution-1",
+        "studyId": "study-1",
+        "ownerSub": "owner-a",
+        "studyRevision": 1,
+        "createdAtUtc": "2026-09-18T11:00:00.000Z",
+        "operationIds": ["OP-1"],
+        "request": { "source": "REAL_OPERATIONS" },
+        "response": { "status": "SUCCEEDED" },
+        "key": "study-1:execution-1"
+      }
+    ]
+  }
+}

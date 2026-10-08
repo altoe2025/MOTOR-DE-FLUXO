@@ -56,9 +56,10 @@ def _ponto_falso(nome_mix: str, economia_pct: str) -> PontoVarredura:
         taxa_netabilidade=zero,
         teto_netabilidade=zero,
         eficiencia_vs_teto=zero,
-        limite_intra_cliente_brl=zero,
-        volume_casado_incremental_brl=zero,
-        taxa_netabilidade_incremental=zero,
+        volume_autonetting_brl=zero,
+        volume_netting_multilateral_brl=zero,
+        taxa_autonetting=zero,
+        taxa_netting_multilateral=zero,
         baseline_total_brl=Decimal(100),
         baseline_iof_brl=zero,
         baseline_carry_brl=zero,
@@ -74,6 +75,12 @@ def _ponto_falso(nome_mix: str, economia_pct: str) -> PontoVarredura:
         economia_brl=Decimal(economia_pct) * Decimal(100),
         economia_pct=Decimal(economia_pct),
         economia_por_ordem_brl=zero,
+        # `resumir` não olha para as colunas de tempo; entram zeradas só para o
+        # ponto sintético ser construível.
+        dias_espera_p90_volume_casado=zero,
+        dias_espera_p90_volume_remetido=zero,
+        dias_espera_media_por_real=zero,
+        pct_volume_espera_truncada=zero,
     )
 
 
@@ -103,22 +110,13 @@ def test_resumo_carrega_o_teto_e_a_eficiencia_medianos():
         ]
         tetos = sorted(p.teto_netabilidade for p in do_grupo)
         eficiencias = sorted(p.eficiencia_vs_teto for p in do_grupo)
-        meio = len(tetos) // 2
-        esperado_teto = (
-            tetos[meio] if len(tetos) % 2 else (tetos[meio - 1] + tetos[meio]) / 2
-        )
-        esperado_ef = (
-            eficiencias[meio]
-            if len(eficiencias) % 2
-            else (eficiencias[meio - 1] + eficiencias[meio]) / 2
-        )
+        esperado_teto = tetos[1]
+        esperado_ef = eficiencias[1]
         assert resumo.teto_netabilidade_p50 == esperado_teto
         assert resumo.eficiencia_vs_teto_p50 == esperado_ef
 
 
-def test_resumo_carrega_a_netabilidade_incremental_mediana():
-    """O número que interessa para a proposta comercial precisa estar no resumo,
-    ao lado da netabilidade bruta — senão só a bruta é citada."""
+def test_resumo_carrega_as_duas_parcelas_observadas_da_netabilidade():
     grade = _grade()
     for resumo in resumir(grade):
         do_grupo = [
@@ -127,15 +125,10 @@ def test_resumo_carrega_a_netabilidade_incremental_mediana():
             if (p.nome_mix, p.n_clientes, p.janela_dias)
             == (resumo.nome_mix, resumo.n_clientes, resumo.janela_dias)
         ]
-        valores = sorted(p.taxa_netabilidade_incremental for p in do_grupo)
-        meio = len(valores) // 2
-        esperado = (
-            valores[meio]
-            if len(valores) % 2
-            else (valores[meio - 1] + valores[meio]) / 2
-        )
-        assert resumo.taxa_netabilidade_incremental_p50 == esperado
-        assert resumo.taxa_netabilidade_incremental_p50 <= resumo.taxa_netabilidade_p50
+        autonetting = sorted(p.taxa_autonetting for p in do_grupo)
+        multilaterais = sorted(p.taxa_netting_multilateral for p in do_grupo)
+        assert resumo.taxa_autonetting_p50 == autonetting[1]
+        assert resumo.taxa_netting_multilateral_p50 == multilaterais[1]
 
 
 def test_nao_mistura_celulas_diferentes():
@@ -182,9 +175,9 @@ def test_fracao_positiva_conta_as_seeds_que_deram_prejuizo():
     assert resumo.economia_pct_min == Decimal("-0.10")
 
 
-def test_mediana_de_numero_par_de_seeds():
+def test_p50_de_numero_par_de_seeds_usa_nearest_rank():
     pontos = [_ponto_falso("m", v) for v in ["0.10", "0.20", "0.30", "0.40"]]
-    assert resumir(pontos)[0].economia_pct_p50 == Decimal("0.25")
+    assert resumir(pontos)[0].economia_pct_p50 == Decimal("0.20")
 
 
 def test_resumir_grade_vazia_devolve_nada():

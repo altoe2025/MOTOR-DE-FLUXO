@@ -19,7 +19,8 @@ corrente, ocorre o que vier primeiro entre: (1) já passaram `janela_dias` desde
 último fechamento; (2) alguma ordem aberta vence hoje (`dia_limite == dia`); (3) o
 horizonte da simulação terminou.
 
-Ao fechar, casa `min(pendente_out, pendente_in)` e emite `Alocacao(CASADO)` nos
+Ao fechar, casa primeiro OUT e IN abertos do mesmo cliente. Só os saldos restantes
+entram no casamento multilateral. Em ambas as fases, emite `Alocacao(CASADO)` nos
 dois lados. O que sobra **permanece aberto**: só vira `Alocacao(REMETIDO)` no dia
 em que a ordem atinge o próprio `dia_limite`. O vencimento de uma ordem força a
 saída apenas DAQUELA ordem, nunca do lote inteiro — remeter o lote todo era um
@@ -42,12 +43,72 @@ from __future__ import annotations
 from bisect import insort
 from decimal import Decimal
 
-from motor.dominio import Alocacao, Cenario, Ciclo, Direcao, Ordem, TipoAlocacao
+from motor.dominio import (
+    Alocacao,
+    Cenario,
+    Ciclo,
+    Direcao,
+    Ordem,
+    OrigemCasamento,
+    TipoAlocacao,
+)
 
 
 def _prioridade(ordem: Ordem) -> tuple[int, str]:
     """EDF com desempate determinístico."""
     return (ordem.dia_limite, ordem.id)
+
+
+def _consumir_casamento(
+    fila_out: list[Ordem],
+    fila_in: list[Ordem],
+    valor: Decimal,
+    dia: int,
+    pendente: dict[str, Decimal],
+    origem: OrigemCasamento,
+    alocacoes: list[Alocacao],
+) -> Decimal:
+    """Consome o mesmo volume nos dois lados, preservando a ordem EDF/id."""
+    for fila in (fila_out, fila_in):
+        restante = valor
+        for ordem in fila:
+            if restante <= 0:
+                break
+            usa = min(pendente[ordem.id], restante)
+            if usa <= 0:
+                continue
+            pendente[ordem.id] -= usa
+            restante -= usa
+            alocacoes.append(
+                Alocacao(ordem.id, dia, usa, TipoAlocacao.CASADO, origem)
+            )
+        if restante != 0:
+            raise ValueError(
+                f"casamento {origem.value} não coube no próprio lado no dia {dia}: "
+                f"sobraram {restante}"
+            )
+    return valor
+
+
+def _validar_conservacao(ordens: tuple[Ordem, ...], ciclos: tuple[Ciclo, ...]) -> None:
+    entrada = sum((ordem.valor_brl for ordem in ordens), Decimal(0))
+    saida = sum(
+        (alocacao.valor_brl for ciclo in ciclos for alocacao in ciclo.alocacoes),
+        Decimal(0),
+    )
+    if entrada != saida:
+        raise ValueError(f"conservacao global violada: entrada {entrada} != alocado {saida}")
+
+    por_id: dict[str, Decimal] = {}
+    for ciclo in ciclos:
+        for alocacao in ciclo.alocacoes:
+            por_id[alocacao.ordem_id] = por_id.get(alocacao.ordem_id, Decimal(0)) + alocacao.valor_brl
+    for ordem in ordens:
+        if por_id.get(ordem.id, Decimal(0)) != ordem.valor_brl:
+            raise ValueError(
+                f"conservacao violada em {ordem.id}: "
+                f"alocado {por_id.get(ordem.id, Decimal(0))} != valor_brl {ordem.valor_brl}"
+            )
 
 
 def executar_p0(cenario: Cenario) -> tuple[Ciclo, ...]:
@@ -85,21 +146,60 @@ def executar_p0(cenario: Cenario) -> tuple[Ciclo, ...]:
 
         bruto_out = sum((pendente[o.id] for o in out), Decimal(0))
         bruto_in = sum((pendente[o.id] for o in entrada), Decimal(0))
-        casado = min(bruto_out, bruto_in)
-
         alocacoes: list[Alocacao] = []
-        for fila in (out, entrada):
-            restante = casado
-            for ordem in fila:
-                if restante <= 0:
-                    break
-                usa = min(pendente[ordem.id], restante)
-                if usa <= 0:
-                    continue
-                pendente[ordem.id] -= usa
-                restante -= usa
-                alocacoes.append(Alocacao(ordem.id, dia, usa, TipoAlocacao.CASADO))
-            assert restante == 0, "casado não coube na fila do próprio lado"
+        casado_intra = Decimal(0)
+        out_por_cliente: dict[str, list[Ordem]] = {}
+        in_por_cliente: dict[str, list[Ordem]] = {}
+        for ordem in abertas:
+            if pendente[ordem.id] <= 0:
+                continue
+            destino = (
+                out_por_cliente if ordem.direcao is Direcao.OUT else in_por_cliente
+            )
+            destino.setdefault(ordem.cliente_id, []).append(ordem)
+
+        clientes_duas_pontas = sorted(out_por_cliente.keys() & in_por_cliente.keys())
+        for cliente_id in clientes_duas_pontas:
+            out_cliente = out_por_cliente[cliente_id]
+            in_cliente = in_por_cliente[cliente_id]
+            valor_intra = min(
+                sum((pendente[ordem.id] for ordem in out_cliente), Decimal(0)),
+                sum((pendente[ordem.id] for ordem in in_cliente), Decimal(0)),
+            )
+            casado_intra += _consumir_casamento(
+                out_cliente,
+                in_cliente,
+                valor_intra,
+                dia,
+                pendente,
+                OrigemCasamento.INTRA_CLIENTE,
+                alocacoes,
+            )
+
+        out_residual = [
+            ordem
+            for ordem in abertas
+            if ordem.direcao is Direcao.OUT and pendente[ordem.id] > 0
+        ]
+        in_residual = [
+            ordem
+            for ordem in abertas
+            if ordem.direcao is Direcao.IN and pendente[ordem.id] > 0
+        ]
+        casado_inter = min(
+            sum((pendente[ordem.id] for ordem in out_residual), Decimal(0)),
+            sum((pendente[ordem.id] for ordem in in_residual), Decimal(0)),
+        )
+        _consumir_casamento(
+            out_residual,
+            in_residual,
+            casado_inter,
+            dia,
+            pendente,
+            OrigemCasamento.INTER_CLIENTE,
+            alocacoes,
+        )
+        casado = casado_intra + casado_inter
 
         residuo = Decimal(0)
         # `abertas` já está na prioridade do casamento — e tem que ser percorrida
@@ -131,7 +231,11 @@ def executar_p0(cenario: Cenario) -> tuple[Ciclo, ...]:
         # é sempre de um lado só, então a direção continua bem definida.
         direcao_residuo = Direcao.OUT if bruto_out >= bruto_in else Direcao.IN
 
-        assert casado <= bruto_out and casado <= bruto_in
+        if casado > bruto_out or casado > bruto_in:
+            raise ValueError(
+                f"casado ({casado}) excede um dos lados no dia {dia}: "
+                f"OUT {bruto_out}, IN {bruto_in}"
+            )
 
         ciclos.append(
             Ciclo(
@@ -146,17 +250,16 @@ def executar_p0(cenario: Cenario) -> tuple[Ciclo, ...]:
         )
         dia_ultimo_fechamento = dia
 
-    assert not abertas, "sobraram ordens abertas ao fim do horizonte"
-
-    alocado: dict[str, Decimal] = {}
-    for ciclo in ciclos:
-        for alocacao in ciclo.alocacoes:
-            alocado[alocacao.ordem_id] = (
-                alocado.get(alocacao.ordem_id, Decimal(0)) + alocacao.valor_brl
-            )
-    for ordem in cenario.ordens:
-        assert alocado.get(ordem.id, Decimal(0)) == ordem.valor_brl, (
-            f"conservacao violada em {ordem.id}: alocado != valor_brl"
+    # Estes dois são invariantes de CORREÇÃO, não sanidade de desenvolvimento: se
+    # falharem, o resultado devolvido está errado. Como `assert` some sob `python -O`,
+    # a checagem tem que ser exceção de verdade — senão uma ordem pode desaparecer da
+    # conta em silêncio e a economia sair menor (ou maior) do que a real.
+    if abertas:
+        raise ValueError(
+            f"sobraram {len(abertas)} ordens abertas ao fim do horizonte: "
+            f"{[o.id for o in abertas]}"
         )
 
-    return tuple(ciclos)
+    resultado = tuple(ciclos)
+    _validar_conservacao(cenario.ordens, resultado)
+    return resultado

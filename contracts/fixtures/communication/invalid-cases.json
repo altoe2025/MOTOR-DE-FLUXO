@@ -1,0 +1,757 @@
+[
+  {
+    "name": "cross-context-studyId",
+    "base": "observed",
+    "path": [
+      "evidenceIndex",
+      "gross",
+      "studyId"
+    ],
+    "value": "other"
+  },
+  {
+    "name": "cross-context-scenarioId",
+    "base": "observed",
+    "path": [
+      "evidenceIndex",
+      "gross",
+      "scenarioId"
+    ],
+    "value": "other"
+  },
+  {
+    "name": "cross-context-scenarioRevision",
+    "base": "observed",
+    "path": [
+      "evidenceIndex",
+      "gross",
+      "scenarioRevision"
+    ],
+    "value": 2
+  },
+  {
+    "name": "cross-context-diagnosticExecutionId",
+    "base": "observed",
+    "path": [
+      "evidenceIndex",
+      "gross",
+      "diagnosticExecutionId"
+    ],
+    "value": "other"
+  },
+  {
+    "name": "cross-context-repetitionId",
+    "base": "observed",
+    "path": [
+      "evidenceIndex",
+      "gross",
+      "repetitionId"
+    ],
+    "value": "other"
+  },
+  {
+    "name": "cross-context-sourceId",
+    "base": "observed",
+    "path": [
+      "evidenceIndex",
+      "gross",
+      "sourceId"
+    ],
+    "value": "other"
+  },
+  {
+    "name": "invalid-refs-6",
+    "base": "observed",
+    "path": [
+      "executiveMetrics",
+      0,
+      "evidenceRefs"
+    ],
+    "value": []
+  },
+  {
+    "name": "invalid-refs-7",
+    "base": "observed",
+    "path": [
+      "executiveMetrics",
+      0,
+      "evidenceRefs"
+    ],
+    "value": [
+      "missing-ref"
+    ]
+  },
+  {
+    "name": "invalid-refs-8",
+    "base": "observed",
+    "path": [
+      "executiveMetrics",
+      0,
+      "evidenceRefs"
+    ],
+    "value": [
+      "gross",
+      "gross"
+    ]
+  },
+  {
+    "name": "invalid-decimal-9",
+    "base": "observed",
+    "path": [
+      "executiveMetrics",
+      0,
+      "value"
+    ],
+    "value": "1e2"
+  },
+  {
+    "name": "invalid-decimal-10",
+    "base": "observed",
+    "path": [
+      "executiveMetrics",
+      0,
+      "value"
+    ],
+    "value": "NaN"
+  },
+  {
+    "name": "invalid-decimal-11",
+    "base": "observed",
+    "path": [
+      "executiveMetrics",
+      0,
+      "value"
+    ],
+    "value": "Infinity"
+  },
+  {
+    "name": "invalid-decimal-12",
+    "base": "observed",
+    "path": [
+      "executiveMetrics",
+      0,
+      "value"
+    ],
+    "value": "01"
+  },
+  {
+    "name": "invalid-decimal-13",
+    "base": "observed",
+    "path": [
+      "executiveMetrics",
+      0,
+      "value"
+    ],
+    "value": "１２"
+  },
+  {
+    "name": "invalid-decimal-14",
+    "base": "observed",
+    "path": [
+      "executiveMetrics",
+      0,
+      "value"
+    ],
+    "value": "1\n"
+  },
+  {
+    "name": "invalid-decimal-15",
+    "base": "observed",
+    "path": [
+      "executiveMetrics",
+      0,
+      "value"
+    ],
+    "value": "111111111111111111111111111111111111111111111111111111111111111111111111111111111"
+  },
+  {
+    "name": "invalid-decimal-16",
+    "base": "observed",
+    "path": [
+      "executiveMetrics",
+      0,
+      "value"
+    ],
+    "value": 12
+  },
+  {
+    "name": "invalid-decimal-17",
+    "base": "observed",
+    "path": [
+      "executiveMetrics",
+      0,
+      "value"
+    ],
+    "value": null
+  },
+  {
+    "name": "unavailable-zero",
+    "base": "observed",
+    "path": [
+      "executiveMetrics",
+      1,
+      "value"
+    ],
+    "value": "0"
+  },
+  {
+    "name": "unavailable-fabricated-reason",
+    "base": "observed",
+    "path": [
+      "evidenceIndex",
+      "missing",
+      "value"
+    ],
+    "value": "Anything else"
+  },
+  {
+    "name": "fabricated-metric",
+    "base": "observed",
+    "path": [
+      "executiveMetrics",
+      0,
+      "value"
+    ],
+    "value": "0"
+  },
+  {
+    "name": "fabricated-fact",
+    "base": "observed",
+    "path": [
+      "assumptions",
+      0,
+      "value"
+    ],
+    "value": "Inventada"
+  },
+  {
+    "name": "fabricated-limitation",
+    "base": "observed",
+    "path": [
+      "limitations",
+      0,
+      "statement"
+    ],
+    "value": "Inventada"
+  },
+  {
+    "name": "wrong-synthetic",
+    "base": "observed",
+    "path": [
+      "source",
+      "synthetic"
+    ],
+    "value": true
+  },
+  {
+    "name": "missing-comparison",
+    "base": "synthetic",
+    "path": [
+      "comparison"
+    ],
+    "value": null
+  },
+  {
+    "name": "unexpected-comparison",
+    "base": "observed",
+    "path": [
+      "comparison"
+    ],
+    "value": {
+      "title": "Seção sem dados adicionais",
+      "metrics": [],
+      "facts": []
+    }
+  },
+  {
+    "name": "missing-replay",
+    "base": "synthetic",
+    "path": [
+      "replaySnapshot"
+    ],
+    "value": null
+  },
+  {
+    "name": "unexpected-replay",
+    "base": "observed",
+    "path": [
+      "replaySnapshot"
+    ],
+    "value": {
+      "day": 2,
+      "metrics": [],
+      "facts": []
+    }
+  },
+  {
+    "name": "wrong-replay-day",
+    "base": "synthetic",
+    "path": [
+      "replaySnapshot",
+      "day"
+    ],
+    "value": 3
+  },
+  {
+    "name": "invalid-pointer",
+    "base": "observed",
+    "path": [
+      "evidenceIndex",
+      "gross",
+      "path"
+    ],
+    "value": "/bad~2pointer"
+  },
+  {
+    "name": "unknown-field",
+    "base": "observed",
+    "path": [
+      "extra"
+    ],
+    "value": true
+  },
+  {
+    "name": "boolean-revision",
+    "base": "observed",
+    "path": [
+      "study",
+      "revision"
+    ],
+    "value": true
+  },
+  {
+    "name": "zero-revision",
+    "base": "observed",
+    "path": [
+      "study",
+      "revision"
+    ],
+    "value": 0
+  },
+  {
+    "name": "invalid-evidence-source",
+    "base": "observed",
+    "path": [
+      "evidenceIndex",
+      "gross",
+      "source"
+    ],
+    "value": "OTHER"
+  },
+  {
+    "name": "invalid-timestamp",
+    "base": "observed",
+    "path": [
+      "generatedAt"
+    ],
+    "value": "2026-02-30T12:00:00Z"
+  },
+  {
+    "name": "non-utc-timestamp",
+    "base": "observed",
+    "path": [
+      "generatedAt"
+    ],
+    "value": "2026-09-23T12:00:00+00:00"
+  },
+  {
+    "name": "empty-code",
+    "base": "observed",
+    "path": [
+      "executiveMetrics",
+      0,
+      "code"
+    ],
+    "value": ""
+  },
+  {
+    "name": "unavailable-evidence-duplicate",
+    "base": "observed",
+    "path": [
+      "evidenceIndex",
+      "duplicate"
+    ],
+    "value": {
+      "source": "DIAGNOSTIC",
+      "sourceId": "diagnostic-1",
+      "studyId": "study-1",
+      "scenarioId": "scenario-1",
+      "scenarioRevision": 1,
+      "diagnosticExecutionId": "diagnostic-1",
+      "repetitionId": "repetition-1",
+      "path": "/metrics/missing",
+      "value": null
+    }
+  },
+  {
+    "name": "oversized-refs",
+    "base": "observed",
+    "path": [
+      "executiveMetrics",
+      0,
+      "evidenceRefs"
+    ],
+    "value": [
+      "gross",
+      "gross",
+      "gross",
+      "gross",
+      "gross",
+      "gross",
+      "gross",
+      "gross",
+      "gross",
+      "gross",
+      "gross",
+      "gross",
+      "gross",
+      "gross",
+      "gross",
+      "gross",
+      "gross",
+      "gross",
+      "gross",
+      "gross",
+      "gross"
+    ]
+  },
+  {
+    "name": "fingerprint-tamper",
+    "base": "observed",
+    "path": [
+      "contextFingerprint"
+    ],
+    "value": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  {
+    "name": "inherited-object-ref",
+    "base": "observed",
+    "path": [
+      "executiveMetrics",
+      0,
+      "evidenceRefs"
+    ],
+    "value": [
+      "__proto__"
+    ]
+  },
+  {
+    "name": "study-source-identity",
+    "base": "observed",
+    "path": [
+      "evidenceIndex",
+      "assumption",
+      "sourceId"
+    ],
+    "value": "diagnostic-1"
+  },
+  {
+    "name": "comparison-source-identity",
+    "base": "synthetic",
+    "path": [
+      "evidenceIndex",
+      "delta",
+      "sourceId"
+    ],
+    "value": "diagnostic-1"
+  },
+  {
+    "name": "unselected-replay-source",
+    "base": "observed",
+    "path": [
+      "evidenceIndex",
+      "gross",
+      "source"
+    ],
+    "value": "REPLAY"
+  },
+  {
+    "name": "unselected-comparison-source",
+    "base": "observed",
+    "path": [
+      "evidenceIndex",
+      "gross",
+      "source"
+    ],
+    "value": "COMPARISON"
+  },
+  {
+    "name": "fact-missing-reference",
+    "base": "observed",
+    "path": [
+      "provenance",
+      0,
+      "evidenceRefs"
+    ],
+    "value": [
+      "absent"
+    ]
+  },
+  {
+    "name": "limitation-duplicate-reference",
+    "base": "observed",
+    "path": [
+      "limitations",
+      0,
+      "evidenceRefs"
+    ],
+    "value": [
+      "limitation",
+      "limitation"
+    ]
+  },
+  {
+    "name": "composition-fabricated-metric",
+    "base": "observed",
+    "path": [
+      "composition",
+      "metrics"
+    ],
+    "value": [
+      {
+        "code": "gross",
+        "label": "Volume observado",
+        "availability": "AVAILABLE",
+        "value": "999",
+        "unit": "BRL",
+        "meaning": "Volume publicado pela fonte",
+        "evidenceRefs": [
+          "gross"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "composition-fabricated-fact",
+    "base": "observed",
+    "path": [
+      "composition",
+      "facts"
+    ],
+    "value": [
+      {
+        "code": "assumption",
+        "label": "Premissa",
+        "value": "Contradicao",
+        "evidenceRefs": [
+          "assumption"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "mechanism-fabricated-metric",
+    "base": "observed",
+    "path": [
+      "mechanism",
+      "metrics"
+    ],
+    "value": [
+      {
+        "code": "gross",
+        "label": "Volume observado",
+        "availability": "AVAILABLE",
+        "value": "999",
+        "unit": "BRL",
+        "meaning": "Volume publicado pela fonte",
+        "evidenceRefs": [
+          "gross"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "mechanism-fabricated-fact",
+    "base": "observed",
+    "path": [
+      "mechanism",
+      "facts"
+    ],
+    "value": [
+      {
+        "code": "assumption",
+        "label": "Premissa",
+        "value": "Contradicao",
+        "evidenceRefs": [
+          "assumption"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "economics-fabricated-metric",
+    "base": "observed",
+    "path": [
+      "economics",
+      "metrics"
+    ],
+    "value": [
+      {
+        "code": "gross",
+        "label": "Volume observado",
+        "availability": "AVAILABLE",
+        "value": "999",
+        "unit": "BRL",
+        "meaning": "Volume publicado pela fonte",
+        "evidenceRefs": [
+          "gross"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "economics-fabricated-fact",
+    "base": "observed",
+    "path": [
+      "economics",
+      "facts"
+    ],
+    "value": [
+      {
+        "code": "assumption",
+        "label": "Premissa",
+        "value": "Contradicao",
+        "evidenceRefs": [
+          "assumption"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "robustness-fabricated-metric",
+    "base": "observed",
+    "path": [
+      "robustness",
+      "metrics"
+    ],
+    "value": [
+      {
+        "code": "gross",
+        "label": "Volume observado",
+        "availability": "AVAILABLE",
+        "value": "999",
+        "unit": "BRL",
+        "meaning": "Volume publicado pela fonte",
+        "evidenceRefs": [
+          "gross"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "robustness-fabricated-fact",
+    "base": "observed",
+    "path": [
+      "robustness",
+      "facts"
+    ],
+    "value": [
+      {
+        "code": "assumption",
+        "label": "Premissa",
+        "value": "Contradicao",
+        "evidenceRefs": [
+          "assumption"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "comparison-fabricated-metric",
+    "base": "synthetic",
+    "path": [
+      "comparison",
+      "metrics",
+      0,
+      "value"
+    ],
+    "value": "999"
+  },
+  {
+    "name": "replay-fabricated-metric",
+    "base": "synthetic",
+    "path": [
+      "replaySnapshot",
+      "metrics",
+      0,
+      "value"
+    ],
+    "value": "999"
+  },
+  {
+    "name": "revision-number-string",
+    "base": "observed",
+    "path": [
+      "selection",
+      "scenarioRevision"
+    ],
+    "value": "1"
+  },
+  {
+    "name": "empty-evidence-key",
+    "base": "observed",
+    "path": [
+      "evidenceIndex",
+      ""
+    ],
+    "value": {
+      "source": "DIAGNOSTIC",
+      "sourceId": "diagnostic-1",
+      "studyId": "study-1",
+      "scenarioId": "scenario-1",
+      "scenarioRevision": 1,
+      "diagnosticExecutionId": "diagnostic-1",
+      "repetitionId": "repetition-1",
+      "path": "/metrics/gross",
+      "value": "12345678901234567890.0123456789"
+    }
+  },
+  {
+    "name": "identifier-overflow",
+    "base": "observed",
+    "path": [
+      "selection",
+      "scenarioId"
+    ],
+    "value": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  },
+  {
+    "name": "label-overflow",
+    "base": "observed",
+    "path": [
+      "executiveMetrics",
+      0,
+      "label"
+    ],
+    "value": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  },
+  {
+    "name": "section-title-overflow",
+    "base": "observed",
+    "path": [
+      "composition",
+      "title"
+    ],
+    "value": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  },
+  {
+    "name": "availability-invalid-literal",
+    "base": "observed",
+    "path": [
+      "executiveMetrics",
+      0,
+      "availability"
+    ],
+    "value": "UNKNOWN"
+  },
+  {
+    "name": "nested-unknown-field",
+    "base": "observed",
+    "path": [
+      "evidenceIndex",
+      "gross",
+      "secret"
+    ],
+    "value": true
+  }
+]

@@ -1,0 +1,3710 @@
+[
+ {
+  "document": {
+   "api_version": "1.0.0",
+   "currency": "BRL",
+   "days": [
+    {
+     "closing": null,
+     "day": 0,
+     "end_state": {
+      "matched_position_accumulated_brl": "0",
+      "measured_matched_contribution_accumulated_brl": "0",
+      "open_in_brl": "0",
+      "open_out_brl": "0",
+      "remitted_in_accumulated_brl": "0",
+      "remitted_out_accumulated_brl": "0"
+     },
+     "events": []
+    },
+    {
+     "closing": {
+      "flow_segments": [
+       {
+        "closing_day": 1,
+        "in_order_id": "o02",
+        "matching_origin": "INTRA_CLIENTE",
+        "meaning": "ILLUSTRATIVE_AGGREGATE_DECOMPOSITION",
+        "out_order_id": "o07",
+        "value_brl": "376.3"
+       }
+      ],
+      "gross_in_brl": "11936.85",
+      "gross_out_brl": "376.3",
+      "inter_client_position_brl": "0",
+      "intra_client_position_brl": "376.3",
+      "matched_contribution_brl": "752.6",
+      "matched_position_brl": "376.3",
+      "remitted_in_brl": "7772.59",
+      "remitted_out_brl": "0",
+      "triggers": [
+       "DEADLINE"
+      ]
+     },
+     "day": 1,
+     "end_state": {
+      "matched_position_accumulated_brl": "376.3",
+      "measured_matched_contribution_accumulated_brl": "0",
+      "open_in_brl": "3787.96",
+      "open_out_brl": "0",
+      "remitted_in_accumulated_brl": "7772.59",
+      "remitted_out_accumulated_brl": "0"
+     },
+     "events": [
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o02",
+       "sequence": 0
+      },
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o03",
+       "sequence": 1
+      },
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o07",
+       "sequence": 2
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "OUT",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTRA_CLIENTE",
+       "order_id": "o07",
+       "sequence": 3,
+       "value_brl": "376.3"
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "IN",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTRA_CLIENTE",
+       "order_id": "o02",
+       "sequence": 4,
+       "value_brl": "376.3"
+      },
+      {
+       "allocation_type": "REMETIDO",
+       "direction": "IN",
+       "kind": "ALLOCATION",
+       "matching_origin": null,
+       "order_id": "o03",
+       "sequence": 5,
+       "value_brl": "7772.59"
+      }
+     ]
+    },
+    {
+     "closing": null,
+     "day": 2,
+     "end_state": {
+      "matched_position_accumulated_brl": "376.3",
+      "measured_matched_contribution_accumulated_brl": "0",
+      "open_in_brl": "15097.58",
+      "open_out_brl": "0",
+      "remitted_in_accumulated_brl": "7772.59",
+      "remitted_out_accumulated_brl": "0"
+     },
+     "events": [
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o05",
+       "sequence": 0
+      },
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o11",
+       "sequence": 1
+      }
+     ]
+    },
+    {
+     "closing": {
+      "flow_segments": [],
+      "gross_in_brl": "22144.45",
+      "gross_out_brl": "0",
+      "inter_client_position_brl": "0",
+      "intra_client_position_brl": "0",
+      "matched_contribution_brl": "0",
+      "matched_position_brl": "0",
+      "remitted_in_brl": "3787.96",
+      "remitted_out_brl": "0",
+      "triggers": [
+       "DEADLINE"
+      ]
+     },
+     "day": 3,
+     "end_state": {
+      "matched_position_accumulated_brl": "376.3",
+      "measured_matched_contribution_accumulated_brl": "0",
+      "open_in_brl": "18356.49",
+      "open_out_brl": "0",
+      "remitted_in_accumulated_brl": "11560.55",
+      "remitted_out_accumulated_brl": "0"
+     },
+     "events": [
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o08",
+       "sequence": 0
+      },
+      {
+       "allocation_type": "REMETIDO",
+       "direction": "IN",
+       "kind": "ALLOCATION",
+       "matching_origin": null,
+       "order_id": "o02",
+       "sequence": 1,
+       "value_brl": "3787.96"
+      }
+     ]
+    },
+    {
+     "closing": {
+      "flow_segments": [
+       {
+        "closing_day": 4,
+        "in_order_id": "o10",
+        "matching_origin": "INTRA_CLIENTE",
+        "meaning": "ILLUSTRATIVE_AGGREGATE_DECOMPOSITION",
+        "out_order_id": "o00",
+        "value_brl": "6126.33"
+       },
+       {
+        "closing_day": 4,
+        "in_order_id": "o11",
+        "matching_origin": "INTER_CLIENTE",
+        "meaning": "ILLUSTRATIVE_AGGREGATE_DECOMPOSITION",
+        "out_order_id": "o00",
+        "value_brl": "223.85"
+       }
+      ],
+      "gross_in_brl": "24482.82",
+      "gross_out_brl": "6350.18",
+      "inter_client_position_brl": "223.85",
+      "intra_client_position_brl": "6126.33",
+      "matched_contribution_brl": "12700.36",
+      "matched_position_brl": "6350.18",
+      "remitted_in_brl": "6128.63",
+      "remitted_out_brl": "0",
+      "triggers": [
+       "DEADLINE"
+      ]
+     },
+     "day": 4,
+     "end_state": {
+      "matched_position_accumulated_brl": "6726.48",
+      "measured_matched_contribution_accumulated_brl": "12700.36",
+      "open_in_brl": "12004.01",
+      "open_out_brl": "0",
+      "remitted_in_accumulated_brl": "17689.18",
+      "remitted_out_accumulated_brl": "0"
+     },
+     "events": [
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o00",
+       "sequence": 0
+      },
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o10",
+       "sequence": 1
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "OUT",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTRA_CLIENTE",
+       "order_id": "o00",
+       "sequence": 2,
+       "value_brl": "6126.33"
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "IN",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTRA_CLIENTE",
+       "order_id": "o10",
+       "sequence": 3,
+       "value_brl": "6126.33"
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "OUT",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTER_CLIENTE",
+       "order_id": "o00",
+       "sequence": 4,
+       "value_brl": "223.85"
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "IN",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTER_CLIENTE",
+       "order_id": "o11",
+       "sequence": 5,
+       "value_brl": "223.85"
+      },
+      {
+       "allocation_type": "REMETIDO",
+       "direction": "IN",
+       "kind": "ALLOCATION",
+       "matching_origin": null,
+       "order_id": "o11",
+       "sequence": 6,
+       "value_brl": "6128.63"
+      }
+     ]
+    },
+    {
+     "closing": {
+      "flow_segments": [
+       {
+        "closing_day": 5,
+        "in_order_id": "o05",
+        "matching_origin": "INTRA_CLIENTE",
+        "meaning": "ILLUSTRATIVE_AGGREGATE_DECOMPOSITION",
+        "out_order_id": "o04",
+        "value_brl": "4957.14"
+       },
+       {
+        "closing_day": 5,
+        "in_order_id": "o08",
+        "matching_origin": "INTRA_CLIENTE",
+        "meaning": "ILLUSTRATIVE_AGGREGATE_DECOMPOSITION",
+        "out_order_id": "o04",
+        "value_brl": "2993.49"
+       },
+       {
+        "closing_day": 5,
+        "in_order_id": "o06",
+        "matching_origin": "INTRA_CLIENTE",
+        "meaning": "ILLUSTRATIVE_AGGREGATE_DECOMPOSITION",
+        "out_order_id": "o12",
+        "value_brl": "7484.92"
+       }
+      ],
+      "gross_in_brl": "19638.97",
+      "gross_out_brl": "15435.55",
+      "inter_client_position_brl": "0",
+      "intra_client_position_brl": "15435.55",
+      "matched_contribution_brl": "30871.1",
+      "matched_position_brl": "15435.55",
+      "remitted_in_brl": "0",
+      "remitted_out_brl": "0",
+      "triggers": [
+       "DEADLINE"
+      ]
+     },
+     "day": 5,
+     "end_state": {
+      "matched_position_accumulated_brl": "22162.03",
+      "measured_matched_contribution_accumulated_brl": "43571.46",
+      "open_in_brl": "4203.42",
+      "open_out_brl": "0",
+      "remitted_in_accumulated_brl": "17689.18",
+      "remitted_out_accumulated_brl": "0"
+     },
+     "events": [
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o04",
+       "sequence": 0
+      },
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o06",
+       "sequence": 1
+      },
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o12",
+       "sequence": 2
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "OUT",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTRA_CLIENTE",
+       "order_id": "o04",
+       "sequence": 3,
+       "value_brl": "7950.63"
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "IN",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTRA_CLIENTE",
+       "order_id": "o05",
+       "sequence": 4,
+       "value_brl": "4957.14"
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "IN",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTRA_CLIENTE",
+       "order_id": "o08",
+       "sequence": 5,
+       "value_brl": "2993.49"
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "OUT",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTRA_CLIENTE",
+       "order_id": "o12",
+       "sequence": 6,
+       "value_brl": "7484.92"
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "IN",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTRA_CLIENTE",
+       "order_id": "o06",
+       "sequence": 7,
+       "value_brl": "7484.92"
+      }
+     ]
+    },
+    {
+     "closing": null,
+     "day": 6,
+     "end_state": {
+      "matched_position_accumulated_brl": "22162.03",
+      "measured_matched_contribution_accumulated_brl": "43571.46",
+      "open_in_brl": "15297.65",
+      "open_out_brl": "0",
+      "remitted_in_accumulated_brl": "17689.18",
+      "remitted_out_accumulated_brl": "0"
+     },
+     "events": [
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o01",
+       "sequence": 0
+      },
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o09",
+       "sequence": 1
+      }
+     ]
+    },
+    {
+     "closing": null,
+     "day": 7,
+     "end_state": {
+      "matched_position_accumulated_brl": "22162.03",
+      "measured_matched_contribution_accumulated_brl": "43571.46",
+      "open_in_brl": "15297.65",
+      "open_out_brl": "0",
+      "remitted_in_accumulated_brl": "17689.18",
+      "remitted_out_accumulated_brl": "0"
+     },
+     "events": []
+    },
+    {
+     "closing": null,
+     "day": 8,
+     "end_state": {
+      "matched_position_accumulated_brl": "22162.03",
+      "measured_matched_contribution_accumulated_brl": "43571.46",
+      "open_in_brl": "15297.65",
+      "open_out_brl": "0",
+      "remitted_in_accumulated_brl": "17689.18",
+      "remitted_out_accumulated_brl": "0"
+     },
+     "events": []
+    },
+    {
+     "closing": {
+      "flow_segments": [],
+      "gross_in_brl": "15297.65",
+      "gross_out_brl": "0",
+      "inter_client_position_brl": "0",
+      "intra_client_position_brl": "0",
+      "matched_contribution_brl": "0",
+      "matched_position_brl": "0",
+      "remitted_in_brl": "9828.78",
+      "remitted_out_brl": "0",
+      "triggers": [
+       "DEADLINE"
+      ]
+     },
+     "day": 9,
+     "end_state": {
+      "matched_position_accumulated_brl": "22162.03",
+      "measured_matched_contribution_accumulated_brl": "43571.46",
+      "open_in_brl": "5468.87",
+      "open_out_brl": "0",
+      "remitted_in_accumulated_brl": "27517.96",
+      "remitted_out_accumulated_brl": "0"
+     },
+     "events": [
+      {
+       "allocation_type": "REMETIDO",
+       "direction": "IN",
+       "kind": "ALLOCATION",
+       "matching_origin": null,
+       "order_id": "o01",
+       "sequence": 0,
+       "value_brl": "5775.4"
+      },
+      {
+       "allocation_type": "REMETIDO",
+       "direction": "IN",
+       "kind": "ALLOCATION",
+       "matching_origin": null,
+       "order_id": "o08",
+       "sequence": 1,
+       "value_brl": "4053.38"
+      }
+     ]
+    },
+    {
+     "closing": null,
+     "day": 10,
+     "end_state": {
+      "matched_position_accumulated_brl": "22162.03",
+      "measured_matched_contribution_accumulated_brl": "43571.46",
+      "open_in_brl": "5468.87",
+      "open_out_brl": "0",
+      "remitted_in_accumulated_brl": "27517.96",
+      "remitted_out_accumulated_brl": "0"
+     },
+     "events": []
+    },
+    {
+     "closing": null,
+     "day": 11,
+     "end_state": {
+      "matched_position_accumulated_brl": "22162.03",
+      "measured_matched_contribution_accumulated_brl": "43571.46",
+      "open_in_brl": "5468.87",
+      "open_out_brl": "0",
+      "remitted_in_accumulated_brl": "27517.96",
+      "remitted_out_accumulated_brl": "0"
+     },
+     "events": []
+    },
+    {
+     "closing": {
+      "flow_segments": [],
+      "gross_in_brl": "5468.87",
+      "gross_out_brl": "0",
+      "inter_client_position_brl": "0",
+      "intra_client_position_brl": "0",
+      "matched_contribution_brl": "0",
+      "matched_position_brl": "0",
+      "remitted_in_brl": "5468.87",
+      "remitted_out_brl": "0",
+      "triggers": [
+       "DEADLINE",
+       "HORIZON_END"
+      ]
+     },
+     "day": 12,
+     "end_state": {
+      "matched_position_accumulated_brl": "22162.03",
+      "measured_matched_contribution_accumulated_brl": "43571.46",
+      "open_in_brl": "0",
+      "open_out_brl": "0",
+      "remitted_in_accumulated_brl": "32986.83",
+      "remitted_out_accumulated_brl": "0"
+     },
+     "events": [
+      {
+       "allocation_type": "REMETIDO",
+       "direction": "IN",
+       "kind": "ALLOCATION",
+       "matching_origin": null,
+       "order_id": "o06",
+       "sequence": 0,
+       "value_brl": "150.04"
+      },
+      {
+       "allocation_type": "REMETIDO",
+       "direction": "IN",
+       "kind": "ALLOCATION",
+       "matching_origin": null,
+       "order_id": "o09",
+       "sequence": 1,
+       "value_brl": "5318.83"
+      }
+     ]
+    }
+   ],
+   "diagnostic_execution_id": "00000000-0000-4000-8000-000000000701",
+   "execution_fingerprint": "1d0b52fc87686070887efc9fbe77e3efbfbc6e18b875d3db97e47a4199c9a62c",
+   "motor_version": "fixture",
+   "orders": [
+    {
+     "client_id": "c1",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 4,
+     "direction": "OUT",
+     "id": "o00",
+     "known_day": 4,
+     "value_brl": "6350.18"
+    },
+    {
+     "client_id": "c1",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 9,
+     "direction": "IN",
+     "id": "o01",
+     "known_day": 6,
+     "value_brl": "5775.4"
+    },
+    {
+     "client_id": "c1",
+     "cohort": "WARMUP",
+     "deadline_day": 3,
+     "direction": "IN",
+     "id": "o02",
+     "known_day": 1,
+     "value_brl": "4164.26"
+    },
+    {
+     "client_id": "c0",
+     "cohort": "WARMUP",
+     "deadline_day": 1,
+     "direction": "IN",
+     "id": "o03",
+     "known_day": 1,
+     "value_brl": "7772.59"
+    },
+    {
+     "client_id": "c0",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 5,
+     "direction": "OUT",
+     "id": "o04",
+     "known_day": 5,
+     "value_brl": "7950.63"
+    },
+    {
+     "client_id": "c0",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 8,
+     "direction": "IN",
+     "id": "o05",
+     "known_day": 2,
+     "value_brl": "4957.14"
+    },
+    {
+     "client_id": "c1",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 12,
+     "direction": "IN",
+     "id": "o06",
+     "known_day": 5,
+     "value_brl": "7634.96"
+    },
+    {
+     "client_id": "c1",
+     "cohort": "WARMUP",
+     "deadline_day": 3,
+     "direction": "OUT",
+     "id": "o07",
+     "known_day": 1,
+     "value_brl": "376.3"
+    },
+    {
+     "client_id": "c0",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 9,
+     "direction": "IN",
+     "id": "o08",
+     "known_day": 3,
+     "value_brl": "7046.87"
+    },
+    {
+     "client_id": "c1",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 12,
+     "direction": "IN",
+     "id": "o09",
+     "known_day": 6,
+     "value_brl": "5318.83"
+    },
+    {
+     "client_id": "c1",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 7,
+     "direction": "IN",
+     "id": "o10",
+     "known_day": 4,
+     "value_brl": "6126.33"
+    },
+    {
+     "client_id": "c0",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 4,
+     "direction": "IN",
+     "id": "o11",
+     "known_day": 2,
+     "value_brl": "6352.48"
+    },
+    {
+     "client_id": "c1",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 8,
+     "direction": "OUT",
+     "id": "o12",
+     "known_day": 5,
+     "value_brl": "7484.92"
+    }
+   ],
+   "participant_seeds": {},
+   "period": {
+    "measurement_end_day": 6,
+    "measurement_start_day": 2,
+    "mode": "NATURAL",
+    "settlement_end_day": 12,
+    "warmup_days": 2
+   },
+   "policy": "P0",
+   "repetition_id": "00000000-0000-4000-8000-000000000703",
+   "result_fingerprint": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+   "scenario_id": "00000000-0000-4000-8000-000000000003",
+   "scenario_revision": 1,
+   "totals": {
+    "execution_matched_position_brl": "22162.03",
+    "execution_remitted_in_brl": "32986.83",
+    "execution_remitted_out_brl": "0",
+    "measured_autonetting_contribution_brl": "43123.76",
+    "measured_gross_brl": "64997.74",
+    "measured_matched_contribution_brl": "43571.46",
+    "measured_multilateral_contribution_brl": "447.7",
+    "measured_remitted_brl": "21426.28",
+    "netability_fraction": "0.6703534615203544000145235819"
+   }
+  },
+  "seed": 3
+ },
+ {
+  "document": {
+   "api_version": "1.0.0",
+   "currency": "BRL",
+   "days": [
+    {
+     "closing": {
+      "flow_segments": [],
+      "gross_in_brl": "0",
+      "gross_out_brl": "10447.13",
+      "inter_client_position_brl": "0",
+      "intra_client_position_brl": "0",
+      "matched_contribution_brl": "0",
+      "matched_position_brl": "0",
+      "remitted_in_brl": "0",
+      "remitted_out_brl": "10447.13",
+      "triggers": [
+       "WINDOW",
+       "DEADLINE"
+      ]
+     },
+     "day": 0,
+     "end_state": {
+      "matched_position_accumulated_brl": "0",
+      "measured_matched_contribution_accumulated_brl": "0",
+      "open_in_brl": "0",
+      "open_out_brl": "0",
+      "remitted_in_accumulated_brl": "0",
+      "remitted_out_accumulated_brl": "10447.13"
+     },
+     "events": [
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o00",
+       "sequence": 0
+      },
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o03",
+       "sequence": 1
+      },
+      {
+       "allocation_type": "REMETIDO",
+       "direction": "OUT",
+       "kind": "ALLOCATION",
+       "matching_origin": null,
+       "order_id": "o00",
+       "sequence": 2,
+       "value_brl": "3834.53"
+      },
+      {
+       "allocation_type": "REMETIDO",
+       "direction": "OUT",
+       "kind": "ALLOCATION",
+       "matching_origin": null,
+       "order_id": "o03",
+       "sequence": 3,
+       "value_brl": "6612.6"
+      }
+     ]
+    },
+    {
+     "closing": {
+      "flow_segments": [],
+      "gross_in_brl": "1021.64",
+      "gross_out_brl": "0",
+      "inter_client_position_brl": "0",
+      "intra_client_position_brl": "0",
+      "matched_contribution_brl": "0",
+      "matched_position_brl": "0",
+      "remitted_in_brl": "0",
+      "remitted_out_brl": "0",
+      "triggers": [
+       "WINDOW"
+      ]
+     },
+     "day": 1,
+     "end_state": {
+      "matched_position_accumulated_brl": "0",
+      "measured_matched_contribution_accumulated_brl": "0",
+      "open_in_brl": "1021.64",
+      "open_out_brl": "0",
+      "remitted_in_accumulated_brl": "0",
+      "remitted_out_accumulated_brl": "10447.13"
+     },
+     "events": [
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o07",
+       "sequence": 0
+      }
+     ]
+    },
+    {
+     "closing": {
+      "flow_segments": [
+       {
+        "closing_day": 2,
+        "in_order_id": "o07",
+        "matching_origin": "INTER_CLIENTE",
+        "meaning": "ILLUSTRATIVE_AGGREGATE_DECOMPOSITION",
+        "out_order_id": "o13",
+        "value_brl": "1021.64"
+       }
+      ],
+      "gross_in_brl": "1021.64",
+      "gross_out_brl": "5127.15",
+      "inter_client_position_brl": "1021.64",
+      "intra_client_position_brl": "0",
+      "matched_contribution_brl": "2043.28",
+      "matched_position_brl": "1021.64",
+      "remitted_in_brl": "0",
+      "remitted_out_brl": "0",
+      "triggers": [
+       "WINDOW",
+       "DEADLINE"
+      ]
+     },
+     "day": 2,
+     "end_state": {
+      "matched_position_accumulated_brl": "1021.64",
+      "measured_matched_contribution_accumulated_brl": "2043.28",
+      "open_in_brl": "0",
+      "open_out_brl": "4105.51",
+      "remitted_in_accumulated_brl": "0",
+      "remitted_out_accumulated_brl": "10447.13"
+     },
+     "events": [
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o13",
+       "sequence": 0
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "OUT",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTER_CLIENTE",
+       "order_id": "o13",
+       "sequence": 1,
+       "value_brl": "1021.64"
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "IN",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTER_CLIENTE",
+       "order_id": "o07",
+       "sequence": 2,
+       "value_brl": "1021.64"
+      }
+     ]
+    },
+    {
+     "closing": {
+      "flow_segments": [],
+      "gross_in_brl": "0",
+      "gross_out_brl": "4963.83",
+      "inter_client_position_brl": "0",
+      "intra_client_position_brl": "0",
+      "matched_contribution_brl": "0",
+      "matched_position_brl": "0",
+      "remitted_in_brl": "0",
+      "remitted_out_brl": "0",
+      "triggers": [
+       "WINDOW"
+      ]
+     },
+     "day": 3,
+     "end_state": {
+      "matched_position_accumulated_brl": "1021.64",
+      "measured_matched_contribution_accumulated_brl": "2043.28",
+      "open_in_brl": "0",
+      "open_out_brl": "4963.83",
+      "remitted_in_accumulated_brl": "0",
+      "remitted_out_accumulated_brl": "10447.13"
+     },
+     "events": [
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o10",
+       "sequence": 0
+      }
+     ]
+    },
+    {
+     "closing": {
+      "flow_segments": [],
+      "gross_in_brl": "0",
+      "gross_out_brl": "10331.84",
+      "inter_client_position_brl": "0",
+      "intra_client_position_brl": "0",
+      "matched_contribution_brl": "0",
+      "matched_position_brl": "0",
+      "remitted_in_brl": "0",
+      "remitted_out_brl": "0",
+      "triggers": [
+       "WINDOW"
+      ]
+     },
+     "day": 4,
+     "end_state": {
+      "matched_position_accumulated_brl": "1021.64",
+      "measured_matched_contribution_accumulated_brl": "2043.28",
+      "open_in_brl": "0",
+      "open_out_brl": "10331.84",
+      "remitted_in_accumulated_brl": "0",
+      "remitted_out_accumulated_brl": "10447.13"
+     },
+     "events": [
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o12",
+       "sequence": 0
+      }
+     ]
+    },
+    {
+     "closing": {
+      "flow_segments": [
+       {
+        "closing_day": 5,
+        "in_order_id": "o09",
+        "matching_origin": "INTRA_CLIENTE",
+        "meaning": "ILLUSTRATIVE_AGGREGATE_DECOMPOSITION",
+        "out_order_id": "o13",
+        "value_brl": "3791.47"
+       }
+      ],
+      "gross_in_brl": "3791.47",
+      "gross_out_brl": "10331.84",
+      "inter_client_position_brl": "0",
+      "intra_client_position_brl": "3791.47",
+      "matched_contribution_brl": "7582.94",
+      "matched_position_brl": "3791.47",
+      "remitted_in_brl": "0",
+      "remitted_out_brl": "0",
+      "triggers": [
+       "WINDOW"
+      ]
+     },
+     "day": 5,
+     "end_state": {
+      "matched_position_accumulated_brl": "4813.11",
+      "measured_matched_contribution_accumulated_brl": "9626.22",
+      "open_in_brl": "0",
+      "open_out_brl": "6540.37",
+      "remitted_in_accumulated_brl": "0",
+      "remitted_out_accumulated_brl": "10447.13"
+     },
+     "events": [
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o09",
+       "sequence": 0
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "OUT",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTRA_CLIENTE",
+       "order_id": "o13",
+       "sequence": 1,
+       "value_brl": "3791.47"
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "IN",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTRA_CLIENTE",
+       "order_id": "o09",
+       "sequence": 2,
+       "value_brl": "3791.47"
+      }
+     ]
+    },
+    {
+     "closing": {
+      "flow_segments": [],
+      "gross_in_brl": "0",
+      "gross_out_brl": "7491.57",
+      "inter_client_position_brl": "0",
+      "intra_client_position_brl": "0",
+      "matched_contribution_brl": "0",
+      "matched_position_brl": "0",
+      "remitted_in_brl": "0",
+      "remitted_out_brl": "0",
+      "triggers": [
+       "WINDOW"
+      ]
+     },
+     "day": 6,
+     "end_state": {
+      "matched_position_accumulated_brl": "4813.11",
+      "measured_matched_contribution_accumulated_brl": "9626.22",
+      "open_in_brl": "0",
+      "open_out_brl": "7491.57",
+      "remitted_in_accumulated_brl": "0",
+      "remitted_out_accumulated_brl": "10447.13"
+     },
+     "events": [
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o02",
+       "sequence": 0
+      }
+     ]
+    },
+    {
+     "closing": {
+      "flow_segments": [],
+      "gross_in_brl": "0",
+      "gross_out_brl": "7491.57",
+      "inter_client_position_brl": "0",
+      "intra_client_position_brl": "0",
+      "matched_contribution_brl": "0",
+      "matched_position_brl": "0",
+      "remitted_in_brl": "0",
+      "remitted_out_brl": "858.32",
+      "triggers": [
+       "WINDOW",
+       "DEADLINE"
+      ]
+     },
+     "day": 7,
+     "end_state": {
+      "matched_position_accumulated_brl": "4813.11",
+      "measured_matched_contribution_accumulated_brl": "9626.22",
+      "open_in_brl": "0",
+      "open_out_brl": "6633.25",
+      "remitted_in_accumulated_brl": "0",
+      "remitted_out_accumulated_brl": "11305.45"
+     },
+     "events": [
+      {
+       "allocation_type": "REMETIDO",
+       "direction": "OUT",
+       "kind": "ALLOCATION",
+       "matching_origin": null,
+       "order_id": "o10",
+       "sequence": 0,
+       "value_brl": "858.32"
+      }
+     ]
+    },
+    {
+     "closing": {
+      "flow_segments": [
+       {
+        "closing_day": 8,
+        "in_order_id": "o05",
+        "matching_origin": "INTRA_CLIENTE",
+        "meaning": "ILLUSTRATIVE_AGGREGATE_DECOMPOSITION",
+        "out_order_id": "o12",
+        "value_brl": "4395"
+       },
+       {
+        "closing_day": 8,
+        "in_order_id": "o06",
+        "matching_origin": "INTRA_CLIENTE",
+        "meaning": "ILLUSTRATIVE_AGGREGATE_DECOMPOSITION",
+        "out_order_id": "o12",
+        "value_brl": "973.01"
+       },
+       {
+        "closing_day": 8,
+        "in_order_id": "o06",
+        "matching_origin": "INTRA_CLIENTE",
+        "meaning": "ILLUSTRATIVE_AGGREGATE_DECOMPOSITION",
+        "out_order_id": "o02",
+        "value_brl": "951.2"
+       },
+       {
+        "closing_day": 8,
+        "in_order_id": "o06",
+        "matching_origin": "INTRA_CLIENTE",
+        "meaning": "ILLUSTRATIVE_AGGREGATE_DECOMPOSITION",
+        "out_order_id": "o01",
+        "value_brl": "901.23"
+       },
+       {
+        "closing_day": 8,
+        "in_order_id": "o11",
+        "matching_origin": "INTRA_CLIENTE",
+        "meaning": "ILLUSTRATIVE_AGGREGATE_DECOMPOSITION",
+        "out_order_id": "o13",
+        "value_brl": "314.04"
+       }
+      ],
+      "gross_in_brl": "17918.52",
+      "gross_out_brl": "7534.48",
+      "inter_client_position_brl": "0",
+      "intra_client_position_brl": "7534.48",
+      "matched_contribution_brl": "15068.96",
+      "matched_position_brl": "7534.48",
+      "remitted_in_brl": "0",
+      "remitted_out_brl": "0",
+      "triggers": [
+       "WINDOW",
+       "DEADLINE"
+      ]
+     },
+     "day": 8,
+     "end_state": {
+      "matched_position_accumulated_brl": "12347.59",
+      "measured_matched_contribution_accumulated_brl": "24695.18",
+      "open_in_brl": "10384.04",
+      "open_out_brl": "0",
+      "remitted_in_accumulated_brl": "0",
+      "remitted_out_accumulated_brl": "11305.45"
+     },
+     "events": [
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o01",
+       "sequence": 0
+      },
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o05",
+       "sequence": 1
+      },
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o06",
+       "sequence": 2
+      },
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o11",
+       "sequence": 3
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "OUT",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTRA_CLIENTE",
+       "order_id": "o12",
+       "sequence": 4,
+       "value_brl": "5368.01"
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "OUT",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTRA_CLIENTE",
+       "order_id": "o02",
+       "sequence": 5,
+       "value_brl": "951.2"
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "OUT",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTRA_CLIENTE",
+       "order_id": "o01",
+       "sequence": 6,
+       "value_brl": "901.23"
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "IN",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTRA_CLIENTE",
+       "order_id": "o05",
+       "sequence": 7,
+       "value_brl": "4395"
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "IN",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTRA_CLIENTE",
+       "order_id": "o06",
+       "sequence": 8,
+       "value_brl": "2825.44"
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "OUT",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTRA_CLIENTE",
+       "order_id": "o13",
+       "sequence": 9,
+       "value_brl": "314.04"
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "IN",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTRA_CLIENTE",
+       "order_id": "o11",
+       "sequence": 10,
+       "value_brl": "314.04"
+      }
+     ]
+    },
+    {
+     "closing": {
+      "flow_segments": [
+       {
+        "closing_day": 9,
+        "in_order_id": "o06",
+        "matching_origin": "INTRA_CLIENTE",
+        "meaning": "ILLUSTRATIVE_AGGREGATE_DECOMPOSITION",
+        "out_order_id": "o08",
+        "value_brl": "3049.29"
+       },
+       {
+        "closing_day": 9,
+        "in_order_id": "o11",
+        "matching_origin": "INTRA_CLIENTE",
+        "meaning": "ILLUSTRATIVE_AGGREGATE_DECOMPOSITION",
+        "out_order_id": "o04",
+        "value_brl": "2318.22"
+       },
+       {
+        "closing_day": 9,
+        "in_order_id": "o11",
+        "matching_origin": "INTER_CLIENTE",
+        "meaning": "ILLUSTRATIVE_AGGREGATE_DECOMPOSITION",
+        "out_order_id": "o08",
+        "value_brl": "2156"
+       }
+      ],
+      "gross_in_brl": "10384.04",
+      "gross_out_brl": "7523.51",
+      "inter_client_position_brl": "2156",
+      "intra_client_position_brl": "5367.51",
+      "matched_contribution_brl": "15047.02",
+      "matched_position_brl": "7523.51",
+      "remitted_in_brl": "2860.53",
+      "remitted_out_brl": "0",
+      "triggers": [
+       "WINDOW",
+       "DEADLINE",
+       "HORIZON_END"
+      ]
+     },
+     "day": 9,
+     "end_state": {
+      "matched_position_accumulated_brl": "19871.1",
+      "measured_matched_contribution_accumulated_brl": "39742.2",
+      "open_in_brl": "0",
+      "open_out_brl": "0",
+      "remitted_in_accumulated_brl": "2860.53",
+      "remitted_out_accumulated_brl": "11305.45"
+     },
+     "events": [
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o04",
+       "sequence": 0
+      },
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o08",
+       "sequence": 1
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "OUT",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTRA_CLIENTE",
+       "order_id": "o08",
+       "sequence": 2,
+       "value_brl": "3049.29"
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "IN",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTRA_CLIENTE",
+       "order_id": "o06",
+       "sequence": 3,
+       "value_brl": "3049.29"
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "OUT",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTRA_CLIENTE",
+       "order_id": "o04",
+       "sequence": 4,
+       "value_brl": "2318.22"
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "IN",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTRA_CLIENTE",
+       "order_id": "o11",
+       "sequence": 5,
+       "value_brl": "2318.22"
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "OUT",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTER_CLIENTE",
+       "order_id": "o08",
+       "sequence": 6,
+       "value_brl": "2156"
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "IN",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTER_CLIENTE",
+       "order_id": "o11",
+       "sequence": 7,
+       "value_brl": "2156"
+      },
+      {
+       "allocation_type": "REMETIDO",
+       "direction": "IN",
+       "kind": "ALLOCATION",
+       "matching_origin": null,
+       "order_id": "o11",
+       "sequence": 8,
+       "value_brl": "2860.53"
+      }
+     ]
+    }
+   ],
+   "diagnostic_execution_id": "00000000-0000-4000-8000-000000000701",
+   "execution_fingerprint": "b824ba8a0316b1d9e7b6e294947e47d11304c582f64416aff3d66add65b68f2f",
+   "motor_version": "fixture",
+   "orders": [
+    {
+     "client_id": "c0",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 0,
+     "direction": "OUT",
+     "id": "o00",
+     "known_day": 0,
+     "value_brl": "3834.53"
+    },
+    {
+     "client_id": "c0",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 14,
+     "direction": "OUT",
+     "id": "o01",
+     "known_day": 8,
+     "value_brl": "901.23"
+    },
+    {
+     "client_id": "c0",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 12,
+     "direction": "OUT",
+     "id": "o02",
+     "known_day": 6,
+     "value_brl": "951.2"
+    },
+    {
+     "client_id": "c0",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 0,
+     "direction": "OUT",
+     "id": "o03",
+     "known_day": 0,
+     "value_brl": "6612.6"
+    },
+    {
+     "client_id": "c1",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 9,
+     "direction": "OUT",
+     "id": "o04",
+     "known_day": 9,
+     "value_brl": "2318.22"
+    },
+    {
+     "client_id": "c0",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 10,
+     "direction": "IN",
+     "id": "o05",
+     "known_day": 8,
+     "value_brl": "4395"
+    },
+    {
+     "client_id": "c0",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 10,
+     "direction": "IN",
+     "id": "o06",
+     "known_day": 8,
+     "value_brl": "5874.73"
+    },
+    {
+     "client_id": "c0",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 2,
+     "direction": "IN",
+     "id": "o07",
+     "known_day": 1,
+     "value_brl": "1021.64"
+    },
+    {
+     "client_id": "c0",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 15,
+     "direction": "OUT",
+     "id": "o08",
+     "known_day": 9,
+     "value_brl": "5205.29"
+    },
+    {
+     "client_id": "c1",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 9,
+     "direction": "IN",
+     "id": "o09",
+     "known_day": 5,
+     "value_brl": "3791.47"
+    },
+    {
+     "client_id": "c0",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 7,
+     "direction": "OUT",
+     "id": "o10",
+     "known_day": 3,
+     "value_brl": "858.32"
+    },
+    {
+     "client_id": "c1",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 15,
+     "direction": "IN",
+     "id": "o11",
+     "known_day": 8,
+     "value_brl": "7648.79"
+    },
+    {
+     "client_id": "c0",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 10,
+     "direction": "OUT",
+     "id": "o12",
+     "known_day": 4,
+     "value_brl": "5368.01"
+    },
+    {
+     "client_id": "c1",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 8,
+     "direction": "OUT",
+     "id": "o13",
+     "known_day": 2,
+     "value_brl": "5127.15"
+    }
+   ],
+   "participant_seeds": {},
+   "period": {
+    "measurement_end_day": 9,
+    "measurement_start_day": 0,
+    "mode": "LEGADO",
+    "settlement_end_day": 9,
+    "warmup_days": 0
+   },
+   "policy": "P0",
+   "repetition_id": "00000000-0000-4000-8000-000000000703",
+   "result_fingerprint": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+   "scenario_id": "00000000-0000-4000-8000-000000000003",
+   "scenario_revision": 1,
+   "totals": {
+    "execution_matched_position_brl": "19871.1",
+    "execution_remitted_in_brl": "2860.53",
+    "execution_remitted_out_brl": "11305.45",
+    "measured_autonetting_contribution_brl": "33386.92",
+    "measured_gross_brl": "53908.18",
+    "measured_matched_contribution_brl": "39742.2",
+    "measured_multilateral_contribution_brl": "6355.28",
+    "measured_remitted_brl": "14165.98",
+    "netability_fraction": "0.737220214075118098960120709"
+   }
+  },
+  "seed": 7
+ },
+ {
+  "document": {
+   "api_version": "1.0.0",
+   "currency": "BRL",
+   "days": [
+    {
+     "closing": {
+      "flow_segments": [],
+      "gross_in_brl": "0",
+      "gross_out_brl": "8876.5",
+      "inter_client_position_brl": "0",
+      "intra_client_position_brl": "0",
+      "matched_contribution_brl": "0",
+      "matched_position_brl": "0",
+      "remitted_in_brl": "0",
+      "remitted_out_brl": "0",
+      "triggers": [
+       "WINDOW"
+      ]
+     },
+     "day": 0,
+     "end_state": {
+      "matched_position_accumulated_brl": "0",
+      "measured_matched_contribution_accumulated_brl": "0",
+      "open_in_brl": "0",
+      "open_out_brl": "8876.5",
+      "remitted_in_accumulated_brl": "0",
+      "remitted_out_accumulated_brl": "0"
+     },
+     "events": [
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o04",
+       "sequence": 0
+      },
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o16",
+       "sequence": 1
+      }
+     ]
+    },
+    {
+     "closing": {
+      "flow_segments": [],
+      "gross_in_brl": "0",
+      "gross_out_brl": "12391.67",
+      "inter_client_position_brl": "0",
+      "intra_client_position_brl": "0",
+      "matched_contribution_brl": "0",
+      "matched_position_brl": "0",
+      "remitted_in_brl": "0",
+      "remitted_out_brl": "8094.16",
+      "triggers": [
+       "WINDOW",
+       "DEADLINE"
+      ]
+     },
+     "day": 1,
+     "end_state": {
+      "matched_position_accumulated_brl": "0",
+      "measured_matched_contribution_accumulated_brl": "0",
+      "open_in_brl": "0",
+      "open_out_brl": "4297.51",
+      "remitted_in_accumulated_brl": "0",
+      "remitted_out_accumulated_brl": "8094.16"
+     },
+     "events": [
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o13",
+       "sequence": 0
+      },
+      {
+       "allocation_type": "REMETIDO",
+       "direction": "OUT",
+       "kind": "ALLOCATION",
+       "matching_origin": null,
+       "order_id": "o16",
+       "sequence": 1,
+       "value_brl": "8094.16"
+      }
+     ]
+    },
+    {
+     "closing": {
+      "flow_segments": [],
+      "gross_in_brl": "0",
+      "gross_out_brl": "4297.51",
+      "inter_client_position_brl": "0",
+      "intra_client_position_brl": "0",
+      "matched_contribution_brl": "0",
+      "matched_position_brl": "0",
+      "remitted_in_brl": "0",
+      "remitted_out_brl": "0",
+      "triggers": [
+       "WINDOW"
+      ]
+     },
+     "day": 2,
+     "end_state": {
+      "matched_position_accumulated_brl": "0",
+      "measured_matched_contribution_accumulated_brl": "0",
+      "open_in_brl": "0",
+      "open_out_brl": "4297.51",
+      "remitted_in_accumulated_brl": "0",
+      "remitted_out_accumulated_brl": "8094.16"
+     },
+     "events": []
+    },
+    {
+     "closing": {
+      "flow_segments": [],
+      "gross_in_brl": "0",
+      "gross_out_brl": "4297.51",
+      "inter_client_position_brl": "0",
+      "intra_client_position_brl": "0",
+      "matched_contribution_brl": "0",
+      "matched_position_brl": "0",
+      "remitted_in_brl": "0",
+      "remitted_out_brl": "0",
+      "triggers": [
+       "WINDOW"
+      ]
+     },
+     "day": 3,
+     "end_state": {
+      "matched_position_accumulated_brl": "0",
+      "measured_matched_contribution_accumulated_brl": "0",
+      "open_in_brl": "0",
+      "open_out_brl": "4297.51",
+      "remitted_in_accumulated_brl": "0",
+      "remitted_out_accumulated_brl": "8094.16"
+     },
+     "events": []
+    },
+    {
+     "closing": {
+      "flow_segments": [],
+      "gross_in_brl": "0",
+      "gross_out_brl": "4297.51",
+      "inter_client_position_brl": "0",
+      "intra_client_position_brl": "0",
+      "matched_contribution_brl": "0",
+      "matched_position_brl": "0",
+      "remitted_in_brl": "0",
+      "remitted_out_brl": "0",
+      "triggers": [
+       "WINDOW"
+      ]
+     },
+     "day": 4,
+     "end_state": {
+      "matched_position_accumulated_brl": "0",
+      "measured_matched_contribution_accumulated_brl": "0",
+      "open_in_brl": "0",
+      "open_out_brl": "4297.51",
+      "remitted_in_accumulated_brl": "0",
+      "remitted_out_accumulated_brl": "8094.16"
+     },
+     "events": []
+    },
+    {
+     "closing": {
+      "flow_segments": [
+       {
+        "closing_day": 5,
+        "in_order_id": "o12",
+        "matching_origin": "INTRA_CLIENTE",
+        "meaning": "ILLUSTRATIVE_AGGREGATE_DECOMPOSITION",
+        "out_order_id": "o13",
+        "value_brl": "3515.17"
+       },
+       {
+        "closing_day": 5,
+        "in_order_id": "o12",
+        "matching_origin": "INTER_CLIENTE",
+        "meaning": "ILLUSTRATIVE_AGGREGATE_DECOMPOSITION",
+        "out_order_id": "o04",
+        "value_brl": "782.34"
+       },
+       {
+        "closing_day": 5,
+        "in_order_id": "o12",
+        "matching_origin": "INTER_CLIENTE",
+        "meaning": "ILLUSTRATIVE_AGGREGATE_DECOMPOSITION",
+        "out_order_id": "o14",
+        "value_brl": "295.11"
+       }
+      ],
+      "gross_in_brl": "13811.66",
+      "gross_out_brl": "4592.62",
+      "inter_client_position_brl": "1077.45",
+      "intra_client_position_brl": "3515.17",
+      "matched_contribution_brl": "9185.24",
+      "matched_position_brl": "4592.62",
+      "remitted_in_brl": "0",
+      "remitted_out_brl": "0",
+      "triggers": [
+       "WINDOW",
+       "DEADLINE"
+      ]
+     },
+     "day": 5,
+     "end_state": {
+      "matched_position_accumulated_brl": "4592.62",
+      "measured_matched_contribution_accumulated_brl": "4887.73",
+      "open_in_brl": "9219.04",
+      "open_out_brl": "0",
+      "remitted_in_accumulated_brl": "0",
+      "remitted_out_accumulated_brl": "8094.16"
+     },
+     "events": [
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o01",
+       "sequence": 0
+      },
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o12",
+       "sequence": 1
+      },
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o14",
+       "sequence": 2
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "OUT",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTRA_CLIENTE",
+       "order_id": "o13",
+       "sequence": 3,
+       "value_brl": "3515.17"
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "IN",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTRA_CLIENTE",
+       "order_id": "o12",
+       "sequence": 4,
+       "value_brl": "3515.17"
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "OUT",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTER_CLIENTE",
+       "order_id": "o04",
+       "sequence": 5,
+       "value_brl": "782.34"
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "OUT",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTER_CLIENTE",
+       "order_id": "o14",
+       "sequence": 6,
+       "value_brl": "295.11"
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "IN",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTER_CLIENTE",
+       "order_id": "o12",
+       "sequence": 7,
+       "value_brl": "1077.45"
+      }
+     ]
+    },
+    {
+     "closing": {
+      "flow_segments": [
+       {
+        "closing_day": 6,
+        "in_order_id": "o12",
+        "matching_origin": "INTER_CLIENTE",
+        "meaning": "ILLUSTRATIVE_AGGREGATE_DECOMPOSITION",
+        "out_order_id": "o15",
+        "value_brl": "2329.6"
+       }
+      ],
+      "gross_in_brl": "9219.04",
+      "gross_out_brl": "2329.6",
+      "inter_client_position_brl": "2329.6",
+      "intra_client_position_brl": "0",
+      "matched_contribution_brl": "4659.2",
+      "matched_position_brl": "2329.6",
+      "remitted_in_brl": "0",
+      "remitted_out_brl": "0",
+      "triggers": [
+       "WINDOW"
+      ]
+     },
+     "day": 6,
+     "end_state": {
+      "matched_position_accumulated_brl": "6922.22",
+      "measured_matched_contribution_accumulated_brl": "9546.93",
+      "open_in_brl": "6889.44",
+      "open_out_brl": "0",
+      "remitted_in_accumulated_brl": "0",
+      "remitted_out_accumulated_brl": "8094.16"
+     },
+     "events": [
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o15",
+       "sequence": 0
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "OUT",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTER_CLIENTE",
+       "order_id": "o15",
+       "sequence": 1,
+       "value_brl": "2329.6"
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "IN",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTER_CLIENTE",
+       "order_id": "o12",
+       "sequence": 2,
+       "value_brl": "2329.6"
+      }
+     ]
+    },
+    {
+     "closing": {
+      "flow_segments": [
+       {
+        "closing_day": 7,
+        "in_order_id": "o12",
+        "matching_origin": "INTRA_CLIENTE",
+        "meaning": "ILLUSTRATIVE_AGGREGATE_DECOMPOSITION",
+        "out_order_id": "o03",
+        "value_brl": "142.81"
+       },
+       {
+        "closing_day": 7,
+        "in_order_id": "o01",
+        "matching_origin": "INTRA_CLIENTE",
+        "meaning": "ILLUSTRATIVE_AGGREGATE_DECOMPOSITION",
+        "out_order_id": "o03",
+        "value_brl": "3419"
+       }
+      ],
+      "gross_in_brl": "8305.75",
+      "gross_out_brl": "3561.81",
+      "inter_client_position_brl": "0",
+      "intra_client_position_brl": "3561.81",
+      "matched_contribution_brl": "7123.62",
+      "matched_position_brl": "3561.81",
+      "remitted_in_brl": "0",
+      "remitted_out_brl": "0",
+      "triggers": [
+       "WINDOW"
+      ]
+     },
+     "day": 7,
+     "end_state": {
+      "matched_position_accumulated_brl": "10484.03",
+      "measured_matched_contribution_accumulated_brl": "16670.55",
+      "open_in_brl": "4743.94",
+      "open_out_brl": "0",
+      "remitted_in_accumulated_brl": "0",
+      "remitted_out_accumulated_brl": "8094.16"
+     },
+     "events": [
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o03",
+       "sequence": 0
+      },
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o07",
+       "sequence": 1
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "OUT",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTRA_CLIENTE",
+       "order_id": "o03",
+       "sequence": 2,
+       "value_brl": "3561.81"
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "IN",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTRA_CLIENTE",
+       "order_id": "o12",
+       "sequence": 3,
+       "value_brl": "142.81"
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "IN",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTRA_CLIENTE",
+       "order_id": "o01",
+       "sequence": 4,
+       "value_brl": "3419"
+      }
+     ]
+    },
+    {
+     "closing": {
+      "flow_segments": [
+       {
+        "closing_day": 8,
+        "in_order_id": "o07",
+        "matching_origin": "INTRA_CLIENTE",
+        "meaning": "ILLUSTRATIVE_AGGREGATE_DECOMPOSITION",
+        "out_order_id": "o11",
+        "value_brl": "1416.31"
+       },
+       {
+        "closing_day": 8,
+        "in_order_id": "o01",
+        "matching_origin": "INTER_CLIENTE",
+        "meaning": "ILLUSTRATIVE_AGGREGATE_DECOMPOSITION",
+        "out_order_id": "o11",
+        "value_brl": "595.56"
+       },
+       {
+        "closing_day": 8,
+        "in_order_id": "o01",
+        "matching_origin": "INTER_CLIENTE",
+        "meaning": "ILLUSTRATIVE_AGGREGATE_DECOMPOSITION",
+        "out_order_id": "o17",
+        "value_brl": "817.69"
+       },
+       {
+        "closing_day": 8,
+        "in_order_id": "o01",
+        "matching_origin": "INTER_CLIENTE",
+        "meaning": "ILLUSTRATIVE_AGGREGATE_DECOMPOSITION",
+        "out_order_id": "o09",
+        "value_brl": "1914.38"
+       }
+      ],
+      "gross_in_brl": "4743.94",
+      "gross_out_brl": "7029.31",
+      "inter_client_position_brl": "3327.63",
+      "intra_client_position_brl": "1416.31",
+      "matched_contribution_brl": "9487.88",
+      "matched_position_brl": "4743.94",
+      "remitted_in_brl": "0",
+      "remitted_out_brl": "0",
+      "triggers": [
+       "WINDOW"
+      ]
+     },
+     "day": 8,
+     "end_state": {
+      "matched_position_accumulated_brl": "15227.97",
+      "measured_matched_contribution_accumulated_brl": "26158.43",
+      "open_in_brl": "0",
+      "open_out_brl": "2285.37",
+      "remitted_in_accumulated_brl": "0",
+      "remitted_out_accumulated_brl": "8094.16"
+     },
+     "events": [
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o09",
+       "sequence": 0
+      },
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o11",
+       "sequence": 1
+      },
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o17",
+       "sequence": 2
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "OUT",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTRA_CLIENTE",
+       "order_id": "o11",
+       "sequence": 3,
+       "value_brl": "1416.31"
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "IN",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTRA_CLIENTE",
+       "order_id": "o07",
+       "sequence": 4,
+       "value_brl": "1416.31"
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "OUT",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTER_CLIENTE",
+       "order_id": "o11",
+       "sequence": 5,
+       "value_brl": "595.56"
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "OUT",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTER_CLIENTE",
+       "order_id": "o17",
+       "sequence": 6,
+       "value_brl": "817.69"
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "OUT",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTER_CLIENTE",
+       "order_id": "o09",
+       "sequence": 7,
+       "value_brl": "1914.38"
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "IN",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTER_CLIENTE",
+       "order_id": "o01",
+       "sequence": 8,
+       "value_brl": "3327.63"
+      }
+     ]
+    },
+    {
+     "closing": {
+      "flow_segments": [],
+      "gross_in_brl": "0",
+      "gross_out_brl": "16526.67",
+      "inter_client_position_brl": "0",
+      "intra_client_position_brl": "0",
+      "matched_contribution_brl": "0",
+      "matched_position_brl": "0",
+      "remitted_in_brl": "0",
+      "remitted_out_brl": "7306.84",
+      "triggers": [
+       "WINDOW",
+       "DEADLINE"
+      ]
+     },
+     "day": 9,
+     "end_state": {
+      "matched_position_accumulated_brl": "15227.97",
+      "measured_matched_contribution_accumulated_brl": "26158.43",
+      "open_in_brl": "0",
+      "open_out_brl": "9219.83",
+      "remitted_in_accumulated_brl": "0",
+      "remitted_out_accumulated_brl": "15401"
+     },
+     "events": [
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o02",
+       "sequence": 0
+      },
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o08",
+       "sequence": 1
+      },
+      {
+       "allocation_type": "REMETIDO",
+       "direction": "OUT",
+       "kind": "ALLOCATION",
+       "matching_origin": null,
+       "order_id": "o08",
+       "sequence": 2,
+       "value_brl": "7306.84"
+      }
+     ]
+    },
+    {
+     "closing": {
+      "flow_segments": [
+       {
+        "closing_day": 10,
+        "in_order_id": "o10",
+        "matching_origin": "INTRA_CLIENTE",
+        "meaning": "ILLUSTRATIVE_AGGREGATE_DECOMPOSITION",
+        "out_order_id": "o06",
+        "value_brl": "953.98"
+       },
+       {
+        "closing_day": 10,
+        "in_order_id": "o10",
+        "matching_origin": "INTER_CLIENTE",
+        "meaning": "ILLUSTRATIVE_AGGREGATE_DECOMPOSITION",
+        "out_order_id": "o00",
+        "value_brl": "4001.8"
+       },
+       {
+        "closing_day": 10,
+        "in_order_id": "o10",
+        "matching_origin": "INTER_CLIENTE",
+        "meaning": "ILLUSTRATIVE_AGGREGATE_DECOMPOSITION",
+        "out_order_id": "o05",
+        "value_brl": "43.5"
+       }
+      ],
+      "gross_in_brl": "4999.28",
+      "gross_out_brl": "14370.7",
+      "inter_client_position_brl": "4045.3",
+      "intra_client_position_brl": "953.98",
+      "matched_contribution_brl": "9998.56",
+      "matched_position_brl": "4999.28",
+      "remitted_in_brl": "0",
+      "remitted_out_brl": "151.59",
+      "triggers": [
+       "WINDOW",
+       "DEADLINE"
+      ]
+     },
+     "day": 10,
+     "end_state": {
+      "matched_position_accumulated_brl": "20227.25",
+      "measured_matched_contribution_accumulated_brl": "36156.99",
+      "open_in_brl": "0",
+      "open_out_brl": "9219.83",
+      "remitted_in_accumulated_brl": "0",
+      "remitted_out_accumulated_brl": "15552.59"
+     },
+     "events": [
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o00",
+       "sequence": 0
+      },
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o05",
+       "sequence": 1
+      },
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o06",
+       "sequence": 2
+      },
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o10",
+       "sequence": 3
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "OUT",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTRA_CLIENTE",
+       "order_id": "o06",
+       "sequence": 4,
+       "value_brl": "953.98"
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "IN",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTRA_CLIENTE",
+       "order_id": "o10",
+       "sequence": 5,
+       "value_brl": "953.98"
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "OUT",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTER_CLIENTE",
+       "order_id": "o00",
+       "sequence": 6,
+       "value_brl": "4001.8"
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "OUT",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTER_CLIENTE",
+       "order_id": "o05",
+       "sequence": 7,
+       "value_brl": "43.5"
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "IN",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTER_CLIENTE",
+       "order_id": "o10",
+       "sequence": 8,
+       "value_brl": "4045.3"
+      },
+      {
+       "allocation_type": "REMETIDO",
+       "direction": "OUT",
+       "kind": "ALLOCATION",
+       "matching_origin": null,
+       "order_id": "o05",
+       "sequence": 9,
+       "value_brl": "151.59"
+      }
+     ]
+    },
+    {
+     "closing": {
+      "flow_segments": [],
+      "gross_in_brl": "0",
+      "gross_out_brl": "9219.83",
+      "inter_client_position_brl": "0",
+      "intra_client_position_brl": "0",
+      "matched_contribution_brl": "0",
+      "matched_position_brl": "0",
+      "remitted_in_brl": "0",
+      "remitted_out_brl": "6934.46",
+      "triggers": [
+       "WINDOW",
+       "DEADLINE"
+      ]
+     },
+     "day": 11,
+     "end_state": {
+      "matched_position_accumulated_brl": "20227.25",
+      "measured_matched_contribution_accumulated_brl": "36156.99",
+      "open_in_brl": "0",
+      "open_out_brl": "2285.37",
+      "remitted_in_accumulated_brl": "0",
+      "remitted_out_accumulated_brl": "22487.05"
+     },
+     "events": [
+      {
+       "allocation_type": "REMETIDO",
+       "direction": "OUT",
+       "kind": "ALLOCATION",
+       "matching_origin": null,
+       "order_id": "o02",
+       "sequence": 0,
+       "value_brl": "6934.46"
+      }
+     ]
+    },
+    {
+     "closing": {
+      "flow_segments": [],
+      "gross_in_brl": "0",
+      "gross_out_brl": "2285.37",
+      "inter_client_position_brl": "0",
+      "intra_client_position_brl": "0",
+      "matched_contribution_brl": "0",
+      "matched_position_brl": "0",
+      "remitted_in_brl": "0",
+      "remitted_out_brl": "0",
+      "triggers": [
+       "WINDOW"
+      ]
+     },
+     "day": 12,
+     "end_state": {
+      "matched_position_accumulated_brl": "20227.25",
+      "measured_matched_contribution_accumulated_brl": "36156.99",
+      "open_in_brl": "0",
+      "open_out_brl": "2285.37",
+      "remitted_in_accumulated_brl": "0",
+      "remitted_out_accumulated_brl": "22487.05"
+     },
+     "events": []
+    },
+    {
+     "closing": {
+      "flow_segments": [],
+      "gross_in_brl": "0",
+      "gross_out_brl": "2285.37",
+      "inter_client_position_brl": "0",
+      "intra_client_position_brl": "0",
+      "matched_contribution_brl": "0",
+      "matched_position_brl": "0",
+      "remitted_in_brl": "0",
+      "remitted_out_brl": "0",
+      "triggers": [
+       "WINDOW"
+      ]
+     },
+     "day": 13,
+     "end_state": {
+      "matched_position_accumulated_brl": "20227.25",
+      "measured_matched_contribution_accumulated_brl": "36156.99",
+      "open_in_brl": "0",
+      "open_out_brl": "2285.37",
+      "remitted_in_accumulated_brl": "0",
+      "remitted_out_accumulated_brl": "22487.05"
+     },
+     "events": []
+    },
+    {
+     "closing": {
+      "flow_segments": [],
+      "gross_in_brl": "0",
+      "gross_out_brl": "2285.37",
+      "inter_client_position_brl": "0",
+      "intra_client_position_brl": "0",
+      "matched_contribution_brl": "0",
+      "matched_position_brl": "0",
+      "remitted_in_brl": "0",
+      "remitted_out_brl": "2285.37",
+      "triggers": [
+       "WINDOW",
+       "DEADLINE"
+      ]
+     },
+     "day": 14,
+     "end_state": {
+      "matched_position_accumulated_brl": "20227.25",
+      "measured_matched_contribution_accumulated_brl": "36156.99",
+      "open_in_brl": "0",
+      "open_out_brl": "0",
+      "remitted_in_accumulated_brl": "0",
+      "remitted_out_accumulated_brl": "24772.42"
+     },
+     "events": [
+      {
+       "allocation_type": "REMETIDO",
+       "direction": "OUT",
+       "kind": "ALLOCATION",
+       "matching_origin": null,
+       "order_id": "o09",
+       "sequence": 0,
+       "value_brl": "2285.37"
+      }
+     ]
+    },
+    {
+     "closing": null,
+     "day": 15,
+     "end_state": {
+      "matched_position_accumulated_brl": "20227.25",
+      "measured_matched_contribution_accumulated_brl": "36156.99",
+      "open_in_brl": "0",
+      "open_out_brl": "0",
+      "remitted_in_accumulated_brl": "0",
+      "remitted_out_accumulated_brl": "24772.42"
+     },
+     "events": []
+    },
+    {
+     "closing": null,
+     "day": 16,
+     "end_state": {
+      "matched_position_accumulated_brl": "20227.25",
+      "measured_matched_contribution_accumulated_brl": "36156.99",
+      "open_in_brl": "0",
+      "open_out_brl": "0",
+      "remitted_in_accumulated_brl": "0",
+      "remitted_out_accumulated_brl": "24772.42"
+     },
+     "events": []
+    }
+   ],
+   "diagnostic_execution_id": "00000000-0000-4000-8000-000000000701",
+   "execution_fingerprint": "eacf738cfe58c646f19f95a4a691f366890198152d41d293ed911aeb609d3570",
+   "motor_version": "fixture",
+   "orders": [
+    {
+     "client_id": "c1",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 10,
+     "direction": "OUT",
+     "id": "o00",
+     "known_day": 10,
+     "value_brl": "4001.8"
+    },
+    {
+     "client_id": "c1",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 12,
+     "direction": "IN",
+     "id": "o01",
+     "known_day": 5,
+     "value_brl": "6746.63"
+    },
+    {
+     "client_id": "c0",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 11,
+     "direction": "OUT",
+     "id": "o02",
+     "known_day": 9,
+     "value_brl": "6934.46"
+    },
+    {
+     "client_id": "c1",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 10,
+     "direction": "OUT",
+     "id": "o03",
+     "known_day": 7,
+     "value_brl": "3561.81"
+    },
+    {
+     "client_id": "c2",
+     "cohort": "WARMUP",
+     "deadline_day": 5,
+     "direction": "OUT",
+     "id": "o04",
+     "known_day": 0,
+     "value_brl": "782.34"
+    },
+    {
+     "client_id": "c1",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 10,
+     "direction": "OUT",
+     "id": "o05",
+     "known_day": 10,
+     "value_brl": "195.09"
+    },
+    {
+     "client_id": "c2",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 16,
+     "direction": "OUT",
+     "id": "o06",
+     "known_day": 10,
+     "value_brl": "953.98"
+    },
+    {
+     "client_id": "c0",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 12,
+     "direction": "IN",
+     "id": "o07",
+     "known_day": 7,
+     "value_brl": "1416.31"
+    },
+    {
+     "client_id": "c2",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 9,
+     "direction": "OUT",
+     "id": "o08",
+     "known_day": 9,
+     "value_brl": "7306.84"
+    },
+    {
+     "client_id": "c0",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 14,
+     "direction": "OUT",
+     "id": "o09",
+     "known_day": 8,
+     "value_brl": "4199.75"
+    },
+    {
+     "client_id": "c2",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 16,
+     "direction": "IN",
+     "id": "o10",
+     "known_day": 10,
+     "value_brl": "4999.28"
+    },
+    {
+     "client_id": "c0",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 12,
+     "direction": "OUT",
+     "id": "o11",
+     "known_day": 8,
+     "value_brl": "2011.87"
+    },
+    {
+     "client_id": "c1",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 9,
+     "direction": "IN",
+     "id": "o12",
+     "known_day": 5,
+     "value_brl": "7065.03"
+    },
+    {
+     "client_id": "c1",
+     "cohort": "WARMUP",
+     "deadline_day": 6,
+     "direction": "OUT",
+     "id": "o13",
+     "known_day": 1,
+     "value_brl": "3515.17"
+    },
+    {
+     "client_id": "c2",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 11,
+     "direction": "OUT",
+     "id": "o14",
+     "known_day": 5,
+     "value_brl": "295.11"
+    },
+    {
+     "client_id": "c0",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 12,
+     "direction": "OUT",
+     "id": "o15",
+     "known_day": 6,
+     "value_brl": "2329.6"
+    },
+    {
+     "client_id": "c1",
+     "cohort": "WARMUP",
+     "deadline_day": 1,
+     "direction": "OUT",
+     "id": "o16",
+     "known_day": 0,
+     "value_brl": "8094.16"
+    },
+    {
+     "client_id": "c0",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 12,
+     "direction": "OUT",
+     "id": "o17",
+     "known_day": 8,
+     "value_brl": "817.69"
+    }
+   ],
+   "participant_seeds": {},
+   "period": {
+    "measurement_end_day": 10,
+    "measurement_start_day": 3,
+    "mode": "NATURAL",
+    "settlement_end_day": 16,
+    "warmup_days": 3
+   },
+   "policy": "P0",
+   "repetition_id": "00000000-0000-4000-8000-000000000703",
+   "result_fingerprint": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+   "scenario_id": "00000000-0000-4000-8000-000000000003",
+   "scenario_revision": 1,
+   "totals": {
+    "execution_matched_position_brl": "20227.25",
+    "execution_remitted_in_brl": "0",
+    "execution_remitted_out_brl": "24772.42",
+    "measured_autonetting_contribution_brl": "15379.37",
+    "measured_gross_brl": "52835.25",
+    "measured_matched_contribution_brl": "36156.99",
+    "measured_multilateral_contribution_brl": "20777.62",
+    "measured_remitted_brl": "16678.26",
+    "netability_fraction": "0.6843346061578207730634377617"
+   }
+  },
+  "seed": 12
+ },
+ {
+  "document": {
+   "api_version": "1.0.0",
+   "currency": "BRL",
+   "days": [
+    {
+     "closing": {
+      "flow_segments": [],
+      "gross_in_brl": "0",
+      "gross_out_brl": "2968.82",
+      "inter_client_position_brl": "0",
+      "intra_client_position_brl": "0",
+      "matched_contribution_brl": "0",
+      "matched_position_brl": "0",
+      "remitted_in_brl": "0",
+      "remitted_out_brl": "2697.75",
+      "triggers": [
+       "WINDOW",
+       "DEADLINE"
+      ]
+     },
+     "day": 0,
+     "end_state": {
+      "matched_position_accumulated_brl": "0",
+      "measured_matched_contribution_accumulated_brl": "0",
+      "open_in_brl": "0",
+      "open_out_brl": "271.07",
+      "remitted_in_accumulated_brl": "0",
+      "remitted_out_accumulated_brl": "2697.75"
+     },
+     "events": [
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o00",
+       "sequence": 0
+      },
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o02",
+       "sequence": 1
+      },
+      {
+       "allocation_type": "REMETIDO",
+       "direction": "OUT",
+       "kind": "ALLOCATION",
+       "matching_origin": null,
+       "order_id": "o00",
+       "sequence": 2,
+       "value_brl": "2697.75"
+      }
+     ]
+    },
+    {
+     "closing": {
+      "flow_segments": [],
+      "gross_in_brl": "0",
+      "gross_out_brl": "271.07",
+      "inter_client_position_brl": "0",
+      "intra_client_position_brl": "0",
+      "matched_contribution_brl": "0",
+      "matched_position_brl": "0",
+      "remitted_in_brl": "0",
+      "remitted_out_brl": "271.07",
+      "triggers": [
+       "WINDOW",
+       "DEADLINE"
+      ]
+     },
+     "day": 1,
+     "end_state": {
+      "matched_position_accumulated_brl": "0",
+      "measured_matched_contribution_accumulated_brl": "0",
+      "open_in_brl": "0",
+      "open_out_brl": "0",
+      "remitted_in_accumulated_brl": "0",
+      "remitted_out_accumulated_brl": "2968.82"
+     },
+     "events": [
+      {
+       "allocation_type": "REMETIDO",
+       "direction": "OUT",
+       "kind": "ALLOCATION",
+       "matching_origin": null,
+       "order_id": "o02",
+       "sequence": 0,
+       "value_brl": "271.07"
+      }
+     ]
+    },
+    {
+     "closing": {
+      "flow_segments": [],
+      "gross_in_brl": "8722.94",
+      "gross_out_brl": "0",
+      "inter_client_position_brl": "0",
+      "intra_client_position_brl": "0",
+      "matched_contribution_brl": "0",
+      "matched_position_brl": "0",
+      "remitted_in_brl": "0",
+      "remitted_out_brl": "0",
+      "triggers": [
+       "WINDOW"
+      ]
+     },
+     "day": 2,
+     "end_state": {
+      "matched_position_accumulated_brl": "0",
+      "measured_matched_contribution_accumulated_brl": "0",
+      "open_in_brl": "8722.94",
+      "open_out_brl": "0",
+      "remitted_in_accumulated_brl": "0",
+      "remitted_out_accumulated_brl": "2968.82"
+     },
+     "events": [
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o03",
+       "sequence": 0
+      }
+     ]
+    },
+    {
+     "closing": {
+      "flow_segments": [],
+      "gross_in_brl": "8722.94",
+      "gross_out_brl": "0",
+      "inter_client_position_brl": "0",
+      "intra_client_position_brl": "0",
+      "matched_contribution_brl": "0",
+      "matched_position_brl": "0",
+      "remitted_in_brl": "0",
+      "remitted_out_brl": "0",
+      "triggers": [
+       "WINDOW"
+      ]
+     },
+     "day": 3,
+     "end_state": {
+      "matched_position_accumulated_brl": "0",
+      "measured_matched_contribution_accumulated_brl": "0",
+      "open_in_brl": "8722.94",
+      "open_out_brl": "0",
+      "remitted_in_accumulated_brl": "0",
+      "remitted_out_accumulated_brl": "2968.82"
+     },
+     "events": []
+    },
+    {
+     "closing": {
+      "flow_segments": [
+       {
+        "closing_day": 4,
+        "in_order_id": "o03",
+        "matching_origin": "INTER_CLIENTE",
+        "meaning": "ILLUSTRATIVE_AGGREGATE_DECOMPOSITION",
+        "out_order_id": "o08",
+        "value_brl": "1450.59"
+       }
+      ],
+      "gross_in_brl": "8937.49",
+      "gross_out_brl": "1450.59",
+      "inter_client_position_brl": "1450.59",
+      "intra_client_position_brl": "0",
+      "matched_contribution_brl": "2901.18",
+      "matched_position_brl": "1450.59",
+      "remitted_in_brl": "0",
+      "remitted_out_brl": "0",
+      "triggers": [
+       "WINDOW"
+      ]
+     },
+     "day": 4,
+     "end_state": {
+      "matched_position_accumulated_brl": "1450.59",
+      "measured_matched_contribution_accumulated_brl": "2901.18",
+      "open_in_brl": "7486.9",
+      "open_out_brl": "0",
+      "remitted_in_accumulated_brl": "0",
+      "remitted_out_accumulated_brl": "2968.82"
+     },
+     "events": [
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o08",
+       "sequence": 0
+      },
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o20",
+       "sequence": 1
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "OUT",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTER_CLIENTE",
+       "order_id": "o08",
+       "sequence": 2,
+       "value_brl": "1450.59"
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "IN",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTER_CLIENTE",
+       "order_id": "o03",
+       "sequence": 3,
+       "value_brl": "1450.59"
+      }
+     ]
+    },
+    {
+     "closing": {
+      "flow_segments": [
+       {
+        "closing_day": 5,
+        "in_order_id": "o17",
+        "matching_origin": "INTRA_CLIENTE",
+        "meaning": "ILLUSTRATIVE_AGGREGATE_DECOMPOSITION",
+        "out_order_id": "o19",
+        "value_brl": "5355.44"
+       },
+       {
+        "closing_day": 5,
+        "in_order_id": "o03",
+        "matching_origin": "INTER_CLIENTE",
+        "meaning": "ILLUSTRATIVE_AGGREGATE_DECOMPOSITION",
+        "out_order_id": "o19",
+        "value_brl": "2207.35"
+       }
+      ],
+      "gross_in_brl": "12842.34",
+      "gross_out_brl": "7562.79",
+      "inter_client_position_brl": "2207.35",
+      "intra_client_position_brl": "5355.44",
+      "matched_contribution_brl": "15125.58",
+      "matched_position_brl": "7562.79",
+      "remitted_in_brl": "0",
+      "remitted_out_brl": "0",
+      "triggers": [
+       "WINDOW"
+      ]
+     },
+     "day": 5,
+     "end_state": {
+      "matched_position_accumulated_brl": "9013.38",
+      "measured_matched_contribution_accumulated_brl": "18026.76",
+      "open_in_brl": "5279.55",
+      "open_out_brl": "0",
+      "remitted_in_accumulated_brl": "0",
+      "remitted_out_accumulated_brl": "2968.82"
+     },
+     "events": [
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o17",
+       "sequence": 0
+      },
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o19",
+       "sequence": 1
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "OUT",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTRA_CLIENTE",
+       "order_id": "o19",
+       "sequence": 2,
+       "value_brl": "5355.44"
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "IN",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTRA_CLIENTE",
+       "order_id": "o17",
+       "sequence": 3,
+       "value_brl": "5355.44"
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "OUT",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTER_CLIENTE",
+       "order_id": "o19",
+       "sequence": 4,
+       "value_brl": "2207.35"
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "IN",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTER_CLIENTE",
+       "order_id": "o03",
+       "sequence": 5,
+       "value_brl": "2207.35"
+      }
+     ]
+    },
+    {
+     "closing": {
+      "flow_segments": [
+       {
+        "closing_day": 6,
+        "in_order_id": "o03",
+        "matching_origin": "INTRA_CLIENTE",
+        "meaning": "ILLUSTRATIVE_AGGREGATE_DECOMPOSITION",
+        "out_order_id": "o16",
+        "value_brl": "2236.99"
+       },
+       {
+        "closing_day": 6,
+        "in_order_id": "o03",
+        "matching_origin": "INTER_CLIENTE",
+        "meaning": "ILLUSTRATIVE_AGGREGATE_DECOMPOSITION",
+        "out_order_id": "o01",
+        "value_brl": "852.68"
+       }
+      ],
+      "gross_in_brl": "7157.46",
+      "gross_out_brl": "3089.67",
+      "inter_client_position_brl": "852.68",
+      "intra_client_position_brl": "2236.99",
+      "matched_contribution_brl": "6179.34",
+      "matched_position_brl": "3089.67",
+      "remitted_in_brl": "0",
+      "remitted_out_brl": "0",
+      "triggers": [
+       "WINDOW"
+      ]
+     },
+     "day": 6,
+     "end_state": {
+      "matched_position_accumulated_brl": "12103.05",
+      "measured_matched_contribution_accumulated_brl": "24206.1",
+      "open_in_brl": "4067.79",
+      "open_out_brl": "0",
+      "remitted_in_accumulated_brl": "0",
+      "remitted_out_accumulated_brl": "2968.82"
+     },
+     "events": [
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o01",
+       "sequence": 0
+      },
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o10",
+       "sequence": 1
+      },
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o16",
+       "sequence": 2
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "OUT",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTRA_CLIENTE",
+       "order_id": "o16",
+       "sequence": 3,
+       "value_brl": "2236.99"
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "IN",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTRA_CLIENTE",
+       "order_id": "o03",
+       "sequence": 4,
+       "value_brl": "2236.99"
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "OUT",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTER_CLIENTE",
+       "order_id": "o01",
+       "sequence": 5,
+       "value_brl": "852.68"
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "IN",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTER_CLIENTE",
+       "order_id": "o03",
+       "sequence": 6,
+       "value_brl": "852.68"
+      }
+     ]
+    },
+    {
+     "closing": {
+      "flow_segments": [],
+      "gross_in_brl": "16738.11",
+      "gross_out_brl": "0",
+      "inter_client_position_brl": "0",
+      "intra_client_position_brl": "0",
+      "matched_contribution_brl": "0",
+      "matched_position_brl": "0",
+      "remitted_in_brl": "2189.88",
+      "remitted_out_brl": "0",
+      "triggers": [
+       "WINDOW",
+       "DEADLINE"
+      ]
+     },
+     "day": 7,
+     "end_state": {
+      "matched_position_accumulated_brl": "12103.05",
+      "measured_matched_contribution_accumulated_brl": "24206.1",
+      "open_in_brl": "14548.23",
+      "open_out_brl": "0",
+      "remitted_in_accumulated_brl": "2189.88",
+      "remitted_out_accumulated_brl": "2968.82"
+     },
+     "events": [
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o11",
+       "sequence": 0
+      },
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o14",
+       "sequence": 1
+      },
+      {
+       "allocation_type": "REMETIDO",
+       "direction": "IN",
+       "kind": "ALLOCATION",
+       "matching_origin": null,
+       "order_id": "o03",
+       "sequence": 2,
+       "value_brl": "1975.33"
+      },
+      {
+       "allocation_type": "REMETIDO",
+       "direction": "IN",
+       "kind": "ALLOCATION",
+       "matching_origin": null,
+       "order_id": "o20",
+       "sequence": 3,
+       "value_brl": "214.55"
+      }
+     ]
+    },
+    {
+     "closing": {
+      "flow_segments": [],
+      "gross_in_brl": "14794.76",
+      "gross_out_brl": "0",
+      "inter_client_position_brl": "0",
+      "intra_client_position_brl": "0",
+      "matched_contribution_brl": "0",
+      "matched_position_brl": "0",
+      "remitted_in_brl": "1877.91",
+      "remitted_out_brl": "0",
+      "triggers": [
+       "WINDOW",
+       "DEADLINE"
+      ]
+     },
+     "day": 8,
+     "end_state": {
+      "matched_position_accumulated_brl": "12103.05",
+      "measured_matched_contribution_accumulated_brl": "24206.1",
+      "open_in_brl": "12916.85",
+      "open_out_brl": "0",
+      "remitted_in_accumulated_brl": "4067.79",
+      "remitted_out_accumulated_brl": "2968.82"
+     },
+     "events": [
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o04",
+       "sequence": 0
+      },
+      {
+       "allocation_type": "REMETIDO",
+       "direction": "IN",
+       "kind": "ALLOCATION",
+       "matching_origin": null,
+       "order_id": "o10",
+       "sequence": 1,
+       "value_brl": "1877.91"
+      }
+     ]
+    },
+    {
+     "closing": {
+      "flow_segments": [],
+      "gross_in_brl": "28971.4",
+      "gross_out_brl": "0",
+      "inter_client_position_brl": "0",
+      "intra_client_position_brl": "0",
+      "matched_contribution_brl": "0",
+      "matched_position_brl": "0",
+      "remitted_in_brl": "7290.02",
+      "remitted_out_brl": "0",
+      "triggers": [
+       "WINDOW",
+       "DEADLINE"
+      ]
+     },
+     "day": 9,
+     "end_state": {
+      "matched_position_accumulated_brl": "12103.05",
+      "measured_matched_contribution_accumulated_brl": "24206.1",
+      "open_in_brl": "21681.38",
+      "open_out_brl": "0",
+      "remitted_in_accumulated_brl": "11357.81",
+      "remitted_out_accumulated_brl": "2968.82"
+     },
+     "events": [
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o05",
+       "sequence": 0
+      },
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o06",
+       "sequence": 1
+      },
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o07",
+       "sequence": 2
+      },
+      {
+       "allocation_type": "REMETIDO",
+       "direction": "IN",
+       "kind": "ALLOCATION",
+       "matching_origin": null,
+       "order_id": "o14",
+       "sequence": 3,
+       "value_brl": "7290.02"
+      }
+     ]
+    },
+    {
+     "closing": {
+      "flow_segments": [
+       {
+        "closing_day": 10,
+        "in_order_id": "o06",
+        "matching_origin": "INTRA_CLIENTE",
+        "meaning": "ILLUSTRATIVE_AGGREGATE_DECOMPOSITION",
+        "out_order_id": "o15",
+        "value_brl": "5373.11"
+       }
+      ],
+      "gross_in_brl": "30650.06",
+      "gross_out_brl": "5373.11",
+      "inter_client_position_brl": "0",
+      "intra_client_position_brl": "5373.11",
+      "matched_contribution_brl": "10746.22",
+      "matched_position_brl": "5373.11",
+      "remitted_in_brl": "2040.11",
+      "remitted_out_brl": "0",
+      "triggers": [
+       "WINDOW",
+       "DEADLINE"
+      ]
+     },
+     "day": 10,
+     "end_state": {
+      "matched_position_accumulated_brl": "17476.16",
+      "measured_matched_contribution_accumulated_brl": "34952.32",
+      "open_in_brl": "23236.84",
+      "open_out_brl": "0",
+      "remitted_in_accumulated_brl": "13397.92",
+      "remitted_out_accumulated_brl": "2968.82"
+     },
+     "events": [
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o12",
+       "sequence": 0
+      },
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o13",
+       "sequence": 1
+      },
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o15",
+       "sequence": 2
+      },
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o18",
+       "sequence": 3
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "OUT",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTRA_CLIENTE",
+       "order_id": "o15",
+       "sequence": 4,
+       "value_brl": "5373.11"
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "IN",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTRA_CLIENTE",
+       "order_id": "o06",
+       "sequence": 5,
+       "value_brl": "5373.11"
+      },
+      {
+       "allocation_type": "REMETIDO",
+       "direction": "IN",
+       "kind": "ALLOCATION",
+       "matching_origin": null,
+       "order_id": "o06",
+       "sequence": 6,
+       "value_brl": "1324.39"
+      },
+      {
+       "allocation_type": "REMETIDO",
+       "direction": "IN",
+       "kind": "ALLOCATION",
+       "matching_origin": null,
+       "order_id": "o12",
+       "sequence": 7,
+       "value_brl": "715.72"
+      }
+     ]
+    },
+    {
+     "closing": {
+      "flow_segments": [
+       {
+        "closing_day": 11,
+        "in_order_id": "o07",
+        "matching_origin": "INTRA_CLIENTE",
+        "meaning": "ILLUSTRATIVE_AGGREGATE_DECOMPOSITION",
+        "out_order_id": "o09",
+        "value_brl": "1356.29"
+       },
+       {
+        "closing_day": 11,
+        "in_order_id": "o04",
+        "matching_origin": "INTER_CLIENTE",
+        "meaning": "ILLUSTRATIVE_AGGREGATE_DECOMPOSITION",
+        "out_order_id": "o09",
+        "value_brl": "246.53"
+       },
+       {
+        "closing_day": 11,
+        "in_order_id": "o11",
+        "matching_origin": "INTER_CLIENTE",
+        "meaning": "ILLUSTRATIVE_AGGREGATE_DECOMPOSITION",
+        "out_order_id": "o09",
+        "value_brl": "5380.3"
+       },
+       {
+        "closing_day": 11,
+        "in_order_id": "o13",
+        "matching_origin": "INTER_CLIENTE",
+        "meaning": "ILLUSTRATIVE_AGGREGATE_DECOMPOSITION",
+        "out_order_id": "o09",
+        "value_brl": "1087.09"
+       }
+      ],
+      "gross_in_brl": "23236.84",
+      "gross_out_brl": "8070.21",
+      "inter_client_position_brl": "6713.92",
+      "intra_client_position_brl": "1356.29",
+      "matched_contribution_brl": "16140.42",
+      "matched_position_brl": "8070.21",
+      "remitted_in_brl": "0",
+      "remitted_out_brl": "0",
+      "triggers": [
+       "WINDOW",
+       "DEADLINE"
+      ]
+     },
+     "day": 11,
+     "end_state": {
+      "matched_position_accumulated_brl": "25546.37",
+      "measured_matched_contribution_accumulated_brl": "51092.74",
+      "open_in_brl": "15166.63",
+      "open_out_brl": "0",
+      "remitted_in_accumulated_brl": "13397.92",
+      "remitted_out_accumulated_brl": "2968.82"
+     },
+     "events": [
+      {
+       "kind": "ORDER_ARRIVED",
+       "order_id": "o09",
+       "sequence": 0
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "OUT",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTRA_CLIENTE",
+       "order_id": "o09",
+       "sequence": 1,
+       "value_brl": "1356.29"
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "IN",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTRA_CLIENTE",
+       "order_id": "o07",
+       "sequence": 2,
+       "value_brl": "1356.29"
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "OUT",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTER_CLIENTE",
+       "order_id": "o09",
+       "sequence": 3,
+       "value_brl": "6713.92"
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "IN",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTER_CLIENTE",
+       "order_id": "o04",
+       "sequence": 4,
+       "value_brl": "246.53"
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "IN",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTER_CLIENTE",
+       "order_id": "o11",
+       "sequence": 5,
+       "value_brl": "5380.3"
+      },
+      {
+       "allocation_type": "CASADO",
+       "direction": "IN",
+       "kind": "ALLOCATION",
+       "matching_origin": "INTER_CLIENTE",
+       "order_id": "o13",
+       "sequence": 6,
+       "value_brl": "1087.09"
+      }
+     ]
+    },
+    {
+     "closing": {
+      "flow_segments": [],
+      "gross_in_brl": "15166.63",
+      "gross_out_brl": "0",
+      "inter_client_position_brl": "0",
+      "intra_client_position_brl": "0",
+      "matched_contribution_brl": "0",
+      "matched_position_brl": "0",
+      "remitted_in_brl": "0",
+      "remitted_out_brl": "0",
+      "triggers": [
+       "WINDOW"
+      ]
+     },
+     "day": 12,
+     "end_state": {
+      "matched_position_accumulated_brl": "25546.37",
+      "measured_matched_contribution_accumulated_brl": "51092.74",
+      "open_in_brl": "15166.63",
+      "open_out_brl": "0",
+      "remitted_in_accumulated_brl": "13397.92",
+      "remitted_out_accumulated_brl": "2968.82"
+     },
+     "events": []
+    },
+    {
+     "closing": {
+      "flow_segments": [],
+      "gross_in_brl": "15166.63",
+      "gross_out_brl": "0",
+      "inter_client_position_brl": "0",
+      "intra_client_position_brl": "0",
+      "matched_contribution_brl": "0",
+      "matched_position_brl": "0",
+      "remitted_in_brl": "0",
+      "remitted_out_brl": "0",
+      "triggers": [
+       "WINDOW"
+      ]
+     },
+     "day": 13,
+     "end_state": {
+      "matched_position_accumulated_brl": "25546.37",
+      "measured_matched_contribution_accumulated_brl": "51092.74",
+      "open_in_brl": "15166.63",
+      "open_out_brl": "0",
+      "remitted_in_accumulated_brl": "13397.92",
+      "remitted_out_accumulated_brl": "2968.82"
+     },
+     "events": []
+    },
+    {
+     "closing": {
+      "flow_segments": [],
+      "gross_in_brl": "15166.63",
+      "gross_out_brl": "0",
+      "inter_client_position_brl": "0",
+      "intra_client_position_brl": "0",
+      "matched_contribution_brl": "0",
+      "matched_position_brl": "0",
+      "remitted_in_brl": "4005.33",
+      "remitted_out_brl": "0",
+      "triggers": [
+       "WINDOW",
+       "DEADLINE"
+      ]
+     },
+     "day": 14,
+     "end_state": {
+      "matched_position_accumulated_brl": "25546.37",
+      "measured_matched_contribution_accumulated_brl": "51092.74",
+      "open_in_brl": "11161.3",
+      "open_out_brl": "0",
+      "remitted_in_accumulated_brl": "17403.25",
+      "remitted_out_accumulated_brl": "2968.82"
+     },
+     "events": [
+      {
+       "allocation_type": "REMETIDO",
+       "direction": "IN",
+       "kind": "ALLOCATION",
+       "matching_origin": null,
+       "order_id": "o13",
+       "sequence": 0,
+       "value_brl": "4005.33"
+      }
+     ]
+    },
+    {
+     "closing": {
+      "flow_segments": [],
+      "gross_in_brl": "11161.3",
+      "gross_out_brl": "0",
+      "inter_client_position_brl": "0",
+      "intra_client_position_brl": "0",
+      "matched_contribution_brl": "0",
+      "matched_position_brl": "0",
+      "remitted_in_brl": "8000.76",
+      "remitted_out_brl": "0",
+      "triggers": [
+       "WINDOW",
+       "DEADLINE"
+      ]
+     },
+     "day": 15,
+     "end_state": {
+      "matched_position_accumulated_brl": "25546.37",
+      "measured_matched_contribution_accumulated_brl": "51092.74",
+      "open_in_brl": "3160.54",
+      "open_out_brl": "0",
+      "remitted_in_accumulated_brl": "25404.01",
+      "remitted_out_accumulated_brl": "2968.82"
+     },
+     "events": [
+      {
+       "allocation_type": "REMETIDO",
+       "direction": "IN",
+       "kind": "ALLOCATION",
+       "matching_origin": null,
+       "order_id": "o05",
+       "sequence": 0,
+       "value_brl": "8000.76"
+      }
+     ]
+    },
+    {
+     "closing": {
+      "flow_segments": [],
+      "gross_in_brl": "3160.54",
+      "gross_out_brl": "0",
+      "inter_client_position_brl": "0",
+      "intra_client_position_brl": "0",
+      "matched_contribution_brl": "0",
+      "matched_position_brl": "0",
+      "remitted_in_brl": "0",
+      "remitted_out_brl": "0",
+      "triggers": [
+       "WINDOW"
+      ]
+     },
+     "day": 16,
+     "end_state": {
+      "matched_position_accumulated_brl": "25546.37",
+      "measured_matched_contribution_accumulated_brl": "51092.74",
+      "open_in_brl": "3160.54",
+      "open_out_brl": "0",
+      "remitted_in_accumulated_brl": "25404.01",
+      "remitted_out_accumulated_brl": "2968.82"
+     },
+     "events": []
+    },
+    {
+     "closing": {
+      "flow_segments": [],
+      "gross_in_brl": "3160.54",
+      "gross_out_brl": "0",
+      "inter_client_position_brl": "0",
+      "intra_client_position_brl": "0",
+      "matched_contribution_brl": "0",
+      "matched_position_brl": "0",
+      "remitted_in_brl": "3160.54",
+      "remitted_out_brl": "0",
+      "triggers": [
+       "WINDOW",
+       "DEADLINE",
+       "HORIZON_END"
+      ]
+     },
+     "day": 17,
+     "end_state": {
+      "matched_position_accumulated_brl": "25546.37",
+      "measured_matched_contribution_accumulated_brl": "51092.74",
+      "open_in_brl": "0",
+      "open_out_brl": "0",
+      "remitted_in_accumulated_brl": "28564.55",
+      "remitted_out_accumulated_brl": "2968.82"
+     },
+     "events": [
+      {
+       "allocation_type": "REMETIDO",
+       "direction": "IN",
+       "kind": "ALLOCATION",
+       "matching_origin": null,
+       "order_id": "o18",
+       "sequence": 0,
+       "value_brl": "3160.54"
+      }
+     ]
+    }
+   ],
+   "diagnostic_execution_id": "00000000-0000-4000-8000-000000000701",
+   "execution_fingerprint": "a93da13d163c8c11a76f1d17e85420e6b9487c7b0d24922888496de4dfbb1d99",
+   "motor_version": "fixture",
+   "orders": [
+    {
+     "client_id": "c2",
+     "cohort": "WARMUP",
+     "deadline_day": 0,
+     "direction": "OUT",
+     "id": "o00",
+     "known_day": 0,
+     "value_brl": "2697.75"
+    },
+    {
+     "client_id": "c1",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 13,
+     "direction": "OUT",
+     "id": "o01",
+     "known_day": 6,
+     "value_brl": "852.68"
+    },
+    {
+     "client_id": "c2",
+     "cohort": "WARMUP",
+     "deadline_day": 1,
+     "direction": "OUT",
+     "id": "o02",
+     "known_day": 0,
+     "value_brl": "271.07"
+    },
+    {
+     "client_id": "c2",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 7,
+     "direction": "IN",
+     "id": "o03",
+     "known_day": 2,
+     "value_brl": "8722.94"
+    },
+    {
+     "client_id": "c0",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 11,
+     "direction": "IN",
+     "id": "o04",
+     "known_day": 8,
+     "value_brl": "246.53"
+    },
+    {
+     "client_id": "c2",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 15,
+     "direction": "IN",
+     "id": "o05",
+     "known_day": 9,
+     "value_brl": "8000.76"
+    },
+    {
+     "client_id": "c0",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 10,
+     "direction": "IN",
+     "id": "o06",
+     "known_day": 9,
+     "value_brl": "6697.5"
+    },
+    {
+     "client_id": "c1",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 13,
+     "direction": "IN",
+     "id": "o07",
+     "known_day": 9,
+     "value_brl": "1356.29"
+    },
+    {
+     "client_id": "c1",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 7,
+     "direction": "OUT",
+     "id": "o08",
+     "known_day": 4,
+     "value_brl": "1450.59"
+    },
+    {
+     "client_id": "c1",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 11,
+     "direction": "OUT",
+     "id": "o09",
+     "known_day": 11,
+     "value_brl": "8070.21"
+    },
+    {
+     "client_id": "c2",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 8,
+     "direction": "IN",
+     "id": "o10",
+     "known_day": 6,
+     "value_brl": "1877.91"
+    },
+    {
+     "client_id": "c2",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 14,
+     "direction": "IN",
+     "id": "o11",
+     "known_day": 7,
+     "value_brl": "5380.3"
+    },
+    {
+     "client_id": "c1",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 10,
+     "direction": "IN",
+     "id": "o12",
+     "known_day": 10,
+     "value_brl": "715.72"
+    },
+    {
+     "client_id": "c0",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 14,
+     "direction": "IN",
+     "id": "o13",
+     "known_day": 10,
+     "value_brl": "5092.42"
+    },
+    {
+     "client_id": "c1",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 9,
+     "direction": "IN",
+     "id": "o14",
+     "known_day": 7,
+     "value_brl": "7290.02"
+    },
+    {
+     "client_id": "c0",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 14,
+     "direction": "OUT",
+     "id": "o15",
+     "known_day": 10,
+     "value_brl": "5373.11"
+    },
+    {
+     "client_id": "c2",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 13,
+     "direction": "OUT",
+     "id": "o16",
+     "known_day": 6,
+     "value_brl": "2236.99"
+    },
+    {
+     "client_id": "c1",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 11,
+     "direction": "IN",
+     "id": "o17",
+     "known_day": 5,
+     "value_brl": "5355.44"
+    },
+    {
+     "client_id": "c2",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 17,
+     "direction": "IN",
+     "id": "o18",
+     "known_day": 10,
+     "value_brl": "3160.54"
+    },
+    {
+     "client_id": "c1",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 7,
+     "direction": "OUT",
+     "id": "o19",
+     "known_day": 5,
+     "value_brl": "7562.79"
+    },
+    {
+     "client_id": "c2",
+     "cohort": "MEASUREMENT",
+     "deadline_day": 7,
+     "direction": "IN",
+     "id": "o20",
+     "known_day": 4,
+     "value_brl": "214.55"
+    }
+   ],
+   "participant_seeds": {},
+   "period": {
+    "measurement_end_day": 11,
+    "measurement_start_day": 2,
+    "mode": "NATURAL",
+    "settlement_end_day": 17,
+    "warmup_days": 2
+   },
+   "policy": "P0",
+   "repetition_id": "00000000-0000-4000-8000-000000000703",
+   "result_fingerprint": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+   "scenario_id": "00000000-0000-4000-8000-000000000003",
+   "scenario_revision": 1,
+   "totals": {
+    "execution_matched_position_brl": "25546.37",
+    "execution_remitted_in_brl": "28564.55",
+    "execution_remitted_out_brl": "2968.82",
+    "measured_autonetting_contribution_brl": "28643.66",
+    "measured_gross_brl": "79657.29",
+    "measured_matched_contribution_brl": "51092.74",
+    "measured_multilateral_contribution_brl": "22449.08",
+    "measured_remitted_brl": "28564.55",
+    "netability_fraction": "0.6414069572288989494872346272"
+   }
+  },
+  "seed": 30
+ }
+]

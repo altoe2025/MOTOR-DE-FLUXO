@@ -1,0 +1,255 @@
+{
+  "apiVersion": "1.0.0",
+  "presentationVersion": "1.0.0",
+  "generatedAt": "2026-09-23T12:00:00.000Z",
+  "study": {
+    "id": "study-1",
+    "name": "Estudo observação çã",
+    "revision": 1
+  },
+  "selection": {
+    "scenarioId": "scenario-1",
+    "scenarioRevision": 1,
+    "diagnosticExecutionId": "diagnostic-1",
+    "repetitionId": "repetition-1",
+    "comparisonExecutionId": "comparison-1",
+    "replayDay": 2
+  },
+  "source": {
+    "family": "PROFILE_SIMULATION",
+    "label": "Simulação sintética",
+    "synthetic": true
+  },
+  "executiveMetrics": [
+    {
+      "code": "gross",
+      "label": "Volume observado",
+      "availability": "AVAILABLE",
+      "value": "12345678901234567890.0123456789",
+      "unit": "BRL",
+      "meaning": "Volume publicado pela fonte",
+      "evidenceRefs": [
+        "gross"
+      ]
+    },
+    {
+      "code": "missing",
+      "label": "Volume observado",
+      "availability": "UNAVAILABLE",
+      "value": null,
+      "unit": "BRL",
+      "meaning": "Ausência de dado",
+      "evidenceRefs": [
+        "missing"
+      ]
+    }
+  ],
+  "composition": {
+    "title": "Seção sem dados adicionais",
+    "metrics": [],
+    "facts": []
+  },
+  "mechanism": {
+    "title": "Seção sem dados adicionais",
+    "metrics": [],
+    "facts": []
+  },
+  "economics": {
+    "title": "Seção sem dados adicionais",
+    "metrics": [],
+    "facts": []
+  },
+  "robustness": {
+    "title": "Seção sem dados adicionais",
+    "metrics": [
+      {
+        "code": "status",
+        "label": "Natureza",
+        "availability": "AVAILABLE",
+        "value": "Demonstrativo",
+        "unit": "TEXT",
+        "meaning": "Rótulo publicado",
+        "evidenceRefs": [
+          "status"
+        ]
+      }
+    ],
+    "facts": []
+  },
+  "comparison": {
+    "title": "Comparação publicada",
+    "metrics": [
+      {
+        "code": "delta",
+        "label": "Volume observado",
+        "availability": "AVAILABLE",
+        "value": "-1.000",
+        "unit": "BPS",
+        "meaning": "Volume publicado pela fonte",
+        "evidenceRefs": [
+          "delta"
+        ]
+      }
+    ],
+    "facts": []
+  },
+  "replaySnapshot": {
+    "day": 2,
+    "metrics": [
+      {
+        "code": "day-gross",
+        "label": "Volume observado",
+        "availability": "AVAILABLE",
+        "value": "2.50",
+        "unit": "BRL",
+        "meaning": "Volume publicado pela fonte",
+        "evidenceRefs": [
+          "day-gross"
+        ]
+      }
+    ],
+    "facts": []
+  },
+  "assumptions": [
+    {
+      "code": "assumption",
+      "label": "Premissa",
+      "value": "Estimativa declarada",
+      "evidenceRefs": [
+        "assumption"
+      ]
+    }
+  ],
+  "provenance": [
+    {
+      "code": "provenance",
+      "label": "Origem",
+      "value": "Arquivo observado",
+      "evidenceRefs": [
+        "provenance"
+      ]
+    }
+  ],
+  "limitations": [
+    {
+      "code": "limitation",
+      "severity": "WARNING",
+      "statement": "Resultado não é cotação",
+      "evidenceRefs": [
+        "limitation"
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "code": "version",
+      "label": "API",
+      "value": "1.0.0",
+      "evidenceRefs": [
+        "version"
+      ]
+    }
+  ],
+  "evidenceIndex": {
+    "gross": {
+      "source": "DIAGNOSTIC",
+      "sourceId": "diagnostic-1",
+      "studyId": "study-1",
+      "scenarioId": "scenario-1",
+      "scenarioRevision": 1,
+      "diagnosticExecutionId": "diagnostic-1",
+      "repetitionId": "repetition-1",
+      "path": "/metrics/gross",
+      "value": "12345678901234567890.0123456789"
+    },
+    "missing": {
+      "source": "DIAGNOSTIC",
+      "sourceId": "diagnostic-1",
+      "studyId": "study-1",
+      "scenarioId": "scenario-1",
+      "scenarioRevision": 1,
+      "diagnosticExecutionId": "diagnostic-1",
+      "repetitionId": "repetition-1",
+      "path": "/metrics/missing",
+      "value": "Ausência de dado"
+    },
+    "assumption": {
+      "source": "STUDY",
+      "sourceId": "study-1",
+      "studyId": "study-1",
+      "scenarioId": "scenario-1",
+      "scenarioRevision": 1,
+      "diagnosticExecutionId": "diagnostic-1",
+      "repetitionId": "repetition-1",
+      "path": "/assumptions/0",
+      "value": "Estimativa declarada"
+    },
+    "provenance": {
+      "source": "DIAGNOSTIC",
+      "sourceId": "diagnostic-1",
+      "studyId": "study-1",
+      "scenarioId": "scenario-1",
+      "scenarioRevision": 1,
+      "diagnosticExecutionId": "diagnostic-1",
+      "repetitionId": "repetition-1",
+      "path": "/provenance/0",
+      "value": "Arquivo observado"
+    },
+    "limitation": {
+      "source": "DIAGNOSTIC",
+      "sourceId": "diagnostic-1",
+      "studyId": "study-1",
+      "scenarioId": "scenario-1",
+      "scenarioRevision": 1,
+      "diagnosticExecutionId": "diagnostic-1",
+      "repetitionId": "repetition-1",
+      "path": "/limitations/0",
+      "value": "Resultado não é cotação"
+    },
+    "version": {
+      "source": "DIAGNOSTIC",
+      "sourceId": "diagnostic-1",
+      "studyId": "study-1",
+      "scenarioId": "scenario-1",
+      "scenarioRevision": 1,
+      "diagnosticExecutionId": "diagnostic-1",
+      "repetitionId": "repetition-1",
+      "path": "/api_version",
+      "value": "1.0.0"
+    },
+    "delta": {
+      "source": "COMPARISON",
+      "sourceId": "comparison-1",
+      "studyId": "study-1",
+      "scenarioId": "scenario-1",
+      "scenarioRevision": 1,
+      "diagnosticExecutionId": "diagnostic-1",
+      "repetitionId": "repetition-1",
+      "path": "/delta",
+      "value": "-1.000"
+    },
+    "day-gross": {
+      "source": "REPLAY",
+      "sourceId": "diagnostic-1",
+      "studyId": "study-1",
+      "scenarioId": "scenario-1",
+      "scenarioRevision": 1,
+      "diagnosticExecutionId": "diagnostic-1",
+      "repetitionId": "repetition-1",
+      "path": "/days/2/gross",
+      "value": "2.50"
+    },
+    "status": {
+      "source": "DIAGNOSTIC",
+      "sourceId": "diagnostic-1",
+      "studyId": "study-1",
+      "scenarioId": "scenario-1",
+      "scenarioRevision": 1,
+      "diagnosticExecutionId": "diagnostic-1",
+      "repetitionId": "repetition-1",
+      "path": "/status",
+      "value": "Demonstrativo"
+    }
+  },
+  "contextFingerprint": "cb9df2412807ea3b3808851610d241a9812df5722ec0adcbf65385d2c47416ba"
+}

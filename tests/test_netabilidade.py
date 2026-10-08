@@ -71,6 +71,33 @@ def test_casamento_parcial_conta_as_duas_pernas():
     assert r.taxa_netabilidade == Decimal("0.8")
 
 
+def test_netabilidade_e_decomposta_pela_origem_observada():
+    ordens = (
+        Ordem("a-out", "a", Direcao.OUT, Decimal("100"), 0, 5, True, "x"),
+        Ordem("a-in", "a", Direcao.IN, Decimal("70"), 0, 5, True, "x"),
+        Ordem("b-in", "b", Direcao.IN, Decimal("50"), 0, 5, True, "x"),
+    )
+
+    resultado = simular(
+        Cenario(ordens=ordens, janela_dias=100, horizonte_dias=5, custo=CUSTO)
+    )
+
+    assert resultado.volume_autonetting_brl == Decimal("140")
+    assert resultado.volume_netting_multilateral_brl == Decimal("60")
+    assert resultado.volume_casado_brl == Decimal("200")
+    assert (
+        resultado.volume_autonetting_brl
+        + resultado.volume_netting_multilateral_brl
+        == resultado.volume_casado_brl
+    )
+    assert resultado.taxa_autonetting == Decimal("140") / Decimal("220")
+    assert resultado.taxa_netting_multilateral == Decimal("60") / Decimal("220")
+    assert (
+        resultado.taxa_autonetting + resultado.taxa_netting_multilateral
+        == resultado.taxa_netabilidade
+    )
+
+
 @pytest.mark.parametrize(
     "valor_out,valor_in",
     [("100", "100"), ("120", "80"), ("1", "999"), ("500", "0.01"), ("7", "7")],

@@ -1,0 +1,5497 @@
+{
+  "$id": "https://motor-de-fluxo.local/contracts/schemas.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "AgregadoDTO": {
+      "additionalProperties": false,
+      "properties": {
+        "baseline_periodo": {
+          "$ref": "#/$defs/CustosDTO"
+        },
+        "economia_periodo_brl": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Economia Periodo Brl",
+          "type": "string"
+        },
+        "execucao_completa": {
+          "$ref": "#/$defs/ResultadoLegadoDTO"
+        },
+        "ids_ordens_medidas": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Ids Ordens Medidas",
+          "type": "array"
+        },
+        "mecanismos": {
+          "items": {
+            "$ref": "#/$defs/ResultadoMecanismoDTO"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "title": "Mecanismos",
+          "type": "array"
+        },
+        "netado_periodo": {
+          "$ref": "#/$defs/CustosDTO"
+        },
+        "taxa_autonetting_periodo": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Taxa Autonetting Periodo",
+          "type": "string"
+        },
+        "taxa_netabilidade_periodo": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Taxa Netabilidade Periodo",
+          "type": "string"
+        },
+        "taxa_netting_multilateral_periodo": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Taxa Netting Multilateral Periodo",
+          "type": "string"
+        },
+        "volume_autonetting_periodo_brl": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Volume Autonetting Periodo Brl",
+          "type": "string"
+        },
+        "volume_bruto_periodo_brl": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Volume Bruto Periodo Brl",
+          "type": "string"
+        },
+        "volume_casado_periodo_brl": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Volume Casado Periodo Brl",
+          "type": "string"
+        },
+        "volume_netting_multilateral_periodo_brl": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Volume Netting Multilateral Periodo Brl",
+          "type": "string"
+        },
+        "volume_remetido_periodo_brl": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Volume Remetido Periodo Brl",
+          "type": "string"
+        }
+      },
+      "required": [
+        "execucao_completa",
+        "ids_ordens_medidas",
+        "volume_bruto_periodo_brl",
+        "volume_casado_periodo_brl",
+        "volume_autonetting_periodo_brl",
+        "volume_netting_multilateral_periodo_brl",
+        "volume_remetido_periodo_brl",
+        "baseline_periodo",
+        "netado_periodo",
+        "economia_periodo_brl",
+        "taxa_netabilidade_periodo",
+        "taxa_autonetting_periodo",
+        "taxa_netting_multilateral_periodo",
+        "mecanismos"
+      ],
+      "title": "AgregadoDTO",
+      "type": "object"
+    },
+    "AliquotaFinalidade": {
+      "additionalProperties": false,
+      "properties": {
+        "aliquota": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Aliquota",
+          "type": "string"
+        },
+        "direcao": {
+          "enum": [
+            "OUT",
+            "IN"
+          ],
+          "title": "Direcao",
+          "type": "string"
+        }
+      },
+      "required": [
+        "direcao",
+        "aliquota"
+      ],
+      "title": "AliquotaFinalidade",
+      "type": "object"
+    },
+    "AllocationEventV1": {
+      "additionalProperties": false,
+      "properties": {
+        "allocation_type": {
+          "enum": [
+            "CASADO",
+            "REMETIDO"
+          ],
+          "title": "Allocation Type",
+          "type": "string"
+        },
+        "direction": {
+          "enum": [
+            "OUT",
+            "IN"
+          ],
+          "title": "Direction",
+          "type": "string"
+        },
+        "kind": {
+          "const": "ALLOCATION",
+          "title": "Kind",
+          "type": "string"
+        },
+        "matching_origin": {
+          "anyOf": [
+            {
+              "enum": [
+                "INTRA_CLIENTE",
+                "INTER_CLIENTE"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Matching Origin"
+        },
+        "order_id": {
+          "title": "Order Id",
+          "type": "string"
+        },
+        "sequence": {
+          "minimum": 0,
+          "title": "Sequence",
+          "type": "integer"
+        },
+        "value_brl": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Value Brl",
+          "type": "string"
+        }
+      },
+      "required": [
+        "sequence",
+        "kind",
+        "order_id",
+        "allocation_type",
+        "value_brl",
+        "direction",
+        "matching_origin"
+      ],
+      "title": "AllocationEventV1",
+      "type": "object"
+    },
+    "AlocacaoDTO": {
+      "additionalProperties": false,
+      "properties": {
+        "dia": {
+          "title": "Dia",
+          "type": "integer"
+        },
+        "ordem_id": {
+          "title": "Ordem Id",
+          "type": "string"
+        },
+        "origem_casamento": {
+          "anyOf": [
+            {
+              "enum": [
+                "INTRA_CLIENTE",
+                "INTER_CLIENTE"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Origem Casamento"
+        },
+        "tipo": {
+          "enum": [
+            "CASADO",
+            "REMETIDO"
+          ],
+          "title": "Tipo",
+          "type": "string"
+        },
+        "valor_brl": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Valor Brl",
+          "type": "string"
+        }
+      },
+      "required": [
+        "ordem_id",
+        "dia",
+        "valor_brl",
+        "tipo",
+        "origem_casamento"
+      ],
+      "title": "AlocacaoDTO",
+      "type": "object"
+    },
+    "AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence": {
+          "items": {
+            "maxLength": 300,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 200,
+          "title": "Evidence",
+          "type": "array"
+        },
+        "state": {
+          "const": "AVAILABLE",
+          "title": "State",
+          "type": "string"
+        },
+        "value": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "state",
+        "value",
+        "evidence"
+      ],
+      "title": "AvailableEvidenceMetric[Annotated[str, FieldInfo(annotation=NoneType, required=True, metadata=[Strict(strict=True), MinLen(min_length=1), MaxLen(max_length=80), _PydanticGeneralMetadata(pattern='^-?(0|[1-9][0-9]*)(\\\\.[0-9]+)?$')])]]",
+      "type": "object"
+    },
+    "AvailableEvidenceMetric_DistributionSummary_": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence": {
+          "items": {
+            "maxLength": 300,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 200,
+          "title": "Evidence",
+          "type": "array"
+        },
+        "state": {
+          "const": "AVAILABLE",
+          "title": "State",
+          "type": "string"
+        },
+        "value": {
+          "$ref": "#/$defs/DistributionSummary"
+        }
+      },
+      "required": [
+        "state",
+        "value",
+        "evidence"
+      ],
+      "title": "AvailableEvidenceMetric[DistributionSummary]",
+      "type": "object"
+    },
+    "BoardChatContextV1": {
+      "additionalProperties": false,
+      "properties": {
+        "document": {
+          "$ref": "#/$defs/BoardChatDocumentV1"
+        },
+        "kind": {
+          "const": "BOARD",
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "document"
+      ],
+      "title": "BoardChatContextV1",
+      "type": "object"
+    },
+    "BoardChatDocumentV1": {
+      "additionalProperties": false,
+      "properties": {
+        "apiVersion": {
+          "const": "1.0.0",
+          "title": "Apiversion",
+          "type": "string"
+        },
+        "contextFingerprint": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Contextfingerprint",
+          "type": "string"
+        },
+        "evidenceIndex": {
+          "additionalProperties": {
+            "$ref": "#/$defs/BoardEvidenceV1"
+          },
+          "maxProperties": 1400,
+          "propertyNames": {
+            "maxLength": 128,
+            "minLength": 1
+          },
+          "title": "Evidenceindex",
+          "type": "object"
+        },
+        "generatedAt": {
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$",
+          "title": "Generatedat",
+          "type": "string"
+        },
+        "rows": {
+          "items": {
+            "$ref": "#/$defs/BoardChatRowV1"
+          },
+          "maxItems": 100,
+          "title": "Rows",
+          "type": "array"
+        }
+      },
+      "required": [
+        "apiVersion",
+        "generatedAt",
+        "rows",
+        "evidenceIndex",
+        "contextFingerprint"
+      ],
+      "title": "BoardChatDocumentV1",
+      "type": "object"
+    },
+    "BoardChatRowV1": {
+      "additionalProperties": false,
+      "properties": {
+        "baselineTotalBrl": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Baselinetotalbrl",
+          "type": "string"
+        },
+        "executionId": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Executionid",
+          "type": "string"
+        },
+        "inBrl": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Inbrl",
+          "type": "string"
+        },
+        "netability": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Netability",
+          "type": "string"
+        },
+        "nettedTotalBrl": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Nettedtotalbrl",
+          "type": "string"
+        },
+        "orderCount": {
+          "minimum": 0,
+          "title": "Ordercount",
+          "type": "integer"
+        },
+        "outBrl": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Outbrl",
+          "type": "string"
+        },
+        "rowKey": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Rowkey",
+          "type": "string"
+        },
+        "savingsBrl": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Savingsbrl",
+          "type": "string"
+        },
+        "scenarioId": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Scenarioid",
+          "type": "string"
+        },
+        "scenarioName": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Scenarioname",
+          "type": "string"
+        },
+        "sourceLabel": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Sourcelabel",
+          "type": "string"
+        },
+        "studyId": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Studyid",
+          "type": "string"
+        },
+        "studyName": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Studyname",
+          "type": "string"
+        },
+        "windowDays": {
+          "minimum": 1,
+          "title": "Windowdays",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "rowKey",
+        "studyId",
+        "scenarioId",
+        "executionId",
+        "studyName",
+        "scenarioName",
+        "sourceLabel",
+        "windowDays",
+        "orderCount",
+        "inBrl",
+        "outBrl",
+        "netability",
+        "baselineTotalBrl",
+        "nettedTotalBrl",
+        "savingsBrl"
+      ],
+      "title": "BoardChatRowV1",
+      "type": "object"
+    },
+    "BoardEvidenceV1": {
+      "additionalProperties": false,
+      "properties": {
+        "field": {
+          "enum": [
+            "studyId",
+            "scenarioId",
+            "executionId",
+            "studyName",
+            "scenarioName",
+            "sourceLabel",
+            "windowDays",
+            "orderCount",
+            "inBrl",
+            "outBrl",
+            "netability",
+            "baselineTotalBrl",
+            "nettedTotalBrl",
+            "savingsBrl"
+          ],
+          "title": "Field",
+          "type": "string"
+        },
+        "rowKey": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Rowkey",
+          "type": "string"
+        },
+        "value": {
+          "maxLength": 20000,
+          "minLength": 1,
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "rowKey",
+        "field",
+        "value"
+      ],
+      "title": "BoardEvidenceV1",
+      "type": "object"
+    },
+    "CatalogoImportacao": {
+      "additionalProperties": false,
+      "properties": {
+        "catalog_version": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Catalog Version",
+          "type": "string"
+        },
+        "custos_calibrados": {
+          "const": false,
+          "title": "Custos Calibrados",
+          "type": "boolean"
+        },
+        "custos_origem": {
+          "$ref": "#/$defs/OrigemCatalogo"
+        },
+        "custos_padrao": {
+          "$ref": "#/$defs/CustoPadraoCatalogo"
+        },
+        "finalidades": {
+          "items": {
+            "$ref": "#/$defs/FinalidadeCatalogo"
+          },
+          "maxItems": 100,
+          "title": "Finalidades",
+          "type": "array"
+        },
+        "publicado_em_utc": {
+          "format": "date-time",
+          "title": "Publicado Em Utc",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "CONFIGURADO",
+            "NAO_CONFIGURADO"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "catalog_version",
+        "status",
+        "publicado_em_utc",
+        "finalidades",
+        "custos_padrao",
+        "custos_origem",
+        "custos_calibrados"
+      ],
+      "title": "CatalogoImportacao",
+      "type": "object"
+    },
+    "CenarioEntrada": {
+      "additionalProperties": false,
+      "properties": {
+        "custo": {
+          "$ref": "#/$defs/CustoEntrada"
+        },
+        "horizonte_dias": {
+          "maximum": 730,
+          "minimum": 0,
+          "title": "Horizonte Dias",
+          "type": "integer"
+        },
+        "janela_dias": {
+          "maximum": 730,
+          "minimum": 1,
+          "title": "Janela Dias",
+          "type": "integer"
+        },
+        "ordens": {
+          "description": "Operações explícitas que não devem ser pré-netadas; OUT e IN do mesmo cliente permanecem entradas distintas para a política P0.",
+          "items": {
+            "$ref": "#/$defs/OrdemEntrada"
+          },
+          "maxItems": 1000,
+          "title": "Ordens",
+          "type": "array"
+        }
+      },
+      "required": [
+        "ordens",
+        "janela_dias",
+        "horizonte_dias",
+        "custo"
+      ],
+      "title": "CenarioEntrada",
+      "type": "object"
+    },
+    "ChatAssistantHistoryItem": {
+      "additionalProperties": false,
+      "properties": {
+        "contextFingerprint": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Contextfingerprint"
+        },
+        "role": {
+          "const": "ASSISTANT",
+          "title": "Role",
+          "type": "string"
+        },
+        "text": {
+          "maxLength": 12000,
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "role",
+        "text",
+        "contextFingerprint"
+      ],
+      "title": "ChatAssistantHistoryItem",
+      "type": "object"
+    },
+    "ChatCitation": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "EVIDENCE",
+            "METRIC",
+            "LIMITATION",
+            "HELP"
+          ],
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "id"
+      ],
+      "title": "ChatCitation",
+      "type": "object"
+    },
+    "ChatRequestV1": {
+      "additionalProperties": false,
+      "properties": {
+        "apiVersion": {
+          "const": "1.0.0",
+          "title": "Apiversion",
+          "type": "string"
+        },
+        "context": {
+          "anyOf": [
+            {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/StudyChatContextV1"
+                },
+                {
+                  "$ref": "#/$defs/BoardChatContextV1"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Context"
+        },
+        "conversationId": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Conversationid",
+          "type": "string"
+        },
+        "history": {
+          "description": "Mensagens anteriores; reserva pergunta e resposta na quota de 100.",
+          "items": {
+            "oneOf": [
+              {
+                "$ref": "#/$defs/ChatUserHistoryItem"
+              },
+              {
+                "$ref": "#/$defs/ChatAssistantHistoryItem"
+              }
+            ]
+          },
+          "maxItems": 98,
+          "title": "History",
+          "type": "array"
+        },
+        "message": {
+          "maxLength": 4000,
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Message",
+          "type": "string"
+        },
+        "messageId": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Messageid",
+          "type": "string"
+        },
+        "routeContext": {
+          "$ref": "#/$defs/RouteChatContext"
+        }
+      },
+      "required": [
+        "apiVersion",
+        "conversationId",
+        "messageId",
+        "message",
+        "routeContext",
+        "context",
+        "history"
+      ],
+      "title": "ChatRequestV1",
+      "type": "object"
+    },
+    "ChatResponseV1": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "maxLength": 12000,
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Answer",
+          "type": "string"
+        },
+        "apiVersion": {
+          "const": "1.0.0",
+          "title": "Apiversion",
+          "type": "string"
+        },
+        "citations": {
+          "items": {
+            "$ref": "#/$defs/ChatCitation"
+          },
+          "maxItems": 100,
+          "title": "Citations",
+          "type": "array"
+        },
+        "classification": {
+          "enum": [
+            "IN_SCOPE",
+            "INSUFFICIENT_EVIDENCE",
+            "OUT_OF_SCOPE",
+            "MIXED"
+          ],
+          "title": "Classification",
+          "type": "string"
+        },
+        "contextFingerprint": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Contextfingerprint"
+        },
+        "limitationCodes": {
+          "items": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "\\S",
+            "type": "string"
+          },
+          "maxItems": 100,
+          "title": "Limitationcodes",
+          "type": "array"
+        },
+        "messageId": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Messageid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "apiVersion",
+        "messageId",
+        "classification",
+        "answer",
+        "citations",
+        "contextFingerprint",
+        "limitationCodes"
+      ],
+      "title": "ChatResponseV1",
+      "type": "object"
+    },
+    "ChatUserHistoryItem": {
+      "additionalProperties": false,
+      "properties": {
+        "contextFingerprint": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Contextfingerprint"
+        },
+        "role": {
+          "const": "USER",
+          "title": "Role",
+          "type": "string"
+        },
+        "text": {
+          "maxLength": 4000,
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "role",
+        "text",
+        "contextFingerprint"
+      ],
+      "title": "ChatUserHistoryItem",
+      "type": "object"
+    },
+    "CicloDTO": {
+      "additionalProperties": false,
+      "properties": {
+        "alocacoes": {
+          "items": {
+            "$ref": "#/$defs/AlocacaoDTO"
+          },
+          "title": "Alocacoes",
+          "type": "array"
+        },
+        "bruto_in": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Bruto In",
+          "type": "string"
+        },
+        "bruto_out": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Bruto Out",
+          "type": "string"
+        },
+        "casado": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Casado",
+          "type": "string"
+        },
+        "dia": {
+          "title": "Dia",
+          "type": "integer"
+        },
+        "direcao_residuo": {
+          "enum": [
+            "OUT",
+            "IN"
+          ],
+          "title": "Direcao Residuo",
+          "type": "string"
+        },
+        "residuo": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Residuo",
+          "type": "string"
+        }
+      },
+      "required": [
+        "dia",
+        "alocacoes",
+        "bruto_out",
+        "bruto_in",
+        "casado",
+        "residuo",
+        "direcao_residuo"
+      ],
+      "title": "CicloDTO",
+      "type": "object"
+    },
+    "CommunicationDocumentV1": {
+      "additionalProperties": false,
+      "properties": {
+        "apiVersion": {
+          "const": "1.0.0",
+          "title": "Apiversion",
+          "type": "string"
+        },
+        "assumptions": {
+          "items": {
+            "$ref": "#/$defs/CommunicationFact"
+          },
+          "maxItems": 2000,
+          "title": "Assumptions",
+          "type": "array"
+        },
+        "comparison": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CommunicationSection"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "composition": {
+          "$ref": "#/$defs/CommunicationSection"
+        },
+        "contextFingerprint": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Contextfingerprint",
+          "type": "string"
+        },
+        "economics": {
+          "$ref": "#/$defs/CommunicationSection"
+        },
+        "evidenceIndex": {
+          "additionalProperties": {
+            "$ref": "#/$defs/CommunicationEvidence"
+          },
+          "maxProperties": 10000,
+          "propertyNames": {
+            "maxLength": 128,
+            "minLength": 1
+          },
+          "title": "Evidenceindex",
+          "type": "object"
+        },
+        "executiveMetrics": {
+          "items": {
+            "$ref": "#/$defs/CommunicationMetric"
+          },
+          "maxItems": 500,
+          "title": "Executivemetrics",
+          "type": "array"
+        },
+        "generatedAt": {
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$",
+          "title": "Generatedat",
+          "type": "string"
+        },
+        "limitations": {
+          "items": {
+            "$ref": "#/$defs/CommunicationLimitation"
+          },
+          "maxItems": 2000,
+          "title": "Limitations",
+          "type": "array"
+        },
+        "mechanism": {
+          "$ref": "#/$defs/CommunicationSection"
+        },
+        "presentationVersion": {
+          "const": "1.0.0",
+          "title": "Presentationversion",
+          "type": "string"
+        },
+        "provenance": {
+          "items": {
+            "$ref": "#/$defs/CommunicationFact"
+          },
+          "maxItems": 2000,
+          "title": "Provenance",
+          "type": "array"
+        },
+        "replaySnapshot": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CommunicationReplaySnapshot"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "robustness": {
+          "$ref": "#/$defs/CommunicationSection"
+        },
+        "selection": {
+          "$ref": "#/$defs/CommunicationSelection"
+        },
+        "source": {
+          "$ref": "#/$defs/CommunicationSource"
+        },
+        "study": {
+          "$ref": "#/$defs/CommunicationStudy"
+        },
+        "versions": {
+          "items": {
+            "$ref": "#/$defs/CommunicationFact"
+          },
+          "maxItems": 2000,
+          "title": "Versions",
+          "type": "array"
+        }
+      },
+      "required": [
+        "apiVersion",
+        "presentationVersion",
+        "generatedAt",
+        "study",
+        "selection",
+        "source",
+        "executiveMetrics",
+        "composition",
+        "mechanism",
+        "economics",
+        "robustness",
+        "comparison",
+        "replaySnapshot",
+        "assumptions",
+        "provenance",
+        "limitations",
+        "versions",
+        "evidenceIndex",
+        "contextFingerprint"
+      ],
+      "title": "CommunicationDocumentV1",
+      "type": "object"
+    },
+    "CommunicationEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "diagnosticExecutionId": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Diagnosticexecutionid",
+          "type": "string"
+        },
+        "path": {
+          "maxLength": 20000,
+          "minLength": 1,
+          "pattern": "^(/([^~]|~[01])*)+$",
+          "title": "Path",
+          "type": "string"
+        },
+        "repetitionId": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Repetitionid",
+          "type": "string"
+        },
+        "scenarioId": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Scenarioid",
+          "type": "string"
+        },
+        "scenarioRevision": {
+          "minimum": 1,
+          "title": "Scenariorevision",
+          "type": "integer"
+        },
+        "source": {
+          "enum": [
+            "STUDY",
+            "DIAGNOSTIC",
+            "COMPARISON",
+            "REPLAY"
+          ],
+          "title": "Source",
+          "type": "string"
+        },
+        "sourceId": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Sourceid",
+          "type": "string"
+        },
+        "studyId": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Studyid",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "maxLength": 20000,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Value"
+        }
+      },
+      "required": [
+        "source",
+        "sourceId",
+        "studyId",
+        "scenarioId",
+        "scenarioRevision",
+        "diagnosticExecutionId",
+        "repetitionId",
+        "path",
+        "value"
+      ],
+      "title": "CommunicationEvidence",
+      "type": "object"
+    },
+    "CommunicationFact": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Code",
+          "type": "string"
+        },
+        "evidenceRefs": {
+          "items": {
+            "maxLength": 128,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 20,
+          "minItems": 1,
+          "title": "Evidencerefs",
+          "type": "array"
+        },
+        "label": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "value": {
+          "maxLength": 20000,
+          "minLength": 1,
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "label",
+        "value",
+        "evidenceRefs"
+      ],
+      "title": "CommunicationFact",
+      "type": "object"
+    },
+    "CommunicationLimitation": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Code",
+          "type": "string"
+        },
+        "evidenceRefs": {
+          "items": {
+            "maxLength": 128,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 20,
+          "minItems": 1,
+          "title": "Evidencerefs",
+          "type": "array"
+        },
+        "severity": {
+          "enum": [
+            "INFO",
+            "WARNING"
+          ],
+          "title": "Severity",
+          "type": "string"
+        },
+        "statement": {
+          "maxLength": 20000,
+          "minLength": 1,
+          "title": "Statement",
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "severity",
+        "statement",
+        "evidenceRefs"
+      ],
+      "title": "CommunicationLimitation",
+      "type": "object"
+    },
+    "CommunicationMetric": {
+      "additionalProperties": false,
+      "properties": {
+        "availability": {
+          "enum": [
+            "AVAILABLE",
+            "UNAVAILABLE"
+          ],
+          "title": "Availability",
+          "type": "string"
+        },
+        "code": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Code",
+          "type": "string"
+        },
+        "evidenceRefs": {
+          "items": {
+            "maxLength": 128,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 20,
+          "minItems": 1,
+          "title": "Evidencerefs",
+          "type": "array"
+        },
+        "label": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "meaning": {
+          "maxLength": 20000,
+          "minLength": 1,
+          "title": "Meaning",
+          "type": "string"
+        },
+        "unit": {
+          "enum": [
+            "BRL",
+            "FRACTION",
+            "DAYS",
+            "COUNT",
+            "BPS",
+            "TEXT"
+          ],
+          "title": "Unit",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "maxLength": 20000,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Value"
+        }
+      },
+      "required": [
+        "code",
+        "label",
+        "availability",
+        "value",
+        "unit",
+        "meaning",
+        "evidenceRefs"
+      ],
+      "title": "CommunicationMetric",
+      "type": "object"
+    },
+    "CommunicationReplaySnapshot": {
+      "additionalProperties": false,
+      "properties": {
+        "day": {
+          "minimum": 0,
+          "title": "Day",
+          "type": "integer"
+        },
+        "facts": {
+          "items": {
+            "$ref": "#/$defs/CommunicationFact"
+          },
+          "maxItems": 2000,
+          "title": "Facts",
+          "type": "array"
+        },
+        "metrics": {
+          "items": {
+            "$ref": "#/$defs/CommunicationMetric"
+          },
+          "maxItems": 500,
+          "title": "Metrics",
+          "type": "array"
+        }
+      },
+      "required": [
+        "day",
+        "metrics",
+        "facts"
+      ],
+      "title": "CommunicationReplaySnapshot",
+      "type": "object"
+    },
+    "CommunicationSection": {
+      "additionalProperties": false,
+      "properties": {
+        "facts": {
+          "items": {
+            "$ref": "#/$defs/CommunicationFact"
+          },
+          "maxItems": 2000,
+          "title": "Facts",
+          "type": "array"
+        },
+        "metrics": {
+          "items": {
+            "$ref": "#/$defs/CommunicationMetric"
+          },
+          "maxItems": 500,
+          "title": "Metrics",
+          "type": "array"
+        },
+        "title": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "title",
+        "metrics",
+        "facts"
+      ],
+      "title": "CommunicationSection",
+      "type": "object"
+    },
+    "CommunicationSelection": {
+      "additionalProperties": false,
+      "properties": {
+        "comparisonExecutionId": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Comparisonexecutionid"
+        },
+        "diagnosticExecutionId": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Diagnosticexecutionid",
+          "type": "string"
+        },
+        "repetitionId": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Repetitionid",
+          "type": "string"
+        },
+        "replayDay": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Replayday"
+        },
+        "scenarioId": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Scenarioid",
+          "type": "string"
+        },
+        "scenarioRevision": {
+          "minimum": 1,
+          "title": "Scenariorevision",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "scenarioId",
+        "scenarioRevision",
+        "diagnosticExecutionId",
+        "repetitionId",
+        "comparisonExecutionId",
+        "replayDay"
+      ],
+      "title": "CommunicationSelection",
+      "type": "object"
+    },
+    "CommunicationSource": {
+      "additionalProperties": false,
+      "properties": {
+        "family": {
+          "enum": [
+            "OBSERVED",
+            "PROFILE_SIMULATION"
+          ],
+          "title": "Family",
+          "type": "string"
+        },
+        "label": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "synthetic": {
+          "title": "Synthetic",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "family",
+        "label",
+        "synthetic"
+      ],
+      "title": "CommunicationSource",
+      "type": "object"
+    },
+    "CommunicationStudy": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "revision": {
+          "minimum": 1,
+          "title": "Revision",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "revision"
+      ],
+      "title": "CommunicationStudy",
+      "type": "object"
+    },
+    "CompositionDependencyAxis": {
+      "additionalProperties": false,
+      "properties": {
+        "hhi": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Hhi"
+        },
+        "largest_share": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Largest Share"
+        },
+        "participants": {
+          "items": {
+            "$ref": "#/$defs/ParticipantShare"
+          },
+          "maxItems": 100,
+          "title": "Participants",
+          "type": "array"
+        }
+      },
+      "required": [
+        "hhi",
+        "largest_share",
+        "participants"
+      ],
+      "title": "CompositionDependencyAxis",
+      "type": "object"
+    },
+    "CrossBorderResidualAxis": {
+      "additionalProperties": false,
+      "properties": {
+        "by_day": {
+          "items": {
+            "$ref": "#/$defs/ResidualBreakdown"
+          },
+          "maxItems": 731,
+          "title": "By Day",
+          "type": "array"
+        },
+        "by_purpose": {
+          "items": {
+            "$ref": "#/$defs/PurposeResidualBreakdown"
+          },
+          "maxItems": 200,
+          "title": "By Purpose",
+          "type": "array"
+        },
+        "in_brl": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "In Brl"
+        },
+        "out_brl": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Out Brl"
+        },
+        "remitted_brl": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Remitted Brl"
+        }
+      },
+      "required": [
+        "remitted_brl",
+        "out_brl",
+        "in_brl",
+        "by_day",
+        "by_purpose"
+      ],
+      "title": "CrossBorderResidualAxis",
+      "type": "object"
+    },
+    "CustoEntrada": {
+      "additionalProperties": false,
+      "properties": {
+        "carry_cnr": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Carry Cnr",
+          "type": "string"
+        },
+        "custo_fixo_remessa": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Custo Fixo Remessa",
+          "type": "string"
+        },
+        "custo_oportunidade_aa": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Custo Oportunidade Aa",
+          "type": "string"
+        },
+        "iof_in": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Iof In",
+          "type": "string"
+        },
+        "iof_out": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Iof Out",
+          "type": "string"
+        },
+        "iof_por_finalidade": {
+          "items": {
+            "$ref": "#/$defs/RegraIOF"
+          },
+          "maxItems": 100,
+          "title": "Iof Por Finalidade",
+          "type": "array"
+        },
+        "ptax": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Ptax",
+          "type": "string"
+        },
+        "spread_rail_bps": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Spread Rail Bps",
+          "type": "string"
+        }
+      },
+      "required": [
+        "iof_out",
+        "iof_in",
+        "carry_cnr",
+        "spread_rail_bps",
+        "custo_fixo_remessa",
+        "custo_oportunidade_aa",
+        "ptax",
+        "iof_por_finalidade"
+      ],
+      "title": "CustoEntrada",
+      "type": "object"
+    },
+    "CustoPadraoCatalogo": {
+      "additionalProperties": false,
+      "properties": {
+        "carry_cnr": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Carry Cnr",
+          "type": "string"
+        },
+        "custo_fixo_remessa": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Custo Fixo Remessa",
+          "type": "string"
+        },
+        "custo_oportunidade_aa": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Custo Oportunidade Aa",
+          "type": "string"
+        },
+        "iof_in": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Iof In",
+          "type": "string"
+        },
+        "iof_out": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Iof Out",
+          "type": "string"
+        },
+        "iof_por_finalidade": {
+          "items": {
+            "$ref": "#/$defs/RegraIOFCatalogo"
+          },
+          "maxItems": 100,
+          "title": "Iof Por Finalidade",
+          "type": "array"
+        },
+        "ptax": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Ptax",
+          "type": "string"
+        },
+        "spread_rail_bps": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Spread Rail Bps",
+          "type": "string"
+        }
+      },
+      "required": [
+        "iof_out",
+        "iof_in",
+        "carry_cnr",
+        "spread_rail_bps",
+        "custo_fixo_remessa",
+        "custo_oportunidade_aa",
+        "ptax",
+        "iof_por_finalidade"
+      ],
+      "title": "CustoPadraoCatalogo",
+      "type": "object"
+    },
+    "CustosDTO": {
+      "additionalProperties": false,
+      "properties": {
+        "carry": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Carry",
+          "type": "string"
+        },
+        "espera": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Espera",
+          "type": "string"
+        },
+        "fixo": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Fixo",
+          "type": "string"
+        },
+        "iof": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Iof",
+          "type": "string"
+        },
+        "spread": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Spread",
+          "type": "string"
+        },
+        "total": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Total",
+          "type": "string"
+        }
+      },
+      "required": [
+        "iof",
+        "carry",
+        "spread",
+        "espera",
+        "fixo",
+        "total"
+      ],
+      "title": "CustosDTO",
+      "type": "object"
+    },
+    "DerivedEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "inputs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Inputs",
+          "type": "array"
+        },
+        "rule": {
+          "enum": [
+            "dimensionamento-v1",
+            "geracao-v1",
+            "soma-ordens-v1"
+          ],
+          "title": "Rule",
+          "type": "string"
+        }
+      },
+      "required": [
+        "rule",
+        "inputs"
+      ],
+      "title": "DerivedEvidence",
+      "type": "object"
+    },
+    "DiagnosticAxes": {
+      "additionalProperties": false,
+      "properties": {
+        "composition_dependency": {
+          "$ref": "#/$defs/CompositionDependencyAxis"
+        },
+        "cross_border_residual": {
+          "$ref": "#/$defs/CrossBorderResidualAxis"
+        },
+        "economic_robustness": {
+          "$ref": "#/$defs/EconomicRobustnessAxis"
+        },
+        "operational_profile": {
+          "$ref": "#/$defs/OperationalProfileAxis"
+        },
+        "policy_capture": {
+          "$ref": "#/$defs/PolicyCaptureAxis"
+        },
+        "structural_potential": {
+          "$ref": "#/$defs/StructuralPotentialAxis"
+        },
+        "temporal_compatibility": {
+          "$ref": "#/$defs/TemporalCompatibilityAxis"
+        }
+      },
+      "required": [
+        "structural_potential",
+        "policy_capture",
+        "temporal_compatibility",
+        "cross_border_residual",
+        "composition_dependency",
+        "economic_robustness",
+        "operational_profile"
+      ],
+      "title": "DiagnosticAxes",
+      "type": "object"
+    },
+    "DiagnosticConsequence": {
+      "additionalProperties": false,
+      "properties": {
+        "axis": {
+          "enum": [
+            "STRUCTURAL_POTENTIAL",
+            "POLICY_CAPTURE",
+            "TEMPORAL_COMPATIBILITY",
+            "CROSS_BORDER_RESIDUAL",
+            "COMPOSITION_DEPENDENCY",
+            "ECONOMIC_ROBUSTNESS",
+            "OPERATIONAL_PROFILE"
+          ],
+          "title": "Axis",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "maxLength": 300,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 20,
+          "minItems": 1,
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "rule_id": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Rule Id",
+          "type": "string"
+        },
+        "rule_version": {
+          "enum": [
+            "1.0.0",
+            "1.1.0"
+          ],
+          "title": "Rule Version",
+          "type": "string"
+        },
+        "statement_code": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Statement Code",
+          "type": "string"
+        }
+      },
+      "required": [
+        "rule_id",
+        "rule_version",
+        "axis",
+        "statement_code",
+        "evidence_refs"
+      ],
+      "title": "DiagnosticConsequence",
+      "type": "object"
+    },
+    "DiagnosticEnvelope": {
+      "additionalProperties": false,
+      "properties": {
+        "api_version": {
+          "const": "1.0.0",
+          "title": "Api Version",
+          "type": "string"
+        },
+        "axes": {
+          "$ref": "#/$defs/DiagnosticAxes"
+        },
+        "consequences": {
+          "items": {
+            "$ref": "#/$defs/DiagnosticConsequence"
+          },
+          "maxItems": 100,
+          "title": "Consequences",
+          "type": "array"
+        },
+        "job_id": {
+          "format": "uuid",
+          "title": "Job Id",
+          "type": "string"
+        },
+        "limitations": {
+          "items": {
+            "$ref": "#/$defs/DiagnosticLimitation"
+          },
+          "maxItems": 100,
+          "title": "Limitations",
+          "type": "array"
+        },
+        "provenance": {
+          "$ref": "#/$defs/DiagnosticProvenance"
+        },
+        "repetitions": {
+          "items": {
+            "$ref": "#/$defs/RepetitionSummary"
+          },
+          "maxItems": 100,
+          "minItems": 1,
+          "title": "Repetitions",
+          "type": "array"
+        },
+        "request_fingerprint": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Request Fingerprint",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "selected_execution": {
+          "$ref": "#/$defs/PreviewEnvelope"
+        },
+        "statistics": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/SingleExecutionStatistics"
+            },
+            {
+              "$ref": "#/$defs/DistributionStatistics"
+            }
+          ],
+          "title": "Statistics"
+        }
+      },
+      "required": [
+        "api_version",
+        "schema_version",
+        "job_id",
+        "request_fingerprint",
+        "statistics",
+        "axes",
+        "repetitions",
+        "selected_execution",
+        "consequences",
+        "limitations",
+        "provenance"
+      ],
+      "title": "DiagnosticEnvelope",
+      "type": "object"
+    },
+    "DiagnosticLimitation": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Code",
+          "type": "string"
+        },
+        "condition": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Condition",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "maxLength": 300,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 20,
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "severity": {
+          "enum": [
+            "INFO",
+            "WARNING"
+          ],
+          "title": "Severity",
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "severity",
+        "condition",
+        "evidence_refs"
+      ],
+      "title": "DiagnosticLimitation",
+      "type": "object"
+    },
+    "DiagnosticProvenance": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence_refs": {
+          "items": {
+            "maxLength": 300,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 8309,
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "request_paths": {
+          "additionalProperties": {
+            "$ref": "#/$defs/OrigemValor"
+          },
+          "maxProperties": 8309,
+          "title": "Request Paths",
+          "type": "object"
+        }
+      },
+      "required": [
+        "request_paths",
+        "evidence_refs"
+      ],
+      "title": "DiagnosticProvenance",
+      "type": "object"
+    },
+    "DiagnosticRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "api_version": {
+          "const": "1.0.0",
+          "title": "Api Version",
+          "type": "string"
+        },
+        "idempotency_key": {
+          "format": "uuid",
+          "title": "Idempotency Key",
+          "type": "string"
+        },
+        "input_fingerprint": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Input Fingerprint",
+          "type": "string"
+        },
+        "provenance": {
+          "additionalProperties": {
+            "$ref": "#/$defs/OrigemValor"
+          },
+          "maxProperties": 8309,
+          "title": "Provenance",
+          "type": "object"
+        },
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "sampling": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/FixedInputPlan"
+            },
+            {
+              "$ref": "#/$defs/GeneratedInputPlan"
+            }
+          ],
+          "title": "Sampling"
+        },
+        "scenario_id": {
+          "format": "uuid",
+          "title": "Scenario Id",
+          "type": "string"
+        },
+        "scenario_revision": {
+          "minimum": 1,
+          "title": "Scenario Revision",
+          "type": "integer"
+        },
+        "selected_repetition_id": {
+          "format": "uuid",
+          "title": "Selected Repetition Id",
+          "type": "string"
+        },
+        "study_id": {
+          "format": "uuid",
+          "title": "Study Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "api_version",
+        "request_id",
+        "idempotency_key",
+        "study_id",
+        "scenario_id",
+        "scenario_revision",
+        "input_fingerprint",
+        "sampling",
+        "selected_repetition_id",
+        "provenance"
+      ],
+      "title": "DiagnosticRequest",
+      "type": "object"
+    },
+    "DiagnosticRetryRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "api_version": {
+          "const": "1.0.0",
+          "title": "Api Version",
+          "type": "string"
+        },
+        "idempotency_key": {
+          "format": "uuid",
+          "title": "Idempotency Key",
+          "type": "string"
+        },
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "api_version",
+        "request_id",
+        "idempotency_key"
+      ],
+      "title": "DiagnosticRetryRequest",
+      "type": "object"
+    },
+    "DiagnosticosExperimentaisDTO": {
+      "additionalProperties": false,
+      "properties": {},
+      "title": "DiagnosticosExperimentaisDTO",
+      "type": "object"
+    },
+    "DistributionStatistics": {
+      "additionalProperties": false,
+      "properties": {
+        "count": {
+          "enum": [
+            10,
+            30,
+            100
+          ],
+          "title": "Count",
+          "type": "integer"
+        },
+        "kind": {
+          "const": "DISTRIBUTION",
+          "title": "Kind",
+          "type": "string"
+        },
+        "percentile_method": {
+          "const": "EMPIRICAL_NEAREST_RANK",
+          "title": "Percentile Method",
+          "type": "string"
+        },
+        "selected_repetition_id": {
+          "format": "uuid",
+          "title": "Selected Repetition Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "count",
+        "selected_repetition_id",
+        "percentile_method"
+      ],
+      "title": "DistributionStatistics",
+      "type": "object"
+    },
+    "DistributionSummary": {
+      "additionalProperties": false,
+      "properties": {
+        "amplitude": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Amplitude",
+          "type": "string"
+        },
+        "maximum": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Maximum",
+          "type": "string"
+        },
+        "minimum": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Minimum",
+          "type": "string"
+        },
+        "p10": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "P10",
+          "type": "string"
+        },
+        "p25": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "P25",
+          "type": "string"
+        },
+        "p50": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "P50",
+          "type": "string"
+        },
+        "p75": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "P75",
+          "type": "string"
+        },
+        "p90": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "P90",
+          "type": "string"
+        }
+      },
+      "required": [
+        "minimum",
+        "p10",
+        "p25",
+        "p50",
+        "p75",
+        "p90",
+        "maximum",
+        "amplitude"
+      ],
+      "title": "DistributionSummary",
+      "type": "object"
+    },
+    "EconomicRobustnessAxis": {
+      "additionalProperties": false,
+      "properties": {
+        "baseline_brl": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_DistributionSummary_"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Baseline Brl"
+        },
+        "netability_fraction": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_DistributionSummary_"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Netability Fraction"
+        },
+        "netted_brl": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_DistributionSummary_"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Netted Brl"
+        },
+        "savings_brl": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_DistributionSummary_"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Savings Brl"
+        }
+      },
+      "required": [
+        "baseline_brl",
+        "netted_brl",
+        "savings_brl",
+        "netability_fraction"
+      ],
+      "title": "EconomicRobustnessAxis",
+      "type": "object"
+    },
+    "EffectiveInput": {
+      "additionalProperties": false,
+      "properties": {
+        "costs": {
+          "$ref": "#/$defs/CustoEntrada"
+        },
+        "measurement_days": {
+          "maximum": 365,
+          "minimum": 1,
+          "title": "Measurement Days",
+          "type": "integer"
+        },
+        "participants": {
+          "items": {
+            "$ref": "#/$defs/EffectiveParticipant"
+          },
+          "maxItems": 100,
+          "title": "Participants",
+          "type": "array"
+        },
+        "sources": {
+          "additionalProperties": {
+            "$ref": "#/$defs/EffectiveSource"
+          },
+          "title": "Sources",
+          "type": "object"
+        },
+        "warmup_days": {
+          "maximum": 365,
+          "minimum": 0,
+          "title": "Warmup Days",
+          "type": "integer"
+        },
+        "window_days": {
+          "maximum": 730,
+          "minimum": 1,
+          "title": "Window Days",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "participants",
+        "warmup_days",
+        "measurement_days",
+        "window_days",
+        "costs",
+        "sources"
+      ],
+      "title": "EffectiveInput",
+      "type": "object"
+    },
+    "EffectiveParticipant": {
+      "additionalProperties": false,
+      "properties": {
+        "deadline": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/ProfileDeadline"
+            },
+            {
+              "$ref": "#/$defs/FixedDeadline"
+            }
+          ],
+          "title": "Deadline"
+        },
+        "eh_efx": {
+          "title": "Eh Efx",
+          "type": "boolean"
+        },
+        "id": {
+          "format": "uuid",
+          "title": "Id",
+          "type": "string"
+        },
+        "monthly_volume_brl": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Monthly Volume Brl",
+          "type": "string"
+        },
+        "out_fraction": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Out Fraction",
+          "type": "string"
+        },
+        "profile": {
+          "enum": [
+            "remessa_outbound_massiva",
+            "psp_inbound",
+            "cripto_native_sem_fiat",
+            "payroll_fornecedor",
+            "exportador",
+            "tesouraria_corporativa"
+          ],
+          "title": "Profile",
+          "type": "string"
+        },
+        "purpose_in": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Purpose In",
+          "type": "string"
+        },
+        "purpose_out": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Purpose Out",
+          "type": "string"
+        },
+        "seed": {
+          "maxLength": 19,
+          "minLength": 1,
+          "pattern": "^(0|[1-9][0-9]*)$",
+          "title": "Seed",
+          "type": "string"
+        },
+        "ticket_median_brl": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Ticket Median Brl",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "profile",
+        "seed",
+        "monthly_volume_brl",
+        "ticket_median_brl",
+        "out_fraction",
+        "deadline",
+        "eh_efx",
+        "purpose_out",
+        "purpose_in"
+      ],
+      "title": "EffectiveParticipant",
+      "type": "object"
+    },
+    "EffectiveSource": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "PADRAO_SINTETICO",
+            "ESTIMATIVA_USUARIO"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "recorded_at": {
+          "format": "date-time",
+          "title": "Recorded At",
+          "type": "string"
+        },
+        "source": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "source",
+        "recorded_at"
+      ],
+      "title": "EffectiveSource",
+      "type": "object"
+    },
+    "EstatisticaPrevia": {
+      "additionalProperties": false,
+      "properties": {
+        "count": {
+          "const": 1,
+          "title": "Count",
+          "type": "integer"
+        },
+        "kind": {
+          "const": "SINGLE_EXECUTION",
+          "title": "Kind",
+          "type": "string"
+        },
+        "percentile_method": {
+          "title": "Percentile Method",
+          "type": "null"
+        },
+        "repetition_id": {
+          "format": "uuid",
+          "title": "Repetition Id",
+          "type": "string"
+        },
+        "seed": {
+          "title": "Seed",
+          "type": "null"
+        }
+      },
+      "required": [
+        "kind",
+        "count",
+        "seed",
+        "repetition_id",
+        "percentile_method"
+      ],
+      "title": "EstatisticaPrevia",
+      "type": "object"
+    },
+    "FinalidadeCatalogo": {
+      "additionalProperties": false,
+      "properties": {
+        "aliquotas": {
+          "items": {
+            "$ref": "#/$defs/AliquotaFinalidade"
+          },
+          "maxItems": 2,
+          "minItems": 1,
+          "title": "Aliquotas",
+          "type": "array"
+        },
+        "codigo": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Codigo",
+          "type": "string"
+        },
+        "descricao": {
+          "maxLength": 240,
+          "minLength": 1,
+          "title": "Descricao",
+          "type": "string"
+        }
+      },
+      "required": [
+        "codigo",
+        "descricao",
+        "aliquotas"
+      ],
+      "title": "FinalidadeCatalogo",
+      "type": "object"
+    },
+    "FixedDeadline": {
+      "additionalProperties": false,
+      "properties": {
+        "days": {
+          "maximum": 365,
+          "minimum": 0,
+          "title": "Days",
+          "type": "integer"
+        },
+        "mode": {
+          "const": "FIXED",
+          "title": "Mode",
+          "type": "string"
+        }
+      },
+      "required": [
+        "mode",
+        "days"
+      ],
+      "title": "FixedDeadline",
+      "type": "object"
+    },
+    "FixedInputPlan": {
+      "additionalProperties": false,
+      "properties": {
+        "count": {
+          "const": 1,
+          "title": "Count",
+          "type": "integer"
+        },
+        "kind": {
+          "const": "FIXED_INPUT",
+          "title": "Kind",
+          "type": "string"
+        },
+        "preview_request": {
+          "$ref": "#/$defs/PreviaRequest"
+        }
+      },
+      "required": [
+        "kind",
+        "count",
+        "preview_request"
+      ],
+      "title": "FixedInputPlan",
+      "type": "object"
+    },
+    "GeneratedInputPlan": {
+      "additionalProperties": false,
+      "properties": {
+        "count": {
+          "enum": [
+            10,
+            30,
+            100
+          ],
+          "title": "Count",
+          "type": "integer"
+        },
+        "kind": {
+          "const": "GENERATED_INPUT",
+          "title": "Kind",
+          "type": "string"
+        },
+        "preparation_input": {
+          "$ref": "#/$defs/EffectiveInput"
+        },
+        "repetitions": {
+          "items": {
+            "$ref": "#/$defs/RepetitionPlan"
+          },
+          "maxItems": 100,
+          "minItems": 10,
+          "title": "Repetitions",
+          "type": "array"
+        }
+      },
+      "required": [
+        "kind",
+        "count",
+        "preparation_input",
+        "repetitions"
+      ],
+      "title": "GeneratedInputPlan",
+      "type": "object"
+    },
+    "HTTPValidationError": {
+      "properties": {
+        "detail": {
+          "items": {
+            "$ref": "#/$defs/ValidationError"
+          },
+          "title": "Detail",
+          "type": "array"
+        }
+      },
+      "title": "HTTPValidationError",
+      "type": "object"
+    },
+    "HealthResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "const": "ok",
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "HealthResponse",
+      "type": "object"
+    },
+    "InputSnapshot": {
+      "additionalProperties": false,
+      "properties": {
+        "cenario": {
+          "$ref": "#/$defs/CenarioEntrada"
+        },
+        "periodo": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/PeriodoLegado"
+            },
+            {
+              "$ref": "#/$defs/PeriodoNatural"
+            }
+          ],
+          "title": "Periodo"
+        },
+        "proveniencia": {
+          "additionalProperties": {
+            "$ref": "#/$defs/OrigemValor"
+          },
+          "title": "Proveniencia",
+          "type": "object"
+        }
+      },
+      "required": [
+        "cenario",
+        "periodo",
+        "proveniencia"
+      ],
+      "title": "InputSnapshot",
+      "type": "object"
+    },
+    "JobError": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Message",
+          "type": "string"
+        },
+        "repetition_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Repetition Id"
+        }
+      },
+      "required": [
+        "code",
+        "message",
+        "repetition_id"
+      ],
+      "title": "JobError",
+      "type": "object"
+    },
+    "JobProgress": {
+      "additionalProperties": false,
+      "properties": {
+        "completed": {
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Completed",
+          "type": "integer"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "current_repetition_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Current Repetition Id"
+        },
+        "failed": {
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Failed",
+          "type": "integer"
+        },
+        "finished_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Finished At"
+        },
+        "phase": {
+          "enum": [
+            "QUEUED",
+            "EXECUTING",
+            "AGGREGATING",
+            "TERMINAL"
+          ],
+          "title": "Phase",
+          "type": "string"
+        },
+        "started_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Started At"
+        },
+        "total": {
+          "maximum": 100,
+          "minimum": 1,
+          "title": "Total",
+          "type": "integer"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "completed",
+        "failed",
+        "total",
+        "current_repetition_id",
+        "phase",
+        "created_at",
+        "started_at",
+        "updated_at",
+        "finished_at"
+      ],
+      "title": "JobProgress",
+      "type": "object"
+    },
+    "JobSnapshot": {
+      "additionalProperties": false,
+      "properties": {
+        "api_version": {
+          "const": "1.0.0",
+          "title": "Api Version",
+          "type": "string"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/JobError"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "job_id": {
+          "format": "uuid",
+          "title": "Job Id",
+          "type": "string"
+        },
+        "progress": {
+          "$ref": "#/$defs/JobProgress"
+        },
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "retry_of_job_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Retry Of Job Id"
+        },
+        "status": {
+          "enum": [
+            "QUEUED",
+            "RUNNING",
+            "AGGREGATING",
+            "CANCEL_REQUESTED",
+            "SUCCEEDED",
+            "FAILED",
+            "CANCELLED"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "api_version",
+        "job_id",
+        "request_id",
+        "status",
+        "progress",
+        "retry_of_job_id",
+        "error"
+      ],
+      "title": "JobSnapshot",
+      "type": "object"
+    },
+    "ManifestoDTO": {
+      "additionalProperties": false,
+      "properties": {
+        "arquetipos": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Arquetipos",
+          "type": "array"
+        },
+        "avisos": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Avisos",
+          "type": "array"
+        },
+        "criado_em_utc": {
+          "title": "Criado Em Utc",
+          "type": "string"
+        },
+        "custo_calibrado": {
+          "title": "Custo Calibrado",
+          "type": "boolean"
+        },
+        "drenagem": {
+          "title": "Drenagem",
+          "type": "string"
+        },
+        "hash_configuracao": {
+          "title": "Hash Configuracao",
+          "type": "string"
+        },
+        "horizonte_dias": {
+          "title": "Horizonte Dias",
+          "type": "integer"
+        },
+        "janela_dias": {
+          "title": "Janela Dias",
+          "type": "integer"
+        },
+        "metodo_percentil": {
+          "title": "Metodo Percentil",
+          "type": "string"
+        },
+        "mixes": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Mixes",
+          "type": "array"
+        },
+        "modo_analise": {
+          "const": "AGREGADO",
+          "title": "Modo Analise",
+          "type": "string"
+        },
+        "parametros_custo": {
+          "$ref": "#/$defs/CustoEntrada"
+        },
+        "periodo_medicao_dias": {
+          "title": "Periodo Medicao Dias",
+          "type": "integer"
+        },
+        "run_id": {
+          "title": "Run Id",
+          "type": "string"
+        },
+        "run_ids_origem": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Run Ids Origem",
+          "type": "array"
+        },
+        "schema_version": {
+          "const": "2.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "seeds": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Seeds",
+          "type": "array"
+        },
+        "versao_motor": {
+          "title": "Versao Motor",
+          "type": "string"
+        }
+      },
+      "required": [
+        "run_id",
+        "schema_version",
+        "versao_motor",
+        "criado_em_utc",
+        "hash_configuracao",
+        "run_ids_origem",
+        "parametros_custo",
+        "mixes",
+        "arquetipos",
+        "horizonte_dias",
+        "periodo_medicao_dias",
+        "janela_dias",
+        "seeds",
+        "modo_analise",
+        "custo_calibrado",
+        "metodo_percentil",
+        "drenagem",
+        "avisos"
+      ],
+      "title": "ManifestoDTO",
+      "type": "object"
+    },
+    "OperationalProfileAxis": {
+      "additionalProperties": false,
+      "properties": {
+        "cycle_count": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Cycle Count"
+        },
+        "due_order_count": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Due Order Count"
+        },
+        "maximum_open_queue": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Maximum Open Queue"
+        },
+        "order_count": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Order Count"
+        },
+        "processing_duration_ms": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Processing Duration Ms"
+        },
+        "weighted_wait_days": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Weighted Wait Days"
+        }
+      },
+      "required": [
+        "order_count",
+        "cycle_count",
+        "maximum_open_queue",
+        "due_order_count",
+        "weighted_wait_days",
+        "processing_duration_ms"
+      ],
+      "title": "OperationalProfileAxis",
+      "type": "object"
+    },
+    "OrdemEntrada": {
+      "additionalProperties": false,
+      "description": "Operação explícita; direção oposta do mesmo cliente continua outra ordem.",
+      "properties": {
+        "cliente_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Cliente Id",
+          "type": "string"
+        },
+        "dia_conhecida": {
+          "maximum": 1095,
+          "minimum": 0,
+          "title": "Dia Conhecida",
+          "type": "integer"
+        },
+        "dia_limite": {
+          "maximum": 1095,
+          "minimum": 0,
+          "title": "Dia Limite",
+          "type": "integer"
+        },
+        "direcao": {
+          "enum": [
+            "OUT",
+            "IN"
+          ],
+          "title": "Direcao",
+          "type": "string"
+        },
+        "eh_efx": {
+          "title": "Eh Efx",
+          "type": "boolean"
+        },
+        "finalidade": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Finalidade"
+        },
+        "id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "valor_brl": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Valor Brl",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "cliente_id",
+        "direcao",
+        "valor_brl",
+        "dia_conhecida",
+        "dia_limite",
+        "eh_efx",
+        "finalidade"
+      ],
+      "title": "OrdemEntrada",
+      "type": "object"
+    },
+    "OrderArrivedEventV1": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "ORDER_ARRIVED",
+          "title": "Kind",
+          "type": "string"
+        },
+        "order_id": {
+          "title": "Order Id",
+          "type": "string"
+        },
+        "sequence": {
+          "minimum": 0,
+          "title": "Sequence",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "sequence",
+        "kind",
+        "order_id"
+      ],
+      "title": "OrderArrivedEventV1",
+      "type": "object"
+    },
+    "OrigemCatalogo": {
+      "additionalProperties": false,
+      "properties": {
+        "fonte": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Fonte",
+          "type": "string"
+        },
+        "registrado_em_utc": {
+          "format": "date-time",
+          "title": "Registrado Em Utc",
+          "type": "string"
+        },
+        "tipo": {
+          "enum": [
+            "PADRAO_SINTETICO",
+            "ESTIMATIVA_USUARIO",
+            "DADO_OBSERVADO",
+            "NAO_COLETADO"
+          ],
+          "title": "Tipo",
+          "type": "string"
+        }
+      },
+      "required": [
+        "tipo",
+        "fonte",
+        "registrado_em_utc"
+      ],
+      "title": "OrigemCatalogo",
+      "type": "object"
+    },
+    "OrigemValor": {
+      "additionalProperties": false,
+      "properties": {
+        "fonte": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Fonte",
+          "type": "string"
+        },
+        "registrado_em_utc": {
+          "format": "date-time",
+          "title": "Registrado Em Utc",
+          "type": "string"
+        },
+        "tipo": {
+          "enum": [
+            "PADRAO_SINTETICO",
+            "ESTIMATIVA_USUARIO",
+            "DADO_OBSERVADO",
+            "NAO_COLETADO"
+          ],
+          "title": "Tipo",
+          "type": "string"
+        }
+      },
+      "required": [
+        "tipo",
+        "fonte",
+        "registrado_em_utc"
+      ],
+      "title": "OrigemValor",
+      "type": "object"
+    },
+    "ParticipantShare": {
+      "additionalProperties": false,
+      "properties": {
+        "participant_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Participant Id",
+          "type": "string"
+        },
+        "share": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Share",
+          "type": "string"
+        },
+        "volume_brl": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Volume Brl",
+          "type": "string"
+        }
+      },
+      "required": [
+        "participant_id",
+        "volume_brl",
+        "share"
+      ],
+      "title": "ParticipantShare",
+      "type": "object"
+    },
+    "PeriodoLegado": {
+      "additionalProperties": false,
+      "properties": {
+        "modo": {
+          "const": "LEGADO",
+          "title": "Modo",
+          "type": "string"
+        }
+      },
+      "required": [
+        "modo"
+      ],
+      "title": "PeriodoLegado",
+      "type": "object"
+    },
+    "PeriodoNatural": {
+      "additionalProperties": false,
+      "properties": {
+        "dias_aquecimento": {
+          "minimum": 0,
+          "title": "Dias Aquecimento",
+          "type": "integer"
+        },
+        "modo": {
+          "const": "NATURAL",
+          "title": "Modo",
+          "type": "string"
+        },
+        "periodo_medicao_dias": {
+          "exclusiveMinimum": 0,
+          "title": "Periodo Medicao Dias",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "modo",
+        "dias_aquecimento",
+        "periodo_medicao_dias"
+      ],
+      "title": "PeriodoNatural",
+      "type": "object"
+    },
+    "PolicyCaptureAxis": {
+      "additionalProperties": false,
+      "properties": {
+        "captured_fraction": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Captured Fraction"
+        },
+        "inter_client_brl": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Inter Client Brl"
+        },
+        "intra_client_brl": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Intra Client Brl"
+        },
+        "matched_brl": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Matched Brl"
+        },
+        "uncaptured_potential_brl": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Uncaptured Potential Brl"
+        }
+      },
+      "required": [
+        "matched_brl",
+        "intra_client_brl",
+        "inter_client_brl",
+        "uncaptured_potential_brl",
+        "captured_fraction"
+      ],
+      "title": "PolicyCaptureAxis",
+      "type": "object"
+    },
+    "PreparationParameter": {
+      "additionalProperties": false,
+      "properties": {
+        "cadence_monthly": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Cadence Monthly",
+          "type": "string"
+        },
+        "deadline_max": {
+          "maximum": 365,
+          "minimum": 0,
+          "title": "Deadline Max",
+          "type": "integer"
+        },
+        "deadline_min": {
+          "maximum": 365,
+          "minimum": 0,
+          "title": "Deadline Min",
+          "type": "integer"
+        },
+        "expected_period_brl": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Expected Period Brl",
+          "type": "string"
+        },
+        "participant_id": {
+          "format": "uuid",
+          "title": "Participant Id",
+          "type": "string"
+        },
+        "sigma": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Sigma",
+          "type": "string"
+        }
+      },
+      "required": [
+        "participant_id",
+        "sigma",
+        "cadence_monthly",
+        "expected_period_brl",
+        "deadline_min",
+        "deadline_max"
+      ],
+      "title": "PreparationParameter",
+      "type": "object"
+    },
+    "PreparationRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "expected_build_sha": {
+          "pattern": "^[0-9a-f]{40}$",
+          "title": "Expected Build Sha",
+          "type": "string"
+        },
+        "input": {
+          "$ref": "#/$defs/EffectiveInput"
+        },
+        "preparation_version": {
+          "const": "1.0.0",
+          "title": "Preparation Version",
+          "type": "string"
+        },
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "scenario_id": {
+          "format": "uuid",
+          "title": "Scenario Id",
+          "type": "string"
+        },
+        "scenario_revision": {
+          "minimum": 1,
+          "title": "Scenario Revision",
+          "type": "integer"
+        },
+        "study_id": {
+          "format": "uuid",
+          "title": "Study Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "preparation_version",
+        "request_id",
+        "study_id",
+        "scenario_id",
+        "scenario_revision",
+        "expected_build_sha",
+        "input"
+      ],
+      "title": "PreparationRequest",
+      "type": "object"
+    },
+    "PreparationResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "composition": {
+          "items": {
+            "$ref": "#/$defs/RealizedComposition"
+          },
+          "title": "Composition",
+          "type": "array"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "derived_provenance": {
+          "additionalProperties": {
+            "$ref": "#/$defs/DerivedEvidence"
+          },
+          "title": "Derived Provenance",
+          "type": "object"
+        },
+        "generation_fingerprint": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Generation Fingerprint",
+          "type": "string"
+        },
+        "generator_version": {
+          "const": "dimensionamento-v1",
+          "title": "Generator Version",
+          "type": "string"
+        },
+        "input_snapshot": {
+          "$ref": "#/$defs/EffectiveInput"
+        },
+        "motor_build_sha": {
+          "pattern": "^[0-9a-f]{40}$",
+          "title": "Motor Build Sha",
+          "type": "string"
+        },
+        "orders": {
+          "items": {
+            "$ref": "#/$defs/OrdemEntrada"
+          },
+          "maxItems": 1000,
+          "title": "Orders",
+          "type": "array"
+        },
+        "parameters": {
+          "items": {
+            "$ref": "#/$defs/PreparationParameter"
+          },
+          "title": "Parameters",
+          "type": "array"
+        },
+        "preparation_id": {
+          "format": "uuid",
+          "title": "Preparation Id",
+          "type": "string"
+        },
+        "preparation_version": {
+          "const": "1.0.0",
+          "title": "Preparation Version",
+          "type": "string"
+        },
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "scenario_id": {
+          "format": "uuid",
+          "title": "Scenario Id",
+          "type": "string"
+        },
+        "scenario_revision": {
+          "minimum": 1,
+          "title": "Scenario Revision",
+          "type": "integer"
+        },
+        "study_id": {
+          "format": "uuid",
+          "title": "Study Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "preparation_version",
+        "preparation_id",
+        "request_id",
+        "study_id",
+        "scenario_id",
+        "scenario_revision",
+        "created_at",
+        "motor_build_sha",
+        "generator_version",
+        "generation_fingerprint",
+        "input_snapshot",
+        "orders",
+        "parameters",
+        "composition",
+        "derived_provenance"
+      ],
+      "title": "PreparationResponse",
+      "type": "object"
+    },
+    "PresentationContract": {
+      "additionalProperties": false,
+      "properties": {
+        "currency": {
+          "const": "BRL",
+          "title": "Currency",
+          "type": "string"
+        },
+        "fraction_percent_digits": {
+          "const": 2,
+          "title": "Fraction Percent Digits",
+          "type": "integer"
+        },
+        "locale": {
+          "const": "pt-BR",
+          "title": "Locale",
+          "type": "string"
+        },
+        "money_digits": {
+          "const": 2,
+          "title": "Money Digits",
+          "type": "integer"
+        },
+        "rounding": {
+          "const": "HALF_UP",
+          "title": "Rounding",
+          "type": "string"
+        }
+      },
+      "required": [
+        "currency",
+        "locale",
+        "rounding",
+        "money_digits",
+        "fraction_percent_digits"
+      ],
+      "title": "PresentationContract",
+      "type": "object"
+    },
+    "PreviaRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "api_version": {
+          "const": "1.0.0",
+          "title": "Api Version",
+          "type": "string"
+        },
+        "cenario": {
+          "$ref": "#/$defs/CenarioEntrada"
+        },
+        "periodo": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/PeriodoLegado"
+            },
+            {
+              "$ref": "#/$defs/PeriodoNatural"
+            }
+          ],
+          "title": "Periodo"
+        },
+        "proveniencia": {
+          "additionalProperties": {
+            "$ref": "#/$defs/OrigemValor"
+          },
+          "title": "Proveniencia",
+          "type": "object"
+        },
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "scenario_id": {
+          "format": "uuid",
+          "title": "Scenario Id",
+          "type": "string"
+        },
+        "scenario_revision": {
+          "minimum": 1,
+          "title": "Scenario Revision",
+          "type": "integer"
+        },
+        "study_id": {
+          "format": "uuid",
+          "title": "Study Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "api_version",
+        "request_id",
+        "study_id",
+        "scenario_id",
+        "scenario_revision",
+        "cenario",
+        "periodo",
+        "proveniencia"
+      ],
+      "title": "PreviaRequest",
+      "type": "object"
+    },
+    "PreviewEnvelope": {
+      "additionalProperties": false,
+      "properties": {
+        "api_version": {
+          "const": "1.0.0",
+          "title": "Api Version",
+          "type": "string"
+        },
+        "execution_fingerprint": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Execution Fingerprint",
+          "type": "string"
+        },
+        "execution_id": {
+          "format": "uuid",
+          "title": "Execution Id",
+          "type": "string"
+        },
+        "input_snapshot": {
+          "$ref": "#/$defs/InputSnapshot"
+        },
+        "kind": {
+          "const": "PREVIA",
+          "title": "Kind",
+          "type": "string"
+        },
+        "motor_build_sha": {
+          "pattern": "^[0-9a-f]{40}$",
+          "title": "Motor Build Sha",
+          "type": "string"
+        },
+        "presentation": {
+          "$ref": "#/$defs/PresentationContract"
+        },
+        "presentation_version": {
+          "const": "1.0.0",
+          "title": "Presentation Version",
+          "type": "string"
+        },
+        "provenance_fingerprint": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Provenance Fingerprint",
+          "type": "string"
+        },
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "result": {
+          "$ref": "#/$defs/ResultadoCanonicoDTO"
+        },
+        "scenario_id": {
+          "format": "uuid",
+          "title": "Scenario Id",
+          "type": "string"
+        },
+        "scenario_revision": {
+          "minimum": 1,
+          "title": "Scenario Revision",
+          "type": "integer"
+        },
+        "statistics": {
+          "$ref": "#/$defs/EstatisticaPrevia"
+        },
+        "study_id": {
+          "format": "uuid",
+          "title": "Study Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "api_version",
+        "presentation_version",
+        "execution_id",
+        "request_id",
+        "study_id",
+        "scenario_id",
+        "scenario_revision",
+        "execution_fingerprint",
+        "provenance_fingerprint",
+        "motor_build_sha",
+        "kind",
+        "statistics",
+        "input_snapshot",
+        "result",
+        "presentation"
+      ],
+      "title": "PreviewEnvelope",
+      "type": "object"
+    },
+    "ProductHelpCatalogV1": {
+      "additionalProperties": false,
+      "description": "Documento imutável servido ao chat e à ajuda contextual.",
+      "properties": {
+        "apiVersion": {
+          "const": "1.0.0",
+          "title": "Apiversion",
+          "type": "string"
+        },
+        "catalogVersion": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Catalogversion",
+          "type": "string"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/$defs/ProductHelpItem"
+          },
+          "maxItems": 300,
+          "minItems": 1,
+          "title": "Items",
+          "type": "array"
+        }
+      },
+      "required": [
+        "apiVersion",
+        "catalogVersion",
+        "items"
+      ],
+      "title": "ProductHelpCatalogV1",
+      "type": "object"
+    },
+    "ProductHelpItem": {
+      "additionalProperties": false,
+      "description": "Explicação contextual fechada, independente de conteúdo visual da página.",
+      "properties": {
+        "changes": {
+          "maxLength": 2000,
+          "minLength": 1,
+          "title": "Changes",
+          "type": "string"
+        },
+        "disabledWhen": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 30,
+          "title": "Disabledwhen",
+          "type": "array"
+        },
+        "doesNotChange": {
+          "maxLength": 2000,
+          "minLength": 1,
+          "title": "Doesnotchange",
+          "type": "string"
+        },
+        "elementKind": {
+          "enum": [
+            "PAGE",
+            "SECTION",
+            "CONTROL",
+            "METRIC",
+            "MESSAGE"
+          ],
+          "title": "Elementkind",
+          "type": "string"
+        },
+        "id": {
+          "maxLength": 120,
+          "minLength": 3,
+          "pattern": "^[a-z][a-z0-9-]*(\\.[a-z][a-z0-9-]*)+$",
+          "title": "Id",
+          "type": "string"
+        },
+        "label": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "purpose": {
+          "maxLength": 2000,
+          "minLength": 1,
+          "title": "Purpose",
+          "type": "string"
+        },
+        "recovery": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 30,
+          "title": "Recovery",
+          "type": "array"
+        },
+        "relatedConceptIds": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 40,
+          "title": "Relatedconceptids",
+          "type": "array"
+        },
+        "routePattern": {
+          "maxLength": 300,
+          "minLength": 1,
+          "pattern": "^/[A-Za-z0-9_:/?&=.-]*$",
+          "title": "Routepattern",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "routePattern",
+        "elementKind",
+        "label",
+        "purpose",
+        "changes",
+        "doesNotChange",
+        "disabledWhen",
+        "recovery",
+        "relatedConceptIds"
+      ],
+      "title": "ProductHelpItem",
+      "type": "object"
+    },
+    "ProfileDeadline": {
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "const": "PROFILE",
+          "title": "Mode",
+          "type": "string"
+        }
+      },
+      "required": [
+        "mode"
+      ],
+      "title": "ProfileDeadline",
+      "type": "object"
+    },
+    "PurposeResidualBreakdown": {
+      "additionalProperties": false,
+      "properties": {
+        "direction": {
+          "enum": [
+            "OUT",
+            "IN"
+          ],
+          "title": "Direction",
+          "type": "string"
+        },
+        "key": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Key"
+        },
+        "value_brl": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Value Brl",
+          "type": "string"
+        }
+      },
+      "required": [
+        "key",
+        "direction",
+        "value_brl"
+      ],
+      "title": "PurposeResidualBreakdown",
+      "type": "object"
+    },
+    "RealizedComposition": {
+      "additionalProperties": false,
+      "properties": {
+        "in_brl": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "In Brl",
+          "type": "string"
+        },
+        "order_count": {
+          "maximum": 1000,
+          "minimum": 0,
+          "title": "Order Count",
+          "type": "integer"
+        },
+        "out_brl": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Out Brl",
+          "type": "string"
+        },
+        "out_fraction": {
+          "anyOf": [
+            {
+              "maxLength": 80,
+              "minLength": 1,
+              "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Out Fraction"
+        },
+        "participant_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Participant Id"
+        },
+        "total_brl": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Total Brl",
+          "type": "string"
+        }
+      },
+      "required": [
+        "participant_id",
+        "order_count",
+        "out_brl",
+        "in_brl",
+        "total_brl",
+        "out_fraction"
+      ],
+      "title": "RealizedComposition",
+      "type": "object"
+    },
+    "ReferenceExample": {
+      "additionalProperties": false,
+      "properties": {
+        "cenario": {
+          "$ref": "#/$defs/CenarioEntrada"
+        },
+        "periodo": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/PeriodoLegado"
+            },
+            {
+              "$ref": "#/$defs/PeriodoNatural"
+            }
+          ],
+          "title": "Periodo"
+        },
+        "proveniencia": {
+          "additionalProperties": {
+            "$ref": "#/$defs/OrigemValor"
+          },
+          "title": "Proveniencia",
+          "type": "object"
+        }
+      },
+      "required": [
+        "cenario",
+        "periodo",
+        "proveniencia"
+      ],
+      "title": "ReferenceExample",
+      "type": "object"
+    },
+    "RegraIOF": {
+      "additionalProperties": false,
+      "properties": {
+        "aliquota": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Aliquota",
+          "type": "string"
+        },
+        "direcao": {
+          "enum": [
+            "OUT",
+            "IN"
+          ],
+          "title": "Direcao",
+          "type": "string"
+        },
+        "finalidade": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Finalidade",
+          "type": "string"
+        }
+      },
+      "required": [
+        "finalidade",
+        "direcao",
+        "aliquota"
+      ],
+      "title": "RegraIOF",
+      "type": "object"
+    },
+    "RegraIOFCatalogo": {
+      "additionalProperties": false,
+      "properties": {
+        "aliquota": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Aliquota",
+          "type": "string"
+        },
+        "direcao": {
+          "enum": [
+            "OUT",
+            "IN"
+          ],
+          "title": "Direcao",
+          "type": "string"
+        },
+        "finalidade": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Finalidade",
+          "type": "string"
+        }
+      },
+      "required": [
+        "finalidade",
+        "direcao",
+        "aliquota"
+      ],
+      "title": "RegraIOFCatalogo",
+      "type": "object"
+    },
+    "RepetitionPlan": {
+      "additionalProperties": false,
+      "properties": {
+        "participant_seeds": {
+          "additionalProperties": {
+            "maxLength": 19,
+            "minLength": 1,
+            "pattern": "^(0|[1-9][0-9]*)$",
+            "type": "string"
+          },
+          "maxProperties": 100,
+          "title": "Participant Seeds",
+          "type": "object"
+        },
+        "repetition_id": {
+          "format": "uuid",
+          "title": "Repetition Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "repetition_id",
+        "participant_seeds"
+      ],
+      "title": "RepetitionPlan",
+      "type": "object"
+    },
+    "RepetitionSummary": {
+      "additionalProperties": false,
+      "properties": {
+        "baseline_brl": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Baseline Brl",
+          "type": "string"
+        },
+        "duration_ms": {
+          "minimum": 0,
+          "title": "Duration Ms",
+          "type": "integer"
+        },
+        "execution_fingerprint": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Execution Fingerprint",
+          "type": "string"
+        },
+        "input_fingerprint": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Input Fingerprint",
+          "type": "string"
+        },
+        "netability_fraction": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Netability Fraction",
+          "type": "string"
+        },
+        "netted_brl": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Netted Brl",
+          "type": "string"
+        },
+        "participant_seeds": {
+          "additionalProperties": {
+            "maxLength": 19,
+            "minLength": 1,
+            "pattern": "^(0|[1-9][0-9]*)$",
+            "type": "string"
+          },
+          "maxProperties": 100,
+          "title": "Participant Seeds",
+          "type": "object"
+        },
+        "repetition_id": {
+          "format": "uuid",
+          "title": "Repetition Id",
+          "type": "string"
+        },
+        "savings_brl": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Savings Brl",
+          "type": "string"
+        }
+      },
+      "required": [
+        "repetition_id",
+        "participant_seeds",
+        "input_fingerprint",
+        "execution_fingerprint",
+        "baseline_brl",
+        "netted_brl",
+        "savings_brl",
+        "netability_fraction",
+        "duration_ms"
+      ],
+      "title": "RepetitionSummary",
+      "type": "object"
+    },
+    "ReplayClosingV1": {
+      "additionalProperties": false,
+      "properties": {
+        "flow_segments": {
+          "items": {
+            "$ref": "#/$defs/ReplayFlowSegmentV1"
+          },
+          "maxItems": 2000,
+          "title": "Flow Segments",
+          "type": "array"
+        },
+        "gross_in_brl": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Gross In Brl",
+          "type": "string"
+        },
+        "gross_out_brl": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Gross Out Brl",
+          "type": "string"
+        },
+        "inter_client_position_brl": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Inter Client Position Brl",
+          "type": "string"
+        },
+        "intra_client_position_brl": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Intra Client Position Brl",
+          "type": "string"
+        },
+        "matched_contribution_brl": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Matched Contribution Brl",
+          "type": "string"
+        },
+        "matched_position_brl": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Matched Position Brl",
+          "type": "string"
+        },
+        "remitted_in_brl": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Remitted In Brl",
+          "type": "string"
+        },
+        "remitted_out_brl": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Remitted Out Brl",
+          "type": "string"
+        },
+        "triggers": {
+          "items": {
+            "enum": [
+              "WINDOW",
+              "DEADLINE",
+              "HORIZON_END"
+            ],
+            "type": "string"
+          },
+          "maxItems": 3,
+          "minItems": 1,
+          "title": "Triggers",
+          "type": "array"
+        }
+      },
+      "required": [
+        "triggers",
+        "gross_out_brl",
+        "gross_in_brl",
+        "matched_position_brl",
+        "matched_contribution_brl",
+        "intra_client_position_brl",
+        "inter_client_position_brl",
+        "remitted_out_brl",
+        "remitted_in_brl",
+        "flow_segments"
+      ],
+      "title": "ReplayClosingV1",
+      "type": "object"
+    },
+    "ReplayDayV1": {
+      "additionalProperties": false,
+      "properties": {
+        "closing": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ReplayClosingV1"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "day": {
+          "maximum": 730,
+          "minimum": 0,
+          "title": "Day",
+          "type": "integer"
+        },
+        "end_state": {
+          "$ref": "#/$defs/ReplayEndStateV1"
+        },
+        "events": {
+          "items": {
+            "oneOf": [
+              {
+                "$ref": "#/$defs/OrderArrivedEventV1"
+              },
+              {
+                "$ref": "#/$defs/AllocationEventV1"
+              }
+            ]
+          },
+          "maxItems": 3000,
+          "title": "Events",
+          "type": "array"
+        }
+      },
+      "required": [
+        "day",
+        "events",
+        "closing",
+        "end_state"
+      ],
+      "title": "ReplayDayV1",
+      "type": "object"
+    },
+    "ReplayDocumentV1": {
+      "additionalProperties": false,
+      "properties": {
+        "api_version": {
+          "const": "1.0.0",
+          "title": "Api Version",
+          "type": "string"
+        },
+        "currency": {
+          "const": "BRL",
+          "title": "Currency",
+          "type": "string"
+        },
+        "days": {
+          "items": {
+            "$ref": "#/$defs/ReplayDayV1"
+          },
+          "maxItems": 731,
+          "minItems": 1,
+          "title": "Days",
+          "type": "array"
+        },
+        "diagnostic_execution_id": {
+          "format": "uuid",
+          "title": "Diagnostic Execution Id",
+          "type": "string"
+        },
+        "execution_fingerprint": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Execution Fingerprint",
+          "type": "string"
+        },
+        "motor_version": {
+          "title": "Motor Version",
+          "type": "string"
+        },
+        "orders": {
+          "items": {
+            "$ref": "#/$defs/ReplayOrderV1"
+          },
+          "maxItems": 1000,
+          "title": "Orders",
+          "type": "array"
+        },
+        "participant_seeds": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "maxProperties": 100,
+          "title": "Participant Seeds",
+          "type": "object"
+        },
+        "period": {
+          "$ref": "#/$defs/ReplayPeriodV1"
+        },
+        "policy": {
+          "const": "P0",
+          "title": "Policy",
+          "type": "string"
+        },
+        "repetition_id": {
+          "format": "uuid",
+          "title": "Repetition Id",
+          "type": "string"
+        },
+        "result_fingerprint": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Result Fingerprint",
+          "type": "string"
+        },
+        "scenario_id": {
+          "format": "uuid",
+          "title": "Scenario Id",
+          "type": "string"
+        },
+        "scenario_revision": {
+          "minimum": 1,
+          "title": "Scenario Revision",
+          "type": "integer"
+        },
+        "totals": {
+          "$ref": "#/$defs/ReplayTotalsV1"
+        }
+      },
+      "required": [
+        "api_version",
+        "diagnostic_execution_id",
+        "scenario_id",
+        "scenario_revision",
+        "repetition_id",
+        "participant_seeds",
+        "period",
+        "policy",
+        "currency",
+        "orders",
+        "days",
+        "totals",
+        "motor_version",
+        "execution_fingerprint",
+        "result_fingerprint"
+      ],
+      "title": "ReplayDocumentV1",
+      "type": "object"
+    },
+    "ReplayEndStateV1": {
+      "additionalProperties": false,
+      "properties": {
+        "matched_position_accumulated_brl": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Matched Position Accumulated Brl",
+          "type": "string"
+        },
+        "measured_matched_contribution_accumulated_brl": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Measured Matched Contribution Accumulated Brl",
+          "type": "string"
+        },
+        "open_in_brl": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Open In Brl",
+          "type": "string"
+        },
+        "open_out_brl": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Open Out Brl",
+          "type": "string"
+        },
+        "remitted_in_accumulated_brl": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Remitted In Accumulated Brl",
+          "type": "string"
+        },
+        "remitted_out_accumulated_brl": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Remitted Out Accumulated Brl",
+          "type": "string"
+        }
+      },
+      "required": [
+        "open_out_brl",
+        "open_in_brl",
+        "matched_position_accumulated_brl",
+        "measured_matched_contribution_accumulated_brl",
+        "remitted_out_accumulated_brl",
+        "remitted_in_accumulated_brl"
+      ],
+      "title": "ReplayEndStateV1",
+      "type": "object"
+    },
+    "ReplayFlowSegmentV1": {
+      "additionalProperties": false,
+      "properties": {
+        "closing_day": {
+          "maximum": 730,
+          "minimum": 0,
+          "title": "Closing Day",
+          "type": "integer"
+        },
+        "in_order_id": {
+          "title": "In Order Id",
+          "type": "string"
+        },
+        "matching_origin": {
+          "enum": [
+            "INTRA_CLIENTE",
+            "INTER_CLIENTE"
+          ],
+          "title": "Matching Origin",
+          "type": "string"
+        },
+        "meaning": {
+          "const": "ILLUSTRATIVE_AGGREGATE_DECOMPOSITION",
+          "title": "Meaning",
+          "type": "string"
+        },
+        "out_order_id": {
+          "title": "Out Order Id",
+          "type": "string"
+        },
+        "value_brl": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Value Brl",
+          "type": "string"
+        }
+      },
+      "required": [
+        "closing_day",
+        "out_order_id",
+        "in_order_id",
+        "value_brl",
+        "matching_origin",
+        "meaning"
+      ],
+      "title": "ReplayFlowSegmentV1",
+      "type": "object"
+    },
+    "ReplayOrderV1": {
+      "additionalProperties": false,
+      "properties": {
+        "client_id": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Client Id",
+          "type": "string"
+        },
+        "cohort": {
+          "enum": [
+            "WARMUP",
+            "MEASUREMENT"
+          ],
+          "title": "Cohort",
+          "type": "string"
+        },
+        "deadline_day": {
+          "minimum": 0,
+          "title": "Deadline Day",
+          "type": "integer"
+        },
+        "direction": {
+          "enum": [
+            "OUT",
+            "IN"
+          ],
+          "title": "Direction",
+          "type": "string"
+        },
+        "id": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "known_day": {
+          "maximum": 730,
+          "minimum": 0,
+          "title": "Known Day",
+          "type": "integer"
+        },
+        "value_brl": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Value Brl",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "client_id",
+        "direction",
+        "known_day",
+        "deadline_day",
+        "value_brl",
+        "cohort"
+      ],
+      "title": "ReplayOrderV1",
+      "type": "object"
+    },
+    "ReplayPeriodV1": {
+      "additionalProperties": false,
+      "properties": {
+        "measurement_end_day": {
+          "maximum": 730,
+          "minimum": 0,
+          "title": "Measurement End Day",
+          "type": "integer"
+        },
+        "measurement_start_day": {
+          "maximum": 730,
+          "minimum": 0,
+          "title": "Measurement Start Day",
+          "type": "integer"
+        },
+        "mode": {
+          "enum": [
+            "LEGADO",
+            "NATURAL"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "settlement_end_day": {
+          "maximum": 730,
+          "minimum": 0,
+          "title": "Settlement End Day",
+          "type": "integer"
+        },
+        "warmup_days": {
+          "maximum": 730,
+          "minimum": 0,
+          "title": "Warmup Days",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "mode",
+        "warmup_days",
+        "measurement_start_day",
+        "measurement_end_day",
+        "settlement_end_day"
+      ],
+      "title": "ReplayPeriodV1",
+      "type": "object"
+    },
+    "ReplayRequestV1": {
+      "additionalProperties": false,
+      "properties": {
+        "api_version": {
+          "const": "1.0.0",
+          "title": "Api Version",
+          "type": "string"
+        },
+        "diagnostic_envelope": {
+          "$ref": "#/$defs/DiagnosticEnvelope"
+        },
+        "diagnostic_execution_id": {
+          "format": "uuid",
+          "title": "Diagnostic Execution Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "api_version",
+        "diagnostic_execution_id",
+        "diagnostic_envelope"
+      ],
+      "title": "ReplayRequestV1",
+      "type": "object"
+    },
+    "ReplayTotalsV1": {
+      "additionalProperties": false,
+      "properties": {
+        "execution_matched_position_brl": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Execution Matched Position Brl",
+          "type": "string"
+        },
+        "execution_remitted_in_brl": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Execution Remitted In Brl",
+          "type": "string"
+        },
+        "execution_remitted_out_brl": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Execution Remitted Out Brl",
+          "type": "string"
+        },
+        "measured_autonetting_contribution_brl": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Measured Autonetting Contribution Brl",
+          "type": "string"
+        },
+        "measured_gross_brl": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Measured Gross Brl",
+          "type": "string"
+        },
+        "measured_matched_contribution_brl": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Measured Matched Contribution Brl",
+          "type": "string"
+        },
+        "measured_multilateral_contribution_brl": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Measured Multilateral Contribution Brl",
+          "type": "string"
+        },
+        "measured_remitted_brl": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Measured Remitted Brl",
+          "type": "string"
+        },
+        "netability_fraction": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Netability Fraction",
+          "type": "string"
+        }
+      },
+      "required": [
+        "measured_gross_brl",
+        "measured_matched_contribution_brl",
+        "measured_autonetting_contribution_brl",
+        "measured_multilateral_contribution_brl",
+        "measured_remitted_brl",
+        "netability_fraction",
+        "execution_matched_position_brl",
+        "execution_remitted_out_brl",
+        "execution_remitted_in_brl"
+      ],
+      "title": "ReplayTotalsV1",
+      "type": "object"
+    },
+    "ResidualBreakdown": {
+      "additionalProperties": false,
+      "properties": {
+        "direction": {
+          "enum": [
+            "OUT",
+            "IN"
+          ],
+          "title": "Direction",
+          "type": "string"
+        },
+        "key": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Key",
+          "type": "string"
+        },
+        "value_brl": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Value Brl",
+          "type": "string"
+        }
+      },
+      "required": [
+        "key",
+        "direction",
+        "value_brl"
+      ],
+      "title": "ResidualBreakdown",
+      "type": "object"
+    },
+    "ResultadoCanonicoDTO": {
+      "additionalProperties": false,
+      "properties": {
+        "agregado": {
+          "$ref": "#/$defs/AgregadoDTO"
+        },
+        "avisos": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Avisos",
+          "type": "array"
+        },
+        "clientes": {
+          "items": {},
+          "maxItems": 0,
+          "title": "Clientes",
+          "type": "array"
+        },
+        "contribuicoes_marginais": {
+          "items": {},
+          "maxItems": 0,
+          "title": "Contribuicoes Marginais",
+          "type": "array"
+        },
+        "diagnosticos_experimentais": {
+          "$ref": "#/$defs/DiagnosticosExperimentaisDTO"
+        },
+        "ledger_eventos": {
+          "items": {},
+          "maxItems": 0,
+          "title": "Ledger Eventos",
+          "type": "array"
+        },
+        "manifesto": {
+          "$ref": "#/$defs/ManifestoDTO"
+        }
+      },
+      "required": [
+        "manifesto",
+        "agregado",
+        "clientes",
+        "ledger_eventos",
+        "contribuicoes_marginais",
+        "diagnosticos_experimentais",
+        "avisos"
+      ],
+      "title": "ResultadoCanonicoDTO",
+      "type": "object"
+    },
+    "ResultadoLegadoDTO": {
+      "additionalProperties": false,
+      "properties": {
+        "baseline": {
+          "$ref": "#/$defs/CustosDTO"
+        },
+        "ciclos": {
+          "items": {
+            "$ref": "#/$defs/CicloDTO"
+          },
+          "title": "Ciclos",
+          "type": "array"
+        },
+        "economia": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Economia",
+          "type": "string"
+        },
+        "netado": {
+          "$ref": "#/$defs/CustosDTO"
+        },
+        "taxa_autonetting": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Taxa Autonetting",
+          "type": "string"
+        },
+        "taxa_netabilidade": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Taxa Netabilidade",
+          "type": "string"
+        },
+        "taxa_netting_multilateral": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Taxa Netting Multilateral",
+          "type": "string"
+        },
+        "volume_autonetting_brl": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Volume Autonetting Brl",
+          "type": "string"
+        },
+        "volume_casado_brl": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Volume Casado Brl",
+          "type": "string"
+        },
+        "volume_netting_multilateral_brl": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Volume Netting Multilateral Brl",
+          "type": "string"
+        }
+      },
+      "required": [
+        "ciclos",
+        "baseline",
+        "netado",
+        "economia",
+        "volume_casado_brl",
+        "volume_autonetting_brl",
+        "volume_netting_multilateral_brl",
+        "taxa_netabilidade",
+        "taxa_autonetting",
+        "taxa_netting_multilateral"
+      ],
+      "title": "ResultadoLegadoDTO",
+      "type": "object"
+    },
+    "ResultadoMecanismoDTO": {
+      "additionalProperties": false,
+      "properties": {
+        "baseline_atribuido_brl": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Baseline Atribuido Brl",
+          "type": "string"
+        },
+        "custo_netado_brl": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Custo Netado Brl",
+          "type": "string"
+        },
+        "destino": {
+          "enum": [
+            "INTRA_CLIENTE",
+            "INTER_CLIENTE",
+            "REMETIDO"
+          ],
+          "title": "Destino",
+          "type": "string"
+        },
+        "economia_brl": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Economia Brl",
+          "type": "string"
+        },
+        "volume_brl": {
+          "maxLength": 80,
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "title": "Volume Brl",
+          "type": "string"
+        }
+      },
+      "required": [
+        "destino",
+        "volume_brl",
+        "baseline_atribuido_brl",
+        "custo_netado_brl",
+        "economia_brl"
+      ],
+      "title": "ResultadoMecanismoDTO",
+      "type": "object"
+    },
+    "RouteChatContext": {
+      "additionalProperties": false,
+      "properties": {
+        "diagnosticExecutionId": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 1,
+              "pattern": "\\S",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Diagnosticexecutionid"
+        },
+        "helpId": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 1,
+              "pattern": "\\S",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Helpid"
+        },
+        "replayDay": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Replayday"
+        },
+        "routeId": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Routeid",
+          "type": "string"
+        },
+        "scenarioId": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 1,
+              "pattern": "\\S",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Scenarioid"
+        },
+        "studyId": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 1,
+              "pattern": "\\S",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Studyid"
+        },
+        "uiControls": {
+          "items": {
+            "$ref": "#/$defs/UiControlState"
+          },
+          "maxItems": 200,
+          "title": "Uicontrols",
+          "type": "array"
+        }
+      },
+      "required": [
+        "routeId",
+        "helpId",
+        "studyId",
+        "scenarioId",
+        "diagnosticExecutionId",
+        "replayDay"
+      ],
+      "title": "RouteChatContext",
+      "type": "object"
+    },
+    "SessionResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "user_id": {
+          "format": "uuid",
+          "title": "User Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "user_id"
+      ],
+      "title": "SessionResponse",
+      "type": "object"
+    },
+    "SingleExecutionStatistics": {
+      "additionalProperties": false,
+      "properties": {
+        "count": {
+          "const": 1,
+          "title": "Count",
+          "type": "integer"
+        },
+        "kind": {
+          "const": "SINGLE_EXECUTION",
+          "title": "Kind",
+          "type": "string"
+        },
+        "percentile_method": {
+          "title": "Percentile Method",
+          "type": "null"
+        },
+        "selected_repetition_id": {
+          "format": "uuid",
+          "title": "Selected Repetition Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "count",
+        "selected_repetition_id",
+        "percentile_method"
+      ],
+      "title": "SingleExecutionStatistics",
+      "type": "object"
+    },
+    "StructuralPotentialAxis": {
+      "additionalProperties": false,
+      "properties": {
+        "ceiling_brl": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Ceiling Brl"
+        },
+        "gross_in_brl": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Gross In Brl"
+        },
+        "gross_out_brl": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Gross Out Brl"
+        },
+        "imbalance_brl": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Imbalance Brl"
+        }
+      },
+      "required": [
+        "gross_out_brl",
+        "gross_in_brl",
+        "imbalance_brl",
+        "ceiling_brl"
+      ],
+      "title": "StructuralPotentialAxis",
+      "type": "object"
+    },
+    "StudyChatContextV1": {
+      "additionalProperties": false,
+      "properties": {
+        "document": {
+          "$ref": "#/$defs/CommunicationDocumentV1"
+        },
+        "kind": {
+          "const": "STUDY",
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "document"
+      ],
+      "title": "StudyChatContextV1",
+      "type": "object"
+    },
+    "TemporalCompatibilityAxis": {
+      "additionalProperties": false,
+      "properties": {
+        "deadline_closures": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Deadline Closures"
+        },
+        "deadline_days": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Deadline Days"
+        },
+        "horizon_closures": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Horizon Closures"
+        },
+        "same_day_fraction": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Same Day Fraction"
+        },
+        "weighted_wait_days": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Weighted Wait Days"
+        },
+        "window_closures": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AvailableEvidenceMetric_Annotated_str__FieldInfo_annotation_NoneType__required_True__metadata__Strict_strict_True___MinLen_min_length_1___MaxLen_max_length_80____PydanticGeneralMetadata_pattern___-__0__1-9__0-9_________0-9___________"
+            },
+            {
+              "$ref": "#/$defs/UnavailableEvidenceMetric"
+            }
+          ],
+          "title": "Window Closures"
+        }
+      },
+      "required": [
+        "deadline_days",
+        "same_day_fraction",
+        "weighted_wait_days",
+        "window_closures",
+        "deadline_closures",
+        "horizon_closures"
+      ],
+      "title": "TemporalCompatibilityAxis",
+      "type": "object"
+    },
+    "UiControlState": {
+      "additionalProperties": false,
+      "properties": {
+        "disabledCount": {
+          "maximum": 1000,
+          "minimum": 0,
+          "title": "Disabledcount",
+          "type": "integer"
+        },
+        "enabledCount": {
+          "maximum": 1000,
+          "minimum": 0,
+          "title": "Enabledcount",
+          "type": "integer"
+        },
+        "helpId": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Helpid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "helpId",
+        "enabledCount",
+        "disabledCount"
+      ],
+      "title": "UiControlState",
+      "type": "object"
+    },
+    "UnavailableEvidenceMetric": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence": {
+          "items": {
+            "maxLength": 300,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 200,
+          "title": "Evidence",
+          "type": "array"
+        },
+        "reason": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        },
+        "state": {
+          "enum": [
+            "NOT_COLLECTED",
+            "INSUFFICIENT_COVERAGE",
+            "INCOMPATIBLE"
+          ],
+          "title": "State",
+          "type": "string"
+        }
+      },
+      "required": [
+        "state",
+        "reason",
+        "evidence"
+      ],
+      "title": "UnavailableEvidenceMetric",
+      "type": "object"
+    },
+    "ValidationError": {
+      "properties": {
+        "ctx": {
+          "title": "Context",
+          "type": "object"
+        },
+        "input": {
+          "title": "Input"
+        },
+        "loc": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              }
+            ]
+          },
+          "title": "Location",
+          "type": "array"
+        },
+        "msg": {
+          "title": "Message",
+          "type": "string"
+        },
+        "type": {
+          "title": "Error Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "loc",
+        "msg",
+        "type"
+      ],
+      "title": "ValidationError",
+      "type": "object"
+    }
+  }
+}

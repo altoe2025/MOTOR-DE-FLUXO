@@ -1,0 +1,39 @@
+# Declarative only. Creating/syncing this Blueprint requires separate authorization.
+services:
+  - type: web
+    name: motor-de-fluxo-piloto
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/v1/health
+    autoDeployTrigger: "off"
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: CHAT_ENABLED
+        value: "true"
+      - key: HOST
+        value: 0.0.0.0
+      - key: WEB_DIST_DIR
+        value: /app/web/dist
+      - key: VITE_SUPABASE_URL
+        sync: false
+      - key: VITE_SUPABASE_PUBLISHABLE_KEY
+        sync: false
+      - key: VITE_MOTOR_BUILD_SHA
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_JWT_ISSUER
+        sync: false
+      - key: SUPABASE_JWT_AUDIENCE
+        sync: false
+      - key: SUPABASE_ALLOWED_USER_IDS
+        sync: false
+      - key: MOTOR_BUILD_SHA
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_CHAT_MODEL
+        sync: false

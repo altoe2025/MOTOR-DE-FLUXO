@@ -1,0 +1,824 @@
+{
+  "databaseName": "motor-fluxo:app:v2:stage2-fixture:owner-stage2-fixture",
+  "version": 1,
+  "stores": {
+    "studies": [
+      {
+        "study_id": "00000000-0000-4000-8000-000000000300",
+        "owner_sub": "owner-stage2-fixture",
+        "deleted": 0,
+        "document": {
+          "schemaVersion": "2.0.0",
+          "id": "00000000-0000-4000-8000-000000000300",
+          "ownerSub": "owner-stage2-fixture",
+          "name": "Fixture Stage 2 1",
+          "revision": 1,
+          "baseScenarioId": "00000000-0000-4000-8000-000000000320",
+          "scenarios": [
+            {
+              "id": "00000000-0000-4000-8000-000000000320",
+              "revision": 1,
+              "name": "Cenário base",
+              "sourceSnapshot": {
+                "source": {
+                  "kind": "OBSERVED_CASE",
+                  "caseId": "case-1",
+                  "caseRevision": 4
+                },
+                "capturedAt": "2026-09-19T12:00:00Z",
+                "orders": [
+                  {
+                    "id": "order-b",
+                    "cliente_id": "client-b",
+                    "direcao": "IN",
+                    "dia_conhecida": 0,
+                    "dia_limite": 2,
+                    "valor_brl": "70",
+                    "finalidade": "ANEXO_V_DISPONIBILIDADE",
+                    "eh_efx": false
+                  },
+                  {
+                    "id": "order-a",
+                    "cliente_id": "client-a",
+                    "direcao": "OUT",
+                    "dia_conhecida": 0,
+                    "dia_limite": 1,
+                    "valor_brl": "100",
+                    "finalidade": "ANEXO_V_REMESSA_TERCEIRO",
+                    "eh_efx": true
+                  }
+                ],
+                "provenance": [
+                  {
+                    "kind": "OBSERVED",
+                    "source": "arquivo-observado",
+                    "version": "1",
+                    "recordedAt": "2026-09-19T12:00:00Z"
+                  }
+                ],
+                "observedOutcome": {
+                  "schemaVersion": "1.0.0",
+                  "metrics": [
+                    {
+                      "code": "GROSS_OUT_BRL",
+                      "value": "100",
+                      "unit": "BRL",
+                      "definitionVersion": "1.0.0",
+                      "provenance": {
+                        "kind": "OBSERVED",
+                        "source": "arquivo-observado",
+                        "version": "1",
+                        "recordedAt": "2026-09-19T12:00:00Z"
+                      }
+                    }
+                  ]
+                },
+                "sourceFingerprint": "60cf88772a235d32ca4c00fa33f49c8d0d20ce18e4f623828360fba8b6c3b07f"
+              },
+              "premises": {
+                "costs": {
+                  "iof_out": "0.035",
+                  "iof_in": "0.0038",
+                  "carry_cnr": "0.0004",
+                  "custo_fixo_remessa": "40",
+                  "custo_oportunidade_aa": "0",
+                  "spread_rail_bps": "25",
+                  "ptax": "5.40",
+                  "iof_por_finalidade": []
+                },
+                "windowDays": 7
+              },
+              "period": {
+                "httpPeriod": {
+                  "modo": "NATURAL",
+                  "dias_aquecimento": 0,
+                  "periodo_medicao_dias": 30
+                }
+              },
+              "inputFingerprint": "057ff6cb7e8c872ea563c9eb2cf5dd982255ea07ab4e07343ddf36c5e49ad5bf"
+            }
+          ],
+          "createdAt": "2026-09-19T12:00:00Z",
+          "updatedAt": "2026-09-19T12:00:00Z",
+          "deletedAt": null
+        }
+      },
+      {
+        "study_id": "00000000-0000-4000-8000-000000000301",
+        "owner_sub": "owner-stage2-fixture",
+        "deleted": 0,
+        "document": {
+          "schemaVersion": "2.0.0",
+          "id": "00000000-0000-4000-8000-000000000301",
+          "ownerSub": "owner-stage2-fixture",
+          "name": "Fixture Stage 2 2",
+          "revision": 1,
+          "baseScenarioId": "00000000-0000-4000-8000-000000000321",
+          "scenarios": [
+            {
+              "id": "00000000-0000-4000-8000-000000000321",
+              "revision": 1,
+              "name": "Cenário base",
+              "sourceSnapshot": {
+                "source": {
+                  "kind": "AUTHORED",
+                  "authoredPortfolioId": "portfolio-1"
+                },
+                "capturedAt": "2026-09-19T12:00:00Z",
+                "orders": [
+                  {
+                    "id": "order-b",
+                    "cliente_id": "client-b",
+                    "direcao": "IN",
+                    "dia_conhecida": 0,
+                    "dia_limite": 2,
+                    "valor_brl": "70",
+                    "finalidade": "ANEXO_V_DISPONIBILIDADE",
+                    "eh_efx": false
+                  },
+                  {
+                    "id": "order-a",
+                    "cliente_id": "client-a",
+                    "direcao": "OUT",
+                    "dia_conhecida": 0,
+                    "dia_limite": 1,
+                    "valor_brl": "100",
+                    "finalidade": "ANEXO_V_REMESSA_TERCEIRO",
+                    "eh_efx": true
+                  }
+                ],
+                "provenance": [
+                  {
+                    "kind": "USER_ESTIMATE",
+                    "source": "autoria manual",
+                    "version": "1.0.0",
+                    "recordedAt": "2026-09-19T12:00:00Z"
+                  }
+                ],
+                "observedOutcome": null,
+                "sourceFingerprint": "e03eb5ed74aaf90edaf209ae6f719a0c697a664639b039281aecf45b7e69f163"
+              },
+              "premises": {
+                "costs": {
+                  "iof_out": "0.035",
+                  "iof_in": "0.0038",
+                  "carry_cnr": "0.0004",
+                  "custo_fixo_remessa": "40",
+                  "custo_oportunidade_aa": "0",
+                  "spread_rail_bps": "25",
+                  "ptax": "5.40",
+                  "iof_por_finalidade": []
+                },
+                "windowDays": 7
+              },
+              "period": {
+                "httpPeriod": {
+                  "modo": "NATURAL",
+                  "dias_aquecimento": 0,
+                  "periodo_medicao_dias": 30
+                }
+              },
+              "inputFingerprint": "17819b10cdaf2722591301ede5cedc1ea5414fb4a868f8b9f0b7998ebc911ec3"
+            }
+          ],
+          "createdAt": "2026-09-19T12:00:00Z",
+          "updatedAt": "2026-09-19T12:00:00Z",
+          "deletedAt": null
+        }
+      },
+      {
+        "study_id": "00000000-0000-4000-8000-000000000302",
+        "owner_sub": "owner-stage2-fixture",
+        "deleted": 0,
+        "document": {
+          "schemaVersion": "2.0.0",
+          "id": "00000000-0000-4000-8000-000000000302",
+          "ownerSub": "owner-stage2-fixture",
+          "name": "Fixture Stage 2 3",
+          "revision": 3,
+          "baseScenarioId": "00000000-0000-4000-8000-000000000322",
+          "scenarios": [
+            {
+              "id": "00000000-0000-4000-8000-000000000322",
+              "revision": 1,
+              "name": "Cenário base",
+              "sourceSnapshot": {
+                "source": {
+                  "kind": "SYNTHETIC",
+                  "recipe": {
+                    "exampleId": "equilibrado",
+                    "seeds": [
+                      "1"
+                    ],
+                    "composition": [
+                      {
+                        "participant_id": null,
+                        "order_count": 2,
+                        "total_brl": "170",
+                        "out_brl": "100",
+                        "in_brl": "70",
+                        "out_fraction": "0.588235294118"
+                      }
+                    ],
+                    "preparationVersion": "1.0.0",
+                    "generatorVersion": "dimensionamento-v1",
+                    "motorBuildSha": "dddddddddddddddddddddddddddddddddddddddd",
+                    "generationFingerprint": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+                  }
+                },
+                "capturedAt": "2026-09-19T12:00:00Z",
+                "orders": [
+                  {
+                    "id": "order-b",
+                    "cliente_id": "client-b",
+                    "direcao": "IN",
+                    "dia_conhecida": 0,
+                    "dia_limite": 2,
+                    "valor_brl": "70",
+                    "finalidade": "ANEXO_V_DISPONIBILIDADE",
+                    "eh_efx": false
+                  },
+                  {
+                    "id": "order-a",
+                    "cliente_id": "client-a",
+                    "direcao": "OUT",
+                    "dia_conhecida": 0,
+                    "dia_limite": 1,
+                    "valor_brl": "100",
+                    "finalidade": "ANEXO_V_REMESSA_TERCEIRO",
+                    "eh_efx": true
+                  }
+                ],
+                "provenance": [
+                  {
+                    "kind": "SYNTHETIC_DEFAULT",
+                    "source": "catálogo oficial",
+                    "version": "1.0.0",
+                    "recordedAt": "2026-09-19T12:00:00Z",
+                    "rule": "dimensionamento-v1"
+                  }
+                ],
+                "observedOutcome": null,
+                "sourceFingerprint": "b362b18c5371fc87faa11deed9feac8d5d7817f2086670c0216c07b82d22e56a"
+              },
+              "premises": {
+                "costs": {
+                  "iof_out": "0.035",
+                  "iof_in": "0.0038",
+                  "carry_cnr": "0.0004",
+                  "custo_fixo_remessa": "40",
+                  "custo_oportunidade_aa": "0",
+                  "spread_rail_bps": "25",
+                  "ptax": "5.40",
+                  "iof_por_finalidade": []
+                },
+                "windowDays": 7
+              },
+              "period": {
+                "httpPeriod": {
+                  "modo": "NATURAL",
+                  "dias_aquecimento": 0,
+                  "periodo_medicao_dias": 30
+                }
+              },
+              "inputFingerprint": "40641ec519b071b3b71467f159435120003936b775b023747cf2760a37b5910d"
+            }
+          ],
+          "createdAt": "2026-09-19T12:00:00Z",
+          "updatedAt": "2026-09-19T12:02:00Z",
+          "deletedAt": null
+        }
+      }
+    ],
+    "executions": [
+      {
+        "study_id": "00000000-0000-4000-8000-000000000302",
+        "execution_id": "00000000-0000-4000-8000-000000000410",
+        "owner_sub": "owner-stage2-fixture",
+        "sequence": 0,
+        "document": {
+          "id": "00000000-0000-4000-8000-000000000410",
+          "attemptId": "00000000-0000-4000-8000-000000000410",
+          "scenarioId": "00000000-0000-4000-8000-000000000322",
+          "scenarioRevision": 1,
+          "inputFingerprint": "40641ec519b071b3b71467f159435120003936b775b023747cf2760a37b5910d",
+          "requestSnapshot": {
+            "api_version": "1.0.0",
+            "request_id": "00000000-0000-4000-8000-000000000401",
+            "study_id": "00000000-0000-4000-8000-000000000302",
+            "scenario_id": "00000000-0000-4000-8000-000000000322",
+            "scenario_revision": 1,
+            "cenario": {
+              "ordens": [
+                {
+                  "id": "order-b",
+                  "cliente_id": "client-b",
+                  "direcao": "IN",
+                  "dia_conhecida": 0,
+                  "dia_limite": 2,
+                  "valor_brl": "70",
+                  "finalidade": "ANEXO_V_DISPONIBILIDADE",
+                  "eh_efx": false
+                },
+                {
+                  "id": "order-a",
+                  "cliente_id": "client-a",
+                  "direcao": "OUT",
+                  "dia_conhecida": 0,
+                  "dia_limite": 1,
+                  "valor_brl": "100",
+                  "finalidade": "ANEXO_V_REMESSA_TERCEIRO",
+                  "eh_efx": true
+                }
+              ],
+              "horizonte_dias": 30,
+              "janela_dias": 7,
+              "custo": {
+                "iof_out": "0.035",
+                "iof_in": "0.0038",
+                "carry_cnr": "0.0004",
+                "custo_fixo_remessa": "40",
+                "custo_oportunidade_aa": "0",
+                "spread_rail_bps": "25",
+                "ptax": "5.40",
+                "iof_por_finalidade": []
+              }
+            },
+            "periodo": {
+              "modo": "NATURAL",
+              "dias_aquecimento": 0,
+              "periodo_medicao_dias": 30
+            },
+            "proveniencia": {}
+          },
+          "sourceSnapshot": {
+            "source": {
+              "kind": "SYNTHETIC",
+              "recipe": {
+                "exampleId": "equilibrado",
+                "seeds": [
+                  "1"
+                ],
+                "composition": [
+                  {
+                    "participant_id": null,
+                    "order_count": 2,
+                    "total_brl": "170",
+                    "out_brl": "100",
+                    "in_brl": "70",
+                    "out_fraction": "0.588235294118"
+                  }
+                ],
+                "preparationVersion": "1.0.0",
+                "generatorVersion": "dimensionamento-v1",
+                "motorBuildSha": "dddddddddddddddddddddddddddddddddddddddd",
+                "generationFingerprint": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+              }
+            },
+            "capturedAt": "2026-09-19T12:00:00Z",
+            "orders": [
+              {
+                "id": "order-b",
+                "cliente_id": "client-b",
+                "direcao": "IN",
+                "dia_conhecida": 0,
+                "dia_limite": 2,
+                "valor_brl": "70",
+                "finalidade": "ANEXO_V_DISPONIBILIDADE",
+                "eh_efx": false
+              },
+              {
+                "id": "order-a",
+                "cliente_id": "client-a",
+                "direcao": "OUT",
+                "dia_conhecida": 0,
+                "dia_limite": 1,
+                "valor_brl": "100",
+                "finalidade": "ANEXO_V_REMESSA_TERCEIRO",
+                "eh_efx": true
+              }
+            ],
+            "provenance": [
+              {
+                "kind": "SYNTHETIC_DEFAULT",
+                "source": "catálogo oficial",
+                "version": "1.0.0",
+                "recordedAt": "2026-09-19T12:00:00Z",
+                "rule": "dimensionamento-v1"
+              }
+            ],
+            "observedOutcome": null,
+            "sourceFingerprint": "b362b18c5371fc87faa11deed9feac8d5d7817f2086670c0216c07b82d22e56a"
+          },
+          "premisesSnapshot": {
+            "costs": {
+              "iof_out": "0.035",
+              "iof_in": "0.0038",
+              "carry_cnr": "0.0004",
+              "custo_fixo_remessa": "40",
+              "custo_oportunidade_aa": "0",
+              "spread_rail_bps": "25",
+              "ptax": "5.40",
+              "iof_por_finalidade": []
+            },
+            "windowDays": 7
+          },
+          "periodSnapshot": {
+            "httpPeriod": {
+              "modo": "NATURAL",
+              "dias_aquecimento": 0,
+              "periodo_medicao_dias": 30
+            }
+          },
+          "engineVersion": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "contractVersion": "1.0.0",
+          "status": "RUNNING",
+          "envelope": null,
+          "observedComparison": null,
+          "createdAt": "2026-09-19T12:01:00Z",
+          "finishedAt": null
+        }
+      },
+      {
+        "study_id": "00000000-0000-4000-8000-000000000302",
+        "execution_id": "00000000-0000-4000-8000-000000000411",
+        "owner_sub": "owner-stage2-fixture",
+        "sequence": 1,
+        "document": {
+          "id": "00000000-0000-4000-8000-000000000411",
+          "attemptId": "00000000-0000-4000-8000-000000000410",
+          "scenarioId": "00000000-0000-4000-8000-000000000322",
+          "scenarioRevision": 1,
+          "inputFingerprint": "40641ec519b071b3b71467f159435120003936b775b023747cf2760a37b5910d",
+          "requestSnapshot": {
+            "api_version": "1.0.0",
+            "request_id": "00000000-0000-4000-8000-000000000401",
+            "study_id": "00000000-0000-4000-8000-000000000302",
+            "scenario_id": "00000000-0000-4000-8000-000000000322",
+            "scenario_revision": 1,
+            "cenario": {
+              "ordens": [
+                {
+                  "id": "order-b",
+                  "cliente_id": "client-b",
+                  "direcao": "IN",
+                  "dia_conhecida": 0,
+                  "dia_limite": 2,
+                  "valor_brl": "70",
+                  "finalidade": "ANEXO_V_DISPONIBILIDADE",
+                  "eh_efx": false
+                },
+                {
+                  "id": "order-a",
+                  "cliente_id": "client-a",
+                  "direcao": "OUT",
+                  "dia_conhecida": 0,
+                  "dia_limite": 1,
+                  "valor_brl": "100",
+                  "finalidade": "ANEXO_V_REMESSA_TERCEIRO",
+                  "eh_efx": true
+                }
+              ],
+              "horizonte_dias": 30,
+              "janela_dias": 7,
+              "custo": {
+                "iof_out": "0.035",
+                "iof_in": "0.0038",
+                "carry_cnr": "0.0004",
+                "custo_fixo_remessa": "40",
+                "custo_oportunidade_aa": "0",
+                "spread_rail_bps": "25",
+                "ptax": "5.40",
+                "iof_por_finalidade": []
+              }
+            },
+            "periodo": {
+              "modo": "NATURAL",
+              "dias_aquecimento": 0,
+              "periodo_medicao_dias": 30
+            },
+            "proveniencia": {}
+          },
+          "sourceSnapshot": {
+            "source": {
+              "kind": "SYNTHETIC",
+              "recipe": {
+                "exampleId": "equilibrado",
+                "seeds": [
+                  "1"
+                ],
+                "composition": [
+                  {
+                    "participant_id": null,
+                    "order_count": 2,
+                    "total_brl": "170",
+                    "out_brl": "100",
+                    "in_brl": "70",
+                    "out_fraction": "0.588235294118"
+                  }
+                ],
+                "preparationVersion": "1.0.0",
+                "generatorVersion": "dimensionamento-v1",
+                "motorBuildSha": "dddddddddddddddddddddddddddddddddddddddd",
+                "generationFingerprint": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+              }
+            },
+            "capturedAt": "2026-09-19T12:00:00Z",
+            "orders": [
+              {
+                "id": "order-b",
+                "cliente_id": "client-b",
+                "direcao": "IN",
+                "dia_conhecida": 0,
+                "dia_limite": 2,
+                "valor_brl": "70",
+                "finalidade": "ANEXO_V_DISPONIBILIDADE",
+                "eh_efx": false
+              },
+              {
+                "id": "order-a",
+                "cliente_id": "client-a",
+                "direcao": "OUT",
+                "dia_conhecida": 0,
+                "dia_limite": 1,
+                "valor_brl": "100",
+                "finalidade": "ANEXO_V_REMESSA_TERCEIRO",
+                "eh_efx": true
+              }
+            ],
+            "provenance": [
+              {
+                "kind": "SYNTHETIC_DEFAULT",
+                "source": "catálogo oficial",
+                "version": "1.0.0",
+                "recordedAt": "2026-09-19T12:00:00Z",
+                "rule": "dimensionamento-v1"
+              }
+            ],
+            "observedOutcome": null,
+            "sourceFingerprint": "b362b18c5371fc87faa11deed9feac8d5d7817f2086670c0216c07b82d22e56a"
+          },
+          "premisesSnapshot": {
+            "costs": {
+              "iof_out": "0.035",
+              "iof_in": "0.0038",
+              "carry_cnr": "0.0004",
+              "custo_fixo_remessa": "40",
+              "custo_oportunidade_aa": "0",
+              "spread_rail_bps": "25",
+              "ptax": "5.40",
+              "iof_por_finalidade": []
+            },
+            "windowDays": 7
+          },
+          "periodSnapshot": {
+            "httpPeriod": {
+              "modo": "NATURAL",
+              "dias_aquecimento": 0,
+              "periodo_medicao_dias": 30
+            }
+          },
+          "engineVersion": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "contractVersion": "1.0.0",
+          "status": "SUCCEEDED",
+          "envelope": {
+            "api_version": "1.0.0",
+            "execution_fingerprint": "cc0f8ba33ea9ed0fb9be5e8a796296a8ded247a6c24ced43221a618cc234907d",
+            "execution_id": "00000000-0000-4000-8000-000000000411",
+            "input_snapshot": {
+              "cenario": {
+                "ordens": [
+                  {
+                    "id": "order-b",
+                    "cliente_id": "client-b",
+                    "direcao": "IN",
+                    "dia_conhecida": 0,
+                    "dia_limite": 2,
+                    "valor_brl": "70",
+                    "finalidade": "ANEXO_V_DISPONIBILIDADE",
+                    "eh_efx": false
+                  },
+                  {
+                    "id": "order-a",
+                    "cliente_id": "client-a",
+                    "direcao": "OUT",
+                    "dia_conhecida": 0,
+                    "dia_limite": 1,
+                    "valor_brl": "100",
+                    "finalidade": "ANEXO_V_REMESSA_TERCEIRO",
+                    "eh_efx": true
+                  }
+                ],
+                "horizonte_dias": 30,
+                "janela_dias": 7,
+                "custo": {
+                  "iof_out": "0.035",
+                  "iof_in": "0.0038",
+                  "carry_cnr": "0.0004",
+                  "custo_fixo_remessa": "40",
+                  "custo_oportunidade_aa": "0",
+                  "spread_rail_bps": "25",
+                  "ptax": "5.40",
+                  "iof_por_finalidade": []
+                }
+              },
+              "periodo": {
+                "modo": "NATURAL",
+                "dias_aquecimento": 0,
+                "periodo_medicao_dias": 30
+              },
+              "proveniencia": {}
+            },
+            "kind": "PREVIA",
+            "motor_build_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "presentation": {
+              "currency": "BRL",
+              "fraction_percent_digits": 2,
+              "locale": "pt-BR",
+              "money_digits": 2,
+              "rounding": "HALF_UP"
+            },
+            "presentation_version": "1.0.0",
+            "provenance_fingerprint": "0d2a18c7464d7b117a1b2f73ec4608cfcc9f8f0532e634cfb13d00c75485f3cc",
+            "request_id": "00000000-0000-4000-8000-000000000401",
+            "result": {
+              "agregado": {
+                "baseline_periodo": {
+                  "carry": "0",
+                  "espera": "0",
+                  "fixo": "0",
+                  "iof": "2370600.000000",
+                  "spread": "0.00",
+                  "total": "2370600.000000"
+                },
+                "economia_periodo_brl": "1026000.000000",
+                "execucao_completa": {
+                  "baseline": {
+                    "carry": "0",
+                    "espera": "0",
+                    "fixo": "0",
+                    "iof": "2370600.000000",
+                    "spread": "0.00",
+                    "total": "2370600.000000"
+                  },
+                  "ciclos": [
+                    {
+                      "alocacoes": [
+                        {
+                          "dia": 0,
+                          "ordem_id": "astropay-1",
+                          "origem_casamento": "INTER_CLIENTE",
+                          "tipo": "CASADO",
+                          "valor_brl": "10800000.00"
+                        },
+                        {
+                          "dia": 0,
+                          "ordem_id": "wise-1",
+                          "origem_casamento": "INTER_CLIENTE",
+                          "tipo": "CASADO",
+                          "valor_brl": "16200000.00"
+                        },
+                        {
+                          "dia": 0,
+                          "ordem_id": "nomad-1",
+                          "origem_casamento": "INTER_CLIENTE",
+                          "tipo": "CASADO",
+                          "valor_brl": "27000000.00"
+                        },
+                        {
+                          "dia": 0,
+                          "ordem_id": "wise-1",
+                          "origem_casamento": null,
+                          "tipo": "REMETIDO",
+                          "valor_brl": "37800000.00"
+                        }
+                      ],
+                      "bruto_in": "27000000.00",
+                      "bruto_out": "64800000.00",
+                      "casado": "27000000.00",
+                      "dia": 0,
+                      "direcao_residuo": "OUT",
+                      "residuo": "37800000.00"
+                    }
+                  ],
+                  "economia": "1026000.000000",
+                  "netado": {
+                    "carry": "21600.000000",
+                    "espera": "0",
+                    "fixo": "0",
+                    "iof": "1323000.00000",
+                    "spread": "0.00",
+                    "total": "1344600.000000"
+                  },
+                  "taxa_autonetting": "0",
+                  "taxa_netabilidade": "0.5882352941176470588235294118",
+                  "taxa_netting_multilateral": "0.5882352941176470588235294118",
+                  "volume_autonetting_brl": "0",
+                  "volume_casado_brl": "54000000.00",
+                  "volume_netting_multilateral_brl": "54000000.00"
+                },
+                "ids_ordens_medidas": [
+                  "astropay-1",
+                  "nomad-1",
+                  "wise-1"
+                ],
+                "mecanismos": [
+                  {
+                    "baseline_atribuido_brl": "0",
+                    "custo_netado_brl": "0",
+                    "destino": "INTRA_CLIENTE",
+                    "economia_brl": "0",
+                    "volume_brl": "0"
+                  },
+                  {
+                    "baseline_atribuido_brl": "1047600.000000",
+                    "custo_netado_brl": "21600.000000",
+                    "destino": "INTER_CLIENTE",
+                    "economia_brl": "1026000.000000",
+                    "volume_brl": "54000000.00"
+                  },
+                  {
+                    "baseline_atribuido_brl": "1323000.000000",
+                    "custo_netado_brl": "1323000.000000",
+                    "destino": "REMETIDO",
+                    "economia_brl": "0.000000",
+                    "volume_brl": "37800000.00"
+                  }
+                ],
+                "netado_periodo": {
+                  "carry": "21600.000000",
+                  "espera": "0",
+                  "fixo": "0",
+                  "iof": "1323000.00000",
+                  "spread": "0.00",
+                  "total": "1344600.000000"
+                },
+                "taxa_autonetting_periodo": "0",
+                "taxa_netabilidade_periodo": "0.5882352941176470588235294118",
+                "taxa_netting_multilateral_periodo": "0.5882352941176470588235294118",
+                "volume_autonetting_periodo_brl": "0",
+                "volume_bruto_periodo_brl": "91800000.00",
+                "volume_casado_periodo_brl": "54000000.00",
+                "volume_netting_multilateral_periodo_brl": "54000000.00",
+                "volume_remetido_periodo_brl": "37800000.00"
+              },
+              "avisos": [],
+              "clientes": [],
+              "contribuicoes_marginais": [],
+              "diagnosticos_experimentais": {},
+              "ledger_eventos": [],
+              "manifesto": {
+                "arquetipos": [],
+                "avisos": [],
+                "criado_em_utc": "2026-09-12T20:00:00.000000Z",
+                "custo_calibrado": false,
+                "drenagem": "LEGADO",
+                "hash_configuracao": "de676071029e899ec35817c979c2bce6509054bf2044b53dd00d7844c1108032",
+                "horizonte_dias": 1,
+                "janela_dias": 1,
+                "metodo_percentil": "NAO_APLICAVEL",
+                "mixes": [],
+                "modo_analise": "AGREGADO",
+                "parametros_custo": {
+                  "carry_cnr": "0.0004",
+                  "custo_fixo_remessa": "0",
+                  "custo_oportunidade_aa": "0",
+                  "iof_in": "0.0038",
+                  "iof_out": "0.035",
+                  "iof_por_finalidade": [],
+                  "ptax": "5.40",
+                  "spread_rail_bps": "0"
+                },
+                "periodo_medicao_dias": 2,
+                "run_id": "20260912T200000.000000Z-de676071029e",
+                "run_ids_origem": [],
+                "schema_version": "2.0.0",
+                "seeds": [],
+                "versao_motor": "0.1.0+0000000000000000000000000000000000000000"
+              }
+            },
+            "scenario_id": "00000000-0000-4000-8000-000000000322",
+            "scenario_revision": 1,
+            "statistics": {
+              "count": 1,
+              "kind": "SINGLE_EXECUTION",
+              "percentile_method": null,
+              "repetition_id": "00000000-0000-4000-8000-000000000010",
+              "seed": null
+            },
+            "study_id": "00000000-0000-4000-8000-000000000302"
+          },
+          "observedComparison": null,
+          "createdAt": "2026-09-19T12:01:00Z",
+          "finishedAt": "2026-09-19T12:02:00Z"
+        }
+      }
+    ],
+    "meta": [
+      {
+        "key": "schema_version",
+        "value": 1
+      }
+    ]
+  }
+}

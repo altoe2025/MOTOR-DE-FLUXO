@@ -1,0 +1,243 @@
+# Etapa 1 — registro de execução
+
+## Estado
+
+T0–T6 estão **integradas na `main`** até o PR #33, commit `2953a2b`; T7 está em
+execução na branch `codex/mot22-aceitacao-ci`, baseada nesse commit. As oito tarefas foram
+cadastradas como MOT-15–MOT-22 no workspace **Felipe Bisca**, time
+**MOTOR DE FLUXO**, com as dependências nativas do plano. A base integrada foi
+publicada pelos PRs #21–#26 no commit `1aecc57`; MOT-16 e MOT-17 foram integradas
+pelos PRs #27–#30. A T3 acrescenta a API autenticada, limites operacionais e a
+distribuição segura do build React. O projeto Supabase real foi provisionado pelo
+responsável humano. ES256/JWKS, convite, primeira senha, recuperação de rascunho e
+POST autenticado foram confirmados contra o serviço real.
+
+Fonte de execução: [plano técnico aprovado](../superpowers/plans/2026-09-11-frontend-etapa-1-plano-tecnico.md). As três referências indicadas no plano continuam obrigatórias.
+
+## T0 — verificações concluídas
+
+- [x] Aprovação do plano e autorização de cadastro recebidas na conversa.
+- [x] Checkout local identificado: `analise/sensibilidade-custo`, SHA `19f2a7f43778acaefcf9b24ececc6d3d3773d7db`.
+- [x] Confirmado que este é o checkout principal (`git-dir` e `git-common-dir` iguais a `.git`), não um worktree isolado.
+- [x] Diretório `.worktrees` já ignorado pelo Git.
+- [x] Remote confirmado: `https://github.com/altoe2025/MOTOR-DE-FLUXO.git`.
+- [x] Referências locais `main` e `origin/main`: `c4659852dca252bab66ffc52936371e937e0b625`. Este registro não equivale a um fetch atualizado da referência remota.
+- [x] Fechamento funcional identificado no worktree existente: branch `implementacao/fechamento-funcional-motor`, SHA `3bc2839fab7268594d8825f1a27a5babaad9413d`.
+- [x] Consulta real de PRs abertos no GitHub confirmou a pilha abaixo; nenhum PR aberto da branch de fechamento foi retornado.
+- [x] Linear autenticado; workspace **Felipe Bisca** e time **MOTOR DE FLUXO** confirmados.
+- [x] Busca inicial não encontrou tarefas da etapa 1; T0–T7 foram cadastradas como MOT-15–MOT-22.
+- [x] Dependências nativas configuradas conforme o grafo do plano.
+- [x] Gabriel escolheu aguardar a base integrada após o fechamento funcional. A decisão foi registrada em MOT-15 em 2026-09-12.
+- [x] Worktree `.worktrees/frontend-etapa-1-contratos` criada na branch `codex/frontend-etapa-1-contratos`.
+- [x] Linhas divergentes desde `2fc62a2` integradas por merge limpo: documentação em `da271ad` e fechamento em `3bc2839`.
+- [x] Exports públicos confirmados: `analisar`, `criar_manifesto`, `ConfiguracaoAnalise`, `ConfiguracaoTemporal` e `resultado_para_json`.
+- [x] Baseline em venv própria, Python 3.14.4: 504 testes normais e 504 sob `-O`; o único aviso sob `-O` é o aviso esperado do pytest sobre asserts.
+- [x] Cenário Amanda reproduzido: baseline R$ 2.370.600, netado R$ 1.344.600, economia R$ 1.026.000 e netabilidade 58,82%.
+
+| PR | Branch | Base |
+|---|---|---|
+| [#21](https://github.com/altoe2025/MOTOR-DE-FLUXO/pull/21) | `gabriel/metrica-tempo` | `main` |
+| [#22](https://github.com/altoe2025/MOTOR-DE-FLUXO/pull/22) | `gabriel/varredura-completa` | `main` |
+| [#23](https://github.com/altoe2025/MOTOR-DE-FLUXO/pull/23) | `gabriel/mix-outbound` | `main` |
+| [#24](https://github.com/altoe2025/MOTOR-DE-FLUXO/pull/24) | `analise/sensibilidade-custo` | `main` |
+| [#25](https://github.com/altoe2025/MOTOR-DE-FLUXO/pull/25) | `codex/frontend-base-docs` | `main` |
+| [#26](https://github.com/altoe2025/MOTOR-DE-FLUXO/pull/26) | `codex/fechamento-funcional-integracao` | `main` |
+| [#17](https://github.com/altoe2025/MOTOR-DE-FLUXO/pull/17) | `docs/auditoria-2026-09-06` | `main`; assunto separado |
+
+## Base integrada e pendência externa
+
+- [x] Criar a base integrada, confirmar os contratos públicos e executar o baseline integral em worktree isolada.
+- [x] Revalidar Python 3.11 localmente: lock gerado, instalado, suíte normal e sob
+  `-O` executadas com CPython 3.11.16. O CI repetirá essa evidência quando a branch
+  for publicada.
+- [x] Gabriel provisionou o projeto Supabase, cadastro público/anônimo fechado,
+  redirects locais exatos, templates e chave atual ES256. URL e publishable key
+  ficam apenas na configuração local ignorada pelo Git.
+
+## Cadastro no Linear
+
+| Tarefa do plano | Issue | Situação |
+|---|---|---|
+| T0 | [MOT-15 — Confirmar base Git e pré-requisitos](https://linear.app/felipe-bisca/issue/MOT-15/etapa-1-t0-confirmar-base-git-e-pre-requisitos) | Concluída; base integrada e baseline verificados |
+| T1 | [MOT-16 — Contratos, identidade e apresentação](https://linear.app/felipe-bisca/issue/MOT-16/etapa-1-t1-contratos-identidade-e-apresentacao) | Integrada pelo PR #27; contratos e gates verificados em Python 3.11/Node 24 |
+| T2 | [MOT-17 — Adaptador único e validação de publicação](https://linear.app/felipe-bisca/issue/MOT-17/etapa-1-t2-adaptador-unico-e-validacao-de-publicacao) | Integrada pelo PR #30; portão real concluído |
+| T3 | [MOT-18 — FastAPI, autenticação e mesma origem](https://linear.app/felipe-bisca/issue/MOT-18/etapa-1-t3-fastapi-autenticacao-e-mesma-origem) | Integrada pelo PR #31; CI verde |
+| T4 | [MOT-19 — Shell e componentes acessíveis](https://linear.app/felipe-bisca/issue/MOT-19/etapa-1-t4-shell-e-componentes-acessiveis) | Integrada pelo PR #29 em `64bf303` |
+| T5 | [MOT-20 — Login, convite e recuperação de rascunho](https://linear.app/felipe-bisca/issue/MOT-20/etapa-1-t5-login-convite-e-recuperacao-de-rascunho) | Integrada na `main` pelo PR #32; gate Supabase real aprovado |
+| T6 | [MOT-21 — Cliente tipado e integração navegador–motor](https://linear.app/felipe-bisca/issue/MOT-21/etapa-1-t6-cliente-tipado-e-integracao-navegador-motor) | Integrada pelo PR #33 em `2953a2b`; CI pós-merge e gate Supabase real verdes |
+| T7 | [MOT-22 — Aceitação, CI e passagem para etapa 2](https://linear.app/felipe-bisca/issue/MOT-22/etapa-1-t7-aceitacao-ci-e-passagem-para-etapa-2) | Em execução na branch `codex/mot22-aceitacao-ci`, base `2953a2b` |
+
+Dependências nativas verificadas: T1 depende de T0; T2 de T1; T3 de T2; T4 de T1; T5 de T3 e T4; T6 de T5; T7 de T6. Não atribuir a pessoas com base nos nomes dos modelos; a distribuição Astra/Sol/Terra é orientação de execução, não identidade de membro do Linear.
+
+## T1 — evidência operacional
+
+- [x] Contratos Pydantic estritos para entrada, saída canônica e envelope versionado.
+- [x] Fingerprints separados para execução numérica e proveniência.
+- [x] Fixture de referência derivada do YAML empacotado e OpenAPI gerável sem
+  settings, rede ou segredos.
+- [x] Tipos TypeScript e validadores Ajv gerados, sem coerção, remoção de campos ou
+  defaults.
+- [x] Formatadores `decimal.js` com HALF_UP/pt-BR e repositório de estudo isolado por
+  `owner_sub`.
+- [x] Locks instalados em Python 3.11.16 e Node 24.19.0; wheel testada fora do
+  checkout; geração repetida com hashes idênticos.
+
+Detalhes, decisões e comandos: [registro da MOT-16](mot-16-implementacao.md).
+
+## T2 — evidência operacional
+
+- [x] Adaptador único constrói o domínio diretamente dos DTOs e chama `analisar`
+  uma vez, somente em modo `AGREGADO` e pelas interfaces públicas do motor.
+- [x] Modos `LEGADO` e `NATURAL` preservam horizonte, aquecimento, coorte medida e
+  liquidação posterior à medição.
+- [x] Portão independente valida finitude, referências, dias, tipos, conservação
+  exata por ordem/global/coorte, volumes medidos, taxa, identidade do manifesto e
+  roundtrip do JSON canônico.
+- [x] Fixture `reference-result.json` é gerada pelo adaptador real com relógio,
+  UUID e SHA controlados e reproduz os números de aceitação.
+- [x] Passaram 575 testes normais, 575 sob `python -O`, Ruff e mypy isolado da
+  camada `servidor`; `git diff -- motor` permaneceu vazio. O mypy integral ainda
+  atravessa imports e encontra 31 apontamentos preexistentes em `motor/analise`.
+
+Detalhes, decisões e comandos: [registro da MOT-17](mot-17-implementacao.md).
+
+## T3 — evidência operacional
+
+- [x] Factory FastAPI real com health público e session, exemplo e prévia protegidos
+  por Bearer verificado no servidor.
+- [x] Verificador ES256/JWKS valida emissor, audience exata, tempo, UUID, role e
+  allowlist; cache de cinco minutos, timeout de cinco segundos e atualização de
+  `kid` desconhecido são protegidos por trava.
+- [x] Corpo limitado a 1 MiB antes do parse, contratos limitam 1.000 ordens, uma
+  prévia executa por vez e resposta acima de 8 MiB falha sem truncar.
+- [x] Build React é servido somente nas rotas SPA conhecidas; API, assets ausentes,
+  traversal e links resolvidos para fora do dist nunca recebem `index.html`.
+- [x] Proxy Vite relativo `/api` aponta para `127.0.0.1:8000`; não há CORS curinga.
+- [x] Passaram 627 testes Python normais e sob `-O`, Ruff, mypy da camada `servidor`, 15 testes
+  Vitest, typecheck, wheel instalada fora do checkout e regeneração determinística
+  dos quatro artefatos de contrato. Dois testes de symlink foram ignorados porque o
+  Windows deste ambiente não permite criá-los; a contenção também é verificada em
+  produção antes de servir cada caminho.
+
+Detalhes, configuração e comandos: [registro da MOT-18](mot-18-implementacao.md).
+
+## T4 — shell, tokens e componentes acessíveis
+
+Implementado na branch `feat/mot19-shell-acessivel` e atualizado sobre `main` no
+commit `d6d488ee060a0d58ef2a3f0802ee442f505fd10b`. A entrega mantém o escopo de T4:
+não faz autenticação Supabase, chamadas ao adaptador/motor, IndexedDB, gráficos,
+replay funcional ou mudanças em `motor/`.
+
+- O bootstrap Vite/React/TypeScript estrito está em `web/`, com scripts `dev`,
+  `build`, `typecheck`, `lint` e `test:unit`.
+- A configuração integrada preserva React, setup do Vitest e proxy relativo `/api`
+  para o FastAPI em `127.0.0.1:8000`.
+- `AppShell` entrega navegação vertical de 224 px, skip link, estado ativo com
+  `aria-current`, cabeçalho do estudo e cinco destinos vazios: Carteira,
+  Diagnóstico, Comparar cenários, Replay e Dados e premissas.
+- As rotas públicas são `/login`, `/auth/callback` e `/auth/definir-senha`; a raiz
+  aguarda a resolução do estado de sessão e então redireciona para `/carteira`.
+  Elas são estruturas visuais: nenhum fluxo de autenticação real é apresentado como
+  concluído.
+- `Button`, `TextField`, `InlineNotice`, `EmptyState`, `DefinitionTooltip`,
+  `ComparisonSummary` e `CostTable` usam HTML nativo. Os dois componentes de
+  apresentação recebem `PreviewEnvelope` e somente formatam campos canônicos com os
+  formatadores da MOT-16; não recalculam economia.
+- Os testes cobrem rotas, destino ativo, labels/erros, foco após navegação, teclado
+  no tooltip e estados `aria-busy`/`alert`. Nenhum campo depende exclusivamente de
+  placeholder.
+- A validação integrada passou com 632 testes Python normais e sob `-O`, 31 testes
+  Vitest, typecheck, ESLint e build. O build real foi servido pelo FastAPI nas cinco
+  rotas profundas; somente os bundles declarados no manifesto Vite recebem cache
+  imutável, enquanto nomes descritivos permanecem com `no-cache`.
+
+### Evidência visual
+
+Capturas produzidas com o servidor Vite local e Edge, em 2026-09-12:
+
+![Shell em 1280 por 800](evidencias/mot19-shell-1280x800.png)
+
+![Shell em 1440 por 900](evidencias/mot19-shell-1440x900.png)
+
+![Login em 1280 por 800](evidencias/mot19-login-1280x800.png)
+
+![Shell na largura equivalente a zoom de 200%](evidencias/mot19-shell-zoom200-equivalente-640x800.png)
+
+Em 1280×800 e 1440×900, o shell preserva navegação, conteúdo e estados vazios.
+Na largura CSS de 640 px, equivalente a 200% sobre a área de 1280 px, os destinos
+continuam alcançáveis e nenhum controle é cortado. Os contrastes medidos dos tokens
+reais foram: texto principal/canvas 11,80:1; texto secundário/superfície 5,87:1;
+texto da navegação/fundo 12,85:1; foco/canvas 5,77:1; borda/superfície 4,58:1.
+
+## T5 — sessão e rascunho por usuário
+
+- Cliente Supabase singleton usa somente URL e publishable key públicas, com
+  `detectSessionInUrl: false`; a sessão explícita é resolvida e sincronizada pelos
+  eventos do SDK com cleanup da inscrição.
+- Login, expiração, indisponibilidade, troca de conta e logout local têm estados
+  distintos. Logout e troca de identidade limpam o cache TanStack Query.
+- Callback aceita somente `token_hash` e `type=invite|recovery`, limpa imediatamente
+  a URL e fixa o próximo destino em `/auth/definir-senha`. O processamento é único
+  também sob `StrictMode`.
+- A senha inicial só é enviada por `updateUser` depois de uma sessão validada, exige
+  12 caracteres e preserva espaços digitados.
+- O rascunho contém somente versão, `owner_sub`, `study_id`, nome e instante. A chave
+  local é `motor-fluxo:draft:v1:<sub>`; conta diferente não lê o documento anterior,
+  JSON corrompido é preservado e falha de storage mantém o valor em memória com aviso.
+- O JWKS público real respondeu com chave `ES256`, `EC`, curva `P-256`. Login e
+  callback inválidos foram exercitados com URL limpa; convite, primeira senha, F5,
+  logout e novo login passaram no navegador real. A sessão e o exemplo privados e o
+  POST canônico passaram com token Supabase real, reproduzindo economia
+  `1026000.000000` e o SHA completo da branch.
+
+Detalhes e comandos: [registro da MOT-20](mot-20-implementacao.md).
+
+## T6 — cliente tipado e integração navegador–motor
+
+- `getReferenceExample(signal?)` e `runPreview(input, signal?)` obtêm o Bearer no
+  instante de cada chamada, impõem timeout com `AbortController` e validam o JSON
+  pelo schema antes de devolver dados à interface.
+- `ApiError` conserva somente status, código, mensagem, campos públicos e request ID.
+  GET transitório pode repetir uma vez; POST nunca repete automaticamente.
+- Cada identidade recebe um `QueryClient` novo. A troca de conta limpa o cache,
+  aborta a espera ativa e descarta resultados tardios. Request, estudo, cenário e
+  revisão precisam coincidir antes da aceitação.
+- Carteira bloqueia duplicatas durante a execução. Uma falha preserva nome e
+  envelope anterior, e nova execução só ocorre por clique explícito.
+- Diagnóstico formata os campos canônicos recebidos; não recalcula custo, economia,
+  netabilidade, P0 ou EDF. O exemplo mostra R$ 1.026.000,00, 58,82%, origem
+  sintética e aviso de valores não calibrados.
+- O Playwright usa autenticação controlada, mas percorre FastAPI, adaptador e motor
+  reais. O gate manual abre o build de produção com o Supabase real e requer que a
+  pessoa autorizada já tenha uma sessão ou faça o login localmente; credenciais não
+  são coletadas nem registradas.
+
+Detalhes e comandos: [registro da MOT-21](mot-21-implementacao.md).
+
+## T7 — aceitação, CI e handoff
+
+- A entrega foi integrada pelo PR #34. O primeiro workflow `acceptance` passou em
+  1m52s; antes do merge, o job recuperou o nome protegido `pytest` e repetiu todos
+  os mesmos gates.
+- A CI de pull request cobre Python 3.11, Node 24, locks, geração sem diff,
+  Pytest normal/otimizado, Ruff, mypy do servidor, wheel instalada, Vitest,
+  typecheck, ESLint, build, scanner de credenciais, Chromium e percurso same-origin.
+- O Playwright separa o projeto controlado `local` do projeto opt-in `real-auth`.
+  O primeiro injeta apenas o verificador; o segundo nunca recebe o bypass nem roda
+  em PR sem ambiente protegido.
+- A matriz da etapa 1 ganhou casos explícitos de política temporal/identidade,
+  algoritmo JWT `none` e corrupção de alocações públicas.
+- Cinco execuções finais da referência tiveram p95 de 11,2 ms e envelope
+  máximo de 7.152 bytes em Windows/CPython 3.12.14.
+- Login, Carteira, Diagnóstico canônico, sessão expirada, os dois desktops e zoom
+  de 200% foram inspecionados em capturas sem dados pessoais ou tokens.
+- A sessão Supabase real existente repetiu o percurso até o motor. Os gates humanos
+  de cadastro fechado, convite, primeira senha, logout e isolamento permanecem
+  sustentados pelas evidências integradas das MOT-20/MOT-21, sem repetir ações de
+  conta desnecessárias.
+
+Detalhes, matriz, capturas e handoff: [registro da MOT-22](mot-22-aceitacao.md).
+
+## Arquivos preexistentes preservados
+
+Permanecem intactos, no checkout original, os não rastreados `docs/superpowers/plans/2026-09-11-frontend-motor-de-fluxo-design.md`, `motor/cenarios/fluxo_gabriel.yaml` e `tests/test_exportar_player.py`. O trabalho não commitado da outra worktree não foi alterado nem incorporado.

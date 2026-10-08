@@ -1,0 +1,324 @@
+import type { components } from '../api/generated';
+import type { FieldProvenance, ObservedOutcome } from '../cases/domain';
+import type { ObservedComparison } from '../cases/observedComparison';
+import type { OperationalProfileVersion } from '../profiles/domain';
+
+export type DeepReadonly<T> = T extends (...args: never[]) => unknown
+  ? T
+  : T extends readonly (infer Item)[]
+    ? readonly DeepReadonly<Item>[]
+    : T extends object
+      ? { readonly [Key in keyof T]: DeepReadonly<T[Key]> }
+      : T;
+
+export type DeepMutable<T> = T extends (...args: never[]) => unknown
+  ? T
+  : T extends readonly (infer Item)[]
+    ? DeepMutable<Item>[]
+    : T extends object
+      ? { -readonly [Key in keyof T]: DeepMutable<T[Key]> }
+      : T;
+
+export type CanonicalAuthoredOrder = DeepReadonly<components['schemas']['OrdemEntrada']>;
+export type CostPremises = DeepReadonly<components['schemas']['CustoEntrada']>;
+export type HttpPeriod = DeepReadonly<
+  components['schemas']['PeriodoLegado'] | components['schemas']['PeriodoNatural']
+>;
+export type PeriodDocument =
+  | Readonly<{
+      httpPeriod: DeepReadonly<components['schemas']['PeriodoLegado']>;
+      executableHorizonDays: number;
+    }>
+  | Readonly<{ httpPeriod: DeepReadonly<components['schemas']['PeriodoNatural']> }>;
+export type PreviaRequest = DeepReadonly<components['schemas']['PreviaRequest']>;
+export type PreviewEnvelope = DeepReadonly<components['schemas']['PreviewEnvelope']>;
+export type DiagnosticRequest = DeepReadonly<components['schemas']['DiagnosticRequest']>;
+export type DiagnosticEnvelope = DeepReadonly<components['schemas']['DiagnosticEnvelope']>;
+export type PreparationResponse = DeepReadonly<components['schemas']['PreparationResponse']>;
+export type EffectiveInput = DeepReadonly<components['schemas']['EffectiveInput']>;
+export type SeedText = components['schemas']['EffectiveParticipant']['seed'];
+
+export type OrderFieldProvenance = Readonly<{
+  id?: FieldProvenance;
+  cliente_id?: FieldProvenance;
+  direcao?: FieldProvenance;
+  dia_conhecida: FieldProvenance;
+  dia_limite: FieldProvenance;
+  eh_efx: FieldProvenance;
+  finalidade: FieldProvenance;
+  valor_brl: FieldProvenance;
+}>;
+
+export type AuthoredParameters = Readonly<{
+  frequency: string;
+  ticket: string;
+  direction: 'OUT' | 'IN' | 'MIXED';
+  deadline: string;
+  purpose: string;
+  profile: components['schemas']['EffectiveParticipant']['profile'];
+}>;
+
+export type AuthoredParticipant = Readonly<{
+  id: string;
+  name: string;
+  override: boolean;
+  parameters: AuthoredParameters;
+}>;
+
+export type AuthoredGroup = Readonly<{
+  id: string;
+  name: string;
+  parameters: AuthoredParameters;
+  participants: readonly AuthoredParticipant[];
+}>;
+
+export type AuthoredPortfolioDefinition =
+  | Readonly<{ kind: 'PARAMETRIC'; groups: readonly AuthoredGroup[] }>
+  | Readonly<{
+      kind: 'EXPLICIT_ORDERS';
+      derivedFromObservedCase?: Readonly<{ caseId: string; caseRevision: number; importedFromXlsx?: true }>;
+      /** Carteira montada juntando casos de empresas diferentes. */
+      sourceCases?: readonly Readonly<{ caseId: string; caseRevision: number; companyId: string }>[];
+      /** Empresa de cada ordem, quando a carteira junta empresas. */
+      companyByOrder?: Readonly<Record<string, Readonly<{ companyId: string; companyName: string }>>>;
+      orders: readonly CanonicalAuthoredOrder[];
+      provenanceByOrder: Readonly<Record<string, OrderFieldProvenance>>;
+    }>;
+
+export type SyntheticRecipe = Readonly<{
+  exampleId: string;
+  seeds: readonly SeedText[];
+  composition: PreparationResponse['composition'];
+  preparationVersion: string;
+  generatorVersion: string;
+  motorBuildSha: string;
+  generationFingerprint: string;
+}>;
+
+export type PortfolioSource =
+  | Readonly<{ kind: 'OBSERVED_CASE'; caseId: string; caseRevision: number }>
+  | Readonly<{
+      kind: 'AUTHORED';
+      authoredPortfolioId: string;
+      definition?: AuthoredPortfolioDefinition;
+    }>
+  | Readonly<{ kind: 'SYNTHETIC'; recipe: SyntheticRecipe }>;
+
+export type PortfolioSourceSnapshot = Readonly<{
+  source: PortfolioSource;
+  capturedAt: string;
+  orders: readonly CanonicalAuthoredOrder[];
+  provenance: readonly FieldProvenance[];
+  provenanceByOrder?: Readonly<Record<string, OrderFieldProvenance>>;
+  observedOutcome: ObservedOutcome | null;
+  generationInputSnapshot?: EffectiveInput;
+  sourceFingerprint: string;
+}>;
+
+export type PremisesDocument = Readonly<{
+  costs: CostPremises;
+  windowDays: number;
+}>;
+
+export type ScenarioInputProvenance = Readonly<{
+  premises: Readonly<{
+    windowDays: FieldProvenance;
+    costs: Readonly<{
+      iof_out: FieldProvenance;
+      iof_in: FieldProvenance;
+      carry_cnr: FieldProvenance;
+      custo_fixo_remessa: FieldProvenance;
+      custo_oportunidade_aa: FieldProvenance;
+      spread_rail_bps: FieldProvenance;
+      ptax: FieldProvenance;
+    }>;
+  }>;
+  period: Readonly<{ horizonDays: FieldProvenance }>;
+}>;
+
+/**
+ * De onde veio uma variação de composição: gerada a partir de uma base exata (mesmas ordens,
+ * valores, datas, período e premissas), mantendo só `companies`. Qualquer edição posterior da
+ * variação descarta o vínculo (updateScenario não o copia).
+ */
+export type ScenarioDerivation = Readonly<{
+  kind: 'COMPANY_ALONE' | 'LEAVE_ONE_OUT' | 'SUBSET';
+  baseScenarioId: string;
+  baseSourceFingerprint: string;
+  companies: readonly string[];
+}>;
+
+export type ScenarioDocument = Readonly<{
+  id: string;
+  revision: number;
+  name: string;
+  sourceSnapshot: PortfolioSourceSnapshot;
+  premises: PremisesDocument;
+  period: PeriodDocument;
+  inputProvenance?: ScenarioInputProvenance;
+  derivation?: ScenarioDerivation;
+  inputFingerprint: string;
+}>;
+
+export type ScenarioDraft = Omit<ScenarioDocument, 'inputFingerprint'> &
+  Readonly<{ inputFingerprint?: string }>;
+
+export type ExecutionStatus = 'PREPARING' | 'RUNNING' | 'SUCCEEDED' | 'FAILED' | 'INTERRUPTED';
+export type ExecutionRecord = Readonly<{
+  id: string;
+  attemptId?: string;
+  scenarioId: string;
+  scenarioRevision: number;
+  inputFingerprint: string;
+  requestSnapshot: PreviaRequest;
+  sourceSnapshot?: PortfolioSourceSnapshot;
+  premisesSnapshot?: PremisesDocument;
+  periodSnapshot?: PeriodDocument;
+  engineVersion: string;
+  contractVersion: string;
+  status: ExecutionStatus;
+  envelope: PreviewEnvelope | null;
+  observedComparison: ObservedComparison | null;
+  createdAt: string;
+  finishedAt: string | null;
+}>;
+
+export type StudyDocumentV2 = Readonly<{
+  schemaVersion: '2.0.0';
+  id: string;
+  ownerSub: string;
+  name: string;
+  revision: number;
+  baseScenarioId: string;
+  scenarios: readonly ScenarioDocument[];
+  executions: readonly ExecutionRecord[];
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+}>;
+
+export type PreviewExecutionRecord = Readonly<ExecutionRecord & {
+  kind: 'PREVIEW';
+}>;
+
+export type PersistedExecutionError = Readonly<{
+  code: string;
+  message: string;
+}>;
+
+export type DiagnosticExecutionStatus =
+  | 'QUEUED'
+  | 'RUNNING'
+  | 'SUCCEEDED'
+  | 'FAILED'
+  | 'CANCELLED'
+  | 'INTERRUPTED';
+
+export type DiagnosticExecutionRecord = DeepReadonly<{
+  kind: 'DIAGNOSTIC';
+  id: string;
+  attemptId: string;
+  scenarioId: string;
+  scenarioRevision: number;
+  inputFingerprint: string;
+  requestSnapshot: DiagnosticRequest;
+  sourceSnapshot: PortfolioSourceSnapshot;
+  premisesSnapshot: PremisesDocument;
+  periodSnapshot: PeriodDocument;
+  status: DiagnosticExecutionStatus;
+  jobId: string | null;
+  envelope: DiagnosticEnvelope | null;
+  error: PersistedExecutionError | null;
+  createdAt: string;
+  finishedAt: string | null;
+}>;
+
+export type ExecutionRecordV3 = PreviewExecutionRecord | DiagnosticExecutionRecord;
+
+export type StudyEvidenceSnapshot = DeepReadonly<{
+  kind: 'OPERATIONAL_PROFILE';
+  capturedAt: string;
+  profile: OperationalProfileVersion;
+}>;
+
+/** Assinatura da matriz preparada; o fingerprint da base inclui origem, premissas e período. */
+export type PreparedCombinationCoverage = Readonly<{
+  baseScenarioId: string;
+  baseInputFingerprint: string;
+  /** Proveniência de entrada é copiada aos derivados, mas não integra inputFingerprint. */
+  baseInputProvenanceCanonical: string;
+  /** JSON canônico do array ordenado de IDs; string mantém a assinatura imutável. */
+  companyIdsCanonical: string;
+}>;
+
+export type StudyDocumentV3 = Readonly<
+  Omit<StudyDocumentV2, 'schemaVersion' | 'executions'> & {
+    schemaVersion: '3.0.0';
+    studyType?: 'PORTFOLIO_COMBINATIONS';
+    preparedCombinationCoverage?: PreparedCombinationCoverage;
+    evidenceSnapshots: readonly StudyEvidenceSnapshot[];
+    executions: readonly ExecutionRecordV3[];
+  }
+>;
+
+export type StudyDocument = StudyDocumentV3;
+
+export function migrateStudyDocumentV2(document: StudyDocumentV2): StudyDocumentV3 {
+  const { schemaVersion: _schemaVersion, executions, ...study } = structuredClone(document);
+  void _schemaVersion;
+  return {
+    ...study,
+    schemaVersion: '3.0.0',
+    evidenceSnapshots: [],
+    executions: executions.map((execution) => ({ ...execution, kind: 'PREVIEW' })),
+  };
+}
+
+export type StudyValidationIssue = Readonly<{
+  path: string;
+  code:
+    | 'INVALID_STRUCTURE'
+    | 'OWNER_MISMATCH'
+    | 'BASE_SCENARIO_MISSING'
+    | 'DUPLICATE_ID'
+    | 'MISSING_SCENARIO_REVISION'
+    | 'DUPLICATE_EXECUTION_TERMINAL'
+    | 'INCOMPATIBLE_DIAGNOSTIC_ATTEMPT'
+    | 'INCOMPATIBLE_ENVELOPE'
+    | 'INCOMPATIBLE_EXECUTION_SNAPSHOT'
+    | 'SOURCE_FINGERPRINT_MISMATCH'
+    | 'INPUT_FINGERPRINT_MISMATCH';
+  message: string;
+}>;
+
+export type StudyValidation<T> =
+  | Readonly<{ ok: true; value: T }>
+  | Readonly<{ ok: false; issues: readonly StudyValidationIssue[] }>;
+
+export type IdFactory = () => string;
+
+export type CreateStudyInput = Readonly<{
+  studyType?: 'PORTFOLIO_COMBINATIONS';
+  id: string;
+  ownerSub: string;
+  name: string;
+  baseScenario: ScenarioDraft;
+  now: string;
+}>;
+
+export type ScenarioUpdate = Readonly<{
+  name?: string;
+  sourceSnapshot?: PortfolioSourceSnapshot;
+  premises?: PremisesDocument;
+  period?: PeriodDocument;
+  inputProvenance?: ScenarioInputProvenance;
+}>;
+
+export type ResultState =
+  | Readonly<{ kind: 'ABSENT' }>
+  | Readonly<{ kind: 'CURRENT'; executionId: string; status: ExecutionStatus }>
+  | Readonly<{
+      kind: 'STALE';
+      executionId: string;
+      reasons: readonly ('INPUT_CHANGED' | 'SCENARIO_REVISION_CHANGED')[];
+    }>;

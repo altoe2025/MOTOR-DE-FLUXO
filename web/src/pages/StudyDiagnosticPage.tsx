@@ -1,0 +1,502 @@
+import { diagnosticUsesSavedPremises } from '../diagnostics/effectivePreparation';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
+
+import type { JobSnapshot } from '../api/client';
+import { useDiagnosticRuntime } from '../app/providers';
+import { useOptionalChat } from '../chat/ChatProvider';
+import { selectionId } from '../chat/routeContext';
+import type { FieldProvenance } from '../cases/domain';
+import { buildDiagnosticRequest, MAX_DIAGNOSTIC_REQUEST_BYTES, DiagnosticRequestBuildError } from '../diagnostics/buildDiagnosticRequest';
+import { DiagnosticControls } from '../diagnostics/components/DiagnosticControls';
+import { DiagnosticEngineResult } from '../diagnostics/components/DiagnosticEngineResult';
+import { DiagnosticStatus, type DiagnosticViewState } from '../diagnostics/components/DiagnosticStatus';
+import { VariationComparison } from '../levers/VariationComparison';
+import { PortfolioRecommendation } from '../levers/PortfolioRecommendationPanel';
+import { isCurrentCombinationScenario } from '../levers/prepareCombinationStudy';
+import { currentDiagnostic } from '../levers/savingsOrigin';
+import {
+  cancelStudyDiagnostic,
+  computeDiagnosticAttempt,
+  executeStudyDiagnostic,
+  retryStudyDiagnostic,
+} from '../diagnostics/diagnosticExecutionService';
+import { runDiagnosticPool } from '../diagnostics/runDiagnosticPool';
+import { RevisionConflictError } from '../storage/errors';
+import { buildPreviewRequest, type PreviewRequestProvenance } from '../preparation/buildPreviewRequest';
+import type { DiagnosticExecutionRecord, ScenarioDocument, StudyDocument } from '../study/model';
+import { Button } from '../ui/Button';
+
+function requestProvenance(study: StudyDocument, scenario: ScenarioDocument): PreviewRequestProvenance {
+  const fallback: FieldProvenance = {
+    kind: 'SYNTHETIC_DEFAULT', source: 'configuração registrada no estudo', version: study.schemaVersion,
+    recordedAt: study.createdAt, rule: 'study-defaults-v1',
+  };
+  return scenario.inputProvenance ?? {
+    premises: { windowDays: fallback, costs: {
+      iof_out: fallback, iof_in: fallback, carry_cnr: fallback, custo_fixo_remessa: fallback,
+      custo_oportunidade_aa: fallback, spread_rail_bps: fallback, ptax: fallback,
+    } }, period: { horizonDays: fallback },
+  };
+}
+
+function transientState(snapshot: JobSnapshot): DiagnosticViewState {
+  if (!['QUEUED', 'RUNNING', 'AGGREGATING', 'CANCEL_REQUESTED'].includes(snapshot.status)) {
+    if (snapshot.status === 'SUCCEEDED') return { kind: 'SUCCEEDED', attemptId: snapshot.request_id };
+    if (snapshot.status === 'CANCELLED') return { kind: 'CANCELLED', attemptId: snapshot.request_id };
+    return { kind: 'FAILED', attemptId: snapshot.request_id, publicMessage: 'Não foi possível concluir o diagnóstico.' };
+  }
+  return {
+    kind: snapshot.status as 'QUEUED' | 'RUNNING' | 'AGGREGATING' | 'CANCEL_REQUESTED',
+    jobId: snapshot.job_id,
+    progress: {
+      completed: snapshot.progress.completed, failed: snapshot.progress.failed,
+      total: snapshot.progress.total, phase: snapshot.progress.phase,
+    },
+  };
+}
+
+export function diagnosticFailureMessage(error: Readonly<{ code: string; message: string }> | null): string {
+  if (error?.code === 'ACESSO_NAO_PERMITIDO') {
+    return 'Esta conta entrou, mas ainda não está autorizada a executar diagnósticos no servidor.';
+  }
+  return error?.message ?? 'Não foi possível concluir o diagnóstico.';
+}
+
+function persistedState(execution: DiagnosticExecutionRecord | null): DiagnosticViewState | null {
+  if (execution === null) return null;
+  if (execution.status === 'QUEUED') {
+    return { kind: 'QUEUED', jobId: execution.jobId ?? execution.attemptId, progress: {
+      completed: 0, failed: 0, total: execution.requestSnapshot.sampling.count, phase: 'QUEUED',
+    } };
+  }
+  if (execution.status === 'FAILED') return {
+    kind: 'FAILED', attemptId: execution.attemptId,
+    publicMessage: 'Não foi possível concluir o diagnóstico. A tentativa anterior foi preservada no histórico.',
+  };
+  if (execution.status === 'CANCELLED') return { kind: 'CANCELLED', attemptId: execution.attemptId };
+  if (execution.status === 'INTERRUPTED') return { kind: 'INTERRUPTED', attemptId: execution.attemptId };
+  return { kind: 'SUCCEEDED', attemptId: execution.attemptId };
+}
+
+export function diagnosticsForScenario(
+  study: StudyDocument,
+  scenario: ScenarioDocument,
+): readonly DiagnosticExecutionRecord[] {
+  return study.executions.filter((item): item is DiagnosticExecutionRecord =>
+    item.kind === 'DIAGNOSTIC' && item.scenarioId === scenario.id);
+}
+
+export function isCurrentForScenario(execution: DiagnosticExecutionRecord, scenario: ScenarioDocument): boolean {
+  return execution.scenarioRevision === scenario.revision
+    && execution.inputFingerprint === scenario.inputFingerprint
+    && diagnosticUsesSavedPremises(execution);
+}
+
+export function latestDiagnostic(
+  study: StudyDocument,
+  scenario: ScenarioDocument,
+): DiagnosticExecutionRecord | null {
+  return [...diagnosticsForScenario(study, scenario)].reverse()[0] ?? null;
+}
+
+export function StudyDiagnosticPage() {
+  const { studyId } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const runAllRequested = searchParams.get('runAll') === '1';
+  const autoRunIdentities = useRef(new Set<string>());
+  const batchToken = useRef<number | null>(null);
+  const requestedScenarioId = searchParams.get('scenarioId');
+  const rawExecutionId = searchParams.get('executionId');
+  const requestedExecutionId = selectionId(rawExecutionId);
+  const screenIdentity = `${studyId ?? ''}:${requestedScenarioId ?? ''}:${rawExecutionId ?? ''}`;
+  const { controller, client } = useDiagnosticRuntime();
+  const chat = useOptionalChat();
+  const setChatScenarioId = chat?.setScenarioId;
+  const setChatExecutionId = chat?.setDiagnosticExecutionId;
+  const publishCommunication = chat?.publishCommunication;
+  const heading = useRef<HTMLHeadingElement>(null);
+  const resumedAttempts = useRef(new Set<string>());
+  const mounted = useRef(true);
+  const [study, setStudy] = useState<StudyDocument | null>(null);
+  const [count, setCount] = useState<1 | 10 | 30 | 100>(10);
+  const [viewState, setViewState] = useState<DiagnosticViewState | null>(null);
+  const [runInProgress, setRunInProgress] = useState(false);
+  const [cancelInFlight, setCancelInFlight] = useState(false);
+  const [runAllProgress, setRunAllProgress] = useState<string | null>(null);
+  const [comparisonOpen, setComparisonOpen] = useState(false);
+  const cancelInFlightRef = useRef(false);
+  // Trava síncrona: dois cliques no mesmo instante chegam antes de `runInProgress` re-renderizar.
+  const runInFlightRef = useRef(false);
+  const batchCancelRequested = useRef(false);
+  const batchAbort = useRef<AbortController | null>(null);
+  const identityToken = useRef(0);
+  const activeIdentity = useRef(screenIdentity);
+
+  useEffect(() => {
+    let active = true;
+    const token = ++identityToken.current;
+    activeIdentity.current = screenIdentity;
+    mounted.current = true;
+    resumedAttempts.current = new Set();
+    batchToken.current = null;
+    batchCancelRequested.current = false;
+    setViewState(null);
+    setRunInProgress(false);
+    setRunAllProgress(null);
+    setCancelInFlight(false);
+    heading.current?.focus();
+    if (studyId === undefined) return () => { mounted.current = false; };
+    void controller.loadStudy(studyId).then((loaded) => {
+      if (!active || !mounted.current) return;
+      if (token !== identityToken.current) return;
+      setStudy(loaded);
+      if (loaded === null) {
+        setViewState({ kind: 'UNAVAILABLE', reason: 'O estudo não existe ou pertence a outra conta.' });
+        return;
+      }
+      const selectedId = requestedScenarioId ?? loaded.baseScenarioId;
+      const selected = loaded.scenarios.find((item) => item.id === selectedId);
+      if (selected === undefined) setViewState({ kind: 'UNAVAILABLE', reason: 'O cenário solicitado não existe neste estudo.' });
+      else if (rawExecutionId !== null) {
+        const cited = selectionId(rawExecutionId) === null ? undefined : diagnosticsForScenario(loaded, selected).find((item) =>
+          item.id === requestedExecutionId && item.status === 'SUCCEEDED' && item.envelope !== null
+          && isCurrentForScenario(item, selected));
+        setViewState(cited === undefined
+          ? { kind: 'UNAVAILABLE', reason: 'A execução citada não está disponível neste Estudo.' }
+          : persistedState(cited));
+      } else setViewState(persistedState(latestDiagnostic(loaded, selected)));
+    }).catch(() => {
+      if (active && mounted.current) setViewState({ kind: 'UNAVAILABLE', reason: 'Não foi possível abrir o estudo.' });
+    });
+    const unsubscribe = controller.subscribe(() => {
+      if (!mounted.current || token !== identityToken.current) return;
+      const current = controller.snapshot.document;
+      if (current?.id !== studyId) return;
+      setStudy(current);
+      if (controller.snapshot.status === 'STORAGE_FAILURE') {
+        setViewState({ kind: 'STORAGE_FAILURE', message: 'O resultado não pôde ser salvo. Resolva o armazenamento antes de iniciar novo cálculo.' });
+      }
+    });
+    return () => { active = false; mounted.current = false; batchAbort.current?.abort(); unsubscribe(); };
+  }, [controller, requestedScenarioId, requestedExecutionId, rawExecutionId, screenIdentity, studyId]);
+
+  const selectedScenarioId = requestedScenarioId ?? study?.baseScenarioId;
+  const scenario = study?.scenarios.find((item) => item.id === selectedScenarioId) ?? null;
+  const combinationStudy = study?.studyType === 'PORTFOLIO_COMBINATIONS';
+  const combinationOverview = combinationStudy && requestedScenarioId === null && rawExecutionId === null;
+  const generated = scenario?.sourceSnapshot.generationInputSnapshot !== undefined;
+  const effectiveCount = generated ? count : 1;
+
+  const trackedApi = useCallback(() => ({
+    submitDiagnostic: async (...args: Parameters<typeof client.submitDiagnostic>) => {
+      const result = await client.submitDiagnostic(...args); if (mounted.current && activeIdentity.current === screenIdentity) setViewState(transientState(result)); return result;
+    },
+    getDiagnosticJob: async (...args: Parameters<typeof client.getDiagnosticJob>) => {
+      const result = await client.getDiagnosticJob(...args); if (mounted.current && activeIdentity.current === screenIdentity) setViewState(transientState(result)); return result;
+    },
+    getDiagnosticResult: client.getDiagnosticResult,
+  }), [client, screenIdentity]);
+
+  const complete = useCallback((attempt: Awaited<ReturnType<typeof executeStudyDiagnostic>>) => {
+    if (!mounted.current || activeIdentity.current !== screenIdentity) return;
+    const current = controller.snapshot.document;
+    if (current !== null) setStudy(current);
+    if (attempt.status === 'FAILED') {
+      const publicMessage = diagnosticFailureMessage(attempt.error);
+      setViewState({ kind: 'FAILED', attemptId: attempt.attemptId,
+        publicMessage: `${publicMessage} A tentativa foi preservada no histórico.` });
+    }
+    else setViewState({ kind: attempt.status, attemptId: attempt.attemptId });
+  }, [controller, screenIdentity]);
+
+  const run = useCallback(async () => {
+    if (study === null || scenario === null || runInProgress || runInFlightRef.current) return;
+    runInFlightRef.current = true;
+    setRunInProgress(true);
+    try {
+      const result = await executeStudyDiagnostic({
+        authority: controller,
+        scenarioId: scenario.id,
+        api: trackedApi(),
+        buildRequest: async ({ study: currentStudy, scenario: currentScenario, attemptId }) => {
+          const preview = await buildPreviewRequest(
+            currentScenario.sourceSnapshot, currentScenario.premises, currentScenario.period,
+            { requestId: crypto.randomUUID(), studyId: currentStudy.id, scenarioId: currentScenario.id, scenarioRevision: currentScenario.revision },
+            requestProvenance(currentStudy, currentScenario),
+            { maxBytes: MAX_DIAGNOSTIC_REQUEST_BYTES },
+          );
+          return buildDiagnosticRequest({
+            requestId: preview.request_id, idempotencyKey: crypto.randomUUID(), studyId: currentStudy.id,
+            scenario: currentScenario, count: effectiveCount, baseSeed: attemptId, previewRequest: preview,
+          });
+        },
+      });
+      complete(result);
+    } catch (reason) {
+      const publicMessage = reason instanceof DiagnosticRequestBuildError
+        ? `A entrada do diagnóstico é incompatível (${reason.code}).`
+        : 'Não foi possível concluir o diagnóstico.';
+      if (mounted.current) setViewState(controller.snapshot.status === 'STORAGE_FAILURE'
+        ? { kind: 'STORAGE_FAILURE', message: 'O resultado não pôde ser salvo. Nenhum novo cálculo foi iniciado.' }
+        : { kind: 'FAILED', attemptId: 'não persistida', publicMessage });
+    } finally {
+      runInFlightRef.current = false;
+      if (mounted.current) setRunInProgress(false);
+    }
+  }, [complete, controller, effectiveCount, runInProgress, scenario, study, trackedApi]);
+
+  useEffect(() => {
+    if (study === null || scenario === null || combinationStudy || runInProgress || rawExecutionId !== null) return;
+    const latest = latestDiagnostic(study, scenario);
+    if (latest?.status !== 'QUEUED' || resumedAttempts.current.has(latest.attemptId)) return;
+    resumedAttempts.current.add(latest.attemptId);
+    void run();
+  }, [combinationStudy, run, runInProgress, scenario, study, rawExecutionId]);
+
+  const runAll = useCallback(async () => {
+    if (study === null || study.id !== studyId || runInProgress || runAllProgress !== null || batchToken.current !== null) return;
+    const token = identityToken.current;
+    batchToken.current = token;
+    batchCancelRequested.current = false;
+    const isActive = () => mounted.current && identityToken.current === token;
+    const pending = study.scenarios.filter((item) => currentDiagnostic(study, item) === null
+      && (!combinationStudy || isCurrentCombinationScenario(study, item)));
+    setRunInProgress(true);
+    try {
+      if (combinationStudy) {
+        const abort = new AbortController();
+        batchAbort.current = abort;
+        setViewState(null);
+        setRunAllProgress(`0 de ${pending.length} concluídas · 0 ativas · 0 falhas`);
+        await controller.runForCurrentSession(async ({ signal: sessionSignal, ownerSub, epoch }) => {
+          const onSessionAbort = () => abort.abort();
+          sessionSignal.addEventListener('abort', onSessionAbort, { once: true });
+          if (sessionSignal.aborted) abort.abort();
+          const assertActive = () => {
+            abort.signal.throwIfAborted();
+            if (!isActive() || controller.snapshot.ownerSub !== ownerSub
+              || controller.snapshot.sessionEpoch !== epoch || controller.snapshot.document?.id !== study.id) {
+              throw new DOMException('O contexto do lote mudou.', 'AbortError');
+            }
+          };
+          try {
+            await controller.flush();
+            assertActive();
+            const initial = controller.snapshot.document!;
+            const items = initial.scenarios.filter((item) => currentDiagnostic(initial, item) === null
+              && isCurrentCombinationScenario(initial, item));
+            await runDiagnosticPool(items, {
+              concurrency: 2, signal: abort.signal,
+              shouldSchedule: () => isActive() && !batchCancelRequested.current,
+              shouldCompute: (item) => {
+                assertActive();
+                const latest = controller.snapshot.document!;
+                const current = latest.scenarios.find((scenario) => scenario.id === item.id);
+                return current !== undefined && current.revision === item.revision
+                  && current.inputFingerprint === item.inputFingerprint
+                  && isCurrentCombinationScenario(latest, current) && currentDiagnostic(latest, current) === null;
+              },
+              compute: async (item, signal) => {
+                assertActive();
+                return computeDiagnosticAttempt({ study: controller.snapshot.document!, scenarioId: item.id,
+                  signal, api: client,
+                  buildRequest: async ({ study: currentStudy, scenario: currentScenario, attemptId }) => {
+                    const preview = await buildPreviewRequest(
+                      currentScenario.sourceSnapshot, currentScenario.premises, currentScenario.period,
+                      { requestId: crypto.randomUUID(), studyId: currentStudy.id, scenarioId: currentScenario.id, scenarioRevision: currentScenario.revision },
+                      requestProvenance(currentStudy, currentScenario),
+                      { maxBytes: MAX_DIAGNOSTIC_REQUEST_BYTES },
+                    );
+                    return buildDiagnosticRequest({ requestId: preview.request_id, idempotencyKey: crypto.randomUUID(),
+                      studyId: currentStudy.id, scenario: currentScenario, count: 1, baseSeed: attemptId, previewRequest: preview });
+                  },
+                });
+              },
+              commit: async ({ reservation, terminal }) => {
+                assertActive();
+                try { await controller.appendDiagnosticAttempt(reservation, terminal); }
+                catch (error) {
+                  if (!(error instanceof RevisionConflictError)) throw error;
+                  assertActive();
+                  const reloaded = await controller.loadStudy(study.id);
+                  assertActive();
+                  if (reloaded === null) throw error;
+                  if (reloaded.executions.some((execution) => execution.kind === 'DIAGNOSTIC'
+                    && execution.attemptId === reservation.attemptId
+                    && ['SUCCEEDED', 'FAILED', 'CANCELLED', 'INTERRUPTED'].includes(execution.status))) return;
+                  const current = reloaded.scenarios.find((scenario) => scenario.id === reservation.scenarioId);
+                  if (current?.revision !== reservation.scenarioRevision
+                    || current.inputFingerprint !== reservation.inputFingerprint) throw error;
+                  await controller.appendDiagnosticAttempt(reservation, terminal);
+                }
+              },
+              onProgress: ({ total, completed, active, failed, skipped }) => {
+                if (isActive() && !abort.signal.aborted) setRunAllProgress(
+                  `${completed} de ${total} concluídas · ${active} ativas · ${failed} falhas${skipped > 0 ? ` · ${skipped} ignoradas (já atuais ou desatualizadas)` : ''}${batchCancelRequested.current ? ' · Cancelando após as combinações ativas…' : ''}`,
+                );
+              },
+            });
+          } finally {
+            sessionSignal.removeEventListener('abort', onSessionAbort);
+          }
+        });
+        return;
+      }
+      for (const [index, item] of pending.entries()) {
+        if (!isActive() || batchCancelRequested.current) return;
+        setRunAllProgress(`Rodando ${index + 1} de ${pending.length}…`);
+        const itemCount = item.sourceSnapshot.generationInputSnapshot !== undefined ? count : 1;
+        const attempt = await executeStudyDiagnostic({
+          authority: controller,
+          scenarioId: item.id,
+          api: { submitDiagnostic: client.submitDiagnostic, getDiagnosticJob: client.getDiagnosticJob, getDiagnosticResult: client.getDiagnosticResult },
+          buildRequest: async ({ study: currentStudy, scenario: currentScenario, attemptId }) => {
+            const preview = await buildPreviewRequest(
+              currentScenario.sourceSnapshot, currentScenario.premises, currentScenario.period,
+              { requestId: crypto.randomUUID(), studyId: currentStudy.id, scenarioId: currentScenario.id, scenarioRevision: currentScenario.revision },
+              requestProvenance(currentStudy, currentScenario),
+            { maxBytes: MAX_DIAGNOSTIC_REQUEST_BYTES },
+            );
+            return buildDiagnosticRequest({
+              requestId: preview.request_id, idempotencyKey: crypto.randomUUID(), studyId: currentStudy.id,
+              scenario: currentScenario, count: itemCount, baseSeed: attemptId, previewRequest: preview,
+            });
+          },
+        });
+        if (!isActive()) return;
+        if (batchCancelRequested.current) return;
+        if (attempt.status !== 'SUCCEEDED') {
+          complete(attempt);
+          return;
+        }
+        const current = controller.snapshot.document;
+        if (current?.id === study.id) setStudy(current);
+      }
+    } catch {
+      if (isActive()) setViewState({ kind: 'FAILED', attemptId: 'não persistida', publicMessage: 'Não foi possível rodar todas as variações. As que terminaram ficaram salvas.' });
+    } finally {
+      if (batchToken.current === token) batchToken.current = null;
+      if (isActive()) {
+        batchAbort.current = null;
+        batchCancelRequested.current = false;
+        setRunAllProgress(null);
+        setRunInProgress(false);
+      }
+    }
+  }, [client, combinationStudy, complete, controller, count, runAllProgress, runInProgress, study, studyId]);
+
+  useEffect(() => {
+    if (!runAllRequested || !combinationOverview || study?.id !== studyId || runInProgress
+      || activeIdentity.current !== screenIdentity || autoRunIdentities.current.has(screenIdentity)) return;
+    autoRunIdentities.current.add(screenIdentity);
+    const next = new URLSearchParams(searchParams);
+    next.delete('runAll');
+    setSearchParams(next, { replace: true });
+    void runAll();
+  }, [combinationOverview, runAll, runAllRequested, runInProgress, screenIdentity, searchParams, setSearchParams, study, studyId]);
+
+  const cancelBatch = () => {
+    if (!runInProgress || runAllProgress === null) return;
+    batchCancelRequested.current = true;
+    setRunAllProgress((progress) => `${progress ?? ''} · Cancelando após as combinações ativas…`);
+  };
+
+  const cancel = async () => {
+    if (scenario === null || cancelInFlightRef.current) return;
+    cancelInFlightRef.current = true;
+    setCancelInFlight(true);
+    try {
+      const result = await cancelStudyDiagnostic({ authority: controller, scenarioId: scenario.id, api: {
+        ...trackedApi(), cancelDiagnostic: client.cancelDiagnostic,
+      } });
+      complete(result);
+    } finally {
+      cancelInFlightRef.current = false;
+      if (mounted.current) setCancelInFlight(false);
+    }
+  };
+
+  const retry = async (attemptId: string) => {
+    if (study === null || scenario === null || runInProgress || cancelInFlightRef.current) return;
+    const terminal = [...diagnosticsForScenario(study, scenario)].reverse().find((item) => item.attemptId === attemptId);
+    if (terminal === undefined) return;
+    setRunInProgress(true);
+    try {
+      const result = await retryStudyDiagnostic({ authority: controller, executionId: terminal.id,
+        idempotencyKey: crypto.randomUUID(), api: { ...trackedApi(), retryDiagnostic: client.retryDiagnostic } });
+      complete(result);
+    } catch {
+      if (mounted.current) setViewState({ kind: 'FAILED', attemptId: 'não persistida', publicMessage: 'Não foi possível repetir o diagnóstico.' });
+    } finally { if (mounted.current) setRunInProgress(false); }
+  };
+
+  const scenarioDiagnostics = study === null || scenario === null ? [] : diagnosticsForScenario(study, scenario);
+  const terminal = scenario === null || (rawExecutionId !== null && requestedExecutionId === null) ? null
+    : [...scenarioDiagnostics].reverse().find((item) =>
+    item.status === 'SUCCEEDED' && item.envelope !== null && isCurrentForScenario(item, scenario)
+      && (requestedExecutionId === null || item.id === requestedExecutionId)) ?? null;
+  const envelope = terminal?.envelope ?? null;
+  const hasIofFallback = envelope?.selected_execution.input_snapshot.cenario?.ordens.some((order) =>
+    order.finalidade === null || !terminal!.premisesSnapshot.costs.iof_por_finalidade.some((rule) =>
+      rule.finalidade === order.finalidade && rule.direcao === order.direcao));
+  const chatScenarioId = study?.id === studyId ? scenario?.id ?? null : null;
+  const chatExecutionId = study?.id === studyId ? terminal?.id ?? null : null;
+  useEffect(() => { setChatScenarioId?.(chatScenarioId); }, [setChatScenarioId, chatScenarioId]);
+  useEffect(() => { setChatExecutionId?.(chatExecutionId); }, [setChatExecutionId, chatExecutionId]);
+  useEffect(() => {
+    publishCommunication?.(study !== null && scenario !== null && terminal !== null
+      ? { study, scenarioId: scenario.id, diagnosticExecutionId: terminal.id,
+        comparisonExecutionId: null, replay: null, replayDay: null } : null);
+  }, [publishCommunication, study, scenario, terminal]);
+  return <article className="diagnostic-page">
+    <p className="eyebrow">Estudo {study?.name ?? ''}</p>
+    <h1 ref={heading} tabIndex={-1}>{combinationOverview ? 'Recomendação de carteira' : generated ? 'Diagnóstico robusto' : 'Diagnóstico'}</h1>
+    <p className="page-introduction">{combinationOverview
+      ? 'Defina suas prioridades, compare as melhores composições e entenda o impacto de cada empresa.'
+      : generated
+        ? 'A carteira é gerada; o diagnóstico roda várias repetições, mostra a distribuição da economia e detalha a repetição mediana.'
+        : `Cenário: ${scenario?.name ?? '…'}. Custo sem pool é cada ordem remetendo sozinha; custo com pool é o que sobra depois do netting.`}</p>
+    {study === null || scenario === null ? <DiagnosticStatus state={viewState ?? { kind: 'UNAVAILABLE', reason: 'Carregando estudo…' }} /> : combinationStudy ? <>
+      {combinationOverview ? <>
+        <p><Link to={`/carteira/${encodeURIComponent(study.id)}`}>Alterar empresas, premissas e alavancas</Link></p>
+        <Button data-chat-help-id="control.diagnostico.combinacoes" onClick={() => void runAll()} disabled={runInProgress || controller.snapshot.status === 'STORAGE_FAILURE'}>
+          Diagnosticar combinações
+        </Button>
+        {runAllProgress === null ? null : <Button variant="secondary" data-chat-help-id="control.diagnostico.cancelar-lote" onClick={cancelBatch}>
+          Cancelar lote
+        </Button>}
+        <p className="field-hint">{study.scenarios.filter((item) => isCurrentCombinationScenario(study, item)).length} composições preparadas. Os diagnósticos atuais são reaproveitados.</p>
+        {runAllProgress === null ? null : <p role="status" aria-live="polite">{runAllProgress}</p>}
+        {viewState === null || viewState.kind === 'SUCCEEDED' ? null : <DiagnosticStatus state={viewState} />}
+        <PortfolioRecommendation study={study} deferred={runAllProgress !== null} />
+      </> : <>
+        <Link to={`/estudos/${study.id}/diagnostico`}>Voltar à recomendação</Link>
+        {viewState === null || viewState.kind === 'SUCCEEDED' ? null : <DiagnosticStatus state={viewState} />}
+        {envelope === null ? null : <>
+          <DiagnosticEngineResult envelope={envelope} />
+          {hasIofFallback ? <p className="field-hint iof-note"><strong>IOF padrão por direção</strong>: ordens sem regra específica de finalidade e direção usam as alíquotas por direção das premissas, sem classificação regulatória inferida ou cotação.</p> : null}
+          <Link className="button-link" to={`/estudos/${study.id}/apresentacao?cenario=${encodeURIComponent(scenario.id)}&execucao=${encodeURIComponent(terminal!.id)}`}>Apresentar esta execução</Link>
+        </>}
+      </>}
+    </> : <>
+      <DiagnosticControls generated={generated} count={effectiveCount} onCountChange={setCount} onRun={() => void run()} disabled={runInProgress || controller.snapshot.status === 'STORAGE_FAILURE'} />
+      {viewState === null || viewState.kind === 'SUCCEEDED' ? null : <DiagnosticStatus state={viewState} {...(cancelInFlight ? {} : { onCancel: () => void cancel() })} onRetry={(attemptId) => void retry(attemptId)} />}
+      {envelope === null ? null : <>
+        <DiagnosticEngineResult envelope={envelope} />
+        {hasIofFallback ? <p className="field-hint iof-note"><strong>IOF padrão por direção</strong>: ordens sem regra específica de finalidade e direção usam as alíquotas por direção das premissas, sem classificação regulatória inferida ou cotação.</p> : null}
+        <div className="result-actions">
+          <Link className="button-link replay-cta" to={`/estudos/${study.id}/replay?executionId=${encodeURIComponent(terminal!.id)}`}>Abrir Replay · Fronteira Viva</Link>
+          <Link className="button-link" to={`/estudos/${study.id}/apresentacao?cenario=${encodeURIComponent(scenario.id)}&execucao=${encodeURIComponent(terminal!.id)}`}>Apresentar esta execução</Link>
+        </div>
+      </>}
+      {study.scenarios.length < 2 ? null : <Button variant="secondary" data-chat-help-id="control.diagnostico.mostrar-quadros" className="comparison-toggle" title="Compare os cenários: escolha a carteira com maior economia dentro do seu limite de espera."
+        aria-expanded={comparisonOpen} aria-controls="variation-comparison-panel" onClick={() => setComparisonOpen((open) => !open)}>
+        {comparisonOpen ? 'Ocultar quadros comparativos' : 'Abrir quadros comparativos'}
+      </Button>}
+      {comparisonOpen ? <div id="variation-comparison-panel">
+        <VariationComparison study={study} selectedScenarioId={scenario.id} running={runInProgress} progress={runAllProgress} onRunAll={() => void runAll()} />
+      </div> : null}
+    </>}
+  </article>;
+}

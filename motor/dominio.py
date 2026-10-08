@@ -10,7 +10,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from decimal import Decimal
 from enum import Enum
+from math import isfinite
 from pathlib import Path
+from types import MappingProxyType
 from typing import Any, Mapping
 
 import yaml
@@ -24,6 +26,21 @@ class Direcao(Enum):
 class TipoAlocacao(Enum):
     CASADO = "CASADO"  # não atravessou a fronteira; ficou dentro da CNR
     REMETIDO = "REMETIDO"  # atravessou de fato; é o que paga IOF de remessa
+
+
+class OrigemCasamento(Enum):
+    INTRA_CLIENTE = "INTRA_CLIENTE"
+    INTER_CLIENTE = "INTER_CLIENTE"
+
+
+def _decimal_finito_nao_negativo(nome: str, valor: Decimal) -> None:
+    if not valor.is_finite() or valor < 0:
+        raise ValueError(f"{nome} deve ser finito e não negativo, recebeu {valor!r}")
+
+
+def _decimal_finito_positivo(nome: str, valor: Decimal) -> None:
+    if not valor.is_finite() or valor <= 0:
+        raise ValueError(f"{nome} deve ser positivo, recebeu {valor!r}")
 
 
 @dataclass(frozen=True)
@@ -41,9 +58,16 @@ class Alocacao:
     dia: int
     valor_brl: Decimal
     tipo: TipoAlocacao
+    origem_casamento: OrigemCasamento | None = None
 
     def __post_init__(self) -> None:
-        assert self.valor_brl > 0
+        # ValueError, não assert: `python -O` remove asserts, e uma alocação de valor
+        # zero ou negativo entraria em silêncio na soma de conservação.
+        _decimal_finito_positivo("valor_brl de uma Alocacao", self.valor_brl)
+        if self.tipo is TipoAlocacao.CASADO and self.origem_casamento is None:
+            raise ValueError("Alocacao CASADO exige origem_casamento")
+        if self.tipo is TipoAlocacao.REMETIDO and self.origem_casamento is not None:
+            raise ValueError("Alocacao REMETIDO não aceita origem_casamento")
 
 
 @dataclass(frozen=True)
@@ -55,11 +79,14 @@ class Ordem:
     dia_conhecida: int  # quando o produto fica sabendo da ordem
     dia_limite: int  # quando ela obrigatoriamente executa
     eh_efx: bool
-    finalidade: str  # código do Anexo V da Res. BCB 277
+    finalidade: str | None  # código do Anexo V quando informado
 
     def __post_init__(self) -> None:
-        if self.valor_brl <= 0:
-            raise ValueError(f"valor_brl deve ser positivo, recebeu {self.valor_brl!r}")
+        if not self.id:
+            raise ValueError("id de ordem não pode ser vazio")
+        if not self.cliente_id:
+            raise ValueError("cliente_id não pode ser vazio")
+        _decimal_finito_positivo("valor_brl", self.valor_brl)
         if self.dia_limite < self.dia_conhecida:
             raise ValueError(
                 f"dia_limite ({self.dia_limite}) não pode ser anterior a "
@@ -86,9 +113,37 @@ class ParametrosCusto:
     # A chave é o PAR: a mesma finalidade pode ter alíquotas diferentes conforme
     # o dinheiro entra ou sai.
     #
-    # Convenção: trate como imutável depois de construído (dataclass frozen não
-    # congela o dict por dentro). Ver motor/custo.py:aliquota_iof.
+    # A cópia imutável em __post_init__ impede que um dict fornecido pelo chamador
+    # altere parâmetros já validados. Ver motor/custo.py:aliquota_iof.
     iof_por_finalidade: Mapping[tuple[str, Direcao], Decimal] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        for nome in (
+            "iof_out",
+            "iof_in",
+            "carry_cnr",
+            "spread_rail_bps",
+            "custo_fixo_remessa",
+            "custo_oportunidade_aa",
+        ):
+            _decimal_finito_nao_negativo(nome, getattr(self, nome))
+        if not self.ptax.is_finite() or self.ptax <= 0:
+            raise ValueError(f"ptax deve ser finito e positivo, recebeu {self.ptax!r}")
+
+        tabela: dict[tuple[str, Direcao], Decimal] = {}
+        for chave, aliquota in self.iof_por_finalidade.items():
+            if not isinstance(chave, tuple) or len(chave) != 2:
+                raise ValueError(f"chave inválida de iof_por_finalidade: {chave!r}")
+            finalidade, direcao = chave
+            if not isinstance(finalidade, str) or not finalidade:
+                raise ValueError(f"finalidade inválida em iof_por_finalidade: {finalidade!r}")
+            if not isinstance(direcao, Direcao):
+                raise ValueError(f"direção inválida em iof_por_finalidade: {direcao!r}")
+            _decimal_finito_nao_negativo(
+                f"alíquota de iof_por_finalidade para {chave!r}", aliquota
+            )
+            tabela[chave] = aliquota
+        object.__setattr__(self, "iof_por_finalidade", MappingProxyType(tabela))
 
 
 @dataclass(frozen=True)
@@ -97,6 +152,13 @@ class Cenario:
     janela_dias: int  # W da política P0
     horizonte_dias: int
     custo: ParametrosCusto
+
+    def __post_init__(self) -> None:
+        if self.janela_dias < 1:
+            raise ValueError(f"janela_dias deve ser >= 1, recebeu {self.janela_dias}")
+        if self.horizonte_dias < 0:
+            raise ValueError(f"horizonte_dias deve ser >= 0, recebeu {self.horizonte_dias}")
+        _validar_ordens(self.ordens, self.horizonte_dias)
 
 
 @dataclass(frozen=True)
@@ -123,11 +185,26 @@ class Arquetipo:
     finalidade_in: str
 
     def __post_init__(self) -> None:
-        assert 0.0 <= self.p_out <= 1.0
-        assert self.ticket_mediana_brl > 0
-        assert self.cadencia_mensal > 0
-        assert 0 <= self.buffer_dias_min <= self.buffer_dias_max
-        assert 0 <= self.visibilidade_dias_min <= self.visibilidade_dias_max
+        # ValueError, não assert: um arquétipo mal parametrizado sob `python -O`
+        # geraria uma pool inteira silenciosamente inválida.
+        if not isfinite(self.p_out) or not 0.0 <= self.p_out <= 1.0:
+            raise ValueError(f"p_out deve estar em [0,1], recebeu {self.p_out!r}")
+        _decimal_finito_positivo("ticket_mediana_brl", self.ticket_mediana_brl)
+        if not isfinite(self.ticket_sigma):
+            raise ValueError(f"ticket_sigma deve ser finito, recebeu {self.ticket_sigma!r}")
+        if not isfinite(self.cadencia_mensal) or self.cadencia_mensal <= 0:
+            raise ValueError(
+                f"cadencia_mensal deve ser positiva, recebeu {self.cadencia_mensal!r}"
+            )
+        if not 0 <= self.buffer_dias_min <= self.buffer_dias_max:
+            raise ValueError(
+                f"buffer_dias inválido: 0 <= {self.buffer_dias_min} <= {self.buffer_dias_max}"
+            )
+        if not 0 <= self.visibilidade_dias_min <= self.visibilidade_dias_max:
+            raise ValueError(
+                f"visibilidade_dias inválida: 0 <= {self.visibilidade_dias_min} "
+                f"<= {self.visibilidade_dias_max}"
+            )
 
 
 @dataclass(frozen=True)
@@ -164,6 +241,16 @@ def carregar_cenario(path: str) -> Cenario:
     dados = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
 
     custo_dados = dados["custo"]
+
+    # Tabela opcional de alíquota por (finalidade, direção). No YAML é uma LISTA de
+    # registros, porque a chave do dicionário é um par e YAML não tem chave composta.
+    iof_por_finalidade: dict[tuple[str, Direcao], Decimal] = {}
+    for regra in custo_dados.get("iof_por_finalidade") or ():
+        chave = (str(regra["finalidade"]), Direcao(regra["direcao"]))
+        if chave in iof_por_finalidade:
+            raise ValueError(f"regra de iof_por_finalidade duplicada para {chave}")
+        iof_por_finalidade[chave] = _decimal(regra["aliquota"])
+
     custo = ParametrosCusto(
         iof_out=_decimal(custo_dados["iof_out"]),
         iof_in=_decimal(custo_dados["iof_in"]),
@@ -172,7 +259,10 @@ def carregar_cenario(path: str) -> Cenario:
         custo_fixo_remessa=_decimal(custo_dados["custo_fixo_remessa"]),
         custo_oportunidade_aa=_decimal(custo_dados["custo_oportunidade_aa"]),
         ptax=_decimal(custo_dados["ptax"]),
+        iof_por_finalidade=iof_por_finalidade,
     )
+
+    horizonte_dias = int(dados["horizonte_dias"])
 
     ordens = tuple(
         Ordem(
@@ -183,14 +273,40 @@ def carregar_cenario(path: str) -> Cenario:
             dia_conhecida=int(o["dia_conhecida"]),
             dia_limite=int(o["dia_limite"]),
             eh_efx=bool(o["eh_efx"]),
-            finalidade=str(o["finalidade"]),
+            finalidade=None if o["finalidade"] is None else str(o["finalidade"]),
         )
         for o in dados["ordens"]
     )
 
+    _validar_ordens(ordens, horizonte_dias)
+
     return Cenario(
         ordens=ordens,
         janela_dias=int(dados["janela_dias"]),
-        horizonte_dias=int(dados["horizonte_dias"]),
+        horizonte_dias=horizonte_dias,
         custo=custo,
     )
+
+
+def _validar_ordens(ordens: tuple[Ordem, ...], horizonte_dias: int) -> None:
+    """Barra as duas formas de cenário que o motor não consegue simular corretamente.
+
+    Ambas falham em silêncio se passarem: o netting indexa pendências por `id`, então
+    ids repetidos colapsam duas ordens numa; e o laço diário só vai até
+    `horizonte_dias`, então uma ordem conhecida depois disso nunca é alocada.
+    """
+    vistos: set[str] = set()
+    for ordem in ordens:
+        if ordem.id in vistos:
+            raise ValueError(f"id de ordem duplicado: {ordem.id!r}")
+        vistos.add(ordem.id)
+
+        if ordem.dia_conhecida < 0:
+            raise ValueError(
+                f"ordem {ordem.id!r} tem dia_conhecida negativo: {ordem.dia_conhecida}"
+            )
+        if ordem.dia_conhecida > horizonte_dias:
+            raise ValueError(
+                f"ordem {ordem.id!r} é conhecida no dia {ordem.dia_conhecida}, além do "
+                f"horizonte de {horizonte_dias} dias — nunca entraria na simulação"
+            )

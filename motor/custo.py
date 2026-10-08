@@ -48,7 +48,7 @@ class Custos:
     total: Decimal
 
 
-def aliquota_iof(custo: ParametrosCusto, finalidade: str, direcao: Direcao) -> Decimal:
+def aliquota_iof(custo: ParametrosCusto, finalidade: str | None, direcao: Direcao) -> Decimal:
     """Alíquota de IOF de uma operação, por (finalidade do Anexo V, direção).
 
     Cai em `iof_out`/`iof_in` quando a finalidade não tem regra própria, então um
@@ -57,6 +57,8 @@ def aliquota_iof(custo: ParametrosCusto, finalidade: str, direcao: Direcao) -> D
     Função pura.
     """
     padrao = custo.iof_out if direcao is Direcao.OUT else custo.iof_in
+    if finalidade is None:
+        return padrao
     return custo.iof_por_finalidade.get((finalidade, direcao), padrao)
 
 
