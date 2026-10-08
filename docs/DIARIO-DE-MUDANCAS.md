@@ -37,16 +37,21 @@ Atualizada em 2026-10-08, na limpeza do repositório (as tabelas que cada regist
 
 | Branch | Situação | Dono |
 |---|---|---|
-| `main` | `3c65dc9`: PR #61 mergeado (taxas por mecanismo sem segundo arredondamento); publicado no Render até `1f9420b` (PR #82), o #61 ainda não foi publicado | — |
-| `docs/registros-deploy-consolidados` | Junta os registros de deploy dos PRs #67, #68, #72, #74, #78, #81 e #83 numa única branch, com esta limpeza | Claude |
-| `docs/auditoria-2026-09-06` | PR #17: auditoria de fechamento e casos manuais de verificação do netting | Gabriel |
+| `main` | PRs #61, #84 e #17 integrados em 2026-10-08; publicado no Render até `1f9420b` (PR #82) — a correção do #61 ainda não foi publicada | — |
 
 Branches substituídas viraram tags `archive/<nome-da-branch>` (31 tags, no GitHub); o conteúdo continua acessível por elas.
 
-Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. O PR #17 continua aberto e
-separado deste trabalho. Apagada em 2026-09-06 a branch remota
+Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. O PR #17 foi integrado em
+2026-10-08. Apagada em 2026-09-06 a branch remota
 `github.com/altoe2025/MOTOR-DE-FLUXO`
 — push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
+## 2026-10-08 — Cenários manuais de verificação do netting entram na `main` (PR #17)
+
+1. **Sintoma.** Os 7 cenários manuais e o runner estavam parados no PR #17 desde 2026-09-06; a `main` não tinha como rodá-los e o `AGENTS.md` avisava que não eram regressão disponível.
+2. **Causa.** O PR foi segurado a pedido do Gabriel enquanto a política de netting mudava (EDF global → autonetting preferencial).
+3. **O que foi feito.** A branch `docs/auditoria-2026-09-06` foi atualizada com a `main` e os 7 casos foram rodados contra o motor vigente: as alocações batem com a previsão escrita em cada YAML (caso 1: 3, caso 2: 1, caso 3: 4, caso 4: 5, caso 5: 3, caso 6: 3, caso 7: 20 alocações). `scripts/exportar_timeline.py` roda. `AGENTS.md`, `docs/testing.md` e `docs/MAPA.md` deixam de dizer que esses arquivos não estão na `main`.
+4. **O que isso invalida.** O aviso de que os cenários manuais não são regressão disponível. Nenhum cálculo do motor mudou. Os casos não cobrem autonetting intracliente (cada ordem é de um cliente próprio).
 
 ## 2026-10-08 — Limpeza de branches, worktrees e PRs parados
 

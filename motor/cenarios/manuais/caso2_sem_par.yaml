@@ -1,0 +1,24 @@
+# Caso 2 — ninguém casa, sai sozinha.
+#
+# A (OUT 50) nunca encontra contraparte. Ela só vence no dia 5, então fica
+# aberta o horizonte inteiro e, no fim, tem que remeter o total — resíduo é o
+# BRUTO da ordem inteira, porque não houve nada para casar com ela.
+#
+# PREVISÃO:
+#   dia 5: bruto_out 50 / bruto_in 0 -> casado 0, resíduo 50 OUT
+#     alocações: A REMETIDO 50
+
+janela_dias: 100
+horizonte_dias: 5
+
+custo:
+  iof_out: "0.035"
+  iof_in: "0.0038"
+  carry_cnr: "0.0004"
+  spread_rail_bps: "0"
+  custo_fixo_remessa: "0"
+  custo_oportunidade_aa: "0"
+  ptax: "5.40"
+
+ordens:
+  - { id: "A", cliente_id: "cliente-A", direcao: "OUT", valor_brl: "50", dia_conhecida: 0, dia_limite: 5, eh_efx: false, finalidade: "x" }
