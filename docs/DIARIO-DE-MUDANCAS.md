@@ -44,6 +44,11 @@ Atualizada em 2026-10-08, na limpeza do repositório (as tabelas que cada regist
 
 Branches substituídas viraram tags `archive/<nome-da-branch>` (31 tags, no GitHub); o conteúdo continua acessível por elas.
 
+Essa pilha e as MOT-16–MOT-22 foram integradas na `main` pelos PRs #21–#34. O PR #17 continua aberto e
+separado deste trabalho. Apagada em 2026-09-06 a branch remota
+`github.com/altoe2025/MOTOR-DE-FLUXO`
+— push acidental (nome de branch = URL do repo), sem código exclusivo, nunca foi PR.
+
 ## 2026-10-08 — Limpeza de branches, worktrees e PRs parados
 
 1. **Sintoma.** O repositório acumulava 106 branches locais, 85 no GitHub, 45 worktrees e 25 PRs abertos, a maioria já incorporada ou substituída. Não dava para saber de relance o que estava vivo.
